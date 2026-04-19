@@ -37,6 +37,7 @@ export default function Layout({ children }) {
                                 <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/glossary')}`} to="/admin/glossary">Glossary</Link></li>
+                                <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
                             </>
                         )}
                     </ul>
@@ -50,6 +51,9 @@ export default function Layout({ children }) {
                         <span className="muted">PCM Hub / {name}</span>
                     </div>
                     <div className="top-bar-right">
+                        <Link to="/me" className="btn" style={{background: 'transparent', border: 'none', fontWeight: 'bold'}}>
+                            MyAccount
+                        </Link>
                         <span className="role-badge">{role} Access</span>
                         <button className="btn" onClick={handleLogout}>Logout</button>
                     </div>

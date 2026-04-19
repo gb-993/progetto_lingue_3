@@ -5,24 +5,32 @@ import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 
 // Importa le pagine pubbliche e utente
-import PublicHome from './pages/PublicHome';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import PublicHome from './features/public/PublicHome';
+import Login from './features/auth/Login';
+import Dashboard from './features/dashboard/Dashboard';
 
 // Importa le pagine Admin: Lingue
-import LanguageList from './pages/LanguageList';
+import LanguageList from './features/languages/LanguageList';
+import LanguageForm from './features/languages/LanguageForm';
 
 // Importa le pagine Admin: Glossario
-import GlossaryList from './pages/GlossaryList';
-import GlossaryForm from './pages/GlossaryForm';
+import GlossaryList from './features/glossary/GlossaryList';
+import GlossaryForm from './features/glossary/GlossaryForm';
 
 // Importa le pagine Admin: Parametri
-import ParameterList from './pages/ParameterList';
-import ParameterForm from './pages/ParameterForm';
+import ParameterList from './features/parameters/ParameterList';
+import ParameterForm from './features/parameters/ParameterForm';
 
 // Importa le pagine Admin: Domande (per ora creiamo solo la rotta per la lista)
-import QuestionList from './pages/QuestionList';
-import QuestionForm from './pages/QuestionForm';
+import QuestionList from './features/questions/QuestionList';
+import QuestionForm from './features/questions/QuestionForm';
+
+// importa le pagine admin user
+import AccountList from './features/accounts/AccountList';
+import MyAccount from './features/accounts/MyAccount';
+import AccountCreate from './features/accounts/AccountCreate';
+import AccountAssign from './features/accounts/AccountAssign';
+
 
 export default function App() {
     return (
@@ -34,11 +42,13 @@ export default function App() {
 
                 {/* Rotta protetta generica */}
                 <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
+                <Route path="/me" element={<Layout><MyAccount /></Layout>} />
 
                 {/* ROTTE ESCLUSIVE ADMIN (Protette da AdminRoute) */}
-
                 {/* Lingue */}
                 <Route path="/languages" element={<AdminRoute><Layout><LanguageList /></Layout></AdminRoute>} />
+                <Route path="/languages/add" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
+                <Route path="/languages/:id/edit" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
 
                 {/* Glossario */}
                 <Route path="/admin/glossary" element={<AdminRoute><Layout><GlossaryList /></Layout></AdminRoute>} />
@@ -55,6 +65,10 @@ export default function App() {
                 <Route path="/admin/questions/add" element={<AdminRoute><Layout><QuestionForm /></Layout></AdminRoute>} />
                 <Route path="/admin/questions/:id/edit" element={<AdminRoute><Layout><QuestionForm /></Layout></AdminRoute>} />
 
+                {/* Account */}
+                <Route path="/admin/accounts" element={<AdminRoute><Layout><AccountList /></Layout></AdminRoute>} />
+                <Route path="/admin/accounts/add" element={<AdminRoute><Layout><AccountCreate /></Layout></AdminRoute>} />
+                <Route path="/admin/accounts/:id/assign" element={<AdminRoute><Layout><AccountAssign /></Layout></AdminRoute>} />
             </Routes>
         </Router>
     );
