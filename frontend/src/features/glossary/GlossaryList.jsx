@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function GlossaryList() {
     const [glossary, setGlossary] = useState([]);
@@ -8,10 +8,7 @@ export default function GlossaryList() {
 
     const fetchGlossary = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:8000/api/admin/glossary', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/api/admin/glossary');
             setGlossary(res.data);
         } catch (error) {
             console.error("Errore nel recupero del glossario", error);
@@ -26,10 +23,7 @@ export default function GlossaryList() {
         if (!window.confirm('Sei sicuro di voler eliminare questo termine?')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:8000/api/admin/glossary/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/admin/glossary/${id}`);
             fetchGlossary();
         } catch (error) {
             alert('Errore durante l\'eliminazione');
@@ -50,12 +44,7 @@ export default function GlossaryList() {
 
             <section className="toolbar">
                 <div className="toolbar__form">
-                    <input
-                        type="search"
-                        placeholder="Search term..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+                    <input type="search" placeholder="Search term..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="toolbar__add">
                     <Link to="/admin/glossary/add" className="btn btn--primary">Add Term</Link>

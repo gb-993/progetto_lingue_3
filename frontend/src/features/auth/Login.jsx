@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -11,7 +11,8 @@ export default function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const resp = await axios.post('http://localhost:8000/auth/login', { email, password });
+            // Chiamata centralizzata
+            const resp = await api.post('/auth/login', { email, password });
             localStorage.setItem('token', resp.data.access_token);
             localStorage.setItem('role', resp.data.role);
             localStorage.setItem('name', resp.data.name);

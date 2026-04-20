@@ -62,7 +62,27 @@ class ParameterDef(Base):
     param_type = Column(String(100), default="")
     level_of_comparison = Column(String(255), default="")
 
-    questions = relationship("Question", back_populates="parameter")
+    questions = relationship("Question", back_populates="parameter", cascade="all, delete-orphan")
+
+# ==========================================
+# TABELLE LOOKUP PARAMETRI
+# ==========================================
+class ParamSchema(Base):
+    __tablename__ = "param_schemas"
+    id = Column(Integer, primary_key=True)
+    label = Column(String(255), unique=True, nullable=False)
+
+class ParamType(Base):
+    __tablename__ = "param_types"
+    id = Column(Integer, primary_key=True)
+    label = Column(String(255), unique=True, nullable=False)
+
+class ParamLevelOfComparison(Base):
+    __tablename__ = "param_level_of_comparisons"
+    id = Column(Integer, primary_key=True)
+    label = Column(String(255), unique=True, nullable=False)
+
+
 
 class Question(Base):
     __tablename__ = "questions"

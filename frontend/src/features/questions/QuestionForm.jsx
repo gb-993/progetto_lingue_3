@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function QuestionForm() {
     const { id } = useParams();
@@ -18,16 +18,15 @@ export default function QuestionForm() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-
         const fetchData = async () => {
             try {
-                const paramsRes = await axios.get('http://localhost:8000/api/admin/parameters', config);
+                // Chiamata centralizzata
+                const paramsRes = await api.get('/api/admin/parameters');
                 setParameters(paramsRes.data || []);
 
                 if (isEditMode) {
-                    const questionRes = await axios.get(`http://localhost:8000/api/admin/questions/${id}`, config);
+                    // Chiamata centralizzata
+                    const questionRes = await api.get(`/api/admin/questions/${id}`);
                     setFormData({
                         id: questionRes.data.id || '',
                         parameter_id: questionRes.data.parameter_id || '',
@@ -63,8 +62,6 @@ export default function QuestionForm() {
         }
 
         try {
-            const token = localStorage.getItem('token');
-            const config = { headers: { Authorization: `Bearer ${token}` } };
             const payload = {
                 ...formData,
                 id: formData.id.trim(),
@@ -73,10 +70,11 @@ export default function QuestionForm() {
                 instruction: formData.instruction.trim() === '' ? null : formData.instruction.trim()
             };
 
+            // Chiamate centralizzate
             if (isEditMode) {
-                await axios.put(`http://localhost:8000/api/admin/questions/${id}`, payload, config);
+                await api.put(`/api/admin/questions/${id}`, payload);
             } else {
-                await axios.post('http://localhost:8000/api/admin/questions', payload, config);
+                await api.post('/api/admin/questions', payload);
             }
 
             navigate('/admin/questions');
@@ -173,5 +171,3 @@ export default function QuestionForm() {
         </div>
     );
 }
-
-

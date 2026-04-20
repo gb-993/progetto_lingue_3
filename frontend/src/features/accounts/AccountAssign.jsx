@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function AccountAssign() {
     const { id } = useParams();
@@ -13,14 +13,11 @@ export default function AccountAssign() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const config = { headers: { Authorization: `Bearer ${token}` } };
-
-                const userRes = await axios.get(`http://localhost:8000/api/admin/accounts/${id}`, config);
+                const userRes = await api.get(`/api/admin/accounts/${id}`);
                 setUser(userRes.data);
                 setSelectedLangs(new Set(userRes.data.assigned_languages));
 
-                const langRes = await axios.get('http://localhost:8000/api/admin/languages', config);
+                const langRes = await api.get('/api/admin/languages');
                 setLanguages(langRes.data);
             } catch (err) {
                 setError('Impossibile caricare i dati.');
@@ -39,11 +36,9 @@ export default function AccountAssign() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:8000/api/admin/accounts/${id}/languages`,
-                { language_ids: Array.from(selectedLangs) },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.put(`/api/admin/accounts/${id}/languages`, {
+                language_ids: Array.from(selectedLangs)
+            });
             navigate('/admin/accounts');
         } catch (err) {
             setError(err.response?.data?.detail || 'Errore durante il salvataggio.');
@@ -62,7 +57,6 @@ export default function AccountAssign() {
 
                 {error && <div className="alert alert-error mb-1">{error}</div>}
 
-                {/* AVVISO DI REVOCA AGGIUNTO QUI */}
                 <div className="alert alert-warning" style={{ marginBottom: '1.5rem' }}>
                     <strong>Attenzione:</strong> Se selezioni una lingua che ha l'etichetta "Assegnata ad altri", questa verrà <strong>immediatamente revocata</strong> al precedente proprietario e trasferita a questo utente.
                 </div>
@@ -78,7 +72,6 @@ export default function AccountAssign() {
                                 />
                                 <span><strong>{lang.id}</strong> — {lang.name_full}</span>
 
-                                {/* BADGE AGGIORNATO */}
                                 {lang.assigned_user_id && lang.assigned_user_id !== user.id && (
                                     <span className="badge" style={{ marginLeft: 'auto', backgroundColor: 'var(--pill-warn-bg)', color: 'var(--warn)' }}>
                                         ⚠️ Assegnata ad altri (verrà trasferita)

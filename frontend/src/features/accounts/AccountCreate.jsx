@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function AccountCreate() {
     const navigate = useNavigate();
@@ -15,10 +15,7 @@ export default function AccountCreate() {
         e.preventDefault();
         setError('');
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('http://localhost:8000/api/admin/accounts', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/api/admin/accounts', formData);
             navigate('/admin/accounts');
         } catch (err) {
             setError(err.response?.data?.detail || 'Errore durante la creazione dell\'account.');

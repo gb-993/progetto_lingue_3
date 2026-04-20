@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function GlossaryForm() {
-    const { id } = useParams(); // Se c'è un ID nell'URL, siamo in modalità Modifica
+    const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
@@ -14,14 +14,10 @@ export default function GlossaryForm() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Se siamo in modalità modifica, carica i dati attuali del termine
         if (isEditMode) {
             const fetchTerm = async () => {
                 try {
-                    const token = localStorage.getItem('token');
-                    const res = await axios.get(`http://localhost:8000/api/admin/glossary/${id}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
+                    const res = await api.get(`/api/admin/glossary/${id}`);
                     setFormData({
                         word: res.data.word || '',
                         description: res.data.description || ''
@@ -44,17 +40,11 @@ export default function GlossaryForm() {
         e.preventDefault();
         setError('');
         try {
-            const token = localStorage.getItem('token');
-            const config = { headers: { Authorization: `Bearer ${token}` } };
-
             if (isEditMode) {
-                // Modifica termine esistente
-                await axios.put(`http://localhost:8000/api/admin/glossary/${id}`, formData, config);
+                await api.put(`/api/admin/glossary/${id}`, formData);
             } else {
-                // Creazione nuovo termine
-                await axios.post('http://localhost:8000/api/admin/glossary', formData, config);
+                await api.post('/api/admin/glossary', formData);
             }
-            // Torna alla lista
             navigate('/admin/glossary');
         } catch (err) {
             console.error(err);
@@ -74,28 +64,12 @@ export default function GlossaryForm() {
                 <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                     <div>
                         <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Parola / Termine</label>
-                        <input
-                            type="text"
-                            name="word"
-                            value={formData.word}
-                            onChange={handleChange}
-                            required
-                            style={{width: '100%', padding: '0.5rem'}}
-                            placeholder="Es. Lingua flessiva"
-                        />
+                        <input type="text" name="word" value={formData.word} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} placeholder="Es. Lingua flessiva" />
                     </div>
 
                     <div>
                         <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Descrizione</label>
-                        <textarea
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            required
-                            rows="6"
-                            style={{width: '100%', padding: '0.5rem'}}
-                            placeholder="Inserisci la definizione dettagliata..."
-                        />
+                        <textarea name="description" value={formData.description} onChange={handleChange} required rows="6" style={{width: '100%', padding: '0.5rem'}} placeholder="Inserisci la definizione dettagliata..." />
                     </div>
 
                     <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>

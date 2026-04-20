@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function PublicHome() {
     const [languages, setLanguages] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Chiamata all'API pubblica creata in FastAPI
-        axios.get('http://localhost:8000/api/public/languages')
+        // Chiamata all'API pubblica utilizzando l'istanza centralizzata
+        api.get('/api/public/languages')
             .then((response) => {
                 setLanguages(response.data);
                 setLoading(false);

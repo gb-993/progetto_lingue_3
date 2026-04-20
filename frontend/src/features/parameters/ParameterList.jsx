@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function ParameterList() {
     const [parameters, setParameters] = useState([]);
@@ -8,10 +8,8 @@ export default function ParameterList() {
 
     const fetchParameters = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:8000/api/admin/parameters', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Chiamata centralizzata
+            const res = await api.get('/api/admin/parameters');
             setParameters(res.data);
         } catch (error) {
             console.error("Errore nel recupero dei parametri", error);
@@ -26,10 +24,8 @@ export default function ParameterList() {
         if (!window.confirm(`Sei sicuro di voler eliminare il parametro ${id}?`)) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:8000/api/admin/parameters/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            // Chiamata centralizzata
+            await api.delete(`/api/admin/parameters/${id}`);
             fetchParameters();
         } catch (error) {
             alert(error.response?.data?.detail || 'Errore durante l\'eliminazione');
@@ -44,6 +40,7 @@ export default function ParameterList() {
 
     return (
         <div className="container">
+            {/* JSX Invariato */}
             <header className="dashboard-hero">
                 <h1>Parameter Management</h1>
                 <p className="muted dashboard-copy">Gestione dei parametri sintattici (Admin)</p>

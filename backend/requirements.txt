@@ -7,3 +7,4 @@ pydantic-settings
 bcrypt
 python-multipart
 python-jose[cryptography]
+pyparsing==3.1.2

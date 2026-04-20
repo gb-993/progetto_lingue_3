@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function MyAccount() {
     const navigate = useNavigate();
@@ -11,10 +11,7 @@ export default function MyAccount() {
     useEffect(() => {
         const fetchMe = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:8000/api/me', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const res = await api.get('/api/me');
                 setProfile({ name: res.data.name || '', surname: res.data.surname || '', email: res.data.email || '' });
             } catch (err) {
                 console.error(err);
@@ -29,12 +26,8 @@ export default function MyAccount() {
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.put('http://localhost:8000/api/me', profile, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.put('/api/me', profile);
             setMessage({ text: res.data.detail, type: 'success' });
-            // Aggiorna il nome nel localStorage se è cambiato
             localStorage.setItem('name', profile.name);
         } catch (err) {
             setMessage({ text: err.response?.data?.detail || 'Errore aggiornamento profilo', type: 'error' });
@@ -44,10 +37,7 @@ export default function MyAccount() {
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.put('http://localhost:8000/api/me/password', passwords, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.put('/api/me/password', passwords);
             setMessage({ text: res.data.detail, type: 'success' });
             setPasswords({ old_password: '', new_password1: '', new_password2: '' });
         } catch (err) {

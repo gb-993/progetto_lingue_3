@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Importiamo il nostro uffico postale centrale
 
 export default function LanguageList() {
     const [languages, setLanguages] = useState([]);
@@ -11,10 +11,8 @@ export default function LanguageList() {
     useEffect(() => {
         const fetchLangs = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:8000/api/admin/languages', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                // Chiamata pulita: api sa già l'indirizzo base e ha già il token
+                const res = await api.get('/api/admin/languages');
                 setLanguages(res.data || []);
             } catch (err) {
                 console.error('Errore nel recupero delle lingue', err);
@@ -32,8 +30,7 @@ export default function LanguageList() {
         return (
             String(lang.id || '').toLowerCase().includes(term) ||
             String(lang.name_full || '').toLowerCase().includes(term) ||
-            String(lang.family || '').toLowerCase().includes(term) ||
-            String(lang.top_level_family || '').toLowerCase().includes(term)
+            String(lang.family || '').toLowerCase().includes(term)
         );
     });
 
@@ -79,21 +76,10 @@ export default function LanguageList() {
                                 {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : "No coords"}
                             </td>
                             <td className="row-actions">
-                                <Link to={`/languages/${lang.id}/data`} className="btn">Data</Link>
                                 <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
                             </td>
                         </tr>
                     ))}
-                    {!loading && filteredLanguages.length === 0 && (
-                        <tr>
-                            <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>Nessuna lingua trovata.</td>
-                        </tr>
-                    )}
-                    {loading && (
-                        <tr>
-                            <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>Caricamento lingue...</td>
-                        </tr>
-                    )}
                     </tbody>
                 </table>
             </div>

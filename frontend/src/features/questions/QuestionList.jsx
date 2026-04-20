@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function QuestionList() {
     const [questions, setQuestions] = useState([]);
@@ -9,12 +9,8 @@ export default function QuestionList() {
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:8000/api/admin/questions', {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                });
+                // Chiamata centralizzata: non serve più l'header di autorizzazione manuale
+                const res = await api.get('/api/admin/questions');
                 setQuestions(res.data);
             } catch (error) {
                 console.error("Errore nel recupero delle domande", error);

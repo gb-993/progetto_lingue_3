@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api'; // Sostituito axios
 
 export default function AccountList() {
     const [users, setUsers] = useState([]);
@@ -8,10 +8,7 @@ export default function AccountList() {
 
     const fetchUsers = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('http://localhost:8000/api/admin/accounts', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/api/admin/accounts');
             setUsers(res.data);
         } catch (error) {
             console.error("Errore nel recupero degli account:", error);
@@ -23,10 +20,7 @@ export default function AccountList() {
     const handleDelete = async (userId) => {
         if (!window.confirm("Sei sicuro di voler eliminare questo account? L'azione è irreversibile.")) return;
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:8000/api/admin/accounts/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/admin/accounts/${userId}`);
             fetchUsers();
         } catch (error) {
             alert(error.response?.data?.detail || "Errore durante l'eliminazione");
@@ -62,7 +56,6 @@ export default function AccountList() {
                             <td>{u.email}</td>
                             <td>{u.name} {u.surname}</td>
 
-                            {/* COLONNA LINGUE MODIFICATA */}
                             <td>
                                 {u.role === 'admin' ? (
                                     <span className="badge">All</span>
