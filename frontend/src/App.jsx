@@ -25,12 +25,13 @@ import ParameterForm from './features/parameters/ParameterForm';
 import QuestionList from './features/questions/QuestionList';
 import QuestionForm from './features/questions/QuestionForm';
 
+
 // importa le pagine admin user
 import AccountList from './features/accounts/AccountList';
 import MyAccount from './features/accounts/MyAccount';
 import AccountCreate from './features/accounts/AccountCreate';
 import AccountAssign from './features/accounts/AccountAssign';
-
+import MotivationList from './features/motivations/MotivationList.jsx';
 
 export default function App() {
     return (
@@ -69,6 +70,9 @@ export default function App() {
                 <Route path="/admin/accounts" element={<AdminRoute><Layout><AccountList /></Layout></AdminRoute>} />
                 <Route path="/admin/accounts/add" element={<AdminRoute><Layout><AccountCreate /></Layout></AdminRoute>} />
                 <Route path="/admin/accounts/:id/assign" element={<AdminRoute><Layout><AccountAssign /></Layout></AdminRoute>} />
+
+                {/* Motivations */}
+                <Route path="/admin/motivations" element={<AdminRoute><Layout><MotivationList /></Layout></AdminRoute>} />
             </Routes>
         </Router>
     );

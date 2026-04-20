@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, glossary, languages, parameters, questions, users
+from routers import auth, glossary, languages, parameters, questions, users, motivations
 app = FastAPI(title="PCM-Hub API")
 
 # Abilita le chiamate dal frontend React
@@ -18,3 +18,4 @@ app.include_router(parameters.router)
 app.include_router(languages.router)
 app.include_router(questions.router)
 app.include_router(users.router)
+app.include_router(motivations.router)

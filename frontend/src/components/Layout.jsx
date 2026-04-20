@@ -36,6 +36,10 @@ export default function Layout({ children }) {
                                 <li><Link className={`btn ${isCurrent('/languages')}`} to="/languages">Languages</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
+
+                                {/* NUOVA VOCE MENU AGGIUNTA QUI */}
+                                <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
+
                                 <li><Link className={`btn ${isCurrent('/admin/glossary')}`} to="/admin/glossary">Glossary</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
                             </>
