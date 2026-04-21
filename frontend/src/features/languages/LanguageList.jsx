@@ -75,11 +75,21 @@ export default function LanguageList() {
                             <td className="small">
                                 {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : "No coords"}
                             </td>
-                            <td className="row-actions">
+                            {/* --- QUI LA MODIFICA --- */}
+                            <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                {/* Tasto primario per la compilazione dei dati linguistici */}
+                                <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
+
+                                {/* Tasto secondario per modificare i metadati */}
                                 <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
                             </td>
                         </tr>
                     ))}
+                    {filteredLanguages.length === 0 && !loading && (
+                        <tr>
+                            <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>Nessuna lingua trovata.</td>
+                        </tr>
+                    )}
                     </tbody>
                 </table>
             </div>

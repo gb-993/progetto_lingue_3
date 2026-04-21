@@ -63,20 +63,15 @@ class ParameterDef(Base):
     questions = relationship("Question", back_populates="parameter", cascade="all, delete-orphan")
     change_logs = relationship("ParameterChangeLog", back_populates="parameter", cascade="all, delete-orphan")
 
-class ParamSchema(Base):
-    __tablename__ = "param_schemas"
+class LanguageParameterStatus(Base):
+    """Traccia lo stato di completamento/revisione di un parametro per una lingua"""
+    __tablename__ = "language_parameter_statuses"
     id = Column(Integer, primary_key=True)
-    label = Column(String(255), unique=True, nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
+    is_unsure = Column(Boolean, default=False)
 
-class ParamType(Base):
-    __tablename__ = "param_types"
-    id = Column(Integer, primary_key=True)
-    label = Column(String(255), unique=True, nullable=False)
-
-class ParamLevelOfComparison(Base):
-    __tablename__ = "param_level_of_comparisons"
-    id = Column(Integer, primary_key=True)
-    label = Column(String(255), unique=True, nullable=False)
+    __table_args__ = (UniqueConstraint('language_id', 'parameter_id', name='uq_lang_param_status'),)
 
 class Question(Base):
     __tablename__ = "questions"
@@ -91,12 +86,10 @@ class Question(Base):
 
     parameter = relationship("ParameterDef", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
-
-    # RELAZIONE MOTIVAZIONI
     allowed_motivations = relationship("QuestionAllowedMotivation", back_populates="question", cascade="all, delete-orphan")
 
 # ==========================================
-# 4. RISPOSTE, ESEMPI E MOTIVAZIONI
+# 4. RISPOSTE ED ESEMPI
 # ==========================================
 class Answer(Base):
     __tablename__ = "answers"
@@ -112,8 +105,6 @@ class Answer(Base):
     language = relationship("Language", back_populates="answers")
     question = relationship("Question", back_populates="answers")
     examples = relationship("Example", back_populates="answer", cascade="all, delete-orphan")
-
-    # RELAZIONE MOTIVAZIONI SCELTE
     answer_motivations = relationship("AnswerMotivation", back_populates="answer", cascade="all, delete-orphan")
 
     __table_args__ = (UniqueConstraint('language_id', 'question_id', name='uq_answer_lang_q'),)
@@ -123,27 +114,25 @@ class Example(Base):
     id = Column(Integer, primary_key=True)
     answer_id = Column(Integer, ForeignKey("answers.id"), nullable=False)
     textarea = Column(Text, nullable=True)
+    transliteration = Column(Text, nullable=True)
     gloss = Column(Text, nullable=True)
     translation = Column(Text, nullable=True)
+    reference = Column(Text, nullable=True)
 
     answer = relationship("Answer", back_populates="examples")
 
-# ==========================================
-# 5. MOTIVAZIONI (Dizionario Globale)
-# ==========================================
 class Motivation(Base):
     __tablename__ = "motivations"
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String(50), nullable=False) # es. "M1", tolto unique strict per sicurezza storici
+    code = Column(String(50), nullable=False)
     label = Column(Text, nullable=False)
-    is_active = Column(Boolean, default=True) # Nuova feature: disattivazione soft
+    is_active = Column(Boolean, default=True)
 
 class QuestionAllowedMotivation(Base):
     __tablename__ = "question_allowed_motivations"
     id = Column(Integer, primary_key=True, index=True)
     question_id = Column(String(40), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
     motivation_id = Column(Integer, ForeignKey("motivations.id", ondelete="CASCADE"), nullable=False)
-
     question = relationship("Question", back_populates="allowed_motivations")
     motivation = relationship("Motivation")
 
@@ -152,36 +141,11 @@ class AnswerMotivation(Base):
     id = Column(Integer, primary_key=True, index=True)
     answer_id = Column(Integer, ForeignKey("answers.id", ondelete="CASCADE"), nullable=False)
     motivation_id = Column(Integer, ForeignKey("motivations.id", ondelete="CASCADE"), nullable=False)
-
     answer = relationship("Answer", back_populates="answer_motivations")
     motivation = relationship("Motivation")
 
 # ==========================================
-# 6. VALUTAZIONE DAG
-# ==========================================
-class LanguageParameter(Base):
-    __tablename__ = "language_parameters"
-    id = Column(Integer, primary_key=True)
-    language_id = Column(String(10), ForeignKey("languages.id"))
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"))
-
-    value_orig = Column(Enum("+", "-", "0", "?", name="param_values_orig"), nullable=True)
-    warning_orig = Column(Boolean, default=False)
-
-    eval = relationship("LanguageParameterEval", back_populates="language_parameter", uselist=False, cascade="all, delete-orphan")
-
-class LanguageParameterEval(Base):
-    __tablename__ = "language_parameter_evals"
-    id = Column(Integer, primary_key=True)
-    language_parameter_id = Column(Integer, ForeignKey("language_parameters.id"), unique=True)
-
-    value_eval = Column(Enum("+", "-", "0", "?", name="param_values_eval"), nullable=True)
-    warning_eval = Column(Boolean, default=False)
-
-    language_parameter = relationship("LanguageParameter", back_populates="eval")
-
-# ==========================================
-# 7. GLOSSARIO E LOG
+# RESTO DEL FILE (Glossario, Log, DAG)
 # ==========================================
 class Glossary(Base):
     __tablename__ = "glossary"
@@ -196,6 +160,22 @@ class ParameterChangeLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     change_note = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-
     parameter = relationship("ParameterDef", back_populates="change_logs")
     user = relationship("User")
+
+class LanguageParameter(Base):
+    __tablename__ = "language_parameters"
+    id = Column(Integer, primary_key=True)
+    language_id = Column(String(10), ForeignKey("languages.id"))
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"))
+    value_orig = Column(Enum("+", "-", "0", "?", name="param_values_orig"), nullable=True)
+    warning_orig = Column(Boolean, default=False)
+    eval = relationship("LanguageParameterEval", back_populates="language_parameter", uselist=False, cascade="all, delete-orphan")
+
+class LanguageParameterEval(Base):
+    __tablename__ = "language_parameter_evals"
+    id = Column(Integer, primary_key=True)
+    language_parameter_id = Column(Integer, ForeignKey("language_parameters.id"), unique=True)
+    value_eval = Column(Enum("+", "-", "0", "?", name="param_values_eval"), nullable=True)
+    warning_eval = Column(Boolean, default=False)
+    language_parameter = relationship("LanguageParameter", back_populates="eval")
