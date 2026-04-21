@@ -4,31 +4,22 @@ import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 
-// Importa le pagine pubbliche e utente
 import PublicHome from './features/public/PublicHome';
 import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 
-// Importa le pagine Admin: Lingue
 import LanguageList from './features/languages/LanguageList';
 import LanguageForm from './features/languages/LanguageForm';
 
-// Importa le pagine Admin: Glossario
 import GlossaryList from './features/glossary/GlossaryList';
 import GlossaryForm from './features/glossary/GlossaryForm';
 
-// Importa le pagine Admin: Parametri
 import ParameterList from './features/parameters/ParameterList';
 import ParameterForm from './features/parameters/ParameterForm';
-
-// Importa le pagine Admin: Domande (per ora creiamo solo la rotta per la lista)
 import QuestionList from './features/questions/QuestionList';
 import QuestionForm from './features/questions/QuestionForm';
-
-// Importa la pagina di Compilazione Dati
 import LanguageData from './features/compilation/LanguageData';
-
-// importa le pagine admin user
+import LanguageDebug from "./features/compilation/LanguageDebug.jsx";
 import AccountList from './features/accounts/AccountList';
 import MyAccount from './features/accounts/MyAccount';
 import AccountCreate from './features/accounts/AccountCreate';
@@ -79,6 +70,7 @@ export default function App() {
 
                     {/*compilazione*/}
                     <Route path="/languages/:id/data" element={<AdminRoute><Layout><LanguageData /></Layout></AdminRoute>} />
+                    <Route path="/languages/:id/debug" element={<AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute>} />
 
                 </Routes>
             </Router>

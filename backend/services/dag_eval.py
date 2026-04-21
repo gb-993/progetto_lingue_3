@@ -152,7 +152,29 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             else:
                 lpe.value_eval = v_orig
         else:
-            cond_ok, parse_error = evaluate_with_parser(cond, cond_values)
+            refs = _extract_refs(cond)
+
+            # Short-circuit se un padre ha un warning (?) ---
+            if any(r in warnings for r in refs):
+                if target not in warnings:
+                    warnings.add(target)
+                    warnings_propagated.add(target)
+
+                lpe.value_eval = "?"
+                lpe.warning_eval = True
+                db.commit()
+                db.refresh(lpe)
+                cond_values[target] = "?"
+                processed.append(target)
+                continue
+            try:
+                parsed_ok = evaluate_with_parser(cond, cond_values)
+                parse_error = None
+            except Exception as e:
+                parsed_ok = None
+                parse_error = e
+
+            cond_ok = parsed_ok if parse_error is None else None
 
             if cond_ok is False:
                 lpe.value_eval = "0"

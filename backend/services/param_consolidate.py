@@ -45,7 +45,9 @@ def consolidate_parameter_for_language(lang_id: str, param_id: str, db: Session)
     L'algoritmo originale è mantenuto INALTERATO.
     """
     # Recupera tutte le domande per questo parametro
-    questions = db.query(models.Question).filter(models.Question.parameter_id == param_id).all()
+    questions = db.query(models.Question).filter(
+        models.Question.parameter_id == param_id,
+        models.Question.is_active == True).all()
     q_dict = {q.id: q for q in questions}
 
     # Recupera le risposte valide
@@ -107,7 +109,6 @@ def recompute_and_persist_language_parameter(language_id: str, parameter_id: str
 
     lp.value_orig = value
     lp.warning_orig = warning
-    db.commit()
+    db.flush()
     db.refresh(lp)
-
     return lp

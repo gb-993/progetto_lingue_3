@@ -104,17 +104,18 @@ export default function ParameterForm() {
         }
     };
 
-    // --- ELIMINAZIONE DELLA DOMANDA ---
-    const handleDeleteQuestion = async (questionId) => {
-        if (!window.confirm(`Sei sicuro di voler eliminare la domanda ${questionId} in modo permanente?`)) return;
+    // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
+    const handleToggleQuestionActive = async (questionId, currentStatus) => {
+        const actionText = currentStatus ? 'disattivare' : 'riattivare';
+        if (!window.confirm(`Sei sicuro di voler ${actionText} la domanda ${questionId}? (Scomparirà dalla compilazione)`)) return;
 
         try {
-            await api.delete(`/api/admin/questions/${questionId}`);
-            // Ricarica i dati del parametro per avere la lista domande aggiornata
+            await api.patch(`/api/admin/questions/${questionId}/toggle-active`);
+            // Ricarica i dati per avere la lista aggiornata
             const paramRes = await api.get(`/api/admin/parameters/${id}`);
             setQuestions(paramRes.data.questions || []);
         } catch (err) {
-            alert(err.response?.data?.detail || "Errore durante l'eliminazione della domanda.");
+            alert(err.response?.data?.detail || `Errore durante il cambio di stato della domanda.`);
         }
     };
 
@@ -236,14 +237,21 @@ export default function ParameterForm() {
                                 {normalQuestions.length > 0 ? (
                                     <div>
                                         {normalQuestions.map(q => (
-                                            <div key={q.id} style={qRowStyle}>
+                                            <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
                                                 <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
-                                                    <span>{q.text}</span>
+                                                    <span>{q.text} {q.is_active ? '' : '(Inattiva)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
                                                     <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
-                                                    <button type="button" onClick={() => handleDeleteQuestion(q.id)} className="btn btn--small" style={{ color: 'red', borderColor: 'red' }}>Delete</button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleQuestionActive(q.id, q.is_active)}
+                                                        className={`btn btn--small ${q.is_active ? 'btn--danger' : ''}`}
+                                                        style={{ color: q.is_active ? 'red' : 'green', borderColor: q.is_active ? 'red' : 'green' }}
+                                                    >
+                                                        {q.is_active ? 'Disattiva' : 'Riattiva'}
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -259,14 +267,21 @@ export default function ParameterForm() {
                                 {stopQuestions.length > 0 ? (
                                     <div>
                                         {stopQuestions.map(q => (
-                                            <div key={q.id} style={qRowStyle}>
+                                            <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
                                                 <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
-                                                    <span>{q.text}</span>
+                                                    <span>{q.text} {q.is_active ? '' : '(Inattiva)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
                                                     <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
-                                                    <button type="button" onClick={() => handleDeleteQuestion(q.id)} className="btn btn--small btn--danger" style={{ color: 'red', borderColor: 'red' }}>Delete</button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleQuestionActive(q.id, q.is_active)}
+                                                        className={`btn btn--small ${q.is_active ? 'btn--danger' : ''}`}
+                                                        style={{ color: q.is_active ? 'red' : 'green', borderColor: q.is_active ? 'red' : 'green' }}
+                                                    >
+                                                        {q.is_active ? 'Disattiva' : 'Riattiva'}
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}

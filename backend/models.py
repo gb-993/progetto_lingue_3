@@ -53,8 +53,7 @@ class ParameterDef(Base):
     name = Column(String(200), nullable=False)
     short_description = Column(Text, default="")
     implicational_condition = Column(String(255), nullable=True)
-
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     position = Column(Integer, nullable=False)
     schema = Column(String(100), default="")
     param_type = Column(String(100), default="")
@@ -62,6 +61,22 @@ class ParameterDef(Base):
 
     questions = relationship("Question", back_populates="parameter", cascade="all, delete-orphan")
     change_logs = relationship("ParameterChangeLog", back_populates="parameter", cascade="all, delete-orphan")
+
+class ParamSchema(Base):
+    __tablename__ = "param_schemas"
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String(100), unique=True, nullable=False)
+
+class ParamType(Base):
+    __tablename__ = "param_types"
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String(100), unique=True, nullable=False)
+
+class ParamLevelOfComparison(Base):
+    __tablename__ = "param_levels_of_comparison"
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String(100), unique=True, nullable=False)
+
 
 class LanguageParameterStatus(Base):
     """Traccia lo stato di completamento/revisione di un parametro per una lingua"""
@@ -83,6 +98,7 @@ class Question(Base):
     instruction_yes = Column(Text, nullable=True)
     instruction_no = Column(Text, nullable=True)
     is_stop_question = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
 
     parameter = relationship("ParameterDef", back_populates="questions")
     answers = relationship("Answer", back_populates="question")

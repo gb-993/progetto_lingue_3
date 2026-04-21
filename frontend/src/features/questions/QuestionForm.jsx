@@ -15,9 +15,10 @@ export default function QuestionForm() {
         parameter_id: '',
         text: '',
         instruction: '',
-        instruction_yes: '', // <-- AGGIUNTO
-        instruction_no: '',  // <-- AGGIUNTO
+        instruction_yes: '',
+        instruction_no: '',    
         is_stop_question: false,
+        is_active: true,
         allowed_motivations: []
     });
 
@@ -46,15 +47,16 @@ export default function QuestionForm() {
                         parameter_id: questionRes.data.parameter_id || '',
                         text: questionRes.data.text || '',
                         instruction: questionRes.data.instruction || '',
-                        instruction_yes: questionRes.data.instruction_yes || '', // <-- AGGIUNTO
-                        instruction_no: questionRes.data.instruction_no || '',   // <-- AGGIUNTO
+                        instruction_yes: questionRes.data.instruction_yes || '',   
+                        instruction_no: questionRes.data.instruction_no || '',     
                         is_stop_question: questionRes.data.is_stop_question ?? false,
+                        is_active: questionRes.data.is_active ?? true,
                         allowed_motivations: questionRes.data.allowed_motivations || []
                     });
                 } else if (paramFromUrl) {
                     setFormData((prev) => ({ ...prev, parameter_id: paramFromUrl }));
                 }
-            } catch (err) {
+                } catch {
                 setError('Impossibile caricare i dati.');
             }
         };
@@ -92,7 +94,7 @@ export default function QuestionForm() {
                 allowed_motivations: [...prev.allowed_motivations, res.data.id]
             }));
             setShowCreator(false);
-        } catch (err) {
+        } catch {
             alert("Errore nella creazione della motivazione.");
         }
     };
@@ -107,8 +109,8 @@ export default function QuestionForm() {
             const payload = {
                 ...formData,
                 instruction: formData.instruction?.trim() || null,
-                instruction_yes: formData.instruction_yes?.trim() || null, // <-- AGGIUNTO
-                instruction_no: formData.instruction_no?.trim() || null    // <-- AGGIUNTO
+                instruction_yes: formData.instruction_yes?.trim() || null,   
+                instruction_no: formData.instruction_no?.trim() || null      
             };
 
             if (isEditMode) {
@@ -196,10 +198,17 @@ export default function QuestionForm() {
                         />
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <input type="checkbox" id="is_stop_question" name="is_stop_question" checked={formData.is_stop_question} onChange={handleChange} />
-                        <label htmlFor="is_stop_question" style={{ fontWeight: 'bold' }}>Stop Question</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input type="checkbox" id="is_stop_question" name="is_stop_question" checked={formData.is_stop_question} onChange={handleChange} />
+                            <label htmlFor="is_stop_question" style={{ fontWeight: 'bold' }}>Stop Question</label>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} />
+                            <label htmlFor="is_active" style={{ fontWeight: 'bold' }}>Domanda Attiva</label>
+                        </div>
                     </div>
+
 
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                         <button type="submit" className="btn btn--primary" disabled={isLoading}>

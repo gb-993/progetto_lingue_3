@@ -58,11 +58,11 @@ export default function QuestionList() {
                     </thead>
                     <tbody>
                     {filteredQuestions.map(q => (
-                        <tr key={q.id}>
+                        <tr key={q.id} style={{ opacity: q.is_active === false ? 0.5 : 1 }}>
                             <td style={{fontWeight: 'bold'}}>{q.id}</td>
                             <td>{q.parameter_id}</td>
-                            <td style={{maxWidth: '400px'}}>{q.text}</td>
-                            <td>{q.is_stop_question ? '✅' : '❌'}</td>
+                            <td style={{maxWidth: '400px'}}>{q.text} {q.is_active === false ? <span className="badge badge--error">Inattiva</span> : ''}</td>
+                            <td>{q.is_stop_question ? 'yes' : 'no'}</td>
                             <td className="row-actions">
                                 <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
                             </td>

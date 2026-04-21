@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 
 export default function ParameterList() {
     const [parameters, setParameters] = useState([]);
@@ -8,7 +8,6 @@ export default function ParameterList() {
 
     const fetchParameters = async () => {
         try {
-            // Chiamata centralizzata
             const res = await api.get('/api/admin/parameters');
             setParameters(res.data);
         } catch (error) {
@@ -20,19 +19,6 @@ export default function ParameterList() {
         fetchParameters();
     }, []);
 
-    const handleDelete = async (id) => {
-        if (!window.confirm(`Sei sicuro di voler eliminare il parametro ${id}?`)) return;
-
-        try {
-            // Chiamata centralizzata
-            await api.delete(`/api/admin/parameters/${id}`);
-            fetchParameters();
-        } catch (error) {
-            alert(error.response?.data?.detail || 'Errore durante l\'eliminazione');
-            console.error(error);
-        }
-    };
-
     const filteredParams = parameters.filter(param =>
         param.name.toLowerCase().includes(search.toLowerCase()) ||
         param.id.toLowerCase().includes(search.toLowerCase())
@@ -40,7 +26,6 @@ export default function ParameterList() {
 
     return (
         <div className="container">
-            {/* JSX Invariato */}
             <header className="dashboard-hero">
                 <h1>Parameter Management</h1>
                 <p className="muted dashboard-copy">Gestione dei parametri sintattici (Admin)</p>
@@ -80,7 +65,6 @@ export default function ParameterList() {
                             <td><span className="badge">{param.param_type}</span></td>
                             <td className="row-actions">
                                 <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
-                                <button onClick={() => handleDelete(param.id)} className="btn btn--danger" style={{color: 'red'}}>Delete</button>
                             </td>
                         </tr>
                     ))}

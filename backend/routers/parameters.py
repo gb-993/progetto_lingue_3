@@ -15,6 +15,7 @@ class QuestionRead(BaseModel):
     id: str
     text: str
     is_stop_question: bool
+    is_active: bool = True
 
     class Config:
         from_attributes = True
@@ -92,14 +93,6 @@ def update_admin_parameter(id: str, item: ParameterBase, db: Session = Depends(g
         db.rollback()
         raise HTTPException(status_code=400, detail="Errore nell'aggiornamento.")
 
-@router.delete("/{id}")
-def delete_admin_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
-    if not db_item:
-        raise HTTPException(status_code=404, detail="Parametro non trovato")
-    db.delete(db_item)
-    db.commit()
-    return {"detail": "Parametro eliminato"}
 
 
 # --- ENDPOINT PER LA VALIDAZIONE SINTASSI IN TEMPO REALE ---

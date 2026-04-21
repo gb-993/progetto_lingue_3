@@ -77,11 +77,9 @@ export default function LanguageList() {
                             </td>
                             {/* --- QUI LA MODIFICA --- */}
                             <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                {/* Tasto primario per la compilazione dei dati linguistici */}
                                 <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
-
-                                {/* Tasto secondario per modificare i metadati */}
                                 <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+                                <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
                             </td>
                         </tr>
                     ))}

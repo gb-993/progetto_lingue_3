@@ -16,9 +16,10 @@ class QuestionBase(BaseModel):
     parameter_id: str
     text: str
     instruction: Optional[str] = None
-    instruction_yes: Optional[str] = None  # <-- AGGIUNTO
-    instruction_no: Optional[str] = None   # <-- AGGIUNTO
+    instruction_yes: Optional[str] = None
+    instruction_no: Optional[str] = None
     is_stop_question: bool = False
+    is_active: bool = True
     allowed_motivations: List[int] = []
 
 
@@ -40,9 +41,10 @@ def get_admin_question(id: str, db: Session = Depends(get_db), current_user: mod
         "parameter_id": question.parameter_id,
         "text": question.text,
         "instruction": question.instruction,
-        "instruction_yes": question.instruction_yes, # <-- AGGIUNTO
-        "instruction_no": question.instruction_no,   # <-- AGGIUNTO
+        "instruction_yes": question.instruction_yes,
+        "instruction_no": question.instruction_no,
         "is_stop_question": question.is_stop_question,
+        "is_active": question.is_active,
         "allowed_motivations": [qm.motivation_id for qm in question.allowed_motivations]
     }
 
@@ -58,8 +60,9 @@ def create_admin_question(item: QuestionBase, db: Session = Depends(get_db), cur
         parameter_id=item.parameter_id,
         text=item.text,
         instruction=item.instruction,
-        instruction_yes=item.instruction_yes, # <-- AGGIUNTO
-        instruction_no=item.instruction_no,   # <-- AGGIUNTO
+        instruction_yes=item.instruction_yes,
+        instruction_no=item.instruction_no,
+        is_active=item.is_active,
         is_stop_question=item.is_stop_question
     )
     db.add(db_item)
@@ -92,10 +95,11 @@ def update_admin_question(id: str, item: QuestionBase, db: Session = Depends(get
     db_item.parameter_id = item.parameter_id
     db_item.text = item.text
     db_item.instruction = item.instruction
-    db_item.instruction_yes = item.instruction_yes # <-- AGGIUNTO
-    db_item.instruction_no = item.instruction_no   # <-- AGGIUNTO
+    db_item.instruction_yes = item.instruction_yes  
+    db_item.instruction_no = item.instruction_no    
     db_item.is_stop_question = item.is_stop_question
-
+    db_item.is_active = item.is_active
+    
     db.query(models.QuestionAllowedMotivation).filter(models.QuestionAllowedMotivation.question_id == db_item.id).delete()
 
     for mot_id in item.allowed_motivations:
@@ -109,16 +113,13 @@ def update_admin_question(id: str, item: QuestionBase, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="Impossibile aggiornare la domanda.")
 
 
-@router.delete("/{id}")
-def delete_admin_question(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+@router.patch("/{id}/toggle-active")
+def toggle_question_active(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Disattiva o riattiva una domanda senza eliminarla dal DB"""
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Domanda non trovata")
 
-    db.delete(db_item)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="Impossibile eliminare la domanda: sono presenti record collegati (es. risposte).")
-    return {"detail": "Domanda eliminata con successo"}
+    db_item.is_active = not db_item.is_active
+    db.commit()
+    return {"detail": "Stato domanda aggiornato", "is_active": db_item.is_active}
