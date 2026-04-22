@@ -7,6 +7,7 @@ export default function ParameterForm() {
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
+    const [initialData, setInitialData] = useState(null);
     const [formData, setFormData] = useState({
         id: '', name: '', position: 0, short_description: '',
         implicational_condition: '', is_active: true,
@@ -20,6 +21,14 @@ export default function ParameterForm() {
 
     const [lookups, setLookups] = useState({ schemas: [], types: [], levels: [] });
     const [newLookupInputs, setNewLookupInputs] = useState({ schema: '', type: '', level: '' });
+
+    // Stati per logica Modifiche
+    const [changeNote, setChangeNote] = useState('');
+    const [changeLogs, setChangeLogs] = useState([]);
+
+    // Stati per il Modal di Disattivazione
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+    const [deactivateForm, setDeactivateForm] = useState({ password: '', reason: '' });
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -36,9 +45,11 @@ export default function ParameterForm() {
                         api.get(`/api/admin/parameters/${id}`),
                         api.get(`/api/admin/parameters/${id}/usage`)
                     ]);
-                    const { questions: fetchedQuestions, ...paramData } = paramRes.data;
+                    const { questions: fetchedQuestions, change_logs: fetchedLogs, ...paramData } = paramRes.data;
                     setFormData(paramData);
+                    setInitialData(paramData);
                     setQuestions(fetchedQuestions || []);
+                    setChangeLogs(fetchedLogs || []);
                     setUsage(usageRes.data || []);
                 }
             } catch (err) {
@@ -96,11 +107,47 @@ export default function ParameterForm() {
             return;
         }
         try {
-            const payload = { ...formData, position: parseInt(formData.position, 10) };
+            const payload = { ...formData, position: parseInt(formData.position, 10), change_note: changeNote };
             isEditMode ? await api.put(`/api/admin/parameters/${id}`, payload) : await api.post('/api/admin/parameters', payload);
             navigate('/admin/parameters');
         } catch (err) {
             setError(err.response?.data?.detail || 'Errore salvataggio.');
+        }
+    };
+
+    // --- DISATTIVAZIONE / RIATTIVAZIONE DEL PARAMETRO ---
+    const handleToggleActiveClick = async (e) => {
+        e.preventDefault();
+        if (!isEditMode) return;
+
+        if (formData.is_active) {
+            if (usage.length > 0) {
+                alert("Non puoi disattivare questo parametro perché è menzionato nelle condizioni implicazionali di altri parametri (vedi sidebar).");
+                return;
+            }
+            setShowDeactivateModal(true);
+        } else {
+            if(window.confirm("Vuoi riattivare questo parametro?")) {
+                try {
+                    await api.post(`/api/admin/parameters/${id}/reactivate`);
+                    setFormData(prev => ({ ...prev, is_active: true }));
+                } catch (err) {
+                    alert(err.response?.data?.detail || 'Errore durante la riattivazione');
+                }
+            }
+        }
+    };
+
+    const submitDeactivation = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post(`/api/admin/parameters/${id}/deactivate`, deactivateForm);
+            setShowDeactivateModal(false);
+            setDeactivateForm({ password: '', reason: '' });
+            setFormData(prev => ({ ...prev, is_active: false }));
+            alert("Parametro disattivato con successo.");
+        } catch (err) {
+            alert(err.response?.data?.detail || "Errore durante la disattivazione. Password corretta?");
         }
     };
 
@@ -119,6 +166,18 @@ export default function ParameterForm() {
         }
     };
 
+    // Verifica se ci sono state modifiche per abilitare la textarea delle motivazioni
+    const safeString = (val) => val === null || val === undefined ? '' : String(val);
+    const isDirty = isEditMode && initialData && (
+        safeString(formData.name) !== safeString(initialData.name) ||
+        safeString(formData.position) !== safeString(initialData.position) ||
+        safeString(formData.short_description) !== safeString(initialData.short_description) ||
+        safeString(formData.implicational_condition) !== safeString(initialData.implicational_condition) ||
+        safeString(formData.schema) !== safeString(initialData.schema) ||
+        safeString(formData.param_type) !== safeString(initialData.param_type) ||
+        safeString(formData.level_of_comparison) !== safeString(initialData.level_of_comparison)
+    );
+
     // Separazione delle domande per la visualizzazione
     const normalQuestions = questions.filter(q => !q.is_stop_question);
     const stopQuestions = questions.filter(q => q.is_stop_question);
@@ -133,6 +192,31 @@ export default function ParameterForm() {
 
     return (
         <div className="container" style={{maxWidth: '1200px', marginTop: '2rem', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem'}}>
+
+            {/* MODAL DISATTIVAZIONE */}
+            {showDeactivateModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                    <div className="card" style={{ width: '400px', background: '#fff', padding: '2rem' }}>
+                        <h3 style={{ color: 'red', marginTop: 0 }}>Disattiva Parametro</h3>
+                        <p className="small muted">Inserisci la tua password di amministratore per confermare l'operazione.</p>
+                        <form onSubmit={submitDeactivation}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ fontWeight: 'bold' }}>Admin Password</label>
+                                <input type="password" required value={deactivateForm.password} onChange={e => setDeactivateForm({...deactivateForm, password: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
+                            </div>
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontWeight: 'bold' }}>Motivo (Opzionale)</label>
+                                <textarea rows="2" value={deactivateForm.reason} onChange={e => setDeactivateForm({...deactivateForm, reason: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <button type="button" className="btn" onClick={() => setShowDeactivateModal(false)}>Annulla</button>
+                                <button type="submit" className="btn btn--danger" style={{ background: 'red', color: 'white' }}>Conferma Disattivazione</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div className="card">
                     <header style={{marginBottom: '1.5rem'}}>
@@ -142,7 +226,7 @@ export default function ParameterForm() {
                     {error && <div className="alert alert-error" style={{marginBottom: '1rem'}}>{error}</div>}
 
                     <form onSubmit={handleSubmit}>
-                        {/* --- INIZIO CAMPI FORM (Invariati) --- */}
+                        {/* --- INIZIO CAMPI FORM --- */}
                         <div className="grid grid-2" style={{gap: '1rem', marginBottom: '1rem'}}>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>ID Parametro</label>
@@ -213,15 +297,115 @@ export default function ParameterForm() {
                             {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>⚠️ {syntaxError}</p>}
                         </div>
 
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem'}}>
-                            <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} />
-                            <label htmlFor="is_active" style={{fontWeight: 'bold'}}>Parametro Attivo</label>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>
+                            <input
+                                type="checkbox"
+                                id="is_active"
+                                checked={formData.is_active}
+                                onChange={() => {}}
+                                readOnly
+                            />
+                            <label style={{fontWeight: 'bold'}}>
+                                Parametro Attivo
+                            </label>
+                            {isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={handleToggleActiveClick}
+                                    className={`btn btn--small ${usage.length > 0 && formData.is_active ? 'btn--disabled' : ''}`}
+                                    style={{ marginLeft: 'auto' }}
+                                    title={usage.length > 0 ? "Bloccato: usato in altre condizioni" : ""}
+                                >
+                                    {formData.is_active ? 'Disattiva Parametro...' : 'Riattiva Parametro'}
+                                </button>
+                            )}
+                            {usage.length > 0 && formData.is_active && (
+                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>🔒 Bloccato dalle dipendenze</span>
+                            )}
                         </div>
                         {/* --- FINE CAMPI FORM --- */}
 
                         <hr style={{ margin: '2rem 0', borderColor: 'var(--border)' }} />
 
-                        <button type="submit" className="btn btn--primary">Save Parameter</button>
+                        {/* --- SEZIONE MOTIVAZIONE MODIFICA (Sempre visibile in Edit Mode) --- */}
+                        {isEditMode && (
+                            <div style={{
+                                background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
+                                padding: '1.5rem',
+                                borderRadius: '8px',
+                                border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
+                                marginBottom: '1.5rem'
+                            }}>
+                                <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
+                                    {isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note'}
+                                </h4>
+                                <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                    {isDirty
+                                        ? 'Hai modificato i dati di questo parametro. Devi inserire una motivazione per poter salvare.'
+                                        : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota.'}
+                                </p>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div>
+                                        <textarea
+                                            value={changeNote}
+                                            onChange={e => setChangeNote(e.target.value)}
+                                            rows="4"
+                                            placeholder="Descrivi il motivo della modifica..."
+                                            disabled={!isDirty} // Disabilitata se non ci sono modifiche
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.5rem',
+                                                borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
+                                                borderRadius: '4px',
+                                                backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
+                                                cursor: !isDirty ? 'not-allowed' : 'text',
+                                                opacity: !isDirty ? 0.7 : 1
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn--small"
+                                            style={{
+                                                marginTop: '0.5rem',
+                                                opacity: !isDirty ? 0.5 : 1,
+                                                cursor: !isDirty ? 'not-allowed' : 'pointer'
+                                            }}
+                                            disabled={!isDirty} // Disabilitato se non ci sono modifiche
+                                            onClick={() => setChangeNote("Modifica di test")}
+                                        >
+                                            Modifica di test
+                                        </button>
+                                    </div>
+
+                                    <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
+                                        <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Ultime Modifiche Registrate</h5>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            {changeLogs
+                                                .filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED"))
+                                                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                                .map(log => (
+                                                    <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
+                                                        <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
+                                                    </div>
+                                                ))
+                                            }
+                                            {changeLogs.filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
+                                                <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            className="btn btn--primary"
+                            disabled={isEditMode && (!isDirty || !changeNote.trim())} // Disabilitato se !isDirty
+                        >
+                            Save Parameter
+                        </button>
                         <Link to="/admin/parameters" className="btn" style={{marginLeft: '1rem'}}>Cancel</Link>
                     </form>
                 </div>

@@ -10,13 +10,14 @@ export default function QuestionForm() {
     const [searchParams] = useSearchParams();
     const paramFromUrl = searchParams.get('param_id');
 
+    const [initialData, setInitialData] = useState(null);
     const [formData, setFormData] = useState({
         id: '',
         parameter_id: '',
         text: '',
         instruction: '',
         instruction_yes: '',
-        instruction_no: '',    
+        instruction_no: '',
         is_stop_question: false,
         is_active: true,
         allowed_motivations: []
@@ -30,6 +31,10 @@ export default function QuestionForm() {
     const [showCreator, setShowCreator] = useState(false);
     const [newMotData, setNewMotData] = useState({ code: '', label: '' });
 
+    // Stati per Audit Log (mutuati da ParameterForm)
+    const [changeNote, setChangeNote] = useState('');
+    const [changeLogs, setChangeLogs] = useState([]);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -42,21 +47,33 @@ export default function QuestionForm() {
 
                 if (isEditMode) {
                     const questionRes = await api.get(`/api/admin/questions/${id}`);
-                    setFormData({
+                    const qData = {
                         id: questionRes.data.id || '',
                         parameter_id: questionRes.data.parameter_id || '',
                         text: questionRes.data.text || '',
                         instruction: questionRes.data.instruction || '',
-                        instruction_yes: questionRes.data.instruction_yes || '',   
-                        instruction_no: questionRes.data.instruction_no || '',     
+                        instruction_yes: questionRes.data.instruction_yes || '',
+                        instruction_no: questionRes.data.instruction_no || '',
                         is_stop_question: questionRes.data.is_stop_question ?? false,
                         is_active: questionRes.data.is_active ?? true,
                         allowed_motivations: questionRes.data.allowed_motivations || []
-                    });
+                    };
+
+                    setFormData(qData);
+                    setInitialData(qData);
+
+                    // Carica anche i log del parametro per visualizzarli nella UI
+                    try {
+                        const paramRes = await api.get(`/api/admin/parameters/${qData.parameter_id}`);
+                        setChangeLogs(paramRes.data.change_logs || []);
+                    } catch(err) {
+                        console.warn("Impossibile caricare i log del parametro", err);
+                    }
+
                 } else if (paramFromUrl) {
                     setFormData((prev) => ({ ...prev, parameter_id: paramFromUrl }));
                 }
-                } catch {
+            } catch {
                 setError('Impossibile caricare i dati.');
             }
         };
@@ -109,8 +126,9 @@ export default function QuestionForm() {
             const payload = {
                 ...formData,
                 instruction: formData.instruction?.trim() || null,
-                instruction_yes: formData.instruction_yes?.trim() || null,   
-                instruction_no: formData.instruction_no?.trim() || null      
+                instruction_yes: formData.instruction_yes?.trim() || null,
+                instruction_no: formData.instruction_no?.trim() || null,
+                change_note: changeNote
             };
 
             if (isEditMode) {
@@ -125,6 +143,26 @@ export default function QuestionForm() {
             setIsLoading(false);
         }
     };
+
+    // Logica per isDirty
+    const safeString = (val) => val === null || val === undefined ? '' : String(val);
+    const isArraysEqual = (a, b) => {
+        if (!a || !b) return false;
+        if (a.length !== b.length) return false;
+        const sortedA = [...a].sort();
+        const sortedB = [...b].sort();
+        return sortedA.every((val, index) => val === sortedB[index]);
+    };
+
+    const isDirty = isEditMode && initialData && (
+        safeString(formData.text) !== safeString(initialData.text) ||
+        safeString(formData.instruction) !== safeString(initialData.instruction) ||
+        safeString(formData.instruction_yes) !== safeString(initialData.instruction_yes) ||
+        safeString(formData.instruction_no) !== safeString(initialData.instruction_no) ||
+        formData.is_stop_question !== initialData.is_stop_question ||
+        formData.is_active !== initialData.is_active ||
+        !isArraysEqual(formData.allowed_motivations, initialData.allowed_motivations)
+    );
 
     const cancelLink = formData.parameter_id
         ? `/admin/parameters/${formData.parameter_id}/edit`
@@ -147,7 +185,7 @@ export default function QuestionForm() {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Parameter</label>
-                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required style={{ width: '100%', padding: '0.6rem' }}>
+                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem', backgroundColor: isEditMode ? '#e2e8f0' : 'white' }}>
                                 <option value="">Select parameter...</option>
                                 {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}
                             </select>
@@ -209,9 +247,84 @@ export default function QuestionForm() {
                         </div>
                     </div>
 
+                    {/* --- SEZIONE MOTIVAZIONE MODIFICA (Sempre visibile in Edit Mode) --- */}
+                    {isEditMode && (
+                        <div style={{
+                            background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
+                            padding: '1.5rem',
+                            borderRadius: '8px',
+                            border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
+                            marginTop: '1rem'
+                        }}>
+                            <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
+                                {isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note (Parent Parameter)'}
+                            </h4>
+                            <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                {isDirty
+                                    ? 'Hai modificato i dati di questa domanda. Devi inserire una motivazione per poter salvare.'
+                                    : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota. La nota verrà salvata nello storico del parametro genitore.'}
+                            </p>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-                        <button type="submit" className="btn btn--primary" disabled={isLoading}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div>
+                                    <textarea
+                                        value={changeNote}
+                                        onChange={e => setChangeNote(e.target.value)}
+                                        rows="4"
+                                        placeholder="Descrivi il motivo della modifica..."
+                                        disabled={!isDirty}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.5rem',
+                                            borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
+                                            borderRadius: '4px',
+                                            backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
+                                            cursor: !isDirty ? 'not-allowed' : 'text',
+                                            opacity: !isDirty ? 0.7 : 1
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="btn btn--small"
+                                        style={{
+                                            marginTop: '0.5rem',
+                                            opacity: !isDirty ? 0.5 : 1,
+                                            cursor: !isDirty ? 'not-allowed' : 'pointer'
+                                        }}
+                                        disabled={!isDirty}
+                                        onClick={() => setChangeNote("Modifica di test")}
+                                    >
+                                        Modifica di test
+                                    </button>
+                                </div>
+
+                                <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
+                                    <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Ultime Modifiche (Parametro: {formData.parameter_id})</h5>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {changeLogs
+                                            .filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED"))
+                                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                            .map(log => (
+                                                <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
+                                                    <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
+                                                </div>
+                                            ))
+                                        }
+                                        {changeLogs.filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
+                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                        <button
+                            type="submit"
+                            className="btn btn--primary"
+                            disabled={isLoading || (isEditMode && (!isDirty || !changeNote.trim()))}
+                        >
                             {isLoading ? 'Saving...' : 'Save Question'}
                         </button>
                         <Link to={cancelLink} className="btn">Cancel</Link>

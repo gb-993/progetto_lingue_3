@@ -1,4 +1,5 @@
 from typing import Optional, List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -22,6 +23,8 @@ class QuestionBase(BaseModel):
     is_active: bool = True
     allowed_motivations: List[int] = []
 
+class QuestionUpdate(QuestionBase):
+    change_note: Optional[str] = ""
 
 # --- ENDPOINT ---
 @router.get("")
@@ -82,7 +85,7 @@ def create_admin_question(item: QuestionBase, db: Session = Depends(get_db), cur
 
 
 @router.put("/{id}")
-def update_admin_question(id: str, item: QuestionBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Domanda non trovata")
@@ -95,15 +98,24 @@ def update_admin_question(id: str, item: QuestionBase, db: Session = Depends(get
     db_item.parameter_id = item.parameter_id
     db_item.text = item.text
     db_item.instruction = item.instruction
-    db_item.instruction_yes = item.instruction_yes  
-    db_item.instruction_no = item.instruction_no    
+    db_item.instruction_yes = item.instruction_yes
+    db_item.instruction_no = item.instruction_no
     db_item.is_stop_question = item.is_stop_question
     db_item.is_active = item.is_active
-    
+
     db.query(models.QuestionAllowedMotivation).filter(models.QuestionAllowedMotivation.question_id == db_item.id).delete()
 
     for mot_id in item.allowed_motivations:
         db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
+
+    # Registra il log di modifica nel parametro genitore
+    if item.change_note and item.change_note.strip():
+        log = models.ParameterChangeLog(
+            parameter_id=item.parameter_id,
+            user_id=current_user.id,
+            change_note=f"[Domanda {id}] {item.change_note.strip()}"
+        )
+        db.add(log)
 
     try:
         db.commit()
@@ -121,5 +133,15 @@ def toggle_question_active(id: str, db: Session = Depends(get_db), current_user:
         raise HTTPException(status_code=404, detail="Domanda non trovata")
 
     db_item.is_active = not db_item.is_active
+
+    # Logga automaticamente l'azione sul parametro
+    azione = "Riattivata" if db_item.is_active else "Disattivata"
+    log = models.ParameterChangeLog(
+        parameter_id=db_item.parameter_id,
+        user_id=current_user.id,
+        change_note=f"[Domanda {id}] {azione}"
+    )
+    db.add(log)
+
     db.commit()
     return {"detail": "Stato domanda aggiornato", "is_active": db_item.is_active}

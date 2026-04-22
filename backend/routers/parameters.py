@@ -1,12 +1,15 @@
 from typing import Optional, List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, joinedload
-
+from sqlalchemy.orm import Session, joinedload, selectinload
+import auth
 import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
+
+
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
 
 # --- SCHEMI PYDANTIC ---
@@ -16,6 +19,14 @@ class QuestionRead(BaseModel):
     text: str
     is_stop_question: bool
     is_active: bool = True
+
+    class Config:
+        from_attributes = True
+
+class ParameterChangeLogRead(BaseModel):
+    id: int
+    change_note: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -31,12 +42,22 @@ class ParameterBase(BaseModel):
     param_type: str = ""
     level_of_comparison: str = ""
 
-# Nuovo schema per il dettaglio che include le domande
+# Schema per l'aggiornamento che accetta la motivazione opzionale
+class ParameterUpdate(ParameterBase):
+    change_note: Optional[str] = ""
+
+# Nuovo schema per il dettaglio che include le domande e i log
 class ParameterDetail(ParameterBase):
     questions: List[QuestionRead] = []
+    change_logs: List[ParameterChangeLogRead] = []
 
     class Config:
         from_attributes = True
+
+# Schema per la disattivazione sicura
+class DeactivatePayload(BaseModel):
+    password: str
+    reason: Optional[str] = ""
 
 # --- ENDPOINT ---
 
@@ -46,8 +67,11 @@ def get_admin_parameters(db: Session = Depends(get_db), current_user: models.Use
 
 @router.get("/{id}", response_model=ParameterDetail)
 def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    # Usiamo joinedload per caricare le domande in un'unica query efficiente
-    parameter = db.query(models.ParameterDef).options(joinedload(models.ParameterDef.questions)).filter(models.ParameterDef.id == id).first()
+    # Usiamo joinedload per le domande e selectinload per i log
+    parameter = db.query(models.ParameterDef).options(
+        joinedload(models.ParameterDef.questions),
+        selectinload(models.ParameterDef.change_logs)
+    ).filter(models.ParameterDef.id == id).first()
     if not parameter:
         raise HTTPException(status_code=404, detail="Parametro non trovato")
     return parameter
@@ -71,12 +95,14 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
         raise HTTPException(status_code=400, detail="ID duplicato o dati non validi.")
 
 @router.put("/{id}")
-def update_admin_parameter(id: str, item: ParameterBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Parametro non trovato")
 
-    for key, value in item.dict().items():
+    # Escludiamo is_active e change_note dal normale PUT
+    update_data = item.dict(exclude={'is_active', 'change_note'})
+    for key, value in update_data.items():
         setattr(db_item, key, value)
 
     # Blocca il salvataggio se il TUDO parser fallisce
@@ -86,6 +112,15 @@ def update_admin_parameter(id: str, item: ParameterBase, db: Session = Depends(g
         except ParseException as e:
             raise HTTPException(status_code=400, detail=f"Sintassi formula errata: {str(e)}")
 
+    # Registra il log di modifica se presente
+    if item.change_note and item.change_note.strip():
+        log = models.ParameterChangeLog(
+            parameter_id=id,
+            user_id=current_user.id,
+            change_note=item.change_note.strip()
+        )
+        db.add(log)
+
     try:
         db.commit()
         return db_item
@@ -93,6 +128,49 @@ def update_admin_parameter(id: str, item: ParameterBase, db: Session = Depends(g
         db.rollback()
         raise HTTPException(status_code=400, detail="Errore nell'aggiornamento.")
 
+
+@router.post("/{id}/deactivate")
+def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    # 1. Verifica Password
+    if not auth.verify_password(payload.password, current_user.hashed_password):
+        raise HTTPException(status_code=403, detail="Password errata. Impossibile disattivare.")
+
+    db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Parametro non trovato")
+
+    # 2. Verifica Dipendenze
+    used_in = db.query(models.ParameterDef).filter(
+        models.ParameterDef.is_active == True,
+        models.ParameterDef.implicational_condition.ilike(f"%{id}%")
+    ).all()
+
+    if used_in:
+        raise HTTPException(status_code=400, detail="Impossibile disattivare: il parametro è utilizzato nelle condizioni implicazionali di altri parametri attivi.")
+
+    # 3. Disattiva e logga
+    db_item.is_active = False
+
+    if payload.reason:
+        log = models.ParameterChangeLog(
+            parameter_id=id,
+            user_id=current_user.id,
+            change_note=f"DEACTIVATED. Reason: {payload.reason}"
+        )
+        db.add(log)
+
+    db.commit()
+    return {"detail": "Parametro disattivato con successo."}
+
+@router.post("/{id}/reactivate")
+def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Parametro non trovato")
+
+    db_item.is_active = True
+    db.commit()
+    return {"detail": "Parametro riattivato con successo."}
 
 
 # --- ENDPOINT PER LA VALIDAZIONE SINTASSI IN TEMPO REALE ---

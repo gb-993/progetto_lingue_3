@@ -64,7 +64,8 @@ export default function QuestionList() {
                             <td style={{maxWidth: '400px'}}>{q.text} {q.is_active === false ? <span className="badge badge--error">Inattiva</span> : ''}</td>
                             <td>{q.is_stop_question ? 'yes' : 'no'}</td>
                             <td className="row-actions">
-                                <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
+                                {/* Modifica: Rimanda alla pagina del parametro per garantire il contesto corretto */}
+                                <Link to={`/admin/parameters/${q.parameter_id}/edit`} className="btn">View Parameter</Link>
                             </td>
                         </tr>
                     ))}
