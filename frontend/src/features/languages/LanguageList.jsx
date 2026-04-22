@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api'; // Importiamo il nostro uffico postale centrale
+import api from '../../api';
 
 export default function LanguageList() {
     const [languages, setLanguages] = useState([]);
@@ -8,10 +8,13 @@ export default function LanguageList() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    // Recuperiamo il ruolo per la gestione della UI
+    const role = localStorage.getItem('role');
+
     useEffect(() => {
         const fetchLangs = async () => {
             try {
-                // Chiamata pulita: api sa già l'indirizzo base e ha già il token
+                // Questa chiamata ora restituirà dati diversi in base al ruolo (filtrati dal backend)
                 const res = await api.get('/api/admin/languages');
                 setLanguages(res.data || []);
             } catch (err) {
@@ -49,9 +52,12 @@ export default function LanguageList() {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
-                <div className="toolbar__add">
-                    <Link to="/languages/add" className="btn btn--primary">Add Language</Link>
-                </div>
+                {/* Bottone Add visibile solo ad Admin */}
+                {role === 'admin' && (
+                    <div className="toolbar__add">
+                        <Link to="/languages/add" className="btn btn--primary">Add Language</Link>
+                    </div>
+                )}
             </section>
 
             <div className="card" style={{padding: 0, overflow: 'hidden'}}>
@@ -75,11 +81,16 @@ export default function LanguageList() {
                             <td className="small">
                                 {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : "No coords"}
                             </td>
-                            {/* --- QUI LA MODIFICA --- */}
                             <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                                 <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
-                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
-                                <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
+
+                                {/* Azioni amministrative visibili solo ad Admin */}
+                                {role === 'admin' && (
+                                    <>
+                                        <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+                                        <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
+                                    </>
+                                )}
                             </td>
                         </tr>
                     ))}

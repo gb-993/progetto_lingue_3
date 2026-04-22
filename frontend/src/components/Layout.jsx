@@ -30,17 +30,22 @@ export default function Layout({ children }) {
                             </Link>
                         </li>
 
+                        {/* Voci visibili a Admin e Standard User */}
+                        {role !== 'public' && (
+                            <>
+                                <li><Link className={`btn ${isCurrent('/languages')}`} to="/languages">Languages</Link></li>
+                                <li><Link className={`btn ${isCurrent('/instructions')}`} to="/instructions">Instructions</Link></li>
+                                <li><Link className={`btn ${isCurrent('/glossary')}`} to="/glossary">Glossary</Link></li>
+                            </>
+                        )}
+
+                        {/* Strumenti esclusivi per Admin */}
                         {role === 'admin' && (
                             <>
                                 <li className="nav-divider-label">Admin Tools</li>
-                                <li><Link className={`btn ${isCurrent('/languages')}`} to="/languages">Languages</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
-
-                                {/* NUOVA VOCE MENU AGGIUNTA QUI */}
                                 <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
-
-                                <li><Link className={`btn ${isCurrent('/admin/glossary')}`} to="/admin/glossary">Glossary</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
                             </>
                         )}

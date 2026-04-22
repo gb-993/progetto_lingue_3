@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import models
-from dependencies import get_db, require_admin
+from dependencies import get_db, require_admin, get_current_user
 
 router = APIRouter(prefix="/api", tags=["Languages"])
 
@@ -54,16 +54,34 @@ def get_public_languages(db: Session = Depends(get_db)):
 
 
 @router.get("/admin/languages")
-def get_admin_languages(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    languages = db.query(models.Language).order_by(models.Language.position, models.Language.name_full).all()
+def get_admin_languages(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """
+    Restituisce le lingue.
+    Se Admin: tutte.
+    Se User: solo quelle assegnate.
+    """
+    query = db.query(models.Language)
+
+    if current_user.role != "admin":
+        query = query.filter(models.Language.assigned_user_id == current_user.id)
+
+    languages = query.order_by(models.Language.position, models.Language.name_full).all()
     return languages
 
 
 @router.get("/admin/languages/{id}")
-def get_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def get_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    """
+    Recupera una singola lingua con controllo permessi.
+    """
     language = db.query(models.Language).filter(models.Language.id == id).first()
     if not language:
         raise HTTPException(status_code=404, detail="Lingua non trovata")
+
+    # Se non è admin, deve essere l'assegnatario
+    if current_user.role != "admin" and language.assigned_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Accesso negato a questa lingua.")
+
     return language
 
 
@@ -121,7 +139,7 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="Impossibile aggiornare la lingua (ID duplicato o dati non validi).")
 
 
-@router.delete("/admin/languages/{id}")
+@router.get("/api/admin/languages/{id}")
 def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
@@ -134,4 +152,3 @@ def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: 
         db.rollback()
         raise HTTPException(status_code=409, detail="Impossibile eliminare la lingua: record collegati presenti")
     return {"detail": "Lingua eliminata con successo"}
-

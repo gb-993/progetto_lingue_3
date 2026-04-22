@@ -1,6 +1,9 @@
 from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime
+from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, relationship
+from datetime import datetime
 
 class Base(DeclarativeBase):
     pass
@@ -195,3 +198,17 @@ class LanguageParameterEval(Base):
     value_eval = Column(Enum("+", "-", "0", "?", name="param_values_eval"), nullable=True)
     warning_eval = Column(Boolean, default=False)
     language_parameter = relationship("LanguageParameter", back_populates="eval")
+
+
+# ==========================================
+# 5. CONTENUTI DINAMICI DEL SITO
+# ==========================================
+class SiteContent(Base):
+    __tablename__ = "site_contents"
+    key = Column(String(50), primary_key=True)  # Es: "instr_body"
+    content = Column(Text, nullable=False)      # Il codice HTML generato dall'editor
+    page = Column(String(100))                 # Riferimento alla pagina (es: "Instructions")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    updated_by = relationship("User")

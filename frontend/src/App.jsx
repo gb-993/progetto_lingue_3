@@ -25,6 +25,8 @@ import MyAccount from './features/accounts/MyAccount';
 import AccountCreate from './features/accounts/AccountCreate';
 import AccountAssign from './features/accounts/AccountAssign';
 import MotivationList from './features/motivations/MotivationList.jsx';
+import Instructions from './features/instructions/Instructions';
+
 
 export default function App() {
     return (
@@ -39,11 +41,15 @@ export default function App() {
                     <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
                     <Route path="/me" element={<Layout><MyAccount /></Layout>} />
 
-                    {/* ROTTE ESCLUSIVE ADMIN (Protette da AdminRoute) */}
-                    {/* Lingue */}
-                    <Route path="/languages" element={<AdminRoute><Layout><LanguageList /></Layout></AdminRoute>} />
+                    {/* ROTTE LINGUE (Aperte a Admin e User) */}
+                    <Route path="/languages" element={<Layout><LanguageList /></Layout>} />
+                    <Route path="/languages/:id/data" element={<Layout><LanguageData /></Layout>} />
+                    <Route path="/instructions" element={<Layout><Instructions /></Layout>} />
+
+                    {/* ROTTE ESCLUSIVE ADMIN */}
                     <Route path="/languages/add" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
                     <Route path="/languages/:id/edit" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
+                    <Route path="/languages/:id/debug" element={<AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute>} />
 
                     {/* Glossario */}
                     <Route path="/admin/glossary" element={<AdminRoute><Layout><GlossaryList /></Layout></AdminRoute>} />
@@ -67,10 +73,6 @@ export default function App() {
 
                     {/* Motivations */}
                     <Route path="/admin/motivations" element={<AdminRoute><Layout><MotivationList /></Layout></AdminRoute>} />
-
-                    {/*compilazione*/}
-                    <Route path="/languages/:id/data" element={<AdminRoute><Layout><LanguageData /></Layout></AdminRoute>} />
-                    <Route path="/languages/:id/debug" element={<AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute>} />
 
                 </Routes>
             </Router>

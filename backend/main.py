@@ -1,7 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, glossary, languages, parameters, questions, users, motivations, compilation
+# --- AGGIUNTO: Importiamo models e l'engine del database ---
+import models
+from database import engine
+
+# --- AGGIUNTO: Crea le tabelle mancanti nel database all'avvio ---
+models.Base.metadata.create_all(bind=engine)
+
+from routers import auth, glossary, languages, parameters, questions, users, motivations, compilation, instructions
 
 app = FastAPI(title="PCM-Hub API")
 
@@ -21,3 +28,4 @@ app.include_router(questions.router)
 app.include_router(users.router)
 app.include_router(motivations.router)
 app.include_router(compilation.router)
+app.include_router(instructions.router)
