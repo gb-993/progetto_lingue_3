@@ -6,14 +6,29 @@ from sqlalchemy.orm import Session
 import models
 from dependencies import get_db, require_admin
 
+# Router per Admin (CRUD completo)
 router = APIRouter(prefix="/api/admin/glossary", tags=["Glossary"])
 
+# Router per Utenti / Pubblico (Solo lettura)
+public_router = APIRouter(prefix="/api/glossary", tags=["Glossary Public"])
 
 class GlossaryBase(BaseModel):
     word: str
     description: str
 
 
+# ==========================================
+# ENDPOINT UTENTI (Sola lettura)
+# ==========================================
+@public_router.get("")
+def get_public_glossary(db: Session = Depends(get_db)):
+    glossary_items = db.query(models.Glossary).order_by(models.Glossary.word).all()
+    return glossary_items
+
+
+# ==========================================
+# ENDPOINT ADMIN
+# ==========================================
 @router.get("")
 def get_admin_glossary(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     glossary_items = db.query(models.Glossary).order_by(models.Glossary.word).all()

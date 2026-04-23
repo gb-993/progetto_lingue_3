@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 
 export default function GlossaryForm() {
     const { id } = useParams();
@@ -45,7 +45,8 @@ export default function GlossaryForm() {
             } else {
                 await api.post('/api/admin/glossary', formData);
             }
-            navigate('/admin/glossary');
+            // CORREZIONE: Ora reindirizza alla pagina unificata corretta
+            navigate('/glossary');
         } catch (err) {
             console.error(err);
             setError(err.response?.data?.detail || 'Errore durante il salvataggio del termine.');
@@ -74,7 +75,8 @@ export default function GlossaryForm() {
 
                     <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
                         <button type="submit" className="btn btn--primary">Salva Termine</button>
-                        <Link to="/admin/glossary" className="btn">Annulla</Link>
+                        {/* CORREZIONE: Anche il tasto annulla punta alla pagina corretta */}
+                        <Link to="/glossary" className="btn">Annulla</Link>
                     </div>
                 </form>
             </div>

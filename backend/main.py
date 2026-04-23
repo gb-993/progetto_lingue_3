@@ -8,7 +8,15 @@ from database import engine
 # --- AGGIUNTO: Crea le tabelle mancanti nel database all'avvio ---
 models.Base.metadata.create_all(bind=engine)
 
-from routers import auth, glossary, languages, parameters, questions, users, motivations, compilation, instructions
+from routers import (auth,
+                     glossary,
+                     languages,
+                     parameters,
+                     questions,
+                     users,
+                     motivations,
+                     compilation,
+                     instructions)
 
 app = FastAPI(title="PCM-Hub API")
 
@@ -22,6 +30,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(glossary.router)
+app.include_router(glossary.public_router)
 app.include_router(parameters.router)
 app.include_router(languages.router)
 app.include_router(questions.router)

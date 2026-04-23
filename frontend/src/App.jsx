@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-// Importa i componenti di layout e protezione
 import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 
@@ -27,7 +26,6 @@ import AccountAssign from './features/accounts/AccountAssign';
 import MotivationList from './features/motivations/MotivationList.jsx';
 import Instructions from './features/instructions/Instructions';
 
-
 export default function App() {
     return (
         <AuthProvider>
@@ -41,6 +39,9 @@ export default function App() {
                     <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
                     <Route path="/me" element={<Layout><MyAccount /></Layout>} />
 
+                    {/* GLOSSARIO UNIFICATO (Visibile a tutti, ma con permessi interni) */}
+                    <Route path="/glossary" element={<Layout><GlossaryList /></Layout>} />
+
                     {/* ROTTE LINGUE (Aperte a Admin e User) */}
                     <Route path="/languages" element={<Layout><LanguageList /></Layout>} />
                     <Route path="/languages/:id/data" element={<Layout><LanguageData /></Layout>} />
@@ -51,8 +52,7 @@ export default function App() {
                     <Route path="/languages/:id/edit" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
                     <Route path="/languages/:id/debug" element={<AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute>} />
 
-                    {/* Glossario */}
-                    <Route path="/admin/glossary" element={<AdminRoute><Layout><GlossaryList /></Layout></AdminRoute>} />
+                    {/* Form del Glossario (Aggiunta/Modifica riservata all'Admin) */}
                     <Route path="/admin/glossary/add" element={<AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute>} />
                     <Route path="/admin/glossary/:id/edit" element={<AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute>} />
 
