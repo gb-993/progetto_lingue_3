@@ -212,3 +212,73 @@ class SiteContent(Base):
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     updated_by = relationship("User")
+
+
+# ==========================================
+# 6. BACKUP E SNAPSHOT (Submissions)
+# ==========================================
+class Submission(Base):
+    __tablename__ = "submissions"
+    id = Column(Integer, primary_key=True, index=True)
+    language_id = Column(String(10), ForeignKey("languages.id", ondelete="CASCADE"), nullable=False)
+    submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    submitted_at = Column(DateTime, default=datetime.utcnow, index=True)
+    note = Column(Text, default="")
+
+    # Relazioni
+    language = relationship("Language")
+    submitted_by = relationship("User")
+    answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
+    params = relationship("SubmissionParam", back_populates="submission", cascade="all, delete-orphan")
+    examples = relationship("SubmissionExample", back_populates="submission", cascade="all, delete-orphan")
+    answer_motivations = relationship("SubmissionAnswerMotivation", back_populates="submission", cascade="all, delete-orphan")
+
+class SubmissionAnswer(Base):
+    __tablename__ = "submission_answers"
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+
+    # Salviamo solo il codice, senza FK rigida verso 'questions' per preservare lo storico
+    question_code = Column(String(40), nullable=False)
+    response_text = Column(String(50), nullable=True) # "yes", "no", ecc.
+    comments = Column(Text, nullable=True)
+
+    submission = relationship("Submission", back_populates="answers")
+
+class SubmissionExample(Base):
+    __tablename__ = "submission_examples"
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+
+    question_code = Column(String(40), nullable=False)
+    textarea = Column(Text, nullable=True)
+    transliteration = Column(Text, nullable=True)
+    gloss = Column(Text, nullable=True)
+    translation = Column(Text, nullable=True)
+    reference = Column(Text, nullable=True)
+
+    submission = relationship("Submission", back_populates="examples")
+
+class SubmissionAnswerMotivation(Base):
+    __tablename__ = "submission_answer_motivations"
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+
+    question_code = Column(String(40), nullable=False)
+    motivation_code = Column(String(50), nullable=False)
+
+    submission = relationship("Submission", back_populates="answer_motivations")
+
+class SubmissionParam(Base):
+    __tablename__ = "submission_params"
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+
+    parameter_id = Column(String(10), nullable=False)
+    value_orig = Column(String(10), nullable=True)
+    warning_orig = Column(Boolean, default=False)
+    value_eval = Column(String(10), nullable=True)
+    warning_eval = Column(Boolean, default=False)
+    evaluated_at = Column(DateTime, default=datetime.utcnow)
+
+    submission = relationship("Submission", back_populates="params")
