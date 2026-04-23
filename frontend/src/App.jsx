@@ -4,7 +4,7 @@ import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 
 import PublicHome from './features/public/PublicHome';
-import HowToCite from './features/public/HowToCite'; // <-- NUOVO
+import HowToCite from './features/public/HowToCite';
 import Login from './features/auth/Login';
 import Dashboard from './features/dashboard/Dashboard';
 
@@ -32,6 +32,8 @@ import BackupFolder from './features/backups/BackupFolder';
 import BackupDetail from './features/backups/BackupDetail';
 import EditSiteContent from './features/public/EditSiteContent';
 import TableA from './features/tablea/TableA';
+import LogicTree  from "./features/queries/LogicTree.jsx";
+import QueriesDashboard from "./features/queries/QueriesDashboard.jsx";
 
 export default function App() {
     return (
@@ -82,8 +84,10 @@ export default function App() {
                     <Route path="/admin/backups/submissions/:id" element={<AdminRoute><Layout><BackupDetail /></Layout></AdminRoute>} />
 
                     <Route path="/admin/edit-content/:key" element={<AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute>} />
-
                     <Route path="/tablea" element={<Layout><TableA /></Layout>} />
+                    <Route path="/tablea/:id" element={<Layout><TableA /></Layout>} />
+                    <Route path="/queries" element={<Layout><QueriesDashboard /></Layout>} />
+
 
                 </Routes>
             </Router>

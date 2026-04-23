@@ -172,3 +172,57 @@ def pretty_print_expression(expression: str) -> str:
         raise ValueError(f"Nodo non gestito in render: {n}")
 
     return render(root)
+
+def trace_evaluation_tree(node, values: dict[str, str]) -> dict:
+    """
+    NUOVA FUNZIONE: Genera un albero JSON strutturato per il diagramma grafico in React.
+    Sostituisce il vecchio print_circuit_diagram in ASCII-art.
+    """
+    if isinstance(node, tuple):
+        sign, param = node
+        actual_val = values.get(param)
+        res = (actual_val == sign)
+        return {
+            "type": "LEAF", "label": f"{sign}{param}",
+            "actual_value": actual_val or "None", "result": res, "children": []
+        }
+
+    node = _as_list(node)
+
+    # NOT <expr>
+    if isinstance(node, list) and len(node) == 2 and str(node[0]).lower() == 'not':
+        child_trace = trace_evaluation_tree(node[1], values)
+        res = not child_trace["result"]
+        return {"type": "NOT", "label": "NOT", "result": res, "children": [child_trace]}
+
+    # Catene di AND/OR: [A, op, B, op, C, ...]
+    if isinstance(node, list) and len(node) >= 3 and len(node) % 2 == 1:
+        op_str = str(node[1]).lower()
+        op_txt = 'AND' if op_str in ('&', 'and') else 'OR'
+
+        children_traces = [trace_evaluation_tree(node[i], values) for i in range(0, len(node), 2)]
+
+        if op_txt == 'AND':
+            res = all(c["result"] for c in children_traces)
+        else:
+            res = any(c["result"] for c in children_traces)
+
+        return {"type": "OPERATOR", "label": op_txt, "result": res, "children": children_traces}
+
+    # Caso binario classico (esattamente come nel tuo eval_node)
+    if isinstance(node, list) and len(node) == 3:
+        left, op, right = node
+        op_str = str(op).lower()
+        op_txt = 'AND' if op_str in ('&', 'and') else 'OR'
+
+        left_trace = trace_evaluation_tree(left, values)
+        right_trace = trace_evaluation_tree(right, values)
+
+        if op_txt == 'AND':
+            res = left_trace["result"] and right_trace["result"]
+        else:
+            res = left_trace["result"] or right_trace["result"]
+
+        return {"type": "OPERATOR", "label": op_txt, "result": res, "children": [left_trace, right_trace]}
+
+    return {"type": "ERROR", "label": "Unknown", "result": False, "children": []}
