@@ -48,6 +48,7 @@ export default function Layout({ children }) {
                                 <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
                                 <li><Link className={`btn ${isCurrent('/admin/backups')}`} to="/admin/backups">Backups</Link></li>
+                                <li><Link className={`btn ${isCurrent('/tablea')}`} to="/tablea">Table A</Link></li>
                             </>
                         )}
                     </ul>

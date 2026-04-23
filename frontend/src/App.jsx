@@ -31,7 +31,7 @@ import BackupList from './features/backups/BackupList';
 import BackupFolder from './features/backups/BackupFolder';
 import BackupDetail from './features/backups/BackupDetail';
 import EditSiteContent from './features/public/EditSiteContent';
-
+import TableA from './features/tablea/TableA';
 
 export default function App() {
     return (
@@ -82,6 +82,8 @@ export default function App() {
                     <Route path="/admin/backups/submissions/:id" element={<AdminRoute><Layout><BackupDetail /></Layout></AdminRoute>} />
 
                     <Route path="/admin/edit-content/:key" element={<AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute>} />
+
+                    <Route path="/tablea" element={<Layout><TableA /></Layout>} />
 
                 </Routes>
             </Router>

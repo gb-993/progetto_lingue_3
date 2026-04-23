@@ -38,6 +38,7 @@ class Language(Base):
 
     family = Column(String(255), default="")
     top_level_family = Column(String(255), default="")
+    grp = Column(String(255), default="")
     latitude = Column(Numeric(precision=10, scale=6), nullable=True)
     longitude = Column(Numeric(precision=11, scale=6), nullable=True)
     historical_language = Column(Boolean, default=False)
@@ -96,7 +97,7 @@ class Question(Base):
     id = Column(String(40), primary_key=True)
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
     text = Column(Text, nullable=False)
-
+    template_type = Column(String(100), default="")
     instruction = Column(Text, nullable=True)
     instruction_yes = Column(Text, nullable=True)
     instruction_no = Column(Text, nullable=True)
