@@ -10,13 +10,24 @@ router = APIRouter(prefix="/api/queries", tags=["Queries"])
 # --- Helper Functions (Migrate da views.py) ---
 def _final_map_for_language(db: Session, lang_id: str) -> Dict[str, str]:
     out = {}
-    evals = db.query(models.LanguageParameterEval).join(models.LanguageParameter).filter(
-        models.LanguageParameter.language_id == lang_id
-    ).all()
-    for e in evals: out[e.language_parameter.parameter_id] = e.value_eval
+    # Selezioniamo direttamente parameter_id e value_eval per evitare N+1 query
+    # (non triggera lazy-load della relazione language_parameter su ogni eval)
+    rows = db.query(
+        models.LanguageParameter.parameter_id,
+        models.LanguageParameterEval.value_eval
+    ).join(
+        models.LanguageParameterEval,
+        models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id
+    ).filter(models.LanguageParameter.language_id == lang_id).all()
+    for pid, val in rows:
+        out[pid] = val
 
-    origs = db.query(models.LanguageParameter).filter(models.LanguageParameter.language_id == lang_id).all()
-    for o in origs: out.setdefault(o.parameter_id, o.value_orig)
+    origs = db.query(
+        models.LanguageParameter.parameter_id,
+        models.LanguageParameter.value_orig
+    ).filter(models.LanguageParameter.language_id == lang_id).all()
+    for pid, val in origs:
+        out.setdefault(pid, val)
     return out
 
 def _extract_tokens(expr: str) -> List[str]:
@@ -60,16 +71,19 @@ def query_2_distribution(param_id: str, db: Session = Depends(get_db)):
     all_langs = {l.id: l.name_full for l in db.query(models.Language).all()}
 
     plus, minus, zero = [], [], []
-    evals = db.query(models.LanguageParameterEval).join(models.LanguageParameter).filter(
-        models.LanguageParameter.parameter_id == param_id
-    ).all()
+    # Selezioniamo direttamente le colonne per evitare N+1 query sulla relazione language_parameter
+    eval_rows = db.query(
+        models.LanguageParameter.language_id,
+        models.LanguageParameterEval.value_eval
+    ).join(
+        models.LanguageParameterEval,
+        models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id
+    ).filter(models.LanguageParameter.parameter_id == param_id).all()
     seen_langs = set()
 
-    for e in evals:
-        lang_id = e.language_parameter.language_id
+    for lang_id, val in eval_rows:
         if not lang_id: continue
         seen_langs.add(lang_id)
-        val = e.value_eval
         item = {"id": lang_id, "name": all_langs.get(lang_id, "Unknown")}
 
         if val == "+": plus.append(item)
@@ -96,7 +110,11 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
 
     cond = (param.implicational_condition or "").strip()
     if not cond:
-        return {"no_condition": True}
+        return {
+            "no_condition": True,
+            "parameter": {"id": param.id, "name": param.name},
+            "language": {"id": lang.id, "name": lang.name_full}
+        }
 
     vals_map = _final_map_for_language(db, lang_id)
     parser = build_parser()
@@ -113,7 +131,11 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
             "tree": tree
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e),
+            "parameter": {"id": param.id, "name": param.name},
+            "language": {"id": lang.id, "name": lang.name_full}
+        }
 
 # --- Q4, Q5, Q6: Parameters with value +, -, 0 ---
 @router.get("/q456")

@@ -126,15 +126,18 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         if ans_payload.response_text == "yes":
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
-                    db.add(models.Example(answer_id=answer.id, **ex.dict(exclude={'id'})))
+                    db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))
 
+    db.commit()
+    recompute_and_persist_language_parameter(language.id, param_id, db)
     db.commit()
     return {"detail": "Parametro salvato correttamente"}
 
-# --- WORKFLOW ENDPOINTS (Invariati) ---
+# --- WORKFLOW ENDPOINTS ---
 @router.post("/{lang_id}/workflow/submit")
-def submit_language(lang_id: str, db: Session = Depends(get_db)):
+def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
     db.query(models.Answer).filter(
         models.Answer.language_id == language.id,
         models.Answer.status.in_(['pending', 'rejected'])
@@ -143,8 +146,9 @@ def submit_language(lang_id: str, db: Session = Depends(get_db)):
     return {"detail": "Inviato"}
 
 @router.post("/{lang_id}/workflow/approve")
-def approve_language(lang_id: str, db: Session = Depends(get_db)):
+def approve_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
     db.query(models.Answer).filter(models.Answer.language_id == language.id, models.Answer.status == 'waiting_for_approval').update({"status": "approved"})
     db.commit()
     return {"detail": "Approvato"}
@@ -245,12 +249,15 @@ def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: 
     active_params = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
     for (pid,) in active_params:
         recompute_and_persist_language_parameter(language.id, pid, db)
+    db.commit()
 
     # 2. Lancia il DAG
     try:
         report = run_dag_for_language(language.id, db)
+        db.commit()
         return {
             "detail": f"DAG completato. Elaborati: {len(report.processed)}, Forzati a zero: {len(report.forced_zero)}, Warning propagati: {len(report.warnings_propagated)}."
         }
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore critico durante l'esecuzione del DAG: {str(e)}")

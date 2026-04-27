@@ -26,6 +26,9 @@ class QuestionBase(BaseModel):
 class QuestionUpdate(QuestionBase):
     change_note: Optional[str] = ""
 
+class QuestionCreate(QuestionBase):
+    change_note: Optional[str] = ""
+
 # --- ENDPOINT ---
 @router.get("")
 def get_admin_questions(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
@@ -53,7 +56,7 @@ def get_admin_question(id: str, db: Session = Depends(get_db), current_user: mod
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_admin_question(item: QuestionBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == item.parameter_id).first()
     if not param:
         raise HTTPException(status_code=400, detail="Il parametro associato non esiste.")
@@ -76,8 +79,17 @@ def create_admin_question(item: QuestionBase, db: Session = Depends(get_db), cur
         if item.allowed_motivations:
             for mot_id in item.allowed_motivations:
                 db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
-            db.commit()
 
+        # Registra il log di creazione nel parametro genitore (stessa logica del PUT)
+        if item.change_note and item.change_note.strip():
+            log = models.ParameterChangeLog(
+                parameter_id=item.parameter_id,
+                user_id=current_user.id,
+                change_note=f"[Domanda {item.id}] Nuova: {item.change_note.strip()}"
+            )
+            db.add(log)
+
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()

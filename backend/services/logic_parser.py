@@ -128,10 +128,14 @@ def pretty_print_expression(expression: str) -> str:
       +FGM | +FGA    ->  (FGM=+ OR FGA=+)
       ... & -FGK     ->  ... AND FGK=-
       not +FGM       ->  NOT (FGM=+)
+    Espressione vuota/None -> stringa vuota (parametri senza condizione).
     """
+    expr = (expression or "").strip()
+    if not expr:
+        return ""
     parser = build_parser()
     try:
-        res = parser.parseString((expression or ""), parseAll=True)
+        res = parser.parseString(expr, parseAll=True)
         if len(res) == 0:
             raise ParseException("empty parse")
         root = _as_list(res[0])

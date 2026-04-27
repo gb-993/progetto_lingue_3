@@ -192,6 +192,8 @@ class LanguageParameter(Base):
     warning_orig = Column(Boolean, default=False)
     eval = relationship("LanguageParameterEval", back_populates="language_parameter", uselist=False, cascade="all, delete-orphan")
 
+    __table_args__ = (UniqueConstraint('language_id', 'parameter_id', name='uq_language_parameter_lang_param'),)
+
 class LanguageParameterEval(Base):
     __tablename__ = "language_parameter_evals"
     id = Column(Integer, primary_key=True)

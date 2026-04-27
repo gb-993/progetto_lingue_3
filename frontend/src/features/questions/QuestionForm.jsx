@@ -72,6 +72,13 @@ export default function QuestionForm() {
 
                 } else if (paramFromUrl) {
                     setFormData((prev) => ({ ...prev, parameter_id: paramFromUrl }));
+                    // Anche in creazione carichiamo i log del parametro genitore per il recap
+                    try {
+                        const paramRes = await api.get(`/api/admin/parameters/${paramFromUrl}`);
+                        setChangeLogs(paramRes.data.change_logs || []);
+                    } catch(err) {
+                        console.warn("Impossibile caricare i log del parametro", err);
+                    }
                 }
             } catch {
                 setError('Impossibile caricare i dati.');
@@ -83,6 +90,17 @@ export default function QuestionForm() {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+
+        // In creazione, se cambia il parametro genitore aggiorniamo i log mostrati nel recap
+        if (!isEditMode && name === 'parameter_id') {
+            if (value) {
+                api.get(`/api/admin/parameters/${value}`)
+                    .then(res => setChangeLogs(res.data.change_logs || []))
+                    .catch(() => setChangeLogs([]));
+            } else {
+                setChangeLogs([]);
+            }
+        }
     };
 
     const selectedOptions = allMotivations
@@ -154,7 +172,9 @@ export default function QuestionForm() {
         return sortedA.every((val, index) => val === sortedB[index]);
     };
 
-    const isDirty = isEditMode && initialData && (
+    // In creazione la nota è sempre richiesta (l'intera domanda è "nuova"),
+    // in modifica solo se almeno un campo è cambiato.
+    const isDirty = !isEditMode || (initialData && (
         safeString(formData.text) !== safeString(initialData.text) ||
         safeString(formData.instruction) !== safeString(initialData.instruction) ||
         safeString(formData.instruction_yes) !== safeString(initialData.instruction_yes) ||
@@ -162,7 +182,7 @@ export default function QuestionForm() {
         formData.is_stop_question !== initialData.is_stop_question ||
         formData.is_active !== initialData.is_active ||
         !isArraysEqual(formData.allowed_motivations, initialData.allowed_motivations)
-    );
+    ));
 
     const cancelLink = formData.parameter_id
         ? `/admin/parameters/${formData.parameter_id}/edit`
@@ -247,83 +267,93 @@ export default function QuestionForm() {
                         </div>
                     </div>
 
-                    {/* --- SEZIONE MOTIVAZIONE MODIFICA (Sempre visibile in Edit Mode) --- */}
-                    {isEditMode && (
-                        <div style={{
-                            background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
-                            padding: '1.5rem',
-                            borderRadius: '8px',
-                            border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
-                            marginTop: '1rem'
-                        }}>
-                            <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
-                                {isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note (Parent Parameter)'}
-                            </h4>
-                            <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
-                                {isDirty
+                    {/* --- SEZIONE MOTIVAZIONE (Visibile sia in creazione che in modifica) --- */}
+                    <div style={{
+                        background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
+                        padding: '1.5rem',
+                        borderRadius: '8px',
+                        border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
+                        marginTop: '1rem'
+                    }}>
+                        <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
+                            {!isEditMode
+                                ? '⚠️ Nuova Domanda — Nota Obbligatoria'
+                                : (isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note (Parent Parameter)')}
+                        </h4>
+                        <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                            {!isEditMode
+                                ? 'Stai aggiungendo una nuova domanda. Inserisci una descrizione che verrà salvata nello storico del parametro genitore.'
+                                : (isDirty
                                     ? 'Hai modificato i dati di questa domanda. Devi inserire una motivazione per poter salvare.'
-                                    : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota. La nota verrà salvata nello storico del parametro genitore.'}
-                            </p>
+                                    : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota. La nota verrà salvata nello storico del parametro genitore.')}
+                        </p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                <div>
-                                    <textarea
-                                        value={changeNote}
-                                        onChange={e => setChangeNote(e.target.value)}
-                                        rows="4"
-                                        placeholder="Descrivi il motivo della modifica..."
-                                        disabled={!isDirty}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.5rem',
-                                            borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
-                                            borderRadius: '4px',
-                                            backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
-                                            cursor: !isDirty ? 'not-allowed' : 'text',
-                                            opacity: !isDirty ? 0.7 : 1
-                                        }}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="btn btn--small"
-                                        style={{
-                                            marginTop: '0.5rem',
-                                            opacity: !isDirty ? 0.5 : 1,
-                                            cursor: !isDirty ? 'not-allowed' : 'pointer'
-                                        }}
-                                        disabled={!isDirty}
-                                        onClick={() => setChangeNote("Modifica di test")}
-                                    >
-                                        Modifica di test
-                                    </button>
-                                </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div>
+                                <textarea
+                                    value={changeNote}
+                                    onChange={e => setChangeNote(e.target.value)}
+                                    rows="4"
+                                    placeholder={!isEditMode
+                                        ? "Descrivi la nuova domanda..."
+                                        : "Descrivi il motivo della modifica..."}
+                                    disabled={!isDirty}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
+                                        borderRadius: '4px',
+                                        backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
+                                        cursor: !isDirty ? 'not-allowed' : 'text',
+                                        opacity: !isDirty ? 0.7 : 1
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn--small"
+                                    style={{
+                                        marginTop: '0.5rem',
+                                        opacity: !isDirty ? 0.5 : 1,
+                                        cursor: !isDirty ? 'not-allowed' : 'pointer'
+                                    }}
+                                    disabled={!isDirty}
+                                    onClick={() => setChangeNote(isEditMode ? "Modifica di test" : "Nuova domanda di test")}
+                                >
+                                    {isEditMode ? 'Modifica di test' : 'Nuova di test'}
+                                </button>
+                            </div>
 
-                                <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
-                                    <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Ultime Modifiche (Parametro: {formData.parameter_id})</h5>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {changeLogs
-                                            .filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED"))
-                                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                                            .map(log => (
-                                                <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
-                                                    <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
-                                                </div>
-                                            ))
-                                        }
-                                        {changeLogs.filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
-                                            <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
-                                        )}
-                                    </div>
+                            <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
+                                <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>
+                                    Ultime Modifiche {formData.parameter_id ? `(Parametro: ${formData.parameter_id})` : ''}
+                                </h5>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {changeLogs
+                                        .filter(log => log.change_note !== "Modifica di test"
+                                            && !log.change_note.startsWith("Nuova domanda di test")
+                                            && !log.change_note.startsWith("DEACTIVATED"))
+                                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                        .map(log => (
+                                            <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
+                                                <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
+                                            </div>
+                                        ))
+                                    }
+                                    {changeLogs.filter(log => log.change_note !== "Modifica di test"
+                                        && !log.change_note.startsWith("Nuova domanda di test")
+                                        && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
+                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
 
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
                         <button
                             type="submit"
                             className="btn btn--primary"
-                            disabled={isLoading || (isEditMode && (!isDirty || !changeNote.trim()))}
+                            disabled={isLoading || !isDirty || !changeNote.trim()}
                         >
                             {isLoading ? 'Saving...' : 'Save Question'}
                         </button>
