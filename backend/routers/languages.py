@@ -66,7 +66,22 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
         query = query.filter(models.Language.assigned_user_id == current_user.id)
 
     languages = query.order_by(models.Language.position, models.Language.name_full).all()
-    return languages
+    return [{
+        "id": l.id,
+        "name_full": l.name_full,
+        "position": l.position,
+        "family": l.family,
+        "top_level_family": l.top_level_family,
+        "grp": l.grp,
+        "latitude": float(l.latitude) if l.latitude is not None else None,
+        "longitude": float(l.longitude) if l.longitude is not None else None,
+        "historical_language": l.historical_language,
+        "assigned_user_id": l.assigned_user_id,
+        "status": l.status,
+        "rejection_note": l.rejection_note,
+        "submitted_at": l.submitted_at.isoformat() if l.submitted_at else None,
+        "reviewed_at": l.reviewed_at.isoformat() if l.reviewed_at else None,
+    } for l in languages]
 
 
 @router.get("/admin/languages/{id}")

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../../api';
 import QuestionRow from './QuestionRow';
 
-export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly }) {
+export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly, allExamples = [] }) {
     const [isSaving, setIsSaving] = useState(false);
 
     // Stato locale: mappa { [questionId]: { response_text, comments, motivation_ids, examples } }
@@ -21,6 +21,10 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly 
         return initial;
     });
 
+    // Fingerprint del blocco al caricamento — usato per optimistic concurrency.
+    // Aggiornato dopo ogni save riuscito così salvataggi consecutivi non triggerano falsi conflitti.
+    const [blockLastModified, setBlockLastModified] = useState(parameter.last_modified || null);
+
     const updateAnswer = (qId, newData) => {
         setLocalAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], ...newData } }));
     };
@@ -30,12 +34,32 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly 
         try {
             const payload = {
                 is_unsure: isUnsure,
-                answers: Object.values(localAnswers)
+                answers: Object.values(localAnswers),
+                expected_last_modified: blockLastModified,
             };
-            await api.post(`/api/languages/${langId}/parameters/${parameter.id}/save_block`, payload);
-            onSaved(); // Ricarica dati e vai avanti
+            const res = await api.post(`/api/languages/${langId}/parameters/${parameter.id}/save_block`, payload);
+            // Aggiorna il fingerprint locale (utile se l'utente continua senza onSaved che rimonta il componente)
+            if (res.data && res.data.last_modified) {
+                setBlockLastModified(res.data.last_modified);
+            }
+            onSaved();
         } catch (err) {
-            alert("Errore nel salvataggio del blocco.");
+            // 409 = blocco modificato da un'altra sessione (es. admin in parallelo)
+            if (err.response?.status === 409) {
+                const detail = err.response?.data?.detail;
+                const msg = (detail && typeof detail === 'object' && detail.message)
+                    ? detail.message
+                    : (typeof detail === 'string' ? detail : null);
+                if (msg && msg.toLowerCase().includes('modificat')) {
+                    alert(msg + "\n\nLe tue modifiche locali NON sono state salvate. La pagina verrà ricaricata.");
+                    onSaved(); // forza il refetch upstream
+                    return;
+                }
+                alert(detail?.message || detail || "Conflitto: ricarica la pagina.");
+                return;
+            }
+            const detail = err.response?.data?.detail;
+            alert(typeof detail === 'string' ? detail : "Errore nel salvataggio del blocco.");
         } finally {
             setIsSaving(false);
         }
@@ -56,20 +80,27 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly 
                         value={localAnswers[q.id]}
                         onChange={(newData) => updateAnswer(q.id, newData)}
                         isReadOnly={isReadOnly}
+                        allExamples={allExamples}
+                        currentLangId={langId}
                     />
                 ))}
             </div>
 
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd' }}>
+                {isReadOnly && (
+                    <div style={{ padding: '0.75rem 1rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontSize: '0.9rem' }}>
+                        🔒 Compilazione bloccata dallo stato corrente della lingua. Le modifiche non sono salvabili.
+                    </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
                     <span>Tutto pronto e verificato?</span>
-                    <button className="btn btn--ok" onClick={() => handleFinalSave(false)} disabled={isSaving}>
+                    <button className="btn btn--ok" onClick={() => handleFinalSave(false)} disabled={isSaving || isReadOnly}>
                         {isSaving ? 'Salvataggio...' : `Confident -> Next ${parameter.id}`}
                     </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
                     <span>Hai dei dubbi? Segnala per dopo.</span>
-                    <button className="btn btn--bad" onClick={() => handleFinalSave(true)} disabled={isSaving}>
+                    <button className="btn btn--bad" onClick={() => handleFinalSave(true)} disabled={isSaving || isReadOnly}>
                         {isSaving ? 'Salvataggio...' : 'Unsure -> Next'}
                     </button>
                 </div>

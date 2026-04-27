@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
+import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 
@@ -25,6 +26,8 @@ export default function QuestionForm() {
 
     const [parameters, setParameters] = useState([]);
     const [allMotivations, setAllMotivations] = useState([]);
+    const [allQuestions, setAllQuestions] = useState([]);
+    const [importedFrom, setImportedFrom] = useState(null);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -38,12 +41,14 @@ export default function QuestionForm() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [paramsRes, motsRes] = await Promise.all([
+                const [paramsRes, motsRes, qsRes] = await Promise.all([
                     api.get('/api/admin/parameters'),
-                    api.get('/api/admin/motivations?include_inactive=false')
+                    api.get('/api/admin/motivations?include_inactive=false'),
+                    api.get('/api/admin/questions')
                 ]);
                 setParameters(paramsRes.data || []);
                 setAllMotivations(motsRes.data || []);
+                setAllQuestions(qsRes.data || []);
 
                 if (isEditMode) {
                     const questionRes = await api.get(`/api/admin/questions/${id}`);
@@ -100,6 +105,55 @@ export default function QuestionForm() {
             } else {
                 setChangeLogs([]);
             }
+        }
+    };
+
+    // Lista delle domande del parametro corrente (per il pannello "Existing in this parameter")
+    const currentParamQuestions = useMemo(() => {
+        if (!formData.parameter_id) return [];
+        return allQuestions
+            .filter(q => q.parameter_id === formData.parameter_id)
+            .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    }, [allQuestions, formData.parameter_id]);
+
+    // Opzioni raggruppate per parametro per il select di import
+    const groupedQuestionOptions = useMemo(() => {
+        return parameters
+            .map(p => {
+                const opts = allQuestions
+                    .filter(q => q.parameter_id === p.id)
+                    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+                    .map(q => {
+                        const txt = (q.text || '').trim();
+                        const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
+                        return { value: q.id, label: `${q.id} — ${snippet}` };
+                    });
+                return { label: `${p.id} - ${p.name}`, options: opts };
+            })
+            .filter(g => g.options.length > 0);
+    }, [parameters, allQuestions]);
+
+    const handleImportQuestion = async (selected) => {
+        if (!selected) {
+            setImportedFrom(null);
+            return;
+        }
+        try {
+            const res = await api.get(`/api/admin/questions/${selected.value}`);
+            const q = res.data;
+            // Non sovrascriviamo id (deve essere nuovo) né parameter_id (è il corrente)
+            setFormData(prev => ({
+                ...prev,
+                text: q.text || '',
+                instruction: q.instruction || '',
+                instruction_yes: q.instruction_yes || '',
+                instruction_no: q.instruction_no || '',
+                is_stop_question: q.is_stop_question ?? false,
+                allowed_motivations: q.allowed_motivations || []
+            }));
+            setImportedFrom(selected);
+        } catch {
+            alert("Errore nell'import della domanda selezionata.");
         }
     };
 
@@ -198,6 +252,63 @@ export default function QuestionForm() {
                 {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                    {/* --- IMPORT / EXISTING (solo in creazione) --- */}
+                    {!isEditMode && (
+                        <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Import / Existing</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
+                                        Importa da un'altra domanda (opzionale)
+                                    </label>
+                                    <p className="small muted" style={{ marginBottom: '0.5rem' }}>
+                                        Carica testo, istruzioni, motivazioni e flag stop da una domanda esistente.
+                                        L'ID e il parametro restano quelli che hai scelto qui.
+                                    </p>
+                                    <Select
+                                        isClearable
+                                        options={groupedQuestionOptions}
+                                        value={importedFrom}
+                                        onChange={handleImportQuestion}
+                                        placeholder="Seleziona una domanda da importare..."
+                                        noOptionsMessage={() => "Nessuna domanda disponibile"}
+                                    />
+                                    {importedFrom && (
+                                        <p className="small" style={{ color: '#0056b3', marginTop: '0.4rem' }}>
+                                            ✓ Contenuto importato da <strong>{importedFrom.value}</strong>. Modifica liberamente prima di salvare.
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
+                                        Domande esistenti nel parametro {formData.parameter_id ? `(${formData.parameter_id})` : ''}
+                                    </label>
+                                    <p className="small muted" style={{ marginBottom: '0.5rem' }}>
+                                        Usa quest'elenco per scegliere un ID progressivo per la nuova domanda.
+                                    </p>
+                                    <div style={{ background: '#fff', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
+                                        {currentParamQuestions.length > 0 ? (
+                                            currentParamQuestions.map(q => (
+                                                <div key={q.id} style={{ fontSize: '0.85rem', padding: '0.3rem 0', borderBottom: '1px solid #eee' }}>
+                                                    <strong style={{ color: '#0056b3' }}>{q.id}</strong>
+                                                    {q.is_stop_question ? <span className="small muted"> [stop]</span> : null}
+                                                    {q.is_active === false ? <span className="small muted"> (inattiva)</span> : null}
+                                                    : {(q.text || '').slice(0, 90)}{(q.text || '').length > 90 ? '…' : ''}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="small muted">
+                                                {formData.parameter_id
+                                                    ? 'Nessuna domanda nel parametro selezionato.'
+                                                    : 'Seleziona prima un parametro.'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question ID</label>

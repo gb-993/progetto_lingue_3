@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import Select from 'react-select';
 
-export default function QuestionRow({ question, value, onChange, isReadOnly }) {
+export default function QuestionRow({ question, value, onChange, isReadOnly, allExamples = [], currentLangId }) {
     const [localError, setLocalError] = useState('');
 
     // Validazione base in tempo reale per gli esempi
@@ -47,6 +48,67 @@ export default function QuestionRow({ question, value, onChange, isReadOnly }) {
             examples: value.examples.map(ex =>
                 ex.tempId === tempId ? { ...ex, [field]: val } : ex
             )
+        });
+    };
+
+    // --- IMPORT ESEMPI ---
+    // Opzioni raggruppate per lingua: lingua corrente prima, poi le altre in ordine alfabetico
+    const importExampleOptions = useMemo(() => {
+        if (!allExamples || allExamples.length === 0) return [];
+
+        const byLang = {};
+        for (const ex of allExamples) {
+            const k = ex.language_id;
+            if (!byLang[k]) {
+                byLang[k] = { language_id: ex.language_id, language_name: ex.language_name, items: [] };
+            }
+            byLang[k].items.push(ex);
+        }
+
+        Object.values(byLang).forEach(g => {
+            g.items.sort((a, b) => {
+                const c = String(a.question_id).localeCompare(String(b.question_id));
+                return c !== 0 ? c : String(a.textarea).localeCompare(String(b.textarea));
+            });
+        });
+
+        const groups = Object.values(byLang).sort((a, b) => {
+            if (a.language_id === currentLangId) return -1;
+            if (b.language_id === currentLangId) return 1;
+            return String(a.language_name).localeCompare(String(b.language_name));
+        });
+
+        return groups.map(g => ({
+            label: `${g.language_name} (${g.language_id})${g.language_id === currentLangId ? ' — questa lingua' : ''}`,
+            options: g.items.map(ex => {
+                const txt = (ex.textarea || '').trim();
+                const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
+                const sameQ = ex.question_id === question.id ? ' ★' : '';
+                return {
+                    value: ex.id,
+                    label: `[${ex.question_id}${sameQ}] ${snippet}`,
+                    example: ex
+                };
+            })
+        }));
+    }, [allExamples, currentLangId, question.id]);
+
+    const handleImportExample = (selected) => {
+        if (!selected) return;
+        const ex = selected.example;
+        onChange({
+            examples: [
+                ...value.examples,
+                {
+                    tempId: Date.now(),
+                    id: null, // nuovo esempio (verrà inserito al save)
+                    textarea: ex.textarea || '',
+                    transliteration: ex.transliteration || '',
+                    gloss: ex.gloss || '',
+                    translation: ex.translation || '',
+                    reference: ex.reference || ''
+                }
+            ]
         });
     };
 
@@ -165,7 +227,25 @@ export default function QuestionRow({ question, value, onChange, isReadOnly }) {
                             </div>
                         ))}
 
-                        <button type="button" onClick={handleAddExample} disabled={isReadOnly} className="btn" style={{ marginTop: '0.5rem' }}>+ Add another example</button>
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                            <button type="button" onClick={handleAddExample} disabled={isReadOnly} className="btn">
+                                + Add another example
+                            </button>
+                            <div style={{ flex: '1 1 280px', minWidth: '260px' }}>
+                                <Select
+                                    isClearable
+                                    isDisabled={isReadOnly}
+                                    options={importExampleOptions}
+                                    value={null}
+                                    onChange={handleImportExample}
+                                    placeholder="+ Import example from another answer..."
+                                    noOptionsMessage={() => "Nessun esempio disponibile"}
+                                />
+                            </div>
+                        </div>
+                        <p className="small muted" style={{ marginTop: '0.4rem' }}>
+                            Suggerimento: ★ indica esempi della stessa domanda in un'altra lingua. L'esempio importato è una copia, modificalo liberamente.
+                        </p>
                     </div>
                 </div>
             )}

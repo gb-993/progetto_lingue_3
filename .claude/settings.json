@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile routers/compilation.py routers/languages.py models.py alembic/versions/b2c3d4e5f6a7_lang_workflow_status.py)",
+      "Bash(npx --yes eslint src/features/compilation/LanguageData.jsx src/features/compilation/ParameterBlock.jsx src/features/languages/LanguageList.jsx)",
+      "Bash(npx --yes eslint src/features/compilation/ParameterBlock.jsx src/features/compilation/LanguageData.jsx)"
+    ]
+  }
+}

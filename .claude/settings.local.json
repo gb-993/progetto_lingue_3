@@ -3,7 +3,11 @@
     "allow": [
       "Bash(python -m py_compile routers/compilation.py routers/queries.py services/dag_eval.py services/param_consolidate.py models.py alembic/versions/a1b2c3d4e5f6_unique_lang_param.py)",
       "Bash(python -m py_compile services/logic_parser.py)",
-      "Bash(python -m py_compile routers/questions.py)"
+      "Bash(python -m py_compile routers/questions.py)",
+      "Bash(npx --yes eslint --no-eslintrc --parser-options=ecmaVersion:latest,sourceType:module,ecmaFeatures:{jsx:true} --rule \"{}\" src/features/questions/QuestionForm.jsx)",
+      "Bash(node --check src/features/questions/QuestionForm.jsx)",
+      "Bash(npx --yes eslint src/features/questions/QuestionForm.jsx)",
+      "Bash(python -m py_compile routers/compilation.py)"
     ]
   }
 }

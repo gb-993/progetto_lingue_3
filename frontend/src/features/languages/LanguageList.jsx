@@ -2,6 +2,35 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
+const STATUS_BADGE = {
+    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '✏️' },
+    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d', icon: '⏳' },
+    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac', icon: '✅' },
+    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', icon: '⚠️' },
+};
+
+function StatusBadge({ status }) {
+    const meta = STATUS_BADGE[status] || STATUS_BADGE.pending;
+    return (
+        <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            background: meta.bg,
+            color: meta.color,
+            border: `1px solid ${meta.border}`,
+            padding: '0.15rem 0.55rem',
+            borderRadius: '999px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            lineHeight: 1.6,
+            whiteSpace: 'nowrap',
+        }}>
+            <span aria-hidden="true">{meta.icon}</span>{meta.label}
+        </span>
+    );
+}
+
 export default function LanguageList() {
     const [languages, setLanguages] = useState([]);
     const [search, setSearch] = useState('');
@@ -67,6 +96,7 @@ export default function LanguageList() {
                     <tr>
                         <th>ID</th>
                         <th>Name</th>
+                        <th>Status</th>
                         <th>Family</th>
                         <th>Geography</th>
                         <th style={{textAlign: 'right'}}>Actions</th>
@@ -77,6 +107,7 @@ export default function LanguageList() {
                         <tr key={lang.id}>
                             <td style={{fontWeight: 'bold'}}>{lang.id}</td>
                             <td>{lang.name_full}</td>
+                            <td><StatusBadge status={lang.status} /></td>
                             <td className="muted">{lang.family}</td>
                             <td className="small">
                                 {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : "No coords"}
@@ -96,7 +127,7 @@ export default function LanguageList() {
                     ))}
                     {filteredLanguages.length === 0 && !loading && (
                         <tr>
-                            <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>Nessuna lingua trovata.</td>
+                            <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>Nessuna lingua trovata.</td>
                         </tr>
                     )}
                     </tbody>

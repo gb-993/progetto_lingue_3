@@ -45,6 +45,17 @@ class Language(Base):
 
     assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
+    # Workflow di compilazione (a livello di lingua intera)
+    status = Column(
+        Enum("pending", "waiting_for_approval", "approved", "rejected", name="language_status"),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+    )
+    rejection_note = Column(Text, nullable=True)
+    submitted_at = Column(DateTime, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+
     assigned_user = relationship("User", back_populates="assigned_languages")
     answers = relationship("Answer", back_populates="language")
 
