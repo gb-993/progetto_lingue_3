@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
+import { searchMatches } from '../../utils/search';
 
 export default function QuestionList() {
     const [questions, setQuestions] = useState([]);
@@ -9,7 +10,6 @@ export default function QuestionList() {
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
-                // Chiamata centralizzata: non serve più l'header di autorizzazione manuale
                 const res = await api.get('/api/admin/questions');
                 setQuestions(res.data);
             } catch (error) {
@@ -19,10 +19,8 @@ export default function QuestionList() {
         fetchQuestions();
     }, []);
 
-    const filteredQuestions = questions.filter(q =>
-        q.id.toLowerCase().includes(search.toLowerCase()) ||
-        q.text.toLowerCase().includes(search.toLowerCase())
-    );
+    // Cerca su tutti i campi rilevanti (id, parameter_id, text, template_type, instruction*)
+    const filteredQuestions = questions.filter(q => searchMatches(q, search));
 
     return (
         <div className="container">
@@ -35,7 +33,7 @@ export default function QuestionList() {
                 <div className="toolbar__form">
                     <input
                         type="search"
-                        placeholder="Cerca per ID o testo..."
+                        placeholder="Cerca in ogni campo (ID, parametro, testo, istruzioni, template)..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />

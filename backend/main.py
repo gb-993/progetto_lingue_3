@@ -1,12 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# --- AGGIUNTO: Importiamo models e l'engine del database ---
-import models
-from database import engine
-
-# --- AGGIUNTO: Crea le tabelle mancanti nel database all'avvio ---
-models.Base.metadata.create_all(bind=engine)
+# Le tabelle sono gestite esclusivamente da alembic.
+# NON usare metadata.create_all qui: confligge con le migrazioni
+# (se aggiungi un modello nuovo, create_all crea la tabella all'avvio
+# e poi `alembic upgrade head` fallisce con DuplicateTable).
+# Per applicare nuove migrazioni: docker compose exec backend alembic upgrade head
 
 from routers import (auth,
                      glossary,
@@ -21,7 +20,10 @@ from routers import (auth,
                      site_content,
                      tablea,
                      queries,
-                     dashboard)
+                     dashboard,
+                     export,
+                     import_excel,
+                     history)
 
 app = FastAPI(title="PCM-Hub API")
 
@@ -48,3 +50,6 @@ app.include_router(site_content.router)
 app.include_router(tablea.router)
 app.include_router(queries.router)
 app.include_router(dashboard.router)
+app.include_router(export.router)
+app.include_router(import_excel.router)
+app.include_router(history.router)

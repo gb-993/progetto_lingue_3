@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 import models
 from dependencies import get_db, require_admin
+from services.versioning import record_version
 
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
 
@@ -19,6 +20,8 @@ class QuestionBase(BaseModel):
     instruction: Optional[str] = None
     instruction_yes: Optional[str] = None
     instruction_no: Optional[str] = None
+    example_yes: Optional[str] = None
+    help_info: Optional[str] = None
     is_stop_question: bool = False
     is_active: bool = True
     allowed_motivations: List[int] = []
@@ -49,6 +52,8 @@ def get_admin_question(id: str, db: Session = Depends(get_db), current_user: mod
         "instruction": question.instruction,
         "instruction_yes": question.instruction_yes,
         "instruction_no": question.instruction_no,
+        "example_yes": question.example_yes,
+        "help_info": question.help_info,
         "is_stop_question": question.is_stop_question,
         "is_active": question.is_active,
         "allowed_motivations": [qm.motivation_id for qm in question.allowed_motivations]
@@ -68,6 +73,8 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
         instruction=item.instruction,
         instruction_yes=item.instruction_yes,
         instruction_no=item.instruction_no,
+        example_yes=item.example_yes,
+        help_info=item.help_info,
         is_active=item.is_active,
         is_stop_question=item.is_stop_question
     )
@@ -89,6 +96,9 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
             )
             db.add(log)
 
+        db.commit()
+        record_version(db, db_item, operation="create", source="manual",
+                       user_id=current_user.id, note=(item.change_note or None))
         db.commit()
         return db_item
     except IntegrityError:
@@ -112,6 +122,8 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
     db_item.instruction = item.instruction
     db_item.instruction_yes = item.instruction_yes
     db_item.instruction_no = item.instruction_no
+    db_item.example_yes = item.example_yes
+    db_item.help_info = item.help_info
     db_item.is_stop_question = item.is_stop_question
     db_item.is_active = item.is_active
 
@@ -130,6 +142,9 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
         db.add(log)
 
     try:
+        db.commit()
+        record_version(db, db_item, operation="update", source="manual",
+                       user_id=current_user.id, note=(item.change_note or None))
         db.commit()
         return {"detail": "Domanda aggiornata con successo"}
     except IntegrityError:

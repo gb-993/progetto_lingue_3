@@ -38,6 +38,7 @@ router = APIRouter(prefix="/api/languages", tags=["Compilation & Workflow"])
 # --- SCHEMI PYDANTIC ---
 class ExampleInput(BaseModel):
     id: Optional[int] = None
+    number: str = ""
     textarea: str = ""
     transliteration: str = ""
     gloss: str = ""
@@ -69,6 +70,7 @@ def get_all_examples(db: Session = Depends(get_db), current_user: models.User = 
     """
     rows = db.query(
         models.Example.id,
+        models.Example.number,
         models.Example.textarea,
         models.Example.transliteration,
         models.Example.gloss,
@@ -92,6 +94,7 @@ def get_all_examples(db: Session = Depends(get_db), current_user: models.User = 
 
     return [{
         "id": r.id,
+        "number": r.number or "",
         "textarea": r.textarea or "",
         "transliteration": r.transliteration or "",
         "gloss": r.gloss or "",
@@ -159,6 +162,7 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             q_data = {
                 "id": q.id, "text": q.text, "instruction": q.instruction,
                 "instruction_yes": q.instruction_yes, "instruction_no": q.instruction_no,
+                "example_yes": q.example_yes, "help_info": q.help_info,
                 "allowed_motivations": [{"id": am.motivation.id, "label": am.motivation.label} for am in q.allowed_motivations],
                 "answer": None
             }
@@ -167,7 +171,7 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                 q_data["answer"] = {
                     "response_text": ans.response_text, "comments": ans.comments,
                     "motivation_ids": [m.motivation_id for m in ans.answer_motivations],
-                    "examples": [{"id": ex.id, "textarea": ex.textarea, "transliteration": ex.transliteration, "gloss": ex.gloss, "translation": ex.translation, "reference": ex.reference} for ex in ans.examples]
+                    "examples": [{"id": ex.id, "number": ex.number or "", "textarea": ex.textarea, "transliteration": ex.transliteration, "gloss": ex.gloss, "translation": ex.translation, "reference": ex.reference} for ex in ans.examples]
                 }
             param_data["questions"].append(q_data)
         result["parameters"].append(param_data)

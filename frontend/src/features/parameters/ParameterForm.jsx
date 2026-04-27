@@ -10,7 +10,10 @@ export default function ParameterForm() {
     const [initialData, setInitialData] = useState(null);
     const [formData, setFormData] = useState({
         id: '', name: '', position: 0, short_description: '',
-        implicational_condition: '', is_active: true,
+        long_description: '',
+        implicational_condition: '',
+        description_of_the_implicational_condition: '',
+        is_active: true,
         schema: '', param_type: '', level_of_comparison: ''
     });
 
@@ -172,7 +175,9 @@ export default function ParameterForm() {
         safeString(formData.name) !== safeString(initialData.name) ||
         safeString(formData.position) !== safeString(initialData.position) ||
         safeString(formData.short_description) !== safeString(initialData.short_description) ||
+        safeString(formData.long_description) !== safeString(initialData.long_description) ||
         safeString(formData.implicational_condition) !== safeString(initialData.implicational_condition) ||
+        safeString(formData.description_of_the_implicational_condition) !== safeString(initialData.description_of_the_implicational_condition) ||
         safeString(formData.schema) !== safeString(initialData.schema) ||
         safeString(formData.param_type) !== safeString(initialData.param_type) ||
         safeString(formData.level_of_comparison) !== safeString(initialData.level_of_comparison)
@@ -280,12 +285,17 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{fontWeight: 'bold'}}>Breve Descrizione</label>
-                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} />
+                            <label style={{fontWeight: 'bold'}}>Short Description</label>
+                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="2" style={{width: '100%', padding: '0.5rem'}} />
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{fontWeight: 'bold'}}>Condition</label>
+                            <label style={{fontWeight: 'bold'}}>Long Description</label>
+                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: '0.5rem'}} placeholder="Descrizione estesa del parametro (opzionale)" />
+                        </div>
+
+                        <div style={{marginBottom: '1rem'}}>
+                            <label style={{fontWeight: 'bold'}}>Implicational Condition</label>
                             <input
                                 type="text"
                                 name="implicational_condition"
@@ -295,6 +305,11 @@ export default function ParameterForm() {
                                 style={{width: '100%', padding: '0.5rem', borderColor: syntaxError ? 'red' : 'inherit'}}
                             />
                             {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>⚠️ {syntaxError}</p>}
+                        </div>
+
+                        <div style={{marginBottom: '1rem'}}>
+                            <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition</label>
+                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} placeholder="Spiegazione testuale (opzionale)" />
                         </div>
 
                         <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>

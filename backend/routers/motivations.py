@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 import models
 from dependencies import get_db, require_admin
+from services.versioning import record_version
 
 router = APIRouter(prefix="/api/admin/motivations", tags=["Motivations"])
 
@@ -42,6 +43,8 @@ def create_motivation(item: MotivationBase, db: Session = Depends(get_db), curre
     try:
         db.commit()
         db.refresh(db_item)
+        record_version(db, db_item, operation="create", source="manual", user_id=current_user.id)
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()
@@ -93,6 +96,8 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
     try:
         db.commit()
         db.refresh(db_item)
+        record_version(db, db_item, operation="update", source="manual", user_id=current_user.id)
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()

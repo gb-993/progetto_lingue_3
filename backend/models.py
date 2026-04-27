@@ -1,7 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, relationship
-from datetime import datetime
-from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint, Index, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime
 
@@ -43,6 +40,14 @@ class Language(Base):
     longitude = Column(Numeric(precision=11, scale=6), nullable=True)
     historical_language = Column(Boolean, default=False)
 
+    # Campi metadata aggiuntivi (allineamento con vecchio progetto)
+    isocode = Column(String(20), default="")
+    glottocode = Column(String(20), default="")
+    informant = Column(String(255), default="")
+    supervisor = Column(String(255), default="")
+    source = Column(Text, default="")
+    location = Column(String(255), default="")
+
     assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Workflow di compilazione (a livello di lingua intera)
@@ -67,7 +72,9 @@ class ParameterDef(Base):
     id = Column(String(10), primary_key=True)
     name = Column(String(200), nullable=False)
     short_description = Column(Text, default="")
+    long_description = Column(Text, default="")
     implicational_condition = Column(String(255), nullable=True)
+    description_of_the_implicational_condition = Column(Text, default="")
     is_active = Column(Boolean, default=True, nullable=False)
     position = Column(Integer, nullable=False)
     schema = Column(String(100), default="")
@@ -112,6 +119,8 @@ class Question(Base):
     instruction = Column(Text, nullable=True)
     instruction_yes = Column(Text, nullable=True)
     instruction_no = Column(Text, nullable=True)
+    example_yes = Column(Text, nullable=True)
+    help_info = Column(Text, nullable=True)
     is_stop_question = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
@@ -144,6 +153,7 @@ class Example(Base):
     __tablename__ = "examples"
     id = Column(Integer, primary_key=True)
     answer_id = Column(Integer, ForeignKey("answers.id"), nullable=False)
+    number = Column(String(10), default="")
     textarea = Column(Text, nullable=True)
     transliteration = Column(Text, nullable=True)
     gloss = Column(Text, nullable=True)
@@ -296,3 +306,38 @@ class SubmissionParam(Base):
     evaluated_at = Column(DateTime, default=datetime.utcnow)
 
     submission = relationship("Submission", back_populates="params")
+
+
+# ==========================================
+# 7. CRONOLOGIA VERSIONI (per rollback / audit granulare)
+# ==========================================
+class EntityVersion(Base):
+    """
+    Snapshot di un'entità a un certo istante. Usato come "salvataggio prima/dopo
+    modifica" per Parameters/Questions/Motivations/Languages.
+
+    Ogni record contiene:
+      - lo snapshot completo dell'entità DOPO la modifica (campo `snapshot`),
+      - l'operazione (`create`/`update`/`delete`),
+      - la sorgente (`manual` UI / `excel_import` / `system`),
+      - chi e quando.
+
+    Per ottenere il "prima" si guarda alla versione precedente con stesso
+    (entity_type, entity_id) ordinata per created_at.
+    """
+    __tablename__ = "entity_versions"
+    id = Column(Integer, primary_key=True)
+    entity_type = Column(String(40), nullable=False, index=True)
+    entity_id = Column(String(50), nullable=False, index=True)
+    snapshot = Column(JSON, nullable=False)
+    operation = Column(String(20), default="update", nullable=False)
+    source = Column(String(40), default="manual", nullable=False)
+    note = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_entity_versions_lookup", "entity_type", "entity_id", "created_at"),
+    )

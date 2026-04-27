@@ -123,6 +123,24 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                     <strong className="q-id" style={{ color: 'var(--brand)', fontSize: '1.1rem' }}>{question.id}</strong>
                     <div className="q-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>{question.text}</div>
                 </div>
+                {question.help_info && (
+                    <details style={{ alignSelf: 'flex-start' }}>
+                        <summary style={{
+                            cursor: 'pointer', padding: '0.3rem 0.6rem', background: 'var(--surface-2, #f1f3f5)',
+                            border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem',
+                            fontWeight: 600, listStyle: 'none', userSelect: 'none'
+                        }}>
+                            ⓘ More info
+                        </summary>
+                        <div style={{
+                            marginTop: '0.5rem', padding: '0.6rem 0.85rem', background: 'var(--surface-2, #fafafa)',
+                            border: '1px solid var(--border)', borderRadius: '4px',
+                            fontSize: '0.9rem', whiteSpace: 'pre-wrap', maxWidth: '500px'
+                        }}>
+                            {question.help_info}
+                        </div>
+                    </details>
+                )}
             </div>
 
             {/* Istruzione Generale */}
@@ -130,6 +148,14 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                 <div className="info-row muted">
                     <div className="info-row__label">Instructions</div>
                     <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.instruction}</div>
+                </div>
+            )}
+
+            {/* Example YES (illustrativo, sempre visibile) */}
+            {question.example_yes && (
+                <div className="info-row muted">
+                    <div className="info-row__label">Example YES</div>
+                    <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.example_yes}</div>
                 </div>
             )}
 

@@ -19,6 +19,8 @@ export default function QuestionForm() {
         instruction: '',
         instruction_yes: '',
         instruction_no: '',
+        example_yes: '',
+        help_info: '',
         is_stop_question: false,
         is_active: true,
         allowed_motivations: []
@@ -59,6 +61,8 @@ export default function QuestionForm() {
                         instruction: questionRes.data.instruction || '',
                         instruction_yes: questionRes.data.instruction_yes || '',
                         instruction_no: questionRes.data.instruction_no || '',
+                        example_yes: questionRes.data.example_yes || '',
+                        help_info: questionRes.data.help_info || '',
                         is_stop_question: questionRes.data.is_stop_question ?? false,
                         is_active: questionRes.data.is_active ?? true,
                         allowed_motivations: questionRes.data.allowed_motivations || []
@@ -148,6 +152,8 @@ export default function QuestionForm() {
                 instruction: q.instruction || '',
                 instruction_yes: q.instruction_yes || '',
                 instruction_no: q.instruction_no || '',
+                example_yes: q.example_yes || '',
+                help_info: q.help_info || '',
                 is_stop_question: q.is_stop_question ?? false,
                 allowed_motivations: q.allowed_motivations || []
             }));
@@ -200,6 +206,8 @@ export default function QuestionForm() {
                 instruction: formData.instruction?.trim() || null,
                 instruction_yes: formData.instruction_yes?.trim() || null,
                 instruction_no: formData.instruction_no?.trim() || null,
+                example_yes: formData.example_yes?.trim() || null,
+                help_info: formData.help_info?.trim() || null,
                 change_note: changeNote
             };
 
@@ -233,6 +241,8 @@ export default function QuestionForm() {
         safeString(formData.instruction) !== safeString(initialData.instruction) ||
         safeString(formData.instruction_yes) !== safeString(initialData.instruction_yes) ||
         safeString(formData.instruction_no) !== safeString(initialData.instruction_no) ||
+        safeString(formData.example_yes) !== safeString(initialData.example_yes) ||
+        safeString(formData.help_info) !== safeString(initialData.help_info) ||
         formData.is_stop_question !== initialData.is_stop_question ||
         formData.is_active !== initialData.is_active ||
         !isArraysEqual(formData.allowed_motivations, initialData.allowed_motivations)
@@ -346,6 +356,16 @@ export default function QuestionForm() {
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'red' }}>Instruction for NO</label>
                                 <textarea name="instruction_no" value={formData.instruction_no} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem', borderLeft: '4px solid red' }} placeholder="Specific instruction if the user answers NO..." />
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: '1rem' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Example for YES (illustrative)</label>
+                            <textarea name="example_yes" value={formData.example_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem' }} placeholder="Example shown when discussing a YES case..." />
+                        </div>
+
+                        <div style={{ marginTop: '1rem' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Help info (More info expandable)</label>
+                            <textarea name="help_info" value={formData.help_info} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem' }} placeholder="Additional info shown in the More info expander on the compilation page..." />
                         </div>
                     </div>
 

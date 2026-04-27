@@ -132,10 +132,33 @@ export default function LanguageData() {
         <main className="container" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
 
             {/* Header Lingua */}
-            <div className="card lang-header-card" style={{ marginBottom: '1rem' }}>
+            <div className="card lang-header-card" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <h2 style={{ margin: 0 }}>
                     {language.name_full} <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em' }}>({language.id})</span>
                 </h2>
+                <button
+                    type="button"
+                    className="btn btn--small"
+                    onClick={async () => {
+                        try {
+                            const res = await api.get(`/api/export/language/${language.id}/xlsx`, { responseType: 'blob' });
+                            const cd = res.headers['content-disposition'] || '';
+                            const m = cd.match(/filename="?([^";]+)"?/);
+                            const filename = m ? m[1] : `PCM_${language.id}.xlsx`;
+                            const blob = new Blob([res.data]);
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = filename;
+                            document.body.appendChild(a); a.click(); a.remove();
+                            URL.revokeObjectURL(url);
+                        } catch {
+                            alert("Errore durante l'export.");
+                        }
+                    }}
+                    title={isAdmin ? "Esporta tutto (Database_model + Examples + Answers + schema)" : "Esporta gli esempi di questa lingua"}
+                >
+                    📥 Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
+                </button>
             </div>
 
             {/* Banner Status */}

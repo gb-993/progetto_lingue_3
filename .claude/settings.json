@@ -6,7 +6,24 @@
       "Bash(npx --yes eslint src/features/compilation/ParameterBlock.jsx src/features/compilation/LanguageData.jsx)",
       "Bash(python -m py_compile routers/dashboard.py main.py)",
       "Bash(python -m py_compile routers/dashboard.py)",
-      "Bash(npx --yes eslint src/features/dashboard/Dashboard.jsx)"
+      "Bash(npx --yes eslint src/features/dashboard/Dashboard.jsx)",
+      "Bash(npx --yes eslint src/features/languages/LanguageList.jsx src/features/parameters/ParameterList.jsx src/features/questions/QuestionList.jsx src/features/motivations/MotivationList.jsx src/features/glossary/GlossaryList.jsx src/utils/search.js)",
+      "Bash(python -m py_compile models.py alembic/versions/c3d4e5f6a7b8_add_legacy_fields.py)",
+      "Bash(python -m py_compile models.py routers/languages.py routers/parameters.py routers/questions.py routers/compilation.py)",
+      "Bash(npx --yes eslint src/features/languages/LanguageForm.jsx src/features/parameters/ParameterForm.jsx src/features/questions/QuestionForm.jsx src/features/compilation/QuestionRow.jsx)",
+      "Bash(python -m py_compile services/excel_export.py)",
+      "Bash(python -m py_compile routers/export.py main.py)",
+      "Bash(python -m py_compile tests/conftest.py tests/test_excel_export.py services/excel_export.py)",
+      "Bash(docker compose *)",
+      "Bash(npx --yes eslint src/features/languages/LanguageList.jsx src/features/parameters/ParameterList.jsx src/features/compilation/LanguageData.jsx)",
+      "Bash(python -m py_compile routers/import_excel.py main.py)",
+      "Bash(npx --yes eslint src/features/admin/ImportExcel.jsx src/App.jsx)",
+      "Bash(python -m py_compile models.py alembic/versions/d4e5f6a7b8c9_entity_versions.py)",
+      "Bash(python -m py_compile services/versioning.py routers/parameters.py routers/questions.py routers/motivations.py routers/languages.py)",
+      "Bash(python -m py_compile services/excel_import.py)",
+      "Bash(python -m py_compile routers/history.py main.py)",
+      "Bash(npx --yes eslint src/features/history/History.jsx src/features/history/BackupsTab.jsx src/App.jsx src/components/Layout.jsx)",
+      "Bash(npx --yes eslint src/features/history/History.jsx)"
     ]
   }
 }

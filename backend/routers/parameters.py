@@ -8,6 +8,7 @@ import auth
 import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
+from services.versioning import record_version
 
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
@@ -36,7 +37,9 @@ class ParameterBase(BaseModel):
     name: str
     position: int
     short_description: str = ""
+    long_description: str = ""
     implicational_condition: Optional[str] = None
+    description_of_the_implicational_condition: str = ""
     is_active: bool = True
     schema: str = ""
     param_type: str = ""
@@ -89,6 +92,8 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
     try:
         db.commit()
         db.refresh(db_item)
+        record_version(db, db_item, operation="create", source="manual", user_id=current_user.id)
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()
@@ -122,6 +127,9 @@ def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends
         db.add(log)
 
     try:
+        db.commit()
+        record_version(db, db_item, operation="update", source="manual",
+                       user_id=current_user.id, note=(item.change_note or None))
         db.commit()
         return db_item
     except IntegrityError:

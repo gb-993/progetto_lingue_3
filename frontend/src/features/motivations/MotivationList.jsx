@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
+import { searchMatches } from '../../utils/search';
 
 export default function MotivationList() {
     const [motivations, setMotivations] = useState([]);
@@ -64,10 +65,8 @@ export default function MotivationList() {
         }
     };
 
-    const filteredMots = motivations.filter(m =>
-        m.code.toLowerCase().includes(search.toLowerCase()) ||
-        m.label.toLowerCase().includes(search.toLowerCase())
-    );
+    // Cerca su code, label, status (active/inactive testo se serve)
+    const filteredMots = motivations.filter(m => searchMatches(m, search));
 
     return (
         <div className="container">
@@ -78,7 +77,7 @@ export default function MotivationList() {
 
             <section className="toolbar">
                 <div className="toolbar__form">
-                    <input type="search" placeholder="Search by code or label..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <input type="search" placeholder="Cerca in ogni campo (code, label, ...)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="toolbar__add">
                     <button className="btn btn--primary" onClick={() => handleOpenModal()}>Add Motivation</button>

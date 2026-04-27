@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+import { searchMatches } from '../../utils/search';
 
 export default function GlossaryList() {
     const [glossary, setGlossary] = useState([]);
@@ -34,9 +35,8 @@ export default function GlossaryList() {
         }
     };
 
-    const filteredGlossary = glossary.filter(item =>
-        item.word.toLowerCase().includes(search.toLowerCase())
-    );
+    // Cerca su word + description (e ogni altro campo)
+    const filteredGlossary = glossary.filter(item => searchMatches(item, search));
 
     return (
         <div className="container">
@@ -49,7 +49,7 @@ export default function GlossaryList() {
                 <div className="toolbar__form" style={{ width: '100%', maxWidth: '500px' }}>
                     <input
                         type="search"
-                        placeholder="Cerca un termine..."
+                        placeholder="Cerca termine o descrizione..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ccc' }}

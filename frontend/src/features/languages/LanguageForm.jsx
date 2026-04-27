@@ -9,8 +9,10 @@ export default function LanguageForm() {
 
     const [formData, setFormData] = useState({
         id: '', name_full: '', position: 0, family: '',
-        top_level_family: '', latitude: '', longitude: '',
-        historical_language: false, assigned_user_id: ''
+        top_level_family: '', grp: '', latitude: '', longitude: '',
+        historical_language: false, assigned_user_id: '',
+        isocode: '', glottocode: '', informant: '', supervisor: '',
+        source: '', location: ''
     });
 
     const [users, setUsers] = useState([]);
@@ -96,15 +98,35 @@ export default function LanguageForm() {
                         <input type="text" name="name_full" value={formData.name_full} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
                     </div>
 
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem'}}>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>Famiglia</label>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Top-level Family</label>
+                            <input type="text" name="top_level_family" value={formData.top_level_family} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                        </div>
+                        <div>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Family</label>
                             <input type="text" name="family" value={formData.family} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>Famiglia di Livello Superiore</label>
-                            <input type="text" name="top_level_family" value={formData.top_level_family} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Group</label>
+                            <input type="text" name="grp" value={formData.grp} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
+                    </div>
+
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                        <div>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>ISO code</label>
+                            <input type="text" name="isocode" value={formData.isocode} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                        </div>
+                        <div>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Glottocode</label>
+                            <input type="text" name="glottocode" value={formData.glottocode} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style={{display: 'block', fontWeight: 'bold'}}>Location</label>
+                        <input type="text" name="location" value={formData.location} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                     </div>
 
                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
@@ -116,6 +138,22 @@ export default function LanguageForm() {
                             <label style={{display: 'block', fontWeight: 'bold'}}>Longitudine</label>
                             <input type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
+                    </div>
+
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                        <div>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Supervisor</label>
+                            <input type="text" name="supervisor" value={formData.supervisor} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                        </div>
+                        <div>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Informant</label>
+                            <input type="text" name="informant" value={formData.informant} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style={{display: 'block', fontWeight: 'bold'}}>Source</label>
+                        <textarea name="source" value={formData.source} onChange={handleChange} rows="2" style={{width: '100%', padding: '0.5rem'}} />
                     </div>
 
                     <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem'}}>

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 import models
 from dependencies import get_db, require_admin, get_current_user
+from services.versioning import record_version
 
 router = APIRouter(prefix="/api", tags=["Languages"])
 
@@ -17,10 +18,18 @@ class LanguageBase(BaseModel):
     position: int
     family: str = ""
     top_level_family: str = ""
+    grp: str = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     historical_language: bool = False
     assigned_user_id: Optional[int] = None
+    # Campi metadata aggiuntivi
+    isocode: str = ""
+    glottocode: str = ""
+    informant: str = ""
+    supervisor: str = ""
+    source: str = ""
+    location: str = ""
 
 
 def validate_coordinates(latitude: Optional[float], longitude: Optional[float]):
@@ -77,6 +86,12 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
         "longitude": float(l.longitude) if l.longitude is not None else None,
         "historical_language": l.historical_language,
         "assigned_user_id": l.assigned_user_id,
+        "isocode": l.isocode or "",
+        "glottocode": l.glottocode or "",
+        "informant": l.informant or "",
+        "supervisor": l.supervisor or "",
+        "source": l.source or "",
+        "location": l.location or "",
         "status": l.status,
         "rejection_note": l.rejection_note,
         "submitted_at": l.submitted_at.isoformat() if l.submitted_at else None,
@@ -111,15 +126,24 @@ def create_admin_language(item: LanguageBase, db: Session = Depends(get_db), cur
         position=item.position,
         family=item.family,
         top_level_family=item.top_level_family,
+        grp=item.grp,
         latitude=item.latitude,
         longitude=item.longitude,
         historical_language=item.historical_language,
         assigned_user_id=item.assigned_user_id,
+        isocode=item.isocode,
+        glottocode=item.glottocode,
+        informant=item.informant,
+        supervisor=item.supervisor,
+        source=item.source,
+        location=item.location,
     )
     db.add(db_item)
     try:
         db.commit()
         db.refresh(db_item)
+        record_version(db, db_item, operation="create", source="manual", user_id=current_user.id)
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()
@@ -140,14 +164,23 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
     db_item.position = item.position
     db_item.family = item.family
     db_item.top_level_family = item.top_level_family
+    db_item.grp = item.grp
     db_item.latitude = item.latitude
     db_item.longitude = item.longitude
     db_item.historical_language = item.historical_language
     db_item.assigned_user_id = item.assigned_user_id
+    db_item.isocode = item.isocode
+    db_item.glottocode = item.glottocode
+    db_item.informant = item.informant
+    db_item.supervisor = item.supervisor
+    db_item.source = item.source
+    db_item.location = item.location
 
     try:
         db.commit()
         db.refresh(db_item)
+        record_version(db, db_item, operation="update", source="manual", user_id=current_user.id)
+        db.commit()
         return db_item
     except IntegrityError:
         db.rollback()
