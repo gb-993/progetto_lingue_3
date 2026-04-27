@@ -20,7 +20,8 @@ from routers import (auth,
                      backup,
                      site_content,
                      tablea,
-                     queries)
+                     queries,
+                     dashboard)
 
 app = FastAPI(title="PCM-Hub API")
 
@@ -46,3 +47,4 @@ app.include_router(backup.router)
 app.include_router(site_content.router)
 app.include_router(tablea.router)
 app.include_router(queries.router)
+app.include_router(dashboard.router)
