@@ -1,90 +1,131 @@
 
-/* 1) Design  (tema chiaro) */
+/* =========================================================
+   1) Design tokens — tema chiaro (default)
+   Palette pensata per WCAG AA su tutti gli accoppiamenti
+   testo/sfondo principali.
+   ========================================================= */
 :root{
-  --brand:#d14124; --brand-700:#b53a20;
-  --text:#1b1d20; --text-muted:#61656b;
-  --bg:#eceff1; --surface:#f8f9fa; --surface-2:#e2e6ea;
-  --surface-alt:#eef1f4; --brand-50:rgba(209,65,36,.07);
-  --border:#dadde2; --focus:#2266ff;
-  --ok:#1e824c; --bad:#b00020; --warn:#b58100;
-  --pill-ok-bg:#e9f7ef; --pill-bad-bg:#fff0f0; --pill-warn-bg:#fff7e5;
+  /* Brand */
+  --brand:#d14124;
+  --brand-700:#a8341a;
+  --brand-50: rgba(209,65,36,.08);
+
+  /* Testo */
+  --text:#15181c;            /* ~16:1 su --bg */
+  --text-muted:#565b61;      /* ~6.4:1 su --bg, AA per testo normale */
+
+  /* Superfici */
+  --bg:#f1f3f5;              /* off-white tendente al grigio caldo */
+  --surface:#ffffff;         /* card */
+  --surface-2:#e6eaee;       /* superfici secondarie / hover */
+  --surface-alt:#eef1f4;
+  --top-bar-bg:#fbfcfd;      /* lievemente più chiara di --surface */
+
+  /* Bordi e focus */
+  --border:#d0d4d9;
+  --focus:#2266ff;
+
+  /* Link inline (separato dal brand per non mischiarsi al testo) */
+  --link:#a8341a;
+  --link-hover:#7e2812;
+
+  /* Stato */
+  --ok:#117a3c;              /* verde più scuro per AA su superfici chiare */
+  --bad:#b00020;
+  --warn:#7a5500;
+  --pill-ok-bg:#e3f5e8;
+  --pill-bad-bg:#fde7e7;
+  --pill-warn-bg:#fff5d9;
+
+  /* Tipografia */
   --ff: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif;
   --mono: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
   --fs-1: clamp(.95rem, .92rem + .2vw, 1rem);
   --fs-2: 1.125rem; --fs-3: 1.25rem; --fs-4: 1.5rem; --fs-5: 1.875rem;
+
+  /* Geometria */
   --radius: 12px; --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.06);
+  --shadow: 0 1px 2px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.06);
   --sp-1:.25rem; --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem; --sp-5:1.25rem; --sp-6:1.5rem; --sp-8:2rem;
   --w-col-label: 9.5rem;
   --w-col-name:  22rem;
 }
+
 /* =========================================================
-   THEME: Dark overrides (attivo quando [data-theme="dark"])
+   2) Tema scuro — attivo con [data-theme="dark"] su <html>
+   Stessa identità visiva, ma colori ricalibrati per AA
+   su superfici scure (no nero puro, no rossi troppo cupi).
    ========================================================= */
 :root[data-theme="dark"] {
-  /* Neutri principali (Nero ammorbidito) */
-  --text: #f3f5f7;            /* testo principale */
-  --text-muted: #9ca3af;      /* testo attenuato (leggermente migliorato per contrasto) */
+  /* Brand */
+  --brand:#e9573b;           /* rosso un filo più chiaro per superfici scure */
+  --brand-700:#c0411f;
+  --brand-50: rgba(233,87,59,.16);
 
-  --bg: #181a1f;              /* background pagina - Grigio scuro morbido, non nero */
-  --surface: #21242b;         /* card - Leggermente più chiare dello sfondo */
-  --surface-2: #282c34;       /* superfici secondarie / navbar */
-  --surface-alt: #262a31;
-  --brand-50: rgba(209,65,36,.16);
-  --border: #3a3f4b;          /* bordi e separatori ben bilanciati */
+  /* Testo */
+  --text:#eceef2;            /* ~15:1 su --bg */
+  --text-muted:#a3aab5;      /* ~7.5:1 su --bg */
 
-  /* Stato/semantica: manteniamo contrasto adeguato su dark */
-  --ok: #32d27a;
-  --bad: #d14124;
-  --warn: #f0c35a;
+  /* Superfici (mai nero puro: riducono affaticamento visivo) */
+  --bg:#14171c;
+  --surface:#1d2027;
+  --surface-2:#262a32;
+  --surface-alt:#2a2e37;
+  --top-bar-bg:#1a1d23;
 
-  /* Pill/Badge background in dark (con testo leggibile) */
-  --pill-ok-bg: rgba(50, 210, 122, 0.15);
-  --pill-bad-bg: rgba(255, 93, 110, 0.15);
-  --pill-warn-bg: rgba(240, 195, 90, 0.18);
+  /* Bordi e focus */
+  --border:#3a3f4b;
+  --focus:#6da3ff;
 
-  /* Focus rimane ben visibile sul dark */
-  --focus: #5b8cff;
+  /* Link più chiari per restare leggibili sul dark */
+  --link:#ffa07f;
+  --link-hover:#ffc1ab;
+
+  /* Stato — colori scelti per contrasto AA su --bg/--surface */
+  --ok:#4ade80;
+  --bad:#ff7a85;
+  --warn:#fbbf24;
+  --pill-ok-bg: rgba(74,222,128,.14);
+  --pill-bad-bg: rgba(255,122,133,.15);
+  --pill-warn-bg: rgba(251,191,36,.16);
+
+  /* Ombre più marcate per leggere l'elevazione su dark */
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.45);
+
+  color-scheme: dark;
 }
 
-:root[data-theme="dark"],
-:root[data-theme="dark"] body {
-  background-color: var(--bg);
-  color: var(--text);
+/* Transizione morbida quando si cambia tema, ma rispettiamo
+   prefers-reduced-motion. */
+html, body, .sidebar, .top-bar, .card, .btn, .table, input, select, textarea, .news-box, .alert, .role-badge, .pill, .status {
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+@media (prefers-reduced-motion: reduce){
+  html, body, .sidebar, .top-bar, .card, .btn, .table, input, select, textarea, .news-box, .alert, .role-badge, .pill, .status {
+    transition: none;
+  }
 }
 
+/* Link inline (paragrafi, breadcrumb...) su entrambi i temi.
+   Conservano il colore del brand ma con tono accessibile. */
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+:root[data-theme="dark"] a { color: var(--link); }
+:root[data-theme="dark"] a:hover { color: var(--link-hover); }
 
-
-/* Accessibilità:  */
-:root[data-theme="dark"] a {
-  color: var(--brand);
-}
-:root[data-theme="dark"] a:hover {
-  color: var(--brand-700);
-}
-
-/* ============================
-   Dark theme – contrast fixes
-   ============================ */
-
-:root[data-theme="dark"] .btn {
-  color: var(--text);
-}
-
-/* 2) Bottoni nella navbar */
-:root[data-theme="dark"] .nav-list .btn {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--text);
+/* Bottoni con etichetta sopra brand: testo sempre bianco. */
+.btn--primary,
+.btn--bad,
+.nav-list .btn.is-current,
+.nav-list .btn[aria-current="page"],
+.nav-tiles .tile,
+.nav-tiles .tile strong,
+.nav-tiles .tile .tile-sub {
+  color:#fff;
 }
 
-/* 3) Stato "attivo" nella navbar (bg brand): testo sempre bianco */
-.nav-list [aria-current="page"] {
-  background: var(--brand);
-  border-color: color-mix(in oklab, var(--brand) 75%, black);
-  color: #fff;
-}
-/* Navbar: tasto disattivato (pagina corrente) con sfondo rosso */
+/* Stato "attivo" nella navbar (rosso brand) — regola unica per i due temi. */
+.nav-list [aria-current="page"],
 .nav-list .btn.is-current[aria-disabled="true"] {
   background: var(--brand);
   border-color: color-mix(in oklab, var(--brand) 75%, black);
@@ -92,30 +133,23 @@
   opacity: 1;
 }
 
-/* 4) Link generici in dark: */
-:root[data-theme="dark"] a {
-  color: var(--brand);
+/* ============================
+   Dark — fix di contrasto puntuali
+   ============================ */
+:root[data-theme="dark"] .btn { color: var(--text); }
+:root[data-theme="dark"] .nav-list .btn {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
 }
-:root[data-theme="dark"] a:hover {
-  color: var(--brand-700);
-  text-decoration: underline;
-}
-
-/* 5) Sottotitoli/testi attenuati */
 :root[data-theme="dark"] .muted,
 :root[data-theme="dark"] .site-title .site-subtitle,
-:root[data-theme="dark"] .breadcrumb {
-  color: var(--text-muted);
-}
-
-/* 6) Badge/Pill generiche  */
+:root[data-theme="dark"] .breadcrumb { color: var(--text-muted); }
 :root[data-theme="dark"] .badge {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
 }
-
-/* 7) Tabelle: header e sticky columns con bg coerente e testo leggibile */
 :root[data-theme="dark"] .table thead th,
 :root[data-theme="dark"] .table.table--freeze thead th,
 :root[data-theme="dark"] .table.table--freeze th[scope="row"],
@@ -126,8 +160,6 @@
   border-color: var(--border);
   box-shadow: 1px 0 0 var(--border);
 }
-
-/* 8) Alert/Message con testo di stato su dark */
 :root[data-theme="dark"] .alert {
   background: var(--surface-2);
   color: var(--text);
@@ -138,21 +170,6 @@
   background: var(--pill-bad-bg);
   border-color: color-mix(in oklab, var(--bad) 25%, var(--border));
 }
-
-/* 9) Bottoni primari/negativi */
-.btn--primary,
-.btn--bad {
-  color: #fff;
-}
-
-/* 10) Tiles della dashboard */
-.nav-tiles .tile,
-.nav-tiles .tile strong,
-.nav-tiles .tile .tile-sub {
-  color: #fff;
-}
-
-/* 11) Input e label: contrasto pieno in dark */
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select,
 :root[data-theme="dark"] textarea {
@@ -160,8 +177,47 @@
   color: var(--text);
   border-color: var(--border);
 }
-:root[data-theme="dark"] label {
+:root[data-theme="dark"] label { color: var(--text); }
+
+/* Toolbar buttons in dark restano bianchi sopra il brand. */
+:root[data-theme="dark"] .toolbar .btn--search,
+:root[data-theme="dark"] .toolbar .btn--primary { color:#fff; }
+
+/* =========================================================
+   Toggle tema (in top-bar, accanto al Logout)
+   ========================================================= */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  padding: 0 .7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .9rem;
+  line-height: 1;
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .05s ease;
+}
+.theme-toggle:hover {
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--brand));
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.theme-toggle .theme-toggle__icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: inline-block;
+  flex: 0 0 auto;
 }
 
 /* 2) Reset minimale */
@@ -228,7 +284,7 @@ a:hover{text-decoration:underline}
   gap: 1rem;
   padding: var(--sp-5) var(--sp-6);
   border-bottom: 1px solid var(--border);
-  background: color-mix(in oklab, var(--surface) 88%, white);
+  background: var(--top-bar-bg);
   position: sticky;
   top: 0;
   z-index: 20;

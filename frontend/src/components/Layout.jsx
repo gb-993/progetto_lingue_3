@@ -1,14 +1,34 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
+const THEME_STORAGE_KEY = 'pcm-theme';
+
+function getInitialTheme() {
+    if (typeof window === 'undefined') return 'light';
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export default function Layout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
     const role = localStorage.getItem('role');
     const name = localStorage.getItem('name');
 
+    const [theme, setTheme] = useState(getInitialTheme);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }, [theme]);
+
+    const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+
     const handleLogout = () => {
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         localStorage.clear();
+        if (savedTheme) localStorage.setItem(THEME_STORAGE_KEY, savedTheme);
         navigate('/');
     };
 
@@ -67,6 +87,26 @@ export default function Layout({ children }) {
                             MyAccount
                         </Link>
                         <span className="role-badge">{role} Access</span>
+                        <button
+                            type="button"
+                            className="theme-toggle"
+                            onClick={toggleTheme}
+                            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            aria-pressed={theme === 'dark'}
+                        >
+                            {theme === 'dark' ? (
+                                <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="4" />
+                                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                                </svg>
+                            ) : (
+                                <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                                </svg>
+                            )}
+                            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                        </button>
                         <button className="btn" onClick={handleLogout}>Logout</button>
                     </div>
                 </header>
