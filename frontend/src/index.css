@@ -260,7 +260,28 @@ a:hover{text-decoration:underline}
 .sidebar-nav .nav-list{
   flex-direction: column;
   align-items: stretch;
-  gap: .65rem;
+  gap: .4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar-nav .nav-list > li{
+  width: 100%;
+  display: block;
+}
+/* Tutti i tasti della sidebar: stessa larghezza, stessa altezza, allineati a sinistra */
+.sidebar-nav .nav-list .btn{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: .6rem .85rem;
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  min-height: 2.5rem;
+  border-radius: 10px;
 }
 .sidebar-nav .nav-list .nav-divider-label{
   margin-top: .5rem;
