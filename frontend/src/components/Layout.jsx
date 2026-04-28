@@ -247,28 +247,30 @@ export default function Layout({ children }) {
                                 </Link>
                             </li>
 
-                            {/* Voci visibili a Admin e Standard User */}
+                            {/* Voci per User loggati e Admin (ordine come nel vecchio base.html) */}
                             {role !== 'public' && (
                                 <>
+                                    <li className="nav-divider-label">Data & Tools</li>
                                     <li><Link className={`btn ${isCurrent('/languages')}`} to="/languages">Languages</Link></li>
+
+                                    {/* Strumenti esclusivi Admin */}
+                                    {role === 'admin' && (
+                                        <>
+                                            <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/taxonomy')}`} to="/admin/taxonomy">Taxonomy</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/tablea')}`} to="/tablea">Table A</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/queries')}`} to="/queries">Filters</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/history') || isCurrent('/admin/backups')}`} to="/admin/history">History & Backups</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" style={{ color: '#b91c1c' }}>Migration Import</Link></li>
+                                        </>
+                                    )}
+
+                                    {/* Tool comuni a User e Admin (in fondo, come nel vecchio) */}
                                     <li><Link className={`btn ${isCurrent('/instructions')}`} to="/instructions">Instructions</Link></li>
                                     <li><Link className={`btn ${isCurrent('/glossary')}`} to="/glossary">Glossary</Link></li>
-                                </>
-                            )}
-
-                            {/* Strumenti esclusivi per Admin */}
-                            {role === 'admin' && (
-                                <>
-                                    <li className="nav-divider-label">Admin Tools</li>
-                                    <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/taxonomy')}`} to="/admin/taxonomy">Taxonomy</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/history') || isCurrent('/admin/backups')}`} to="/admin/history">History & Backups</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/tablea')}`} to="/tablea">Table A</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/queries')}`} to="/queries">Filters</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" style={{ color: '#b91c1c' }}>Migration Import</Link></li>
                                 </>
                             )}
                         </ul>
