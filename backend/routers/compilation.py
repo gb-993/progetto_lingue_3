@@ -87,7 +87,6 @@ class ParameterBlockSavePayload(BaseModel):
 @router.get("/examples/search")
 def search_examples(
     q: str = "",
-    question_id: Optional[str] = None,
     language_id: Optional[str] = None,
     limit: int = 50,
     db: Session = Depends(get_db),
@@ -96,13 +95,16 @@ def search_examples(
     """
     Ricerca paginata di esempi per il selettore di import della pagina di compilazione.
 
+    Comportamento del filtro per lingua:
+      - q vuota + language_id presente → SOLO esempi della stessa lingua. Senza una
+        query mirata gli esempi delle altre lingue non sono utili (un esempio
+        linguistico non si ripete tra lingue diverse), quindi il default è ristretto.
+      - q valorizzata → ricerca in tutto il DB, con gli esempi della stessa lingua
+        ordinati per primi.
+
     Filtri:
       - q: full-text ILIKE su textarea/translation/gloss (case-insensitive)
-      - question_id / language_id: usati per ordinamento prioritario (stessa domanda
-        e/o stessa lingua emergono prima), non per filtrare
       - limit: clampato a [1, 200]; default 50
-
-    L'endpoint sostituisce il vecchio /examples/all (che scaricava ~37k record).
     """
     limit = max(1, min(int(limit or 50), 200))
 
@@ -133,11 +135,11 @@ def search_examples(
             models.Example.translation.ilike(like),
             models.Example.gloss.ilike(like),
         ))
+    elif language_id:
+        base = base.filter(models.Answer.language_id == language_id)
 
     order_cols = []
-    if question_id:
-        order_cols.append(case((models.Answer.question_id == question_id, 0), else_=1))
-    if language_id:
+    if q and language_id:
         order_cols.append(case((models.Answer.language_id == language_id, 0), else_=1))
     order_cols.extend([models.Language.name_full, models.Example.id])
 

@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncSelect from 'react-select/async';
 import api from '../../api';
 
-const formatExampleOption = (ex, currentQuestionId) => {
+const formatExampleOption = (ex) => {
     const txt = (ex.textarea || '').trim();
     const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
-    const sameQ = ex.question_id === currentQuestionId ? ' (same question)' : '';
     return {
         value: ex.id,
-        label: `[${ex.language_id} · ${ex.question_id}${sameQ}] ${snippet}`,
+        label: `[${ex.language_id} · ${ex.question_id}] ${snippet}`,
         example: ex,
     };
 };
@@ -73,17 +72,16 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             const res = await api.get('/api/languages/examples/search', {
                 params: {
                     q: q || '',
-                    question_id: question.id,
                     language_id: currentLangId,
                     limit: 50,
                 },
             });
-            return (res.data || []).map(ex => formatExampleOption(ex, question.id));
+            return (res.data || []).map(formatExampleOption);
         } catch (err) {
             console.warn('Example search failed', err);
             return [];
         }
-    }, [question.id, currentLangId]);
+    }, [currentLangId]);
 
     // Debounce 300ms su loadOptions: AsyncSelect chiama loadOptions a ogni keystroke
     // ma noi accumuliamo in un timer e risolviamo solo l'ultima richiesta.
@@ -281,7 +279,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                             </div>
                         </div>
                         <p className="small muted" style={{ marginTop: '0.4rem' }}>
-                            Tip: "(same question)" marks examples of the same question in another language. The imported example is a copy, edit it freely.
+                            <strong>The imported example is a copy — edit it freely.</strong>
                         </p>
                     </div>
                 </div>
