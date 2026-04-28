@@ -31,6 +31,11 @@ export default function ParameterList() {
     const [options, setOptions] = useState({ opt_schemas: [], opt_types: [], opt_levels: [] });
     const [loading, setLoading] = useState(true);
 
+    // --- Drag & drop reorder state ---
+    const [draggingId, setDraggingId] = useState(null);
+    const [dropTarget, setDropTarget] = useState(null); // { id, above: bool }
+    const [savingOrder, setSavingOrder] = useState(false);
+
     useEffect(() => {
         const load = async () => {
             try {
@@ -38,7 +43,8 @@ export default function ParameterList() {
                     api.get('/api/admin/parameters'),
                     api.get('/api/tablea/options').catch(() => ({ data: {} })),
                 ]);
-                setParameters(paramsRes.data || []);
+                const sorted = (paramsRes.data || []).slice().sort((a, b) => a.position - b.position);
+                setParameters(sorted);
                 setOptions({
                     opt_schemas: optsRes.data.opt_schemas || [],
                     opt_types: optsRes.data.opt_types || [],
@@ -83,6 +89,78 @@ export default function ParameterList() {
         (filters.level_of_comparison ? 1 : 0) +
         (filters.active !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
+
+    // Reorder è abilitato solo se nessun filtro/search è attivo
+    const canReorder = activeFilterCount === 0 && !savingOrder;
+
+    // ---- Drag & drop handlers ----
+    const handleDragStart = (e, id) => {
+        e.dataTransfer.setData('application/x-parameter-row', id);
+        e.dataTransfer.effectAllowed = 'move';
+        // Drag image = l'intera riga, non solo l'handle
+        const row = e.currentTarget.closest('tr');
+        if (row) {
+            try { e.dataTransfer.setDragImage(row, 20, row.offsetHeight / 2); } catch { /* noop */ }
+        }
+        setDraggingId(id);
+    };
+
+    const handleDragEnd = () => {
+        setDraggingId(null);
+        setDropTarget(null);
+    };
+
+    const handleDragOver = (e, targetId) => {
+        if (!draggingId || draggingId === targetId) return;
+        const types = e.dataTransfer.types;
+        if (!types || !Array.from(types).includes('application/x-parameter-row')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = e.currentTarget.getBoundingClientRect();
+        const above = e.clientY < rect.top + rect.height / 2;
+        setDropTarget(prev =>
+            (prev && prev.id === targetId && prev.above === above) ? prev : { id: targetId, above }
+        );
+    };
+
+    const handleDrop = async (e, targetId) => {
+        e.preventDefault();
+        const movedId = draggingId;
+        const above = dropTarget?.above ?? false;
+        // Reset visual state subito
+        setDraggingId(null);
+        setDropTarget(null);
+
+        if (!movedId || movedId === targetId) return;
+
+        const fromIdx = parameters.findIndex(p => p.id === movedId);
+        const targetIdx = parameters.findIndex(p => p.id === targetId);
+        if (fromIdx < 0 || targetIdx < 0) return;
+
+        let insertAt = above ? targetIdx : targetIdx + 1;
+        if (fromIdx < insertAt) insertAt -= 1;
+        if (insertAt === fromIdx) return;
+
+        const newArr = [...parameters];
+        const [moved] = newArr.splice(fromIdx, 1);
+        newArr.splice(insertAt, 0, moved);
+
+        // Update ottimistico (riassegno position 1..N localmente)
+        const previousArr = parameters;
+        setParameters(newArr.map((p, i) => ({ ...p, position: i + 1 })));
+        setSavingOrder(true);
+        try {
+            await api.patch('/api/admin/parameters/reorder', {
+                moved_id: movedId,
+                order: newArr.map(p => p.id),
+            });
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Reorder failed.');
+            setParameters(previousArr); // rollback
+        } finally {
+            setSavingOrder(false);
+        }
+    };
 
     return (
         <div className="container">
@@ -133,7 +211,8 @@ export default function ParameterList() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
                         {filteredParams.length} of {parameters.length} parameters
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
+                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters · reordering disabled while filtering</span>}
+                        {savingOrder && <span> · saving order…</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
@@ -163,8 +242,8 @@ export default function ParameterList() {
                 <table className="table">
                     <thead>
                         <tr>
+                            {canReorder && <th style={{ width: '24px' }} aria-label="Drag handle" />}
                             <th>ID</th>
-                            <th>Pos</th>
                             <th>Name</th>
                             <th>Schema</th>
                             <th>Type</th>
@@ -173,22 +252,58 @@ export default function ParameterList() {
                         </tr>
                     </thead>
                     <tbody>
-                        {!loading && filteredParams.map(param => (
-                            <tr key={param.id} style={{ opacity: param.is_active ? 1 : 0.5 }}>
-                                <td style={{ fontWeight: 'bold' }}>{param.id}</td>
-                                <td>{param.position}</td>
-                                <td>{param.name} {param.is_active ? '' : '(Inactive)'}</td>
-                                <td className="muted small">{param.schema || '—'}</td>
-                                <td>{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
-                                <td className="muted small">{param.level_of_comparison || '—'}</td>
-                                <td className="row-actions">
-                                    <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
-                                </td>
-                            </tr>
-                        ))}
+                        {!loading && filteredParams.map(param => {
+                            const isDragging = param.id === draggingId;
+                            const isDropAbove = dropTarget?.id === param.id && dropTarget?.above;
+                            const isDropBelow = dropTarget?.id === param.id && !dropTarget?.above;
+                            const rowDnDProps = canReorder ? {
+                                onDragOver: (e) => handleDragOver(e, param.id),
+                                onDrop: (e) => handleDrop(e, param.id),
+                            } : {};
+                            return (
+                                <tr
+                                    key={param.id}
+                                    style={{
+                                        opacity: isDragging ? 0.4 : (param.is_active ? 1 : 0.5),
+                                        boxShadow: isDropAbove
+                                            ? 'inset 0 2px 0 var(--brand, #3b82f6)'
+                                            : isDropBelow
+                                                ? 'inset 0 -2px 0 var(--brand, #3b82f6)'
+                                                : 'none',
+                                    }}
+                                    {...rowDnDProps}
+                                >
+                                    {canReorder && (
+                                        <td
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, param.id)}
+                                            onDragEnd={handleDragEnd}
+                                            title="Drag to reorder"
+                                            style={{
+                                                width: '24px',
+                                                cursor: 'grab',
+                                                textAlign: 'center',
+                                                userSelect: 'none',
+                                                color: 'var(--text-muted)',
+                                            }}
+                                        >
+                                            ⋮⋮
+                                        </td>
+                                    )}
+                                    <td style={{ fontWeight: 'bold' }}>{param.id}</td>
+                                    <td>{param.name} {param.is_active ? '' : '(Inactive)'}</td>
+                                    <td className="muted small">{param.schema || '—'}</td>
+                                    <td>{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
+                                    <td className="muted small">{param.level_of_comparison || '—'}</td>
+                                    <td className="row-actions">
+                                        <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {filteredParams.length === 0 && !loading && (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
+                                <td colSpan={canReorder ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
                             </tr>
                         )}
                     </tbody>

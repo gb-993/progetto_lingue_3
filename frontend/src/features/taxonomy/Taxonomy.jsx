@@ -34,16 +34,21 @@ export default function Taxonomy() {
 
     useEffect(() => { fetchTree(); }, []);
 
-    // --- ricava le liste filtrate ---
-    const allTops = tree?.top_families || [];
-    const orphanFamilies = tree?.orphan_families || [];
-    const orphanGroups = tree?.orphan_groups || [];
+    // --- ricava le liste filtrate (sempre ordinate alfabeticamente) ---
+    const sortByName = (arr) =>
+        [...(arr || [])].sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+        );
+
+    const allTops = useMemo(() => sortByName(tree?.top_families), [tree]);
+    const orphanFamilies = useMemo(() => sortByName(tree?.orphan_families), [tree]);
+    const orphanGroups = useMemo(() => sortByName(tree?.orphan_groups), [tree]);
     const unnormalized = tree?.unnormalized || { top_families: [], families: [], groups: [] };
 
     const familiesOfSelectedTop = useMemo(() => {
         if (selectedTopId === null) return orphanFamilies;
         const tf = allTops.find(t => t.id === selectedTopId);
-        return tf ? tf.families : [];
+        return tf ? sortByName(tf.families) : [];
     }, [selectedTopId, allTops, orphanFamilies]);
 
     const groupsOfSelectedFamily = useMemo(() => {
@@ -51,7 +56,7 @@ export default function Taxonomy() {
         const fam =
             familiesOfSelectedTop.find(f => f.id === selectedFamilyId) ||
             allTops.flatMap(t => t.families).find(f => f.id === selectedFamilyId);
-        return fam ? fam.groups : [];
+        return fam ? sortByName(fam.groups) : [];
     }, [selectedFamilyId, familiesOfSelectedTop, allTops, orphanGroups]);
 
     // se la family selezionata sparisce dopo refresh / cambio top, deselezionala
@@ -63,7 +68,7 @@ export default function Taxonomy() {
 
     // --- handlers ---
     const handleDelete = async (kind, id, label) => {
-        const what = kind === 'top' ? 'top-family' : kind === 'family' ? 'family' : 'group';
+        const what = kind === 'top' ? 'top-family' : kind === 'family' ? 'subfamily' : 'group';
         if (!window.confirm(`Delete ${what} "${label}"? Operation will be blocked if it still has children or is referenced by languages.`)) return;
         const path = kind === 'top' ? `top-families/${id}` : kind === 'family' ? `families/${id}` : `groups/${id}`;
         try {
@@ -111,9 +116,10 @@ export default function Taxonomy() {
     };
 
     // ---------- DRAG & DROP ----------
-    // I drag trasportano { kind: 'top'|'family'|'group', id }.
-    // Drop su una row di livello superiore = "move under that parent".
-    // Drop su una row dello stesso livello/colonna = "insert before" (riordino).
+    // I drag trasportano { kind: 'family'|'group', id }.
+    // Solo cross-livello: drop di una Family su una Top-Family per riassegnarne il parent,
+    // drop di un Group su una Family per riassegnarne il parent. Niente riordino:
+    // le liste sono ordinate alfabeticamente in automatico.
 
     const handleDropMoveFamilyUnderTop = (familyId, topId) => {
         if (!familyId) return;
@@ -125,22 +131,6 @@ export default function Taxonomy() {
         handleMoveGroup(groupId, familyId);
     };
 
-    const reorder = async (kind, draggedId, targetId, list) => {
-        // riordina list: rimuovi draggedId e inseriscilo prima di targetId
-        if (draggedId === targetId) return;
-        const ids = list.map(x => x.id).filter(x => x !== draggedId);
-        const targetIdx = ids.indexOf(targetId);
-        const insertAt = targetIdx === -1 ? ids.length : targetIdx;
-        ids.splice(insertAt, 0, draggedId);
-        const path = kind === 'top' ? 'top-families' : kind === 'family' ? 'families' : 'groups';
-        try {
-            await api.post(`/api/admin/taxonomy/reorder/${path}`, { ids });
-            fetchTree();
-        } catch (err) {
-            alert(err.response?.data?.detail || 'Error');
-        }
-    };
-
     if (loading) return <div className="container">Loading...</div>;
     if (error) return <div className="container alert alert-error">{error}</div>;
 
@@ -149,8 +139,8 @@ export default function Taxonomy() {
             <header className="dashboard-hero">
                 <h1>Taxonomy</h1>
                 <p className="muted dashboard-copy">
-                    Manage the hierarchy <strong>Top-Family → Family → Group</strong>. Click an item to drill down.
-                    Drag rows to reorder within a column, or drop a Family onto a Top-Family (or a Group onto a Family) to reassign its parent.
+                    Manage the hierarchy <strong>Top-Family → Subfamily → Group</strong>. Click an item to drill down.
+                    Drag a Subfamily onto a Top-Family (or a Group onto a Subfamily) to reassign its parent. Lists are sorted alphabetically.
                     Renaming an entity propagates the new label to all languages that referenced it.
                 </p>
             </header>
@@ -177,24 +167,20 @@ export default function Taxonomy() {
                             badge={`${tf.families.length} sub · ${tf.language_count} lang`}
                             onEdit={() => setModal({ kind: 'top', mode: 'edit', entity: tf })}
                             onDelete={() => handleDelete('top', tf.id, tf.name)}
-                            // Drag & drop: questa riga è draggable (riordino top) e droppable (riordino top + accept family)
-                            dragKind="top"
-                            dragId={tf.id}
+                            // Drop target: accetta solo Family (per riassegnare il parent)
                             onDropPayload={(payload) => {
-                                if (payload.kind === 'top') {
-                                    reorder('top', payload.id, tf.id, allTops);
-                                } else if (payload.kind === 'family') {
+                                if (payload.kind === 'family') {
                                     handleDropMoveFamilyUnderTop(payload.id, tf.id);
                                 }
                             }}
-                            acceptKinds={['top', 'family']}
+                            acceptKinds={['family']}
                         />
                     )}
                     footer={
                         <Row
                             active={selectedTopId === null}
                             onClick={() => { setSelectedTopId(null); setSelectedFamilyId(null); }}
-                            label={<em>Unassigned families</em>}
+                            label={<em>Unassigned subfamilies</em>}
                             badge={`${orphanFamilies.length}`}
                             muted
                             // Drop su questa riga = scollega family/group dal parent
@@ -209,8 +195,8 @@ export default function Taxonomy() {
                 {/* COLONNA 2 — FAMILIES */}
                 <Column
                     title={selectedTopId === null
-                        ? 'Unassigned Families'
-                        : `Families of "${allTops.find(t => t.id === selectedTopId)?.name || ''}"`}
+                        ? 'Unassigned Subfamilies'
+                        : `Subfamilies of "${allTops.find(t => t.id === selectedTopId)?.name || ''}"`}
                     hint="Romance, Celtic, ..."
                     onAdd={() => setModal({
                         kind: 'family', mode: 'new',
@@ -218,8 +204,8 @@ export default function Taxonomy() {
                     })}
                     items={familiesOfSelectedTop}
                     emptyText={selectedTopId === null
-                        ? 'No unassigned families.'
-                        : 'No families under this top-family yet.'}
+                        ? 'No unassigned subfamilies.'
+                        : 'No subfamilies under this top-family yet.'}
                     renderItem={(f) => (
                         <Row
                             key={f.id}
@@ -242,13 +228,11 @@ export default function Taxonomy() {
                             dragKind="family"
                             dragId={f.id}
                             onDropPayload={(payload) => {
-                                if (payload.kind === 'family') {
-                                    reorder('family', payload.id, f.id, familiesOfSelectedTop);
-                                } else if (payload.kind === 'group') {
+                                if (payload.kind === 'group') {
                                     handleDropMoveGroupUnderFamily(payload.id, f.id);
                                 }
                             }}
-                            acceptKinds={['family', 'group']}
+                            acceptKinds={['group']}
                         />
                     )}
                 />
@@ -270,7 +254,7 @@ export default function Taxonomy() {
                     items={groupsOfSelectedFamily}
                     emptyText={selectedFamilyId === null
                         ? 'No unassigned groups.'
-                        : 'No groups under this family yet.'}
+                        : 'No groups under this subfamily yet.'}
                     renderItem={(g) => (
                         <Row
                             key={g.id}
@@ -293,12 +277,6 @@ export default function Taxonomy() {
                             }
                             dragKind="group"
                             dragId={g.id}
-                            onDropPayload={(payload) => {
-                                if (payload.kind === 'group') {
-                                    reorder('group', payload.id, g.id, groupsOfSelectedFamily);
-                                }
-                            }}
-                            acceptKinds={['group']}
                         />
                     )}
                 />
@@ -434,7 +412,13 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
             {(onEdit || onDelete || extra) && (
                 <div
                     onClick={(e) => e.stopPropagation()}
-                    style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}
+                    style={{
+                        display: 'flex',
+                        gap: '0.3rem',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        justifyContent: extra ? 'flex-start' : 'flex-end',
+                    }}
                 >
                     {extra}
                     {onEdit && <button className="btn btn--small" onClick={onEdit} style={{ fontSize: '0.72rem' }}>Edit</button>}
@@ -467,7 +451,7 @@ function UnnormalizedSection({ data, allTops, allFamilies, onPromote }) {
         return (
             <div className="card" style={{ padding: '0.75rem 1rem', background: 'var(--pill-ok-bg)', border: '1px solid color-mix(in oklab, var(--ok) 25%, var(--border))' }}>
                 <strong style={{ color: 'var(--ok)' }}>All language strings are normalized.</strong>{' '}
-                <span className="muted small">Every Top-Family / Family / Group used on languages exists as an entity above.</span>
+                <span className="muted small">Every Top-Family / Subfamily / Group used on languages exists as an entity above.</span>
             </div>
         );
     }
@@ -493,11 +477,11 @@ function UnnormalizedSection({ data, allTops, allFamilies, onPromote }) {
             />
 
             <UnnormGroup
-                title="Families"
+                title="Subfamilies"
                 rows={data.families}
                 renderActions={(row) => (
                     <PromoteWithParent
-                        label="Promote → family under"
+                        label="Promote → subfamily under"
                         options={[
                             { value: '', label: '— Unassigned —' },
                             ...allTops.map(t => ({ value: t.id, label: t.name })),
@@ -593,9 +577,8 @@ function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
     const [saving, setSaving] = useState(false);
     const [err, setErr] = useState('');
 
-    const title = isEdit
-        ? `Edit ${modal.kind === 'top' ? 'top-family' : modal.kind}`
-        : `New ${modal.kind === 'top' ? 'top-family' : modal.kind}`;
+    const kindLabel = modal.kind === 'top' ? 'top-family' : modal.kind === 'family' ? 'subfamily' : modal.kind;
+    const title = isEdit ? `Edit ${kindLabel}` : `New ${kindLabel}`;
 
     const hasParent = modal.kind !== 'top';
     const parentOptions = modal.kind === 'family'
@@ -654,7 +637,7 @@ function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
                     {hasParent && (
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>
-                                {modal.kind === 'family' ? 'Top-Family' : 'Family'}
+                                {modal.kind === 'family' ? 'Top-Family' : 'Subfamily'}
                             </label>
                             <select
                                 value={parentId}

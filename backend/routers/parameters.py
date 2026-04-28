@@ -99,6 +99,82 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
         db.rollback()
         raise HTTPException(status_code=400, detail="Duplicate ID or invalid data.")
 
+# Schema per il riordino drag&drop
+class ReorderPayload(BaseModel):
+    moved_id: str
+    order: List[str]
+
+
+@router.patch("/reorder")
+def reorder_parameters(
+    payload: ReorderPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    if not payload.order:
+        raise HTTPException(status_code=400, detail="Empty order.")
+    if len(payload.order) != len(set(payload.order)):
+        raise HTTPException(status_code=400, detail="Duplicate IDs in order.")
+
+    db_params = db.query(models.ParameterDef).all()
+    db_ids = {p.id for p in db_params}
+    payload_ids = set(payload.order)
+
+    if db_ids != payload_ids:
+        raise HTTPException(
+            status_code=409,
+            detail="Parameter list out of sync with the server. Please refresh the page.",
+        )
+    if payload.moved_id not in db_ids:
+        raise HTTPException(status_code=404, detail="Moved parameter not found.")
+
+    by_id = {p.id: p for p in db_params}
+    moved = by_id[payload.moved_id]
+    old_position = moved.position
+    new_position = payload.order.index(payload.moved_id) + 1
+
+    changed = False
+    for idx, pid in enumerate(payload.order):
+        target_pos = idx + 1
+        if by_id[pid].position != target_pos:
+            by_id[pid].position = target_pos
+            changed = True
+
+    if not changed:
+        return {
+            "detail": "No change.",
+            "moved_id": payload.moved_id,
+            "old_position": old_position,
+            "new_position": new_position,
+        }
+
+    log = models.ParameterChangeLog(
+        parameter_id=payload.moved_id,
+        user_id=current_user.id,
+        change_note=f"Position: {old_position} → {new_position}",
+    )
+    db.add(log)
+
+    try:
+        db.commit()
+        record_version(
+            db, moved, operation="update", source="manual",
+            user_id=current_user.id,
+            note=f"Reorder: position {old_position} → {new_position}",
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Reorder error.")
+
+    return {
+        "detail": "Reordered.",
+        "moved_id": payload.moved_id,
+        "old_position": old_position,
+        "new_position": new_position,
+    }
+
+
 @router.put("/{id}")
 def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()

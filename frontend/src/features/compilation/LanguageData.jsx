@@ -364,7 +364,7 @@ function LanguageMetaGrid({ language, isAdmin }) {
         }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Top-level family" value={language.top_level_family} />
-                <MetaRow label="SubFamily" value={language.family} />
+                <MetaRow label="Subfamily" value={language.family} />
                 <MetaRow label="Historical" value={language.historical_language ? 'Yes' : 'No'} />
                 <MetaRow label="ISO code" value={language.isocode} />
                 <MetaRow label="Glottocode" value={language.glottocode} />

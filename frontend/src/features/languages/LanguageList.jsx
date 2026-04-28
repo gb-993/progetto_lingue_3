@@ -138,20 +138,6 @@ export default function LanguageList() {
         }
     };
 
-    const onExportSingle = async (langId) => {
-        setExporting(true);
-        try {
-            await downloadBlob(
-                api.get(`/api/export/language/${langId}/xlsx`, { responseType: 'blob' }),
-                `PCM_${langId}.xlsx`
-            );
-        } catch {
-            alert("Error while exporting the language.");
-        } finally {
-            setExporting(false);
-        }
-    };
-
     const onExportMetadata = async () => {
         setExporting(true);
         try {
@@ -210,7 +196,7 @@ export default function LanguageList() {
                             {options.opt_top_families.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                     </FilterField>
-                    <FilterField label="Family">
+                    <FilterField label="Subfamily">
                         <select name="family" value={filters.family} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
                             {options.opt_families.map(v => <option key={v} value={v}>{v}</option>)}
@@ -300,9 +286,9 @@ export default function LanguageList() {
                                 />
                             </th>
                             <th>ID</th>
-                            <th>Name</th>
+                            <th style={{ width: '22%' }}>Name</th>
                             <th>Status</th>
-                            <th>Family</th>
+                            <th>Subfamily</th>
                             <th>Group</th>
                             <th>Geography</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
@@ -326,16 +312,8 @@ export default function LanguageList() {
                                 <td className="small">
                                     {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : 'No coords'}
                                 </td>
-                                <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                                     <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
-                                    <button
-                                        onClick={() => onExportSingle(lang.id)}
-                                        disabled={exporting}
-                                        className="btn"
-                                        title="Export this language as .xlsx"
-                                    >
-                                        Export
-                                    </button>
                                     {isAdmin && (
                                         <>
                                             <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>

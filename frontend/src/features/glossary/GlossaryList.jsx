@@ -67,7 +67,6 @@ export default function GlossaryList() {
                 <table className="table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead style={{ backgroundColor: '#f9f9f9', textAlign: 'left' }}>
                     <tr>
-                        {isAdmin && <th style={{ padding: '1rem', borderBottom: '2px solid #eee', width: '8%' }}>ID</th>}
                         <th style={{ padding: '1rem', width: '25%', borderBottom: '2px solid #eee' }}>Term</th>
                         <th style={{ padding: '1rem', width: isAdmin ? '45%' : '75%', borderBottom: '2px solid #eee' }}>Description</th>
                         {isAdmin && <th style={{ padding: '1rem', width: '22%', textAlign: 'right', borderBottom: '2px solid #eee' }}>Actions</th>}
@@ -76,9 +75,7 @@ export default function GlossaryList() {
                     <tbody>
                     {filteredGlossary.map(item => (
                         <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-                            {isAdmin && (
-                                <td style={{ fontWeight: 'bold', padding: '1rem', verticalAlign: 'top' }}>{item.id}</td>
-                            )}
+                            
                             <td style={{ fontWeight: 'bold', padding: '1rem', verticalAlign: 'top', wordWrap: 'break-word' }}>
                                 {item.word}
                             </td>

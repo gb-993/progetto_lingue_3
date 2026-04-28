@@ -53,6 +53,7 @@ import zipfile
 
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, DataError
 import bcrypt
@@ -320,6 +321,37 @@ PARAM_FIELDS = (
 )
 
 
+def _ensure_param_lookup(
+    db: Session,
+    model_cls,
+    raw_label: str,
+    cache: Dict[str, Any],
+) -> str:
+    """
+    Upsert su una lookup table di parametri (ParamSchema/ParamType/ParamLevelOfComparison)
+    con matching case-insensitive. Ritorna la label canonica (quella effettivamente
+    presente in DB) così che il valore stringa sul ParameterDef venga normalizzato e
+    coincida esattamente con un'opzione delle tendine del form.
+    """
+    if raw_label is None:
+        return ""
+    label = str(raw_label).strip()
+    if not label:
+        return ""
+    key = label.lower()
+    if key in cache:
+        return cache[key].label
+    existing = db.query(model_cls).filter(func.lower(model_cls.label) == key).first()
+    if existing:
+        cache[key] = existing
+        return existing.label
+    obj = model_cls(label=label)
+    db.add(obj)
+    db.flush()
+    cache[key] = obj
+    return obj.label
+
+
 def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("Parameters")
     hmap = _build_header_map(ws)
@@ -334,6 +366,11 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
         db.query(models.ParameterDef).count() and
         max((p.position or 0) for p in db.query(models.ParameterDef).all()) or 0
     )
+
+    # Cache locali per le lookup (riempite on-the-fly, case-insensitive)
+    schema_cache: Dict[str, models.ParamSchema] = {}
+    type_cache: Dict[str, models.ParamType] = {}
+    level_cache: Dict[str, models.ParamLevelOfComparison] = {}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -358,6 +395,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
                     setattr(existing, attr, parser(_get(row, hmap, col)))
                 existing.position = position
                 existing.is_active = is_active
+                target = existing
                 summary.updated += 1
             else:
                 kwargs = {col_attr[1]: col_attr[2](_get(row, hmap, col_attr[0]))
@@ -368,8 +406,17 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
                 db.add(obj)
                 db.flush()
                 by_id[pid] = obj
+                target = obj
                 summary.inserted += 1
                 next_position = max(next_position, position) + 1
+
+            # Popola le lookup table e normalizza il valore stringa sul ParameterDef
+            # (case-insensitive: la prima occorrenza definisce la forma canonica).
+            target.schema = _ensure_param_lookup(db, models.ParamSchema, target.schema, schema_cache)
+            target.param_type = _ensure_param_lookup(db, models.ParamType, target.param_type, type_cache)
+            target.level_of_comparison = _ensure_param_lookup(
+                db, models.ParamLevelOfComparison, target.level_of_comparison, level_cache
+            )
         except (IntegrityError, DataError) as e:
             db.rollback()
             summary.errors += 1
@@ -657,8 +704,8 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 existing.latitude = latitude
                 existing.longitude = longitude
                 existing.historical_language = historical
-                # workflow: tutto importato come approved (decisione utente A)
-                existing.status = "approved"
+                # workflow: tutte le lingue importate partono in pending
+                existing.status = "pending"
                 summary.updated += 1
             else:
                 kwargs = {ca[1]: ca[2](_get(row, hmap, ca[0])) for ca in LANGUAGE_FIELDS}
@@ -670,7 +717,7 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                     group_id=grp.id if grp else None,
                     latitude=latitude, longitude=longitude,
                     historical_language=historical,
-                    status="approved",
+                    status="pending",
                     **{k: v for k, v in kwargs.items() if k != "name_full"},
                 )
                 db.add(obj)

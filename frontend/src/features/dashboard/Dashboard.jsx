@@ -384,7 +384,7 @@ function RedParamsCard({ total, languages }) {
     const list = languages || [];
     return (
         <div className={`card counter-card${total > 0 ? ' border-bad' : ''}`}>
-            <h3 className="admin-label">Red Parameters</h3>
+            <h3 className="admin-label">Flagged/Unsure Parameters</h3>
             <p className="muted small" style={{ margin: '0.1rem 0 0.25rem', fontSize: '0.72rem' }}>
                 Unsure or partially compiled (empty parameters excluded).
             </p>
@@ -412,7 +412,7 @@ function RedParamsCard({ total, languages }) {
                     ))}
                 </div>
             ) : (
-                <p className="muted small" style={{ margin: '0.25rem 0 0' }}>No red parameters.</p>
+                <p className="muted small" style={{ margin: '0.25rem 0 0' }}>No flagged/unsure parameters.</p>
             )}
         </div>
     );
