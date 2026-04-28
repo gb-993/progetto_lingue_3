@@ -39,7 +39,8 @@
       "Bash(python -c \"import matplotlib, os; d = os.path.join\\(os.path.dirname\\(matplotlib.__file__\\), 'mpl-data', 'fonts', 'ttf'\\); print\\(d\\); print\\([f for f in os.listdir\\(d\\) if 'DejaVu' in f]\\)\")",
       "Bash(docker exec *)",
       "Bash(npx --no-install vite build)",
-      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" \"http://localhost:8000/api/languages/examples/search?q=test&limit=5\")"
+      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" \"http://localhost:8000/api/languages/examples/search?q=test&limit=5\")",
+      "Bash(typst compile *)"
     ]
   }
 }
