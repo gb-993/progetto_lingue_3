@@ -24,7 +24,8 @@ from routers import (auth,
                      export,
                      import_excel,
                      history,
-                     taxonomy)
+                     taxonomy,
+                     migration)
 
 app = FastAPI(title="PCM-Hub API")
 
@@ -55,3 +56,4 @@ app.include_router(export.router)
 app.include_router(import_excel.router)
 app.include_router(history.router)
 app.include_router(taxonomy.router)
+app.include_router(migration.router)
