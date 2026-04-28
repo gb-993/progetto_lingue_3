@@ -18,7 +18,7 @@ export default function BackupFolder() {
                 setSubmissions(res.data || []);
             } catch (err) {
                 console.error('Errore nel recupero dei contenuti della cartella', err);
-                setError('Impossibile caricare le lingue per questo backup.');
+                setError('Could not load the languages for this backup.');
             } finally {
                 setLoading(false);
             }

@@ -62,11 +62,11 @@ def export_single_language(
 ):
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not lang:
-        raise HTTPException(status_code=404, detail="Lingua non trovata")
+        raise HTTPException(status_code=404, detail="Language not found")
 
     is_admin = current_user.role == "admin"
     if not is_admin and lang.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Non puoi esportare questa lingua.")
+        raise HTTPException(status_code=403, detail="You cannot export this language.")
 
     wb = build_language_workbook(db, lang, is_admin=is_admin)
     suffix = "full" if is_admin else "examples"
@@ -114,7 +114,7 @@ def export_languages_zip(
     languages = q.all()
 
     if not languages:
-        raise HTTPException(status_code=400, detail="Nessuna lingua da esportare.")
+        raise HTTPException(status_code=400, detail="No language to export.")
 
     ts = _ts()
     zip_buf = io.BytesIO()

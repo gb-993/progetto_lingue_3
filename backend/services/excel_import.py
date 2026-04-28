@@ -261,7 +261,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             failed_codes.add(code)
             report.errors.append(ImportError(
                 sheet="Motivations", row=ridx, column="Code", value=code,
-                reason=f"Motivation '{code}' non esiste in DB. Crea via UI prima di importarla."
+                reason=f"Motivation '{code}' does not exist in the DB. Create it via the UI before importing."
             ))
             continue
 
@@ -310,7 +310,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
     hmap = _build_header_map(ws)
     if "ID" not in hmap:
         report.errors.append(ImportError(sheet="Parameters", row=1,
-                                         reason="Colonna 'ID' mancante"))
+                                         reason="Missing 'ID' column"))
         return
 
     by_id = {p.id: p for p in db.query(models.ParameterDef).all()}
@@ -325,7 +325,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="Parameters", row=ridx, column="ID",
-                reason="ID vuoto, riga saltata"
+                reason="Empty ID, row skipped"
             ))
             continue
 
@@ -335,7 +335,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
             failed_ids.add(pid)
             report.errors.append(ImportError(
                 sheet="Parameters", row=ridx, column="ID", value=pid,
-                reason=f"Parameter '{pid}' non esiste in DB. Crea via UI prima di importarlo."
+                reason=f"Parameter '{pid}' does not exist in the DB. Create it via the UI before importing."
             ))
             continue
 
@@ -350,7 +350,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 report.errors.append(ImportError(
                     sheet="Parameters", row=ridx,
                     column="Implicational Condition", value=cond_raw,
-                    reason=f"Sintassi formula errata: {e}"
+                    reason=f"Wrong formula syntax: {e}"
                 ))
                 continue
 
@@ -397,7 +397,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
         if diff_parts:
             log = models.ParameterChangeLog(
                 parameter_id=pid, user_id=user_id,
-                change_note=f"[Excel import] Aggiornati: {', '.join(diff_parts)}"
+                change_note=f"[Excel import] Updated: {', '.join(diff_parts)}"
             )
             db.add(log)
 
@@ -432,7 +432,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
     hmap = _build_header_map(ws)
     if "ID" not in hmap:
         report.errors.append(ImportError(sheet="Questions", row=1,
-                                         reason="Colonna 'ID' mancante"))
+                                         reason="Missing 'ID' column"))
         return
 
     by_id = {q.id: q for q in db.query(models.Question).all()}
@@ -448,7 +448,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="Questions", row=ridx, column="ID",
-                reason="ID vuoto, riga saltata"
+                reason="Empty ID, row skipped"
             ))
             continue
 
@@ -458,7 +458,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
             failed_question_ids.add(qid)
             report.errors.append(ImportError(
                 sheet="Questions", row=ridx, column="ID", value=qid,
-                reason=f"Question '{qid}' non esiste in DB. Crea via UI prima di importarla."
+                reason=f"Question '{qid}' does not exist in the DB. Create it via the UI before importing."
             ))
             continue
 
@@ -470,7 +470,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                 failed_question_ids.add(qid)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
-                    reason=f"Parameter '{new_param_id}' fallito in import (errore upstream)"
+                    reason=f"Parameter '{new_param_id}' failed during import (upstream error)"
                 ))
                 continue
             if new_param_id not in valid_param_ids:
@@ -478,7 +478,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                 failed_question_ids.add(qid)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
-                    reason=f"Parameter '{new_param_id}' non esiste"
+                    reason=f"Parameter '{new_param_id}' does not exist"
                 ))
                 continue
 
@@ -522,7 +522,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
         if diff_parts:
             log = models.ParameterChangeLog(
                 parameter_id=existing.parameter_id, user_id=user_id,
-                change_note=f"[Excel import] [Domanda {qid}] Aggiornati: {', '.join(diff_parts)}"
+                change_note=f"[Excel import] [Question {qid}] Updated: {', '.join(diff_parts)}"
             )
             db.add(log)
 
@@ -547,7 +547,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
     if "Question ID" not in hmap or "Motivation Code" not in hmap:
         report.errors.append(ImportError(
             sheet="QuestionAllowedMotivations", row=1,
-            reason="Colonne richieste: 'Question ID', 'Motivation Code'"
+            reason="Required columns: 'Question ID', 'Motivation Code'"
         ))
         return
 
@@ -571,7 +571,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
-                reason="Question ID o Motivation Code vuoto"
+                reason="Empty Question ID or Motivation Code"
             ))
             continue
 
@@ -580,7 +580,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
                 column="Question ID", value=qid,
-                reason=f"Question '{qid}' fallita in import (errore upstream)"
+                reason=f"Question '{qid}' failed during import (upstream error)"
             ))
             continue
         if qid not in by_qid:
@@ -588,7 +588,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
                 column="Question ID", value=qid,
-                reason=f"Question '{qid}' non esiste"
+                reason=f"Question '{qid}' does not exist"
             ))
             continue
 
@@ -597,7 +597,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
                 column="Motivation Code", value=code,
-                reason=f"Motivation '{code}' fallita in import (errore upstream)"
+                reason=f"Motivation '{code}' failed during import (upstream error)"
             ))
             continue
         if code not in by_code:
@@ -605,7 +605,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
                 column="Motivation Code", value=code,
-                reason=f"Motivation '{code}' non esiste"
+                reason=f"Motivation '{code}' does not exist"
             ))
             continue
 
@@ -647,7 +647,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
     if missing:
         report.errors.append(ImportError(
             sheet=COMPILATION_SHEET, row=1,
-            reason=f"Colonne mancanti: {', '.join(missing)}"
+            reason=f"Missing columns: {', '.join(missing)}"
         ))
         return
 
@@ -667,7 +667,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
     if len(lang_values) != 1:
         report.errors.append(ImportError(
             sheet=COMPILATION_SHEET, row=0,
-            reason=f"Il file deve contenere una sola lingua. Trovati: {sorted(lang_values)}"
+            reason=f"The file must contain a single language. Found: {sorted(lang_values)}"
         ))
         return
 
@@ -678,7 +678,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
     if not lang:
         report.errors.append(ImportError(
             sheet=COMPILATION_SHEET, row=0, value=lang_name,
-            reason=f"Lingua '{lang_name}' non trovata (cerca per name_full)"
+            reason=f"Language '{lang_name}' not found (search by name_full)"
         ))
         return
 
@@ -718,7 +718,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Question_ID",
-                reason="Question_ID vuoto"
+                reason="Empty Question_ID"
             ))
             continue
 
@@ -726,14 +726,14 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Question_ID", value=qid,
-                reason=f"Question '{qid}' fallita in import (errore upstream)"
+                reason=f"Question '{qid}' failed during import (upstream error)"
             ))
             continue
         if qid not in valid_qids:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Question_ID", value=qid,
-                reason=f"Question '{qid}' non esiste"
+                reason=f"Question '{qid}' does not exist"
             ))
             continue
 
@@ -750,7 +750,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Language_Answer", value=raw_ans,
-                reason=f"Valore non valido (atteso YES/NO/vuoto): '{raw_ans}'"
+                reason=f"Invalid value (expected YES/NO/empty): '{raw_ans}'"
             ))
             continue
 

@@ -38,4 +38,4 @@ def update_site_content(
     item.updated_at = datetime.utcnow()
 
     db.commit()
-    return {"detail": "Contenuto aggiornato con successo."}
+    return {"detail": "Content updated successfully."}

@@ -39,7 +39,7 @@ def get_admin_glossary(db: Session = Depends(get_db), current_user: models.User 
 def get_glossary_term(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     item = db.query(models.Glossary).filter(models.Glossary.id == id).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Termine non trovato")
+        raise HTTPException(status_code=404, detail="Term not found")
     return item
 
 
@@ -53,14 +53,14 @@ def create_glossary_term(item: GlossaryBase, db: Session = Depends(get_db), curr
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Questo termine esiste già nel glossario.")
+        raise HTTPException(status_code=400, detail="This term already exists in the glossary.")
 
 
 @router.put("/{id}")
 def update_glossary_term(id: int, item: GlossaryBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Glossary).filter(models.Glossary.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Termine non trovato")
+        raise HTTPException(status_code=404, detail="Term not found")
 
     db_item.word = item.word
     db_item.description = item.description
@@ -70,15 +70,15 @@ def update_glossary_term(id: int, item: GlossaryBase, db: Session = Depends(get_
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Questo termine esiste già nel glossario.")
+        raise HTTPException(status_code=400, detail="This term already exists in the glossary.")
 
 
 @router.delete("/{id}")
 def delete_glossary_term(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Glossary).filter(models.Glossary.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Termine non trovato")
+        raise HTTPException(status_code=404, detail="Term not found")
 
     db.delete(db_item)
     db.commit()
-    return {"detail": "Termine eliminato con successo"}
+    return {"detail": "Term deleted successfully"}

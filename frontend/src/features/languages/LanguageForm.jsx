@@ -35,7 +35,7 @@ export default function LanguageForm() {
                     });
                 }
             } catch (err) {
-                setError('Impossibile caricare i dati.');
+                setError('Could not load the data.');
             }
         };
         fetchData();
@@ -68,7 +68,7 @@ export default function LanguageForm() {
             }
             navigate('/languages');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore durante il salvataggio.');
+            setError(err.response?.data?.detail || 'Error while saving.');
         }
     };
 
@@ -84,17 +84,17 @@ export default function LanguageForm() {
                 <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>ID Lingua (es. eng)</label>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Language ID (e.g. eng)</label>
                             <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>Position (Ordine)</label>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Position (order)</label>
                             <input type="number" name="position" value={formData.position} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                     </div>
 
                     <div>
-                        <label style={{display: 'block', fontWeight: 'bold'}}>Nome Completo</label>
+                        <label style={{display: 'block', fontWeight: 'bold'}}>Full name</label>
                         <input type="text" name="name_full" value={formData.name_full} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
                     </div>
 
@@ -131,11 +131,11 @@ export default function LanguageForm() {
 
                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>Latitudine</label>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Latitude</label>
                             <input type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                         <div>
-                            <label style={{display: 'block', fontWeight: 'bold'}}>Longitudine</label>
+                            <label style={{display: 'block', fontWeight: 'bold'}}>Longitude</label>
                             <input type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                     </div>
@@ -158,13 +158,13 @@ export default function LanguageForm() {
 
                     <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem'}}>
                         <input type="checkbox" id="historical_language" name="historical_language" checked={formData.historical_language} onChange={handleChange} />
-                        <label htmlFor="historical_language" style={{fontWeight: 'bold'}}>Lingua Storica</label>
+                        <label htmlFor="historical_language" style={{fontWeight: 'bold'}}>Historical language</label>
                     </div>
 
                     <div style={{marginTop: '0.5rem'}}>
-                        <label style={{display: 'block', fontWeight: 'bold'}}>Assegna a un utente</label>
+                        <label style={{display: 'block', fontWeight: 'bold'}}>Assign to a user</label>
                         <select name="assigned_user_id" value={formData.assigned_user_id} onChange={handleChange} style={{width: '100%', padding: '0.5rem', marginTop: '0.25rem'}}>
-                            <option value="">-- Nessun utente assegnato --</option>
+                            <option value="">-- No user assigned --</option>
                             {users.map(u => (
                                 <option key={u.id} value={u.id}>
                                     {u.name} {u.surname} ({u.email})

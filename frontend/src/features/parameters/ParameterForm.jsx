@@ -56,7 +56,7 @@ export default function ParameterForm() {
                     setUsage(usageRes.data || []);
                 }
             } catch (err) {
-                setError('Errore nel caricamento dei dati.');
+                setError('Error loading the data.');
             }
         };
         fetchInitialData();
@@ -100,13 +100,13 @@ export default function ParameterForm() {
             const field = inputKey === 'type' ? 'param_type' : (inputKey === 'level' ? 'level_of_comparison' : 'schema');
             setFormData(prev => ({ ...prev, [field]: res.data.label }));
             setNewLookupInputs(prev => ({ ...prev, [inputKey]: '' }));
-        } catch (err) { alert("Errore aggiunta lookup"); }
+        } catch (err) { alert("Error adding lookup"); }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (syntaxError) {
-            alert("Correggi gli errori di sintassi nella formula prima di salvare!");
+            alert("Fix the syntax errors in the formula before saving!");
             return;
         }
         try {
@@ -114,7 +114,7 @@ export default function ParameterForm() {
             isEditMode ? await api.put(`/api/admin/parameters/${id}`, payload) : await api.post('/api/admin/parameters', payload);
             navigate('/admin/parameters');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore salvataggio.');
+            setError(err.response?.data?.detail || 'Error while saving.');
         }
     };
 
@@ -125,17 +125,17 @@ export default function ParameterForm() {
 
         if (formData.is_active) {
             if (usage.length > 0) {
-                alert("Non puoi disattivare questo parametro perché è menzionato nelle condizioni implicazionali di altri parametri (vedi sidebar).");
+                alert("You cannot deactivate this parameter because it is mentioned in the implicational conditions of other parameters (see sidebar).");
                 return;
             }
             setShowDeactivateModal(true);
         } else {
-            if(window.confirm("Vuoi riattivare questo parametro?")) {
+            if(window.confirm("Do you want to reactivate this parameter?")) {
                 try {
                     await api.post(`/api/admin/parameters/${id}/reactivate`);
                     setFormData(prev => ({ ...prev, is_active: true }));
                 } catch (err) {
-                    alert(err.response?.data?.detail || 'Errore durante la riattivazione');
+                    alert(err.response?.data?.detail || 'Error during reactivation');
                 }
             }
         }
@@ -148,16 +148,16 @@ export default function ParameterForm() {
             setShowDeactivateModal(false);
             setDeactivateForm({ password: '', reason: '' });
             setFormData(prev => ({ ...prev, is_active: false }));
-            alert("Parametro disattivato con successo.");
+            alert("Parameter successfully deactivated.");
         } catch (err) {
-            alert(err.response?.data?.detail || "Errore durante la disattivazione. Password corretta?");
+            alert(err.response?.data?.detail || "Error during deactivation. Is the password correct?");
         }
     };
 
     // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
     const handleToggleQuestionActive = async (questionId, currentStatus) => {
-        const actionText = currentStatus ? 'disattivare' : 'riattivare';
-        if (!window.confirm(`Sei sicuro di voler ${actionText} la domanda ${questionId}? (Scomparirà dalla compilazione)`)) return;
+        const actionText = currentStatus ? 'deactivate' : 'reactivate';
+        if (!window.confirm(`Are you sure you want to ${actionText} question ${questionId}? (It will disappear from the form)`)) return;
 
         try {
             await api.patch(`/api/admin/questions/${questionId}/toggle-active`);
@@ -165,7 +165,7 @@ export default function ParameterForm() {
             const paramRes = await api.get(`/api/admin/parameters/${id}`);
             setQuestions(paramRes.data.questions || []);
         } catch (err) {
-            alert(err.response?.data?.detail || `Errore durante il cambio di stato della domanda.`);
+            alert(err.response?.data?.detail || `Error while changing the question status.`);
         }
     };
 
@@ -202,20 +202,20 @@ export default function ParameterForm() {
             {showDeactivateModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="card" style={{ width: '400px', background: '#fff', padding: '2rem' }}>
-                        <h3 style={{ color: 'red', marginTop: 0 }}>Disattiva Parametro</h3>
-                        <p className="small muted">Inserisci la tua password di amministratore per confermare l'operazione.</p>
+                        <h3 style={{ color: 'red', marginTop: 0 }}>Deactivate Parameter</h3>
+                        <p className="small muted">Enter your admin password to confirm the operation.</p>
                         <form onSubmit={submitDeactivation}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{ fontWeight: 'bold' }}>Admin Password</label>
                                 <input type="password" required value={deactivateForm.password} onChange={e => setDeactivateForm({...deactivateForm, password: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ fontWeight: 'bold' }}>Motivo (Opzionale)</label>
+                                <label style={{ fontWeight: 'bold' }}>Reason (optional)</label>
                                 <textarea rows="2" value={deactivateForm.reason} onChange={e => setDeactivateForm({...deactivateForm, reason: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                <button type="button" className="btn" onClick={() => setShowDeactivateModal(false)}>Annulla</button>
-                                <button type="submit" className="btn btn--danger" style={{ background: 'red', color: 'white' }}>Conferma Disattivazione</button>
+                                <button type="button" className="btn" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn--danger" style={{ background: 'red', color: 'white' }}>Confirm Deactivation</button>
                             </div>
                         </form>
                     </div>
@@ -234,7 +234,7 @@ export default function ParameterForm() {
                         {/* --- INIZIO CAMPI FORM --- */}
                         <div className="grid grid-2" style={{gap: '1rem', marginBottom: '1rem'}}>
                             <div>
-                                <label style={{fontWeight: 'bold'}}>ID Parametro</label>
+                                <label style={{fontWeight: 'bold'}}>Parameter ID</label>
                                 <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: '0.5rem'}} />
                             </div>
                             <div>
@@ -256,7 +256,7 @@ export default function ParameterForm() {
                                     {lookups.schemas.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                                 </select>
                                 <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="Nuovo..." value={newLookupInputs.schema} onChange={e => setNewLookupInputs({...newLookupInputs, schema: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
+                                    <input type="text" placeholder="New..." value={newLookupInputs.schema} onChange={e => setNewLookupInputs({...newLookupInputs, schema: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
                                     <button type="button" onClick={() => handleAddLookup('schemas', 'schemas', 'schema')} className="btn btn--small">+</button>
                                 </div>
                             </div>
@@ -267,7 +267,7 @@ export default function ParameterForm() {
                                     {lookups.types.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
                                 </select>
                                 <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="Nuovo..." value={newLookupInputs.type} onChange={e => setNewLookupInputs({...newLookupInputs, type: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
+                                    <input type="text" placeholder="New..." value={newLookupInputs.type} onChange={e => setNewLookupInputs({...newLookupInputs, type: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
                                     <button type="button" onClick={() => handleAddLookup('types', 'types', 'type')} className="btn btn--small">+</button>
                                 </div>
                             </div>
@@ -278,7 +278,7 @@ export default function ParameterForm() {
                                     {lookups.levels.map(l => <option key={l.id} value={l.label}>{l.label}</option>)}
                                 </select>
                                 <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="Nuovo..." value={newLookupInputs.level} onChange={e => setNewLookupInputs({...newLookupInputs, level: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
+                                    <input type="text" placeholder="New..." value={newLookupInputs.level} onChange={e => setNewLookupInputs({...newLookupInputs, level: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
                                     <button type="button" onClick={() => handleAddLookup('levels', 'levels', 'level')} className="btn btn--small">+</button>
                                 </div>
                             </div>
@@ -291,7 +291,7 @@ export default function ParameterForm() {
 
                         <div style={{marginBottom: '1rem'}}>
                             <label style={{fontWeight: 'bold'}}>Long Description</label>
-                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: '0.5rem'}} placeholder="Descrizione estesa del parametro (opzionale)" />
+                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: '0.5rem'}} placeholder="Extended description of the parameter (optional)" />
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
@@ -304,12 +304,12 @@ export default function ParameterForm() {
                                 placeholder="e.g. (+FGM | -ABC)"
                                 style={{width: '100%', padding: '0.5rem', borderColor: syntaxError ? 'red' : 'inherit'}}
                             />
-                            {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>⚠️ {syntaxError}</p>}
+                            {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{syntaxError}</p>}
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
                             <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition</label>
-                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} placeholder="Spiegazione testuale (opzionale)" />
+                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} placeholder="Textual explanation (optional)" />
                         </div>
 
                         <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>
@@ -321,7 +321,7 @@ export default function ParameterForm() {
                                 readOnly
                             />
                             <label style={{fontWeight: 'bold'}}>
-                                Parametro Attivo
+                                Active Parameter
                             </label>
                             {isEditMode && (
                                 <button
@@ -329,13 +329,13 @@ export default function ParameterForm() {
                                     onClick={handleToggleActiveClick}
                                     className={`btn btn--small ${usage.length > 0 && formData.is_active ? 'btn--disabled' : ''}`}
                                     style={{ marginLeft: 'auto' }}
-                                    title={usage.length > 0 ? "Bloccato: usato in altre condizioni" : ""}
+                                    title={usage.length > 0 ? "Locked: used in other conditions" : ""}
                                 >
-                                    {formData.is_active ? 'Disattiva Parametro...' : 'Riattiva Parametro'}
+                                    {formData.is_active ? 'Deactivate Parameter...' : 'Reactivate Parameter'}
                                 </button>
                             )}
                             {usage.length > 0 && formData.is_active && (
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>🔒 Bloccato dalle dipendenze</span>
+                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Locked by dependencies</span>
                             )}
                         </div>
                         {/* --- FINE CAMPI FORM --- */}
@@ -352,12 +352,12 @@ export default function ParameterForm() {
                                 marginBottom: '1.5rem'
                             }}>
                                 <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
-                                    {isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note'}
+                                    {isDirty ? 'Changes Detected' : 'Audit Log & Note'}
                                 </h4>
                                 <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
                                     {isDirty
-                                        ? 'Hai modificato i dati di questo parametro. Devi inserire una motivazione per poter salvare.'
-                                        : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota.'}
+                                        ? 'You have modified this parameter. You must enter a reason in order to save.'
+                                        : 'No changes detected. Edit at least one field to enable saving and to add a note.'}
                                 </p>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -366,7 +366,7 @@ export default function ParameterForm() {
                                             value={changeNote}
                                             onChange={e => setChangeNote(e.target.value)}
                                             rows="4"
-                                            placeholder="Descrivi il motivo della modifica..."
+                                            placeholder="Describe the reason for the change..."
                                             disabled={!isDirty} // Disabilitata se non ci sono modifiche
                                             style={{
                                                 width: '100%',
@@ -387,17 +387,17 @@ export default function ParameterForm() {
                                                 cursor: !isDirty ? 'not-allowed' : 'pointer'
                                             }}
                                             disabled={!isDirty} // Disabilitato se non ci sono modifiche
-                                            onClick={() => setChangeNote("Modifica di test")}
+                                            onClick={() => setChangeNote("Test edit")}
                                         >
-                                            Modifica di test
+                                            Test edit
                                         </button>
                                     </div>
 
                                     <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
-                                        <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Ultime Modifiche Registrate</h5>
+                                        <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Latest Recorded Changes</h5>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {changeLogs
-                                                .filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED"))
+                                                .filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED"))
                                                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                                 .map(log => (
                                                     <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
@@ -405,8 +405,8 @@ export default function ParameterForm() {
                                                     </div>
                                                 ))
                                             }
-                                            {changeLogs.filter(log => log.change_note !== "Modifica di test" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
-                                                <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
+                                            {changeLogs.filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
+                                                <span style={{ fontSize: '0.8rem', color: '#999' }}>No recent changes recorded.</span>
                                             )}
                                         </div>
                                     </div>
@@ -439,7 +439,7 @@ export default function ParameterForm() {
                                             <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
                                                 <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
-                                                    <span>{q.text} {q.is_active ? '' : '(Inattiva)'}</span>
+                                                    <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
                                                     <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
@@ -449,7 +449,7 @@ export default function ParameterForm() {
                                                         className={`btn btn--small ${q.is_active ? 'btn--danger' : ''}`}
                                                         style={{ color: q.is_active ? 'red' : 'green', borderColor: q.is_active ? 'red' : 'green' }}
                                                     >
-                                                        {q.is_active ? 'Disattiva' : 'Riattiva'}
+                                                        {q.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -469,7 +469,7 @@ export default function ParameterForm() {
                                             <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
                                                 <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
-                                                    <span>{q.text} {q.is_active ? '' : '(Inattiva)'}</span>
+                                                    <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
                                                     <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
@@ -479,7 +479,7 @@ export default function ParameterForm() {
                                                         className={`btn btn--small ${q.is_active ? 'btn--danger' : ''}`}
                                                         style={{ color: q.is_active ? 'red' : 'green', borderColor: q.is_active ? 'red' : 'green' }}
                                                     >
-                                                        {q.is_active ? 'Disattiva' : 'Riattiva'}
+                                                        {q.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
                                                 </div>
                                             </div>

@@ -79,11 +79,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
         });
 
         return groups.map(g => ({
-            label: `${g.language_name} (${g.language_id})${g.language_id === currentLangId ? ' — questa lingua' : ''}`,
+            label: `${g.language_name} (${g.language_id})${g.language_id === currentLangId ? ' — this language' : ''}`,
             options: g.items.map(ex => {
                 const txt = (ex.textarea || '').trim();
                 const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
-                const sameQ = ex.question_id === question.id ? ' ★' : '';
+                const sameQ = ex.question_id === question.id ? ' (same question)' : '';
                 return {
                     value: ex.id,
                     label: `[${ex.question_id}${sameQ}] ${snippet}`,
@@ -130,7 +130,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                             border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.85rem',
                             fontWeight: 600, listStyle: 'none', userSelect: 'none'
                         }}>
-                            ⓘ More info
+                            More info
                         </summary>
                         <div style={{
                             marginTop: '0.5rem', padding: '0.6rem 0.85rem', background: 'var(--surface-2, #fafafa)',
@@ -219,7 +219,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                     <div className="info-row__label">Examples</div>
                     <div className="info-row__content">
 
-                        {localError && <div style={{ background: '#ffe8e8', color: '#842029', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontWeight: 'bold' }}>⚠️ {localError}</div>}
+                        {localError && <div style={{ background: '#ffe8e8', color: '#842029', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
 
                         {value.examples.map((ex, index) => (
                             <div key={ex.tempId} className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>
@@ -265,12 +265,12 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                                     value={null}
                                     onChange={handleImportExample}
                                     placeholder="+ Import example from another answer..."
-                                    noOptionsMessage={() => "Nessun esempio disponibile"}
+                                    noOptionsMessage={() => "No example available"}
                                 />
                             </div>
                         </div>
                         <p className="small muted" style={{ marginTop: '0.4rem' }}>
-                            Suggerimento: ★ indica esempi della stessa domanda in un'altra lingua. L'esempio importato è una copia, modificalo liberamente.
+                            Tip: "(same question)" marks examples of the same question in another language. The imported example is a copy, edit it freely.
                         </p>
                     </div>
                 </div>

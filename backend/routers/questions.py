@@ -43,7 +43,7 @@ def get_admin_questions(db: Session = Depends(get_db), current_user: models.User
 def get_admin_question(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     question = db.query(models.Question).options(joinedload(models.Question.allowed_motivations)).filter(models.Question.id == id).first()
     if not question:
-        raise HTTPException(status_code=404, detail="Domanda non trovata")
+        raise HTTPException(status_code=404, detail="Question not found")
 
     return {
         "id": question.id,
@@ -64,7 +64,7 @@ def get_admin_question(id: str, db: Session = Depends(get_db), current_user: mod
 def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == item.parameter_id).first()
     if not param:
-        raise HTTPException(status_code=400, detail="Il parametro associato non esiste.")
+        raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
     db_item = models.Question(
         id=item.id,
@@ -92,7 +92,7 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
             log = models.ParameterChangeLog(
                 parameter_id=item.parameter_id,
                 user_id=current_user.id,
-                change_note=f"[Domanda {item.id}] Nuova: {item.change_note.strip()}"
+                change_note=f"[Question {item.id}] New: {item.change_note.strip()}"
             )
             db.add(log)
 
@@ -103,18 +103,18 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile creare la domanda. ID duplicato.")
+        raise HTTPException(status_code=400, detail="Could not create the question. Duplicate ID.")
 
 
 @router.put("/{id}")
 def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Domanda non trovata")
+        raise HTTPException(status_code=404, detail="Question not found")
 
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == item.parameter_id).first()
     if not param:
-        raise HTTPException(status_code=400, detail="Il parametro associato non esiste.")
+        raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
     db_item.id = item.id
     db_item.parameter_id = item.parameter_id
@@ -137,7 +137,7 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
         log = models.ParameterChangeLog(
             parameter_id=item.parameter_id,
             user_id=current_user.id,
-            change_note=f"[Domanda {id}] {item.change_note.strip()}"
+            change_note=f"[Question {id}] {item.change_note.strip()}"
         )
         db.add(log)
 
@@ -146,10 +146,10 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
         record_version(db, db_item, operation="update", source="manual",
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
-        return {"detail": "Domanda aggiornata con successo"}
+        return {"detail": "Question updated successfully"}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile aggiornare la domanda.")
+        raise HTTPException(status_code=400, detail="Could not update the question.")
 
 
 @router.patch("/{id}/toggle-active")
@@ -157,18 +157,18 @@ def toggle_question_active(id: str, db: Session = Depends(get_db), current_user:
     """Disattiva o riattiva una domanda senza eliminarla dal DB"""
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Domanda non trovata")
+        raise HTTPException(status_code=404, detail="Question not found")
 
     db_item.is_active = not db_item.is_active
 
     # Logga automaticamente l'azione sul parametro
-    azione = "Riattivata" if db_item.is_active else "Disattivata"
+    azione = "Reactivated" if db_item.is_active else "Deactivated"
     log = models.ParameterChangeLog(
         parameter_id=db_item.parameter_id,
         user_id=current_user.id,
-        change_note=f"[Domanda {id}] {azione}"
+        change_note=f"[Question {id}] {azione}"
     )
     db.add(log)
 
     db.commit()
-    return {"detail": "Stato domanda aggiornato", "is_active": db_item.is_active}
+    return {"detail": "Question status updated", "is_active": db_item.is_active}

@@ -88,7 +88,7 @@ export default function ParameterList() {
         <div className="container">
             <header className="dashboard-hero">
                 <h1>Parameter Management</h1>
-                <p className="muted dashboard-copy">Gestione dei parametri sintattici (Admin)</p>
+                <p className="muted dashboard-copy">Manage syntactic parameters (Admin)</p>
             </header>
 
             {/* ==== FILTRI ==== */}
@@ -97,7 +97,7 @@ export default function ParameterList() {
                     <FilterField label="Search">
                         <input
                             type="search"
-                            placeholder="Cerca in ogni campo..."
+                            placeholder="Search every field..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             style={inputStyle}
@@ -132,8 +132,8 @@ export default function ParameterList() {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
-                        {filteredParams.length} di {parameters.length} parametri
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} filtri attivi</span>}
+                        {filteredParams.length} of {parameters.length} parameters
+                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
@@ -146,13 +146,13 @@ export default function ParameterList() {
                                         'PCM_schema.xlsx'
                                     );
                                 } catch {
-                                    alert("Errore durante l'export dello schema.");
+                                    alert("Error while exporting the schema.");
                                 }
                             }}
                             className="btn btn--small"
-                            title="Export schema completo: parametri, domande, motivazioni, link"
+                            title="Export full schema: parameters, questions, motivations, links"
                         >
-                            📥 Export schema (.xlsx)
+                            Export schema (.xlsx)
                         </button>
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
@@ -177,7 +177,7 @@ export default function ParameterList() {
                             <tr key={param.id} style={{ opacity: param.is_active ? 1 : 0.5 }}>
                                 <td style={{ fontWeight: 'bold' }}>{param.id}</td>
                                 <td>{param.position}</td>
-                                <td>{param.name} {param.is_active ? '' : '(Inattivo)'}</td>
+                                <td>{param.name} {param.is_active ? '' : '(Inactive)'}</td>
                                 <td className="muted small">{param.schema || '—'}</td>
                                 <td>{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
                                 <td className="muted small">{param.level_of_comparison || '—'}</td>
@@ -188,7 +188,7 @@ export default function ParameterList() {
                         ))}
                         {filteredParams.length === 0 && !loading && (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>Nessun parametro trovato.</td>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
                             </tr>
                         )}
                     </tbody>

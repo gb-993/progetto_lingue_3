@@ -58,7 +58,7 @@ export default function TableA() {
             setMatrixData(res.data);
         } catch (err) {
             console.error("Errore caricamento matrice", err);
-            setError("Errore durante il calcolo della tabella.");
+            setError("Error while computing the table.");
         } finally {
             setLoading(false);
         }
@@ -130,7 +130,7 @@ export default function TableA() {
             link.parentNode.removeChild(link);
         } catch (err) {
             console.error(`Errore export ${endpoint}`, err);
-            alert("Errore durante la generazione del file. Controlla i filtri applicati.");
+            alert("Error while generating the file. Check the applied filters.");
         }
     };
 

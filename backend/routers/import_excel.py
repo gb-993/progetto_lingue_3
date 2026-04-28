@@ -43,17 +43,17 @@ def post_import_excel(
     fname = (file.filename or "").lower()
     if not fname.endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
         raise HTTPException(status_code=400,
-                            detail="Formato file non supportato. Carica un .xlsx")
+                            detail="Unsupported file format. Upload a .xlsx file")
 
     try:
         contents = file.file.read()
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Impossibile leggere il file: {e}")
+        raise HTTPException(status_code=400, detail=f"Could not read the file: {e}")
 
     if len(contents) == 0:
-        raise HTTPException(status_code=400, detail="File vuoto")
+        raise HTTPException(status_code=400, detail="Empty file")
     if len(contents) > 50 * 1024 * 1024:  # 50 MB
-        raise HTTPException(status_code=413, detail="File troppo grande (max 50 MB)")
+        raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     report = import_excel(db, contents, current_user.id)
     return report.to_dict()

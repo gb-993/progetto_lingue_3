@@ -90,7 +90,7 @@ export default function QuestionForm() {
                     }
                 }
             } catch {
-                setError('Impossibile caricare i dati.');
+                setError('Could not load the data.');
             }
         };
         fetchData();
@@ -159,7 +159,7 @@ export default function QuestionForm() {
             }));
             setImportedFrom(selected);
         } catch {
-            alert("Errore nell'import della domanda selezionata.");
+            alert("Error importing the selected question.");
         }
     };
 
@@ -190,7 +190,7 @@ export default function QuestionForm() {
             }));
             setShowCreator(false);
         } catch {
-            alert("Errore nella creazione della motivazione.");
+            alert("Error creating the motivation.");
         }
     };
 
@@ -218,7 +218,7 @@ export default function QuestionForm() {
             }
             navigate(`/admin/parameters/${formData.parameter_id}/edit`);
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore durante il salvataggio.');
+            setError(err.response?.data?.detail || 'Error while saving.');
         } finally {
             setIsLoading(false);
         }
@@ -269,32 +269,32 @@ export default function QuestionForm() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
-                                        Importa da un'altra domanda (opzionale)
+                                        Import from another question (optional)
                                     </label>
                                     <p className="small muted" style={{ marginBottom: '0.5rem' }}>
-                                        Carica testo, istruzioni, motivazioni e flag stop da una domanda esistente.
-                                        L'ID e il parametro restano quelli che hai scelto qui.
+                                        Load text, instructions, motivations and stop flag from an existing question.
+                                        The ID and parameter remain the ones you chose here.
                                     </p>
                                     <Select
                                         isClearable
                                         options={groupedQuestionOptions}
                                         value={importedFrom}
                                         onChange={handleImportQuestion}
-                                        placeholder="Seleziona una domanda da importare..."
-                                        noOptionsMessage={() => "Nessuna domanda disponibile"}
+                                        placeholder="Select a question to import..."
+                                        noOptionsMessage={() => "No question available"}
                                     />
                                     {importedFrom && (
                                         <p className="small" style={{ color: '#0056b3', marginTop: '0.4rem' }}>
-                                            ✓ Contenuto importato da <strong>{importedFrom.value}</strong>. Modifica liberamente prima di salvare.
+                                            Content imported from <strong>{importedFrom.value}</strong>. Edit freely before saving.
                                         </p>
                                     )}
                                 </div>
                                 <div>
                                     <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
-                                        Domande esistenti nel parametro {formData.parameter_id ? `(${formData.parameter_id})` : ''}
+                                        Existing questions in parameter {formData.parameter_id ? `(${formData.parameter_id})` : ''}
                                     </label>
                                     <p className="small muted" style={{ marginBottom: '0.5rem' }}>
-                                        Usa quest'elenco per scegliere un ID progressivo per la nuova domanda.
+                                        Use this list to choose a progressive ID for the new question.
                                     </p>
                                     <div style={{ background: '#fff', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
                                         {currentParamQuestions.length > 0 ? (
@@ -302,15 +302,15 @@ export default function QuestionForm() {
                                                 <div key={q.id} style={{ fontSize: '0.85rem', padding: '0.3rem 0', borderBottom: '1px solid #eee' }}>
                                                     <strong style={{ color: '#0056b3' }}>{q.id}</strong>
                                                     {q.is_stop_question ? <span className="small muted"> [stop]</span> : null}
-                                                    {q.is_active === false ? <span className="small muted"> (inattiva)</span> : null}
+                                                    {q.is_active === false ? <span className="small muted"> (inactive)</span> : null}
                                                     : {(q.text || '').slice(0, 90)}{(q.text || '').length > 90 ? '…' : ''}
                                                 </div>
                                             ))
                                         ) : (
                                             <span className="small muted">
                                                 {formData.parameter_id
-                                                    ? 'Nessuna domanda nel parametro selezionato.'
-                                                    : 'Seleziona prima un parametro.'}
+                                                    ? 'No questions in the selected parameter.'
+                                                    : 'Select a parameter first.'}
                                             </span>
                                         )}
                                     </div>
@@ -394,7 +394,7 @@ export default function QuestionForm() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} />
-                            <label htmlFor="is_active" style={{ fontWeight: 'bold' }}>Domanda Attiva</label>
+                            <label htmlFor="is_active" style={{ fontWeight: 'bold' }}>Active Question</label>
                         </div>
                     </div>
 
@@ -408,15 +408,15 @@ export default function QuestionForm() {
                     }}>
                         <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
                             {!isEditMode
-                                ? '⚠️ Nuova Domanda — Nota Obbligatoria'
-                                : (isDirty ? '⚠️ Modifiche Rilevate' : 'Audit Log & Note (Parent Parameter)')}
+                                ? 'New Question — Note Required'
+                                : (isDirty ? 'Changes Detected' : 'Audit Log & Note (Parent Parameter)')}
                         </h4>
                         <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
                             {!isEditMode
-                                ? 'Stai aggiungendo una nuova domanda. Inserisci una descrizione che verrà salvata nello storico del parametro genitore.'
+                                ? 'You are adding a new question. Enter a description that will be saved in the history of the parent parameter.'
                                 : (isDirty
-                                    ? 'Hai modificato i dati di questa domanda. Devi inserire una motivazione per poter salvare.'
-                                    : 'Nessuna modifica rilevata. Modifica almeno un campo per abilitare il salvataggio e inserire una nota. La nota verrà salvata nello storico del parametro genitore.')}
+                                    ? 'You have modified this question. You must enter a reason in order to save.'
+                                    : 'No changes detected. Edit at least one field to enable saving and to add a note. The note will be saved in the history of the parent parameter.')}
                         </p>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
@@ -426,8 +426,8 @@ export default function QuestionForm() {
                                     onChange={e => setChangeNote(e.target.value)}
                                     rows="4"
                                     placeholder={!isEditMode
-                                        ? "Descrivi la nuova domanda..."
-                                        : "Descrivi il motivo della modifica..."}
+                                        ? "Describe the new question..."
+                                        : "Describe the reason for the change..."}
                                     disabled={!isDirty}
                                     style={{
                                         width: '100%',
@@ -448,20 +448,20 @@ export default function QuestionForm() {
                                         cursor: !isDirty ? 'not-allowed' : 'pointer'
                                     }}
                                     disabled={!isDirty}
-                                    onClick={() => setChangeNote(isEditMode ? "Modifica di test" : "Nuova domanda di test")}
+                                    onClick={() => setChangeNote(isEditMode ? "Test edit" : "Test new question")}
                                 >
-                                    {isEditMode ? 'Modifica di test' : 'Nuova di test'}
+                                    {isEditMode ? 'Test edit' : 'Test new'}
                                 </button>
                             </div>
 
                             <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
                                 <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>
-                                    Ultime Modifiche {formData.parameter_id ? `(Parametro: ${formData.parameter_id})` : ''}
+                                    Latest Changes {formData.parameter_id ? `(Parameter: ${formData.parameter_id})` : ''}
                                 </h5>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     {changeLogs
-                                        .filter(log => log.change_note !== "Modifica di test"
-                                            && !log.change_note.startsWith("Nuova domanda di test")
+                                        .filter(log => log.change_note !== "Test edit"
+                                            && !log.change_note.startsWith("Test new question")
                                             && !log.change_note.startsWith("DEACTIVATED"))
                                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                         .map(log => (
@@ -470,10 +470,10 @@ export default function QuestionForm() {
                                             </div>
                                         ))
                                     }
-                                    {changeLogs.filter(log => log.change_note !== "Modifica di test"
-                                        && !log.change_note.startsWith("Nuova domanda di test")
+                                    {changeLogs.filter(log => log.change_note !== "Test edit"
+                                        && !log.change_note.startsWith("Test new question")
                                         && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
-                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>Nessuna modifica recente registrata.</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>No recent changes recorded.</span>
                                     )}
                                 </div>
                             </div>

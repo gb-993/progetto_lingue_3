@@ -141,5 +141,5 @@ def delete_backup_folder(timestamp: datetime, db: Session = Depends(get_db), cur
     db.commit()
 
     if deleted == 0:
-        raise HTTPException(status_code=404, detail="Nessun backup trovato per questa data.")
-    return {"detail": f"Backup eliminato. ({deleted} record rimossi)"}
+        raise HTTPException(status_code=404, detail="No backup found for this date.")
+    return {"detail": f"Backup deleted. ({deleted} records removed)"}

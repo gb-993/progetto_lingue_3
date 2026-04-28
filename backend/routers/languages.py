@@ -34,9 +34,9 @@ class LanguageBase(BaseModel):
 
 def validate_coordinates(latitude: Optional[float], longitude: Optional[float]):
     if latitude is not None and not -90 <= latitude <= 90:
-        raise HTTPException(status_code=422, detail="La latitudine deve essere compresa tra -90 e 90")
+        raise HTTPException(status_code=422, detail="Latitude must be between -90 and 90")
     if longitude is not None and not -180 <= longitude <= 180:
-        raise HTTPException(status_code=422, detail="La longitudine deve essere compresa tra -180 e 180")
+        raise HTTPException(status_code=422, detail="Longitude must be between -180 and 180")
 
 
 def ensure_assigned_user_exists(user_id: Optional[int], db: Session):
@@ -44,7 +44,7 @@ def ensure_assigned_user_exists(user_id: Optional[int], db: Session):
         return
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Utente assegnato non trovato")
+        raise HTTPException(status_code=404, detail="Assigned user not found")
 
 
 @router.get("/public/languages")
@@ -106,11 +106,11 @@ def get_admin_language(id: str, db: Session = Depends(get_db), current_user: mod
     """
     language = db.query(models.Language).filter(models.Language.id == id).first()
     if not language:
-        raise HTTPException(status_code=404, detail="Lingua non trovata")
+        raise HTTPException(status_code=404, detail="Language not found")
 
     # Se non è admin, deve essere l'assegnatario
     if current_user.role != "admin" and language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Accesso negato a questa lingua.")
+        raise HTTPException(status_code=403, detail="Access denied to this language.")
 
     return language
 
@@ -147,14 +147,14 @@ def create_admin_language(item: LanguageBase, db: Session = Depends(get_db), cur
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile creare la lingua (ID duplicato o dati non validi).")
+        raise HTTPException(status_code=400, detail="Could not create the language (duplicate ID or invalid data).")
 
 
 @router.put("/admin/languages/{id}")
 def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Lingua non trovata")
+        raise HTTPException(status_code=404, detail="Language not found")
 
     validate_coordinates(item.latitude, item.longitude)
     ensure_assigned_user_exists(item.assigned_user_id, db)
@@ -184,19 +184,19 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile aggiornare la lingua (ID duplicato o dati non validi).")
+        raise HTTPException(status_code=400, detail="Could not update the language (duplicate ID or invalid data).")
 
 
 @router.get("/api/admin/languages/{id}")
 def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Lingua non trovata")
+        raise HTTPException(status_code=404, detail="Language not found")
 
     db.delete(db_item)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Impossibile eliminare la lingua: record collegati presenti")
-    return {"detail": "Lingua eliminata con successo"}
+        raise HTTPException(status_code=409, detail="Could not delete the language: related records exist")
+    return {"detail": "Language deleted successfully"}

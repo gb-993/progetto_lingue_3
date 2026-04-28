@@ -4,10 +4,10 @@ import api from '../../api';
 import { searchMatches } from '../../utils/search';
 
 const STATUS_BADGE = {
-    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '✏️' },
-    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d', icon: '⏳' },
-    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac', icon: '✅' },
-    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', icon: '⚠️' },
+    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d' },
+    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
 };
 
 function StatusBadge({ status }) {
@@ -19,7 +19,7 @@ function StatusBadge({ status }) {
             padding: '0.15rem 0.55rem', borderRadius: '999px', fontSize: '0.75rem',
             fontWeight: 600, lineHeight: 1.6, whiteSpace: 'nowrap',
         }}>
-            <span aria-hidden="true">{meta.icon}</span>{meta.label}
+            {meta.label}
         </span>
     );
 }
@@ -74,7 +74,7 @@ export default function LanguageList() {
                 });
             } catch (err) {
                 console.error('Errore nel recupero delle lingue', err);
-                setError('Impossibile caricare le lingue.');
+                setError('Could not load the languages.');
             } finally {
                 setLoading(false);
             }
@@ -149,7 +149,7 @@ export default function LanguageList() {
                 `PCM_${langId}.xlsx`
             );
         } catch {
-            alert("Errore durante l'export della lingua.");
+            alert("Error while exporting the language.");
         } finally {
             setExporting(false);
         }
@@ -166,7 +166,7 @@ export default function LanguageList() {
                 'PCM_languages.xlsx'
             );
         } catch {
-            alert("Errore durante l'export dei metadati.");
+            alert("Error while exporting the metadata.");
         } finally {
             setExporting(false);
         }
@@ -183,7 +183,7 @@ export default function LanguageList() {
                 'PCM_languages.zip'
             );
         } catch {
-            alert("Errore durante l'export ZIP.");
+            alert("Error while exporting the ZIP.");
         } finally {
             setExporting(false);
         }
@@ -201,7 +201,7 @@ export default function LanguageList() {
                     <FilterField label="Search">
                         <input
                             type="search"
-                            placeholder="Cerca in ogni campo..."
+                            placeholder="Search every field..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             style={inputStyle}
@@ -245,9 +245,9 @@ export default function LanguageList() {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
-                        {filteredLanguages.length} di {languages.length} lingue
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} filtri attivi</span>}
-                        {selectedIds.size > 0 && <span> · <strong>{selectedIds.size} selezionate</strong></span>}
+                        {filteredLanguages.length} of {languages.length} languages
+                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
+                        {selectedIds.size > 0 && <span> · <strong>{selectedIds.size} selected</strong></span>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
@@ -262,16 +262,16 @@ export default function LanguageList() {
             <div className="card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', border: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
                 <span className="small muted" style={{ marginRight: '0.5rem' }}>
                     {selectedIds.size > 0
-                        ? `Azione su ${selectedIds.size} lingua/e selezionate`
-                        : `Azione su ${filteredLanguages.length} lingue filtrate`}
+                        ? `Action on ${selectedIds.size} selected language(s)`
+                        : `Action on ${filteredLanguages.length} filtered languages`}
                 </span>
                 <button
                     onClick={onExportMetadata}
                     disabled={exporting || targetIds.length === 0 || !isAdmin}
                     className="btn btn--small"
-                    title={!isAdmin ? "Solo admin" : ""}
+                    title={!isAdmin ? "Admin only" : ""}
                 >
-                    📋 Export language metadata (.xlsx)
+                    Export language metadata (.xlsx)
                 </button>
                 {isAdmin && (
                     <button
@@ -279,12 +279,12 @@ export default function LanguageList() {
                         disabled={exporting || targetIds.length === 0}
                         className="btn btn--small"
                     >
-                        📦 Export parametric data (.zip)
+                        Export parametric data (.zip)
                     </button>
                 )}
                 {isAdmin && (
                     <Link to="/admin/import-excel" className="btn btn--small">
-                        ⬆️ Import from Excel
+                        Import from Excel
                     </Link>
                 )}
             </div>
@@ -350,7 +350,7 @@ export default function LanguageList() {
                         ))}
                         {filteredLanguages.length === 0 && !loading && (
                             <tr>
-                                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>Nessuna lingua trovata.</td>
+                                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>No language found.</td>
                             </tr>
                         )}
                     </tbody>

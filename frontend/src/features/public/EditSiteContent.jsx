@@ -20,7 +20,7 @@ export default function EditSiteContent() {
             })
             .catch(err => {
                 console.error("Errore recupero contenuto:", err);
-                setError("Impossibile recuperare il contenuto da modificare.");
+                setError("Could not retrieve the content to edit.");
                 setLoading(false);
             });
     }, [key]);
@@ -31,7 +31,7 @@ export default function EditSiteContent() {
             await api.put(`/api/admin/site-content/${key}`, { content });
             navigate('/how-to-cite');
         } catch (err) {
-            setError("Errore durante il salvataggio.");
+            setError("Error while saving.");
         }
     };
 

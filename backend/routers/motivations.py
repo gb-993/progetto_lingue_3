@@ -48,23 +48,23 @@ def create_motivation(item: MotivationBase, db: Session = Depends(get_db), curre
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile creare la motivazione. Verifica i dati inseriti.")
+        raise HTTPException(status_code=400, detail="Could not create the motivation. Please check the input data.")
 
 @router.put("/{id}", response_model=MotivationRead)
 def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Aggiorna testo o disattiva una motivazione e propaga il log ai parametri e domande interessate"""
     db_item = db.query(models.Motivation).filter(models.Motivation.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Motivazione non trovata")
+        raise HTTPException(status_code=404, detail="Motivation not found")
 
     # Rileva le modifiche per creare un log automatico
     changes = []
     if db_item.code != item.code:
-        changes.append(f"codice cambiato da '{db_item.code}' a '{item.code}'")
+        changes.append(f"code changed from '{db_item.code}' to '{item.code}'")
     if db_item.label != item.label:
-        changes.append("descrizione aggiornata")
+        changes.append("description updated")
     if db_item.is_active != item.is_active:
-        changes.append("riattivata" if item.is_active else "disattivata")
+        changes.append("reactivated" if item.is_active else "deactivated")
 
     db_item.code = item.code
     db_item.label = item.label
@@ -84,7 +84,7 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
         ).distinct().all()
 
         for param_id, question_id in affected_questions:
-            log_msg = f"[Domanda {question_id} - Motivazione {item.code}] Modifica globale: {', '.join(changes)}"
+            log_msg = f"[Question {question_id} - Motivation {item.code}] Global change: {', '.join(changes)}"
 
             log = models.ParameterChangeLog(
                 parameter_id=param_id,
@@ -101,18 +101,18 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Impossibile aggiornare la motivazione.")
+        raise HTTPException(status_code=400, detail="Could not update the motivation.")
 
 @router.delete("/{id}")
 def delete_motivation(id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Motivation).filter(models.Motivation.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Motivazione non trovata")
+        raise HTTPException(status_code=404, detail="Motivation not found")
 
     db.delete(db_item)
     try:
         db.commit()
-        return {"detail": "Motivazione eliminata con successo"}
+        return {"detail": "Motivation deleted successfully"}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Impossibile eliminare: la motivazione è già utilizzata in alcune risposte o domande. Prova a disattivarla invece di eliminarla.")
+        raise HTTPException(status_code=409, detail="Cannot delete: the motivation is already used in some answers or questions. Try deactivating it instead of deleting it.")

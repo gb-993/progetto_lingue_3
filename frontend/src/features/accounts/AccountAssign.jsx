@@ -20,7 +20,7 @@ export default function AccountAssign() {
                 const langRes = await api.get('/api/admin/languages');
                 setLanguages(langRes.data);
             } catch (err) {
-                setError('Impossibile caricare i dati.');
+                setError('Could not load the data.');
             }
         };
         fetchData();
@@ -41,11 +41,11 @@ export default function AccountAssign() {
             });
             navigate('/admin/accounts');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore durante il salvataggio.');
+            setError(err.response?.data?.detail || 'Error while saving.');
         }
     };
 
-    if (!user) return <div className="container">Caricamento...</div>;
+    if (!user) return <div className="container">Loading...</div>;
 
     return (
         <div className="container" style={{ maxWidth: '800px', marginTop: '2rem' }}>
@@ -58,7 +58,7 @@ export default function AccountAssign() {
                 {error && <div className="alert alert-error mb-1">{error}</div>}
 
                 <div className="alert alert-warning" style={{ marginBottom: '1.5rem' }}>
-                    <strong>Attenzione:</strong> Se selezioni una lingua che ha l'etichetta "Assegnata ad altri", questa verrà <strong>immediatamente revocata</strong> al precedente proprietario e trasferita a questo utente.
+                    <strong>Warning:</strong> If you select a language labelled "Assigned to others", it will be <strong>immediately revoked</strong> from the previous owner and transferred to this user.
                 </div>
 
                 <form onSubmit={handleSubmit}>
@@ -74,7 +74,7 @@ export default function AccountAssign() {
 
                                 {lang.assigned_user_id && lang.assigned_user_id !== user.id && (
                                     <span className="badge" style={{ marginLeft: 'auto', backgroundColor: 'var(--pill-warn-bg)', color: 'var(--warn)' }}>
-                                        ⚠️ Assegnata ad altri (verrà trasferita)
+                                        Assigned to others (will be transferred)
                                     </span>
                                 )}
                             </label>

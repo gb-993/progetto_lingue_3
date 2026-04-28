@@ -24,7 +24,7 @@ export default function GlossaryForm() {
                     });
                 } catch (err) {
                     console.error(err);
-                    setError('Impossibile caricare il termine. Potrebbe essere stato eliminato.');
+                    setError('Could not load the term. It may have been deleted.');
                 }
             };
             fetchTerm();
@@ -49,7 +49,7 @@ export default function GlossaryForm() {
             navigate('/glossary');
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.detail || 'Errore durante il salvataggio del termine.');
+            setError(err.response?.data?.detail || 'Error while saving the term.');
         }
     };
 
@@ -57,26 +57,26 @@ export default function GlossaryForm() {
         <div className="container" style={{maxWidth: '600px', marginTop: '2rem'}}>
             <div className="card">
                 <header style={{marginBottom: '1.5rem'}}>
-                    <h2>{isEditMode ? 'Modifica Termine' : 'Aggiungi Termine al Glossario'}</h2>
+                    <h2>{isEditMode ? 'Edit Term' : 'Add Term to Glossary'}</h2>
                 </header>
 
                 {error && <div style={{color: 'red', marginBottom: '1rem', padding: '0.5rem', border: '1px solid red', borderRadius: '4px'}}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
                     <div>
-                        <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Parola / Termine</label>
-                        <input type="text" name="word" value={formData.word} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} placeholder="Es. Lingua flessiva" />
+                        <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Word / Term</label>
+                        <input type="text" name="word" value={formData.word} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} placeholder="E.g. Inflectional language" />
                     </div>
 
                     <div>
-                        <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Descrizione</label>
-                        <textarea name="description" value={formData.description} onChange={handleChange} required rows="6" style={{width: '100%', padding: '0.5rem'}} placeholder="Inserisci la definizione dettagliata..." />
+                        <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Description</label>
+                        <textarea name="description" value={formData.description} onChange={handleChange} required rows="6" style={{width: '100%', padding: '0.5rem'}} placeholder="Enter the detailed definition..." />
                     </div>
 
                     <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
-                        <button type="submit" className="btn btn--primary">Salva Termine</button>
+                        <button type="submit" className="btn btn--primary">Save Term</button>
                         {/* CORREZIONE: Anche il tasto annulla punta alla pagina corretta */}
-                        <Link to="/glossary" className="btn">Annulla</Link>
+                        <Link to="/glossary" className="btn">Cancel</Link>
                     </div>
                 </form>
             </div>

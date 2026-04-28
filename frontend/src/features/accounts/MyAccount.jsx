@@ -30,7 +30,7 @@ export default function MyAccount() {
             setMessage({ text: res.data.detail, type: 'success' });
             localStorage.setItem('name', profile.name);
         } catch (err) {
-            setMessage({ text: err.response?.data?.detail || 'Errore aggiornamento profilo', type: 'error' });
+            setMessage({ text: err.response?.data?.detail || 'Profile update error', type: 'error' });
         }
     };
 
@@ -41,7 +41,7 @@ export default function MyAccount() {
             setMessage({ text: res.data.detail, type: 'success' });
             setPasswords({ old_password: '', new_password1: '', new_password2: '' });
         } catch (err) {
-            setMessage({ text: err.response?.data?.detail || 'Errore aggiornamento password', type: 'error' });
+            setMessage({ text: err.response?.data?.detail || 'Password update error', type: 'error' });
         }
     };
 

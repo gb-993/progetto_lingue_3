@@ -26,14 +26,14 @@ export default function QuestionList() {
         <div className="container">
             <header className="dashboard-hero">
                 <h1>Question Management</h1>
-                <p className="muted dashboard-copy">Gestione delle domande per i parametri (Admin)</p>
+                <p className="muted dashboard-copy">Manage questions for parameters (Admin)</p>
             </header>
 
             <section className="toolbar">
                 <div className="toolbar__form">
                     <input
                         type="search"
-                        placeholder="Cerca in ogni campo (ID, parametro, testo, istruzioni, template)..."
+                        placeholder="Search every field (ID, parameter, text, instructions, template)..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -59,7 +59,7 @@ export default function QuestionList() {
                         <tr key={q.id} style={{ opacity: q.is_active === false ? 0.5 : 1 }}>
                             <td style={{fontWeight: 'bold'}}>{q.id}</td>
                             <td>{q.parameter_id}</td>
-                            <td style={{maxWidth: '400px'}}>{q.text} {q.is_active === false ? <span className="badge badge--error">Inattiva</span> : ''}</td>
+                            <td style={{maxWidth: '400px'}}>{q.text} {q.is_active === false ? <span className="badge badge--error">Inactive</span> : ''}</td>
                             <td>{q.is_stop_question ? 'yes' : 'no'}</td>
                             <td className="row-actions">
                                 {/* Modifica: Rimanda alla pagina del parametro per garantire il contesto corretto */}
@@ -69,7 +69,7 @@ export default function QuestionList() {
                     ))}
                     {filteredQuestions.length === 0 && (
                         <tr>
-                            <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>Nessuna domanda trovata.</td>
+                            <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>No question found.</td>
                         </tr>
                     )}
                     </tbody>

@@ -10,32 +10,28 @@ const STATUS_META = {
         bg: '#f1f5f9',
         color: '#475569',
         border: '#cbd5e1',
-        icon: '✏️',
-        description: 'Stai compilando questa lingua. Le modifiche permangono fra sessioni.'
+        description: 'You are filling in this language. Changes persist between sessions.'
     },
     waiting_for_approval: {
         label: 'Waiting for approval',
         bg: '#fff8e1',
         color: '#92400e',
         border: '#fcd34d',
-        icon: '⏳',
-        description: 'In attesa di revisione admin. Compilazione bloccata fino a esito.'
+        description: 'Awaiting admin review. The form is locked until a decision is made.'
     },
     approved: {
         label: 'Approved',
         bg: '#dcfce7',
         color: '#15803d',
         border: '#86efac',
-        icon: '✅',
-        description: 'Approvata. Compilazione bloccata.'
+        description: 'Approved. The form is locked.'
     },
     rejected: {
         label: 'Rejected',
         bg: '#fee2e2',
         color: '#b91c1c',
         border: '#fca5a5',
-        icon: '⚠️',
-        description: 'Rifiutata. Riapri per modificarla e re-inviarla.'
+        description: 'Rejected. Reopen to edit and resubmit it.'
     },
 };
 
@@ -58,7 +54,7 @@ export default function LanguageData() {
             setError('');
         } catch (err) {
             console.error(err);
-            setError('Impossibile caricare i dati della lingua.');
+            setError('Could not load the language data.');
         } finally {
             setLoading(false);
         }
@@ -80,22 +76,22 @@ export default function LanguageData() {
         try {
             setActionInProgress(true);
             const res = await api.post(`/api/languages/${id}/workflow/${action}`, body || {});
-            alert(res.data.detail || 'Operazione eseguita.');
+            alert(res.data.detail || 'Operation completed.');
             await fetchCompilationData();
         } catch (err) {
-            alert(err.response?.data?.detail || `Errore durante: ${action}`);
+            alert(err.response?.data?.detail || `Error during: ${action}`);
         } finally {
             setActionInProgress(false);
         }
     };
 
     const handleSubmit = () => {
-        if (!window.confirm("Inviare questa lingua per approvazione? Dopo l'invio non potrai modificarla finché un admin non la revisiona.")) return;
+        if (!window.confirm("Submit this language for approval? Once submitted, you will not be able to edit it until an admin reviews it.")) return;
         callWorkflow('submit');
     };
 
     const handleApprove = () => {
-        if (!window.confirm('Approvare definitivamente questa lingua?')) return;
+        if (!window.confirm('Definitively approve this language?')) return;
         callWorkflow('approve');
     };
 
@@ -110,11 +106,11 @@ export default function LanguageData() {
     };
 
     const handleReopen = () => {
-        if (!window.confirm("Riaprire la compilazione? Lo status tornerà a 'pending' e potrai modificarla.")) return;
+        if (!window.confirm("Reopen the form? The status will go back to 'pending' and you will be able to edit it.")) return;
         callWorkflow('reopen');
     };
 
-    if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Caricamento...</div>;
+    if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Loading...</div>;
     if (error) return <div className="container alert alert-error" style={{ marginTop: '2rem' }}>{error}</div>;
     if (!data) return null;
 
@@ -152,12 +148,12 @@ export default function LanguageData() {
                             document.body.appendChild(a); a.click(); a.remove();
                             URL.revokeObjectURL(url);
                         } catch {
-                            alert("Errore durante l'export.");
+                            alert("Error during export.");
                         }
                     }}
-                    title={isAdmin ? "Esporta tutto (Database_model + Examples + Answers + schema)" : "Esporta gli esempi di questa lingua"}
+                    title={isAdmin ? "Export everything (Database_model + Examples + Answers + schema)" : "Export the examples of this language"}
                 >
-                    📥 Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
+                    Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
                 </button>
             </div>
 
@@ -176,7 +172,7 @@ export default function LanguageData() {
             }}>
                 <div style={{ flex: '1 1 300px' }}>
                     <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
-                        {meta.icon} {meta.label}
+                        {meta.label}
                     </div>
                     <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>{meta.description}</div>
                     {status === 'rejected' && language.rejection_note && (
@@ -189,7 +185,7 @@ export default function LanguageData() {
                             color: '#7f1d1d',
                             whiteSpace: 'pre-wrap',
                         }}>
-                            <strong>Nota dell'admin:</strong> {language.rejection_note}
+                            <strong>Admin note:</strong> {language.rejection_note}
                         </div>
                     )}
                 </div>
@@ -233,8 +229,8 @@ export default function LanguageData() {
                     marginBottom: '1rem',
                     fontSize: '0.9rem',
                 }}>
-                    👑 <strong>Admin override:</strong> stai modificando una lingua in stato <code>{status}</code>.
-                    Le tue modifiche vengono salvate immediatamente, lo status non cambia automaticamente.
+                    <strong>Admin override:</strong> you are editing a language in <code>{status}</code> state.
+                    Your changes are saved immediately and the status does not change automatically.
                 </div>
             )}
 
@@ -243,12 +239,12 @@ export default function LanguageData() {
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="card" style={{ width: '500px', background: '#fff', padding: '1.5rem' }}>
                         <h3 style={{ marginTop: 0, color: '#b91c1c' }}>Reject Language</h3>
-                        <p className="small muted">Inserisci una nota (opzionale) che verrà mostrata all'utente assegnato.</p>
+                        <p className="small muted">Enter a note (optional) that will be shown to the assigned user.</p>
                         <textarea
                             rows="4"
                             value={rejectNote}
                             onChange={e => setRejectNote(e.target.value)}
-                            placeholder="Es: la sezione X è incompleta, controllare le risposte sui parametri Y..."
+                            placeholder="E.g.: section X is incomplete, please review the answers for parameters Y..."
                             style={{ width: '100%', padding: '0.5rem', resize: 'vertical' }}
                         />
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>

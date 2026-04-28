@@ -76,7 +76,7 @@ def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: mo
         selectinload(models.ParameterDef.change_logs)
     ).filter(models.ParameterDef.id == id).first()
     if not parameter:
-        raise HTTPException(status_code=404, detail="Parametro non trovato")
+        raise HTTPException(status_code=404, detail="Parameter not found")
     return parameter
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -88,7 +88,7 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
         try:
             validate_expression(item.implicational_condition)
         except ParseException as e:
-            raise HTTPException(status_code=400, detail=f"Sintassi formula errata: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
     try:
         db.commit()
         db.refresh(db_item)
@@ -97,13 +97,13 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="ID duplicato o dati non validi.")
+        raise HTTPException(status_code=400, detail="Duplicate ID or invalid data.")
 
 @router.put("/{id}")
 def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Parametro non trovato")
+        raise HTTPException(status_code=404, detail="Parameter not found")
 
     # Escludiamo is_active e change_note dal normale PUT
     update_data = item.dict(exclude={'is_active', 'change_note'})
@@ -115,7 +115,7 @@ def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends
         try:
             validate_expression(item.implicational_condition)
         except ParseException as e:
-            raise HTTPException(status_code=400, detail=f"Sintassi formula errata: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
 
     # Registra il log di modifica se presente
     if item.change_note and item.change_note.strip():
@@ -134,18 +134,18 @@ def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends
         return db_item
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Errore nell'aggiornamento.")
+        raise HTTPException(status_code=400, detail="Update error.")
 
 
 @router.post("/{id}/deactivate")
 def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     # 1. Verifica Password
     if not auth.verify_password(payload.password, current_user.hashed_password):
-        raise HTTPException(status_code=403, detail="Password errata. Impossibile disattivare.")
+        raise HTTPException(status_code=403, detail="Wrong password. Cannot deactivate.")
 
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Parametro non trovato")
+        raise HTTPException(status_code=404, detail="Parameter not found")
 
     # 2. Verifica Dipendenze
     used_in = db.query(models.ParameterDef).filter(
@@ -154,7 +154,7 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
     ).all()
 
     if used_in:
-        raise HTTPException(status_code=400, detail="Impossibile disattivare: il parametro è utilizzato nelle condizioni implicazionali di altri parametri attivi.")
+        raise HTTPException(status_code=400, detail="Cannot deactivate: the parameter is used in the implicational conditions of other active parameters.")
 
     # 3. Disattiva e logga
     db_item.is_active = False
@@ -168,17 +168,17 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
         db.add(log)
 
     db.commit()
-    return {"detail": "Parametro disattivato con successo."}
+    return {"detail": "Parameter successfully deactivated."}
 
 @router.post("/{id}/reactivate")
 def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
-        raise HTTPException(status_code=404, detail="Parametro non trovato")
+        raise HTTPException(status_code=404, detail="Parameter not found")
 
     db_item.is_active = True
     db.commit()
-    return {"detail": "Parametro riattivato con successo."}
+    return {"detail": "Parameter successfully reactivated."}
 
 
 # --- ENDPOINT PER LA VALIDAZIONE SINTASSI IN TEMPO REALE ---
@@ -224,7 +224,7 @@ def create_schema(item: LookupBase, db: Session = Depends(get_db)):
         return {"id": db_item.id, "label": db_item.label}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Schema già esistente")
+        raise HTTPException(status_code=400, detail="Schema already exists")
 
 @router.get("/lookups/types")
 def get_types(db: Session = Depends(get_db)):
@@ -239,7 +239,7 @@ def create_type(item: LookupBase, db: Session = Depends(get_db)):
         return {"id": db_item.id, "label": db_item.label}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Tipo già esistente")
+        raise HTTPException(status_code=400, detail="Type already exists")
 
 @router.get("/lookups/levels")
 def get_levels(db: Session = Depends(get_db)):
@@ -254,4 +254,4 @@ def create_level(item: LookupBase, db: Session = Depends(get_db)):
         return {"id": db_item.id, "label": db_item.label}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Livello già esistente")
+        raise HTTPException(status_code=400, detail="Level already exists")

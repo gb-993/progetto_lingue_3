@@ -18,12 +18,12 @@ export default function AccountList() {
     useEffect(() => { fetchUsers(); }, []);
 
     const handleDelete = async (userId) => {
-        if (!window.confirm("Sei sicuro di voler eliminare questo account? L'azione è irreversibile.")) return;
+        if (!window.confirm("Are you sure you want to delete this account? The action is irreversible.")) return;
         try {
             await api.delete(`/api/admin/accounts/${userId}`);
             fetchUsers();
         } catch (error) {
-            alert(error.response?.data?.detail || "Errore durante l'eliminazione");
+            alert(error.response?.data?.detail || "Error during deletion");
         }
     };
 
@@ -97,7 +97,7 @@ export default function AccountList() {
 
             <section className="toolbar">
                 <div className="toolbar__form">
-                    <input type="search" placeholder="Cerca un utente..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <input type="search" placeholder="Search a user..." value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="toolbar__add">
                     <Link to="/admin/accounts/add" className="btn btn--primary">Add Account</Link>

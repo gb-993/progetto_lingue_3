@@ -18,7 +18,7 @@ export default function Login() {
             localStorage.setItem('name', resp.data.name);
             navigate('/dashboard');
         } catch {
-            setError('Credenziali non valide');
+            setError('Invalid credentials');
         }
     };
 

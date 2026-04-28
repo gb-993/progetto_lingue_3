@@ -18,7 +18,7 @@ export default function AccountCreate() {
             await api.post('/api/admin/accounts', formData);
             navigate('/admin/accounts');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore durante la creazione dell\'account.');
+            setError(err.response?.data?.detail || 'Error while creating the account.');
         }
     };
 

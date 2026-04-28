@@ -50,7 +50,7 @@ export default function BackupDetail() {
                 setSub(res.data);
             } catch (err) {
                 console.error('Errore nel recupero dei dettagli', err);
-                setError('Impossibile caricare i dati del backup.');
+                setError('Could not load the backup data.');
             } finally {
                 setLoading(false);
             }
@@ -58,7 +58,7 @@ export default function BackupDetail() {
         fetchDetail();
     }, [id]);
 
-    if (loading) return <div className="container"><p>Caricamento dettagli backup in corso...</p></div>;
+    if (loading) return <div className="container"><p>Loading backup details...</p></div>;
     if (error) return <div className="container"><div className="alert alert-error">{error}</div></div>;
     if (!sub) return null;
 
@@ -125,9 +125,9 @@ export default function BackupDetail() {
                                     <tr key={idx}>
                                         <td>{p.parameter_id}</td>
                                         <td>{p.value_orig || ""}</td>
-                                        <td>{p.warning_orig ? "✔" : ""}</td>
+                                        <td>{p.warning_orig ? "yes" : ""}</td>
                                         <td>{p.value_eval || ""}</td>
-                                        <td>{p.warning_eval ? "✔" : ""}</td>
+                                        <td>{p.warning_eval ? "yes" : ""}</td>
                                     </tr>
                                 ))
                             )}

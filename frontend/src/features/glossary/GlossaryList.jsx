@@ -24,13 +24,13 @@ export default function GlossaryList() {
     }, []);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Sei sicuro di voler eliminare questo termine?')) return;
+        if (!window.confirm('Are you sure you want to delete this term?')) return;
 
         try {
             await api.delete(`/api/admin/glossary/${id}`);
             fetchGlossary();
         } catch (error) {
-            alert('Errore durante l\'eliminazione');
+            alert('Error during deletion');
             console.error(error);
         }
     };
@@ -41,15 +41,15 @@ export default function GlossaryList() {
     return (
         <div className="container">
             <header className="dashboard-hero">
-                <h1>Glossario</h1>
-                <p className="muted dashboard-copy">Consulta i termini e le definizioni</p>
+                <h1>Glossary</h1>
+                <p className="muted dashboard-copy">Browse terms and definitions</p>
             </header>
 
             <section className="toolbar">
                 <div className="toolbar__form" style={{ width: '100%', maxWidth: '500px' }}>
                     <input
                         type="search"
-                        placeholder="Cerca termine o descrizione..."
+                        placeholder="Search by term or description..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ccc' }}
@@ -57,7 +57,7 @@ export default function GlossaryList() {
                 </div>
                 {isAdmin && (
                     <div className="toolbar__add">
-                        <Link to="/admin/glossary/add" className="btn btn--primary">Aggiungi Termine</Link>
+                        <Link to="/admin/glossary/add" className="btn btn--primary">Add Term</Link>
                     </div>
                 )}
             </section>
@@ -68,9 +68,9 @@ export default function GlossaryList() {
                     <thead style={{ backgroundColor: '#f9f9f9', textAlign: 'left' }}>
                     <tr>
                         {isAdmin && <th style={{ padding: '1rem', borderBottom: '2px solid #eee', width: '8%' }}>ID</th>}
-                        <th style={{ padding: '1rem', width: '25%', borderBottom: '2px solid #eee' }}>Termine</th>
-                        <th style={{ padding: '1rem', width: isAdmin ? '45%' : '75%', borderBottom: '2px solid #eee' }}>Descrizione</th>
-                        {isAdmin && <th style={{ padding: '1rem', width: '22%', textAlign: 'right', borderBottom: '2px solid #eee' }}>Azioni</th>}
+                        <th style={{ padding: '1rem', width: '25%', borderBottom: '2px solid #eee' }}>Term</th>
+                        <th style={{ padding: '1rem', width: isAdmin ? '45%' : '75%', borderBottom: '2px solid #eee' }}>Description</th>
+                        {isAdmin && <th style={{ padding: '1rem', width: '22%', textAlign: 'right', borderBottom: '2px solid #eee' }}>Actions</th>}
                     </tr>
                     </thead>
                     <tbody>
@@ -98,8 +98,8 @@ export default function GlossaryList() {
                             </td>
                             {isAdmin && (
                                 <td className="row-actions" style={{ padding: '1rem', textAlign: 'right', verticalAlign: 'top' }}>
-                                    <Link to={`/admin/glossary/${item.id}/edit`} className="btn">Modifica</Link>
-                                    <button onClick={() => handleDelete(item.id)} className="btn btn--danger" style={{color: 'red', marginLeft: '0.5rem'}}>Elimina</button>
+                                    <Link to={`/admin/glossary/${item.id}/edit`} className="btn">Edit</Link>
+                                    <button onClick={() => handleDelete(item.id)} className="btn btn--danger" style={{color: 'red', marginLeft: '0.5rem'}}>Delete</button>
                                 </td>
                             )}
                         </tr>
@@ -107,7 +107,7 @@ export default function GlossaryList() {
                     {filteredGlossary.length === 0 && (
                         <tr>
                             <td colSpan={isAdmin ? "4" : "2"} style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
-                                Nessun termine trovato.
+                                No term found.
                             </td>
                         </tr>
                     )}

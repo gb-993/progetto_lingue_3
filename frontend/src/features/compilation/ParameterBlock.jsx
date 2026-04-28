@@ -50,16 +50,16 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly,
                 const msg = (detail && typeof detail === 'object' && detail.message)
                     ? detail.message
                     : (typeof detail === 'string' ? detail : null);
-                if (msg && msg.toLowerCase().includes('modificat')) {
-                    alert(msg + "\n\nLe tue modifiche locali NON sono state salvate. La pagina verrà ricaricata.");
+                if (msg && (msg.toLowerCase().includes('modificat') || msg.toLowerCase().includes('modified'))) {
+                    alert(msg + "\n\nYour local changes have NOT been saved. The page will be reloaded.");
                     onSaved(); // forza il refetch upstream
                     return;
                 }
-                alert(detail?.message || detail || "Conflitto: ricarica la pagina.");
+                alert(detail?.message || detail || "Conflict: reload the page.");
                 return;
             }
             const detail = err.response?.data?.detail;
-            alert(typeof detail === 'string' ? detail : "Errore nel salvataggio del blocco.");
+            alert(typeof detail === 'string' ? detail : "Error while saving the block.");
         } finally {
             setIsSaving(false);
         }
@@ -89,19 +89,19 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly,
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {isReadOnly && (
                     <div style={{ padding: '0.75rem 1rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontSize: '0.9rem' }}>
-                        🔒 Compilazione bloccata dallo stato corrente della lingua. Le modifiche non sono salvabili.
+                        Form locked by the current language status. Changes cannot be saved.
                     </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
-                    <span>Tutto pronto e verificato?</span>
+                    <span>Everything ready and verified?</span>
                     <button className="btn btn--ok" onClick={() => handleFinalSave(false)} disabled={isSaving || isReadOnly}>
-                        {isSaving ? 'Salvataggio...' : `Confident -> Next ${parameter.id}`}
+                        {isSaving ? 'Saving...' : `Confident -> Next ${parameter.id}`}
                     </button>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
-                    <span>Hai dei dubbi? Segnala per dopo.</span>
+                    <span>Any doubts? Flag for later.</span>
                     <button className="btn btn--bad" onClick={() => handleFinalSave(true)} disabled={isSaving || isReadOnly}>
-                        {isSaving ? 'Salvataggio...' : 'Unsure -> Next'}
+                        {isSaving ? 'Saving...' : 'Unsure -> Next'}
                     </button>
                 </div>
             </div>

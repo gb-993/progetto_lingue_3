@@ -24,7 +24,7 @@ export default function HowToCite() {
 
     const copyToClipboard = (text, key) => {
         navigator.clipboard.writeText(text).then(() => {
-            setCopyStatus(prev => ({ ...prev, [key]: '✓ Copied' }));
+            setCopyStatus(prev => ({ ...prev, [key]: 'Copied' }));
             setTimeout(() => {
                 setCopyStatus(prev => ({ ...prev, [key]: 'Copy' }));
             }, 2000);
@@ -74,7 +74,7 @@ export default function HowToCite() {
                     {isAdmin && (
                         <div style={{ marginTop: '10px', textAlign: 'right' }}>
                             <Link to="/admin/edit-content/params_cite" style={{ fontSize: '0.85rem', color: '#ff4500', fontWeight: 'bold', textDecoration: 'none' }}>
-                                ✏️ Edit reference
+                                Edit reference
                             </Link>
                         </div>
                     )}
@@ -110,7 +110,7 @@ export default function HowToCite() {
                     {isAdmin && (
                         <div style={{ marginTop: '10px', textAlign: 'right' }}>
                             <Link to="/admin/edit-content/data_cite" style={{ fontSize: '0.85rem', color: '#ff4500', fontWeight: 'bold', textDecoration: 'none' }}>
-                                ✏️ Edit reference
+                                Edit reference
                             </Link>
                         </div>
                     )}

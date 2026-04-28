@@ -19,7 +19,7 @@ export default function MotivationList() {
             const res = await api.get('/api/admin/motivations?include_inactive=true');
             setMotivations(res.data);
         } catch (err) {
-            setError("Impossibile caricare le motivazioni.");
+            setError("Could not load the motivations.");
         } finally {
             setLoading(false);
         }
@@ -51,17 +51,17 @@ export default function MotivationList() {
             setShowModal(false);
             fetchMotivations();
         } catch (err) {
-            alert(err.response?.data?.detail || "Errore nel salvataggio");
+            alert(err.response?.data?.detail || "Error while saving");
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Sei sicuro di voler eliminare questa motivazione? Se è usata, l'operazione verrà bloccata.")) return;
+        if (!window.confirm("Are you sure you want to delete this motivation? If it is in use, the operation will be blocked.")) return;
         try {
             await api.delete(`/api/admin/motivations/${id}`);
             fetchMotivations();
         } catch (err) {
-            alert(err.response?.data?.detail || "Errore durante l'eliminazione");
+            alert(err.response?.data?.detail || "Error during deletion");
         }
     };
 
@@ -77,7 +77,7 @@ export default function MotivationList() {
 
             <section className="toolbar">
                 <div className="toolbar__form">
-                    <input type="search" placeholder="Cerca in ogni campo (code, label, ...)" value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <input type="search" placeholder="Search every field (code, label, ...)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="toolbar__add">
                     <button className="btn btn--primary" onClick={() => handleOpenModal()}>Add Motivation</button>

@@ -28,7 +28,7 @@ export default function ImportExcel() {
             });
             setReport(res.data);
         } catch (err) {
-            setError(err.response?.data?.detail || 'Errore durante l\'import.');
+            setError(err.response?.data?.detail || 'Error during import.');
         } finally {
             setBusy(false);
         }
@@ -52,7 +52,7 @@ export default function ImportExcel() {
             document.body.appendChild(a); a.click(); a.remove();
             URL.revokeObjectURL(url);
         } catch {
-            alert("Errore nel download del report.");
+            alert("Error downloading the report.");
         }
     };
 
@@ -61,17 +61,17 @@ export default function ImportExcel() {
             <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
                 <h1>Import from Excel</h1>
                 <p className="muted">
-                    Carica un file Excel per importare schema (Motivations, Parameters, Questions, QAM)
-                    e/o dati di compilazione di una singola lingua (sheet <code>Database_model</code>).
+                    Upload an Excel file to import schema (Motivations, Parameters, Questions, QAM)
+                    and/or filled-in data of a single language (sheet <code>Database_model</code>).
                 </p>
             </header>
 
             <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ marginTop: 0 }}>Strategia</h3>
+                <h3 style={{ marginTop: 0 }}>Strategy</h3>
                 <ul className="small" style={{ lineHeight: 1.8, marginBottom: 0 }}>
-                    <li><strong>Schema</strong> (Motivations / Parameters / Questions / QAM): <em>strict update</em>. Se l'<code>id</code> esiste in DB, i campi vengono rimpiazzati col valore del file. Se l'<code>id</code> non esiste, la riga è un errore (saltata, finisce nel report). Le entità non menzionate nel file rimangono intatte.</li>
-                    <li><strong>Database_model</strong>: <em>replace totale</em> della lingua. Tutte le risposte/esempi/motivazioni della lingua vengono cancellate, poi inserite solo le righe valide. Le righe errate restano svuotate (non risposte) e finiscono nel report.</li>
-                    <li><strong>Errori a cascata</strong>: se una motivation/question fallisce, le righe dipendenti generano un errore esplicito (mai silenziose).</li>
+                    <li><strong>Schema</strong> (Motivations / Parameters / Questions / QAM): <em>strict update</em>. If the <code>id</code> exists in the DB, the fields are replaced with the value from the file. If the <code>id</code> does not exist, the row is an error (skipped, included in the report). Entities not mentioned in the file remain untouched.</li>
+                    <li><strong>Database_model</strong>: <em>full replace</em> of the language. All answers/examples/motivations for the language are deleted, then only valid rows are inserted. Invalid rows remain empty (unanswered) and are included in the report.</li>
+                    <li><strong>Cascading errors</strong>: if a motivation/question fails, the dependent rows generate an explicit error (never silent).</li>
                 </ul>
             </div>
 
@@ -99,7 +99,7 @@ export default function ImportExcel() {
                         </button>
                         <Link to="/languages" className="btn">Cancel</Link>
                         {busy && (
-                            <span className="small muted">⚠️ Non chiudere la pagina fino al termine.</span>
+                            <span className="small muted">Do not close the page until completion.</span>
                         )}
                     </div>
                 </form>
@@ -128,7 +128,7 @@ function ImportReport({ report, onDownloadErrors }) {
                 flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem',
             }}>
                 <h3 style={{ margin: 0 }}>
-                    {hasErrors ? '⚠️ Import completato con errori' : '✅ Import completato'}
+                    {hasErrors ? 'Import completed with errors' : 'Import completed'}
                 </h3>
                 {hasErrors && (
                     <button
@@ -136,32 +136,32 @@ function ImportReport({ report, onDownloadErrors }) {
                         className="btn btn--small"
                         onClick={onDownloadErrors}
                     >
-                        📥 Download error report (.xlsx)
+                        Download error report (.xlsx)
                     </button>
                 )}
             </div>
 
             {report.target_language_name && (
                 <p className="small muted" style={{ marginTop: 0 }}>
-                    Lingua processata: <strong>{report.target_language_name}</strong>
+                    Language processed: <strong>{report.target_language_name}</strong>
                     {report.target_language_id && <span> ({report.target_language_id})</span>}
                 </p>
             )}
 
             {/* Summary per sheet */}
-            <h4 style={{ marginBottom: '0.5rem' }}>Riepilogo per sheet</h4>
+            <h4 style={{ marginBottom: '0.5rem' }}>Per-sheet summary</h4>
             {sheets.length === 0 ? (
-                <p className="small muted">Nessun sheet riconosciuto nel file.</p>
+                <p className="small muted">No sheet recognised in the file.</p>
             ) : (
                 <table className="table" style={{ marginBottom: '1.5rem' }}>
                     <thead>
                         <tr>
                             <th>Sheet</th>
-                            <th style={{ textAlign: 'right' }}>Righe</th>
-                            <th style={{ textAlign: 'right' }}>Aggiornate</th>
-                            <th style={{ textAlign: 'right' }}>Inserite</th>
-                            <th style={{ textAlign: 'right' }}>Saltate</th>
-                            <th style={{ textAlign: 'right' }}>Errori</th>
+                            <th style={{ textAlign: 'right' }}>Rows</th>
+                            <th style={{ textAlign: 'right' }}>Updated</th>
+                            <th style={{ textAlign: 'right' }}>Inserted</th>
+                            <th style={{ textAlign: 'right' }}>Skipped</th>
+                            <th style={{ textAlign: 'right' }}>Errors</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -188,7 +188,7 @@ function ImportReport({ report, onDownloadErrors }) {
             {/* Lista errori */}
             {hasErrors && (
                 <>
-                    <h4 style={{ marginBottom: '0.5rem' }}>Errori ({totalErrors})</h4>
+                    <h4 style={{ marginBottom: '0.5rem' }}>Errors ({totalErrors})</h4>
                     <div style={{
                         maxHeight: '500px', overflowY: 'auto',
                         border: '1px solid var(--border)', borderRadius: '6px',
@@ -197,10 +197,10 @@ function ImportReport({ report, onDownloadErrors }) {
                             <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa' }}>
                                 <tr>
                                     <th>Sheet</th>
-                                    <th>Riga</th>
-                                    <th>Colonna</th>
-                                    <th>Valore</th>
-                                    <th>Motivo</th>
+                                    <th>Row</th>
+                                    <th>Column</th>
+                                    <th>Value</th>
+                                    <th>Reason</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -219,17 +219,17 @@ function ImportReport({ report, onDownloadErrors }) {
                         </table>
                     </div>
                     <p className="small muted" style={{ marginTop: '1rem' }}>
-                        Suggerimento: scarica il report con <strong>Download error report (.xlsx)</strong>,
-                        sistema gli errori nel file di partenza e re-importa.
+                        Tip: download the report with <strong>Download error report (.xlsx)</strong>,
+                        fix the errors in the source file and re-import.
                     </p>
                 </>
             )}
 
             <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
-                <Link to="/languages" className="btn btn--primary">Vai alla lista lingue</Link>
+                <Link to="/languages" className="btn btn--primary">Go to languages list</Link>
                 {report.target_language_id && (
                     <Link to={`/languages/${report.target_language_id}/data`} className="btn">
-                        Apri lingua importata
+                        Open imported language
                     </Link>
                 )}
             </div>

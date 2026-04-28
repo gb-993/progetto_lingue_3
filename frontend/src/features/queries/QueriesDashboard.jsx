@@ -73,7 +73,7 @@ export default function QueriesDashboard() {
             setResults(res.data);
         } catch (err) {
             console.error("Query fallita", err);
-            setResults({ error: "Errore durante l'esecuzione della query." });
+            setResults({ error: "Error while executing the query." });
         } finally {
             setLoading(false);
         }

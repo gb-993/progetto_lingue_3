@@ -187,7 +187,7 @@ def get_version_detail(
         .first()
     )
     if not v:
-        raise HTTPException(404, "Versione non trovata")
+        raise HTTPException(404, "Version not found")
 
     prev = get_previous_version(db, v.entity_type, v.entity_id, v.id)
     diff = compute_diff(prev.snapshot if prev else None, v.snapshot or {})

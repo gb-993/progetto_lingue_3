@@ -28,11 +28,11 @@ def _ensure_can_modify(language: models.Language, current_user: models.User):
     if current_user.role == "admin":
         return
     if language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questa lingua.")
+        raise HTTPException(status_code=403, detail="You are not authorized to modify this language.")
     if language.status in LOCKED_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"Lingua bloccata (stato: {language.status}). Attendi la revisione admin o riaprila."
+            detail=f"Language locked (status: {language.status}). Wait for admin review or reopen it."
         )
 
 
@@ -115,7 +115,7 @@ def get_all_examples(db: Session = Depends(get_db), current_user: models.User = 
 @router.get("/{lang_id}/compilation")
 def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     parameters = db.query(models.ParameterDef).filter(models.ParameterDef.is_active == True).order_by(models.ParameterDef.position).all()
     answers = db.query(models.Answer).filter(models.Answer.language_id == language.id).all()
@@ -195,7 +195,7 @@ def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Op
 @router.post("/{lang_id}/parameters/{param_id}/save_block")
 def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSavePayload, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
     _ensure_can_modify(language, current_user)
 
     # Optimistic concurrency: se il client ci dice che ha caricato il blocco a un
@@ -208,7 +208,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
                 status_code=409,
                 detail={
                     "error": "stale_block",
-                    "message": "Questo blocco è stato modificato da un'altra sessione (probabilmente un admin). Ricarica la pagina per vedere le modifiche prima di salvare.",
+                    "message": "This block has been modified by another session (probably an admin). Reload the page to see the changes before saving.",
                     "current_last_modified": current_iso,
                     "expected_last_modified": payload.expected_last_modified,
                 }
@@ -233,7 +233,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         if normalized_response == "yes":
             valid_ex_count = sum(1 for ex in ans_payload.examples if ex.textarea.strip())
             if valid_ex_count < 2:
-                raise HTTPException(status_code=400, detail=f"Devi inserire almeno 2 esempi validi per la domanda {ans_payload.question_id} se rispondi YES.")
+                raise HTTPException(status_code=400, detail=f"You must provide at least 2 valid examples for question {ans_payload.question_id} when answering YES.")
 
         answer = db.query(models.Answer).filter(
             models.Answer.language_id == language.id,
@@ -279,7 +279,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         logger.error("DAG auto-run failed for language %s: %s", language.id, e, exc_info=True)
 
     return {
-        "detail": "Parametro salvato correttamente",
+        "detail": "Parameter saved successfully",
         "last_modified": _block_last_modified_iso(db, language.id, param_id)
     }
 
@@ -296,20 +296,20 @@ def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     da approve/reject sulle lingue già in waiting_for_approval).
     """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     if current_user.role == "admin":
-        raise HTTPException(status_code=403, detail="Il submit è riservato all'utente assegnato. Gli admin gestiscono via approve/reject.")
+        raise HTTPException(status_code=403, detail="Submit is reserved for the assigned user. Admins handle this via approve/reject.")
     if language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Solo l'utente assegnato a questa lingua può inviarla.")
+        raise HTTPException(status_code=403, detail="Only the user assigned to this language can submit it.")
     if language.status not in ("pending", "rejected"):
-        raise HTTPException(status_code=409, detail=f"Impossibile inviare: stato corrente '{language.status}'.")
+        raise HTTPException(status_code=409, detail=f"Cannot submit: current status '{language.status}'.")
 
     language.status = "waiting_for_approval"
     language.submitted_at = datetime.utcnow()
     language.rejection_note = None  # ripuliamo eventuale nota di rifiuto precedente
     db.commit()
-    return {"detail": "Lingua inviata per approvazione.", "status": language.status}
+    return {"detail": "Language submitted for approval.", "status": language.status}
 
 
 @router.post("/{lang_id}/workflow/approve")
@@ -318,15 +318,15 @@ def approve_language(lang_id: str, db: Session = Depends(get_db), current_user: 
     waiting_for_approval -> approved. Solo admin.
     """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "waiting_for_approval":
-        raise HTTPException(status_code=409, detail=f"Impossibile approvare: stato corrente '{language.status}'.")
+        raise HTTPException(status_code=409, detail=f"Cannot approve: current status '{language.status}'.")
 
     language.status = "approved"
     language.reviewed_at = datetime.utcnow()
     language.rejection_note = None
     db.commit()
-    return {"detail": "Lingua approvata.", "status": language.status}
+    return {"detail": "Language approved.", "status": language.status}
 
 
 @router.post("/{lang_id}/workflow/reject")
@@ -335,15 +335,15 @@ def reject_language(lang_id: str, payload: RejectPayload, db: Session = Depends(
     waiting_for_approval -> rejected (con nota opzionale). Solo admin.
     """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "waiting_for_approval":
-        raise HTTPException(status_code=409, detail=f"Impossibile rifiutare: stato corrente '{language.status}'.")
+        raise HTTPException(status_code=409, detail=f"Cannot reject: current status '{language.status}'.")
 
     language.status = "rejected"
     language.reviewed_at = datetime.utcnow()
     language.rejection_note = (payload.note or "").strip() or None
     db.commit()
-    return {"detail": "Lingua rifiutata.", "status": language.status, "rejection_note": language.rejection_note}
+    return {"detail": "Language rejected.", "status": language.status, "rejection_note": language.rejection_note}
 
 
 @router.post("/{lang_id}/workflow/reopen")
@@ -352,22 +352,22 @@ def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     rejected -> pending. Utente assegnato o admin.
     """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     if current_user.role != "admin" and language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a riaprire questa lingua.")
+        raise HTTPException(status_code=403, detail="You are not authorized to reopen this language.")
     if language.status != "rejected":
-        raise HTTPException(status_code=409, detail=f"Impossibile riaprire: stato corrente '{language.status}'.")
+        raise HTTPException(status_code=409, detail=f"Cannot reopen: current status '{language.status}'.")
 
     language.status = "pending"
     db.commit()
-    return {"detail": "Lingua riaperta.", "status": language.status}
+    return {"detail": "Language reopened.", "status": language.status}
 
 
 @router.get("/{lang_id}/debug")
 def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     # 1. Recupera parametri attivi e relative domande
     parameters = db.query(models.ParameterDef).filter(
@@ -450,7 +450,7 @@ def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: 
     Non tocca lo status della lingua né delle answer.
     """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
-    if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     active_params = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
     for (pid,) in active_params:
@@ -461,8 +461,8 @@ def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: 
         report = run_dag_for_language(language.id, db)
         db.commit()
         return {
-            "detail": f"DAG completato. Elaborati: {len(report.processed)}, Forzati a zero: {len(report.forced_zero)}, Warning propagati: {len(report.warnings_propagated)}."
+            "detail": f"DAG completed. Processed: {len(report.processed)}, Forced to zero: {len(report.forced_zero)}, Warnings propagated: {len(report.warnings_propagated)}."
         }
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Errore critico durante l'esecuzione del DAG: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Critical error while running the DAG: {str(e)}")

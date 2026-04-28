@@ -4,10 +4,10 @@ import api from '../../api';
 
 // ===== Palette status (coerente con LanguageList / LanguageData) =====
 const STATUS_BADGE = {
-    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: '✏️' },
-    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d', icon: '⏳' },
-    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac', icon: '✅' },
-    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', icon: '⚠️' },
+    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
+    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d' },
+    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
 };
 
 function StatusBadge({ status }) {
@@ -19,7 +19,7 @@ function StatusBadge({ status }) {
             padding: '0.1rem 0.5rem', borderRadius: '999px', fontSize: '0.72rem',
             fontWeight: 600, lineHeight: 1.6, whiteSpace: 'nowrap',
         }}>
-            <span aria-hidden="true">{meta.icon}</span>{meta.label}
+            {meta.label}
         </span>
     );
 }
@@ -46,7 +46,7 @@ function RichTextEditor({ initialHtml, onSave, onCancel, isSaving }) {
     };
 
     const handleLink = () => {
-        const url = window.prompt('URL del link:', 'https://');
+        const url = window.prompt('Link URL:', 'https://');
         if (url) exec('createLink', url);
     };
 
@@ -69,8 +69,8 @@ function RichTextEditor({ initialHtml, onSave, onCancel, isSaving }) {
                 <button type="button" onClick={() => exec('bold')} style={{ ...btnStyle, fontWeight: 'bold' }} title="Bold">B</button>
                 <button type="button" onClick={() => exec('italic')} style={{ ...btnStyle, fontStyle: 'italic' }} title="Italic">I</button>
                 <button type="button" onClick={() => exec('underline')} style={{ ...btnStyle, textDecoration: 'underline' }} title="Underline">U</button>
-                <button type="button" onClick={handleLink} style={btnStyle} title="Link">🔗</button>
-                <button type="button" onClick={() => exec('removeFormat')} style={btnStyle} title="Clear formatting">⌫</button>
+                <button type="button" onClick={handleLink} style={btnStyle} title="Link">Link</button>
+                <button type="button" onClick={() => exec('removeFormat')} style={btnStyle} title="Clear formatting">Clear</button>
             </div>
             <div
                 ref={editorRef}
@@ -115,7 +115,7 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
             onSaved(keyName, newHtml);
             setEditing(false);
         } catch {
-            alert('Errore nel salvataggio della citazione.');
+            alert('Error saving the citation.');
         } finally {
             setSaving(false);
         }
@@ -152,9 +152,9 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
                                 color: copied ? '#fff' : '#475569',
                                 border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 600,
                             }}
-                            title="Copia citazione (testo semplice)"
+                            title="Copy citation (plain text)"
                         >
-                            {copied ? '✓ Copied' : 'Copy'}
+                            {copied ? 'Copied' : 'Copy'}
                         </button>
                         <div dangerouslySetInnerHTML={{ __html: html }} />
                     </div>
@@ -166,7 +166,7 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
                                 className="btn btn--small"
                                 style={{ fontSize: '0.78rem' }}
                             >
-                                ✏️ Edit reference
+                                Edit reference
                             </button>
                         </div>
                     )}
@@ -225,7 +225,7 @@ export default function Dashboard() {
             <header className="dashboard-hero" style={{ marginBottom: '1.25rem' }}>
                 <h1 style={{ marginBottom: '0.25rem' }}>Welcome, {name}</h1>
                 <p className="muted dashboard-copy" style={{ margin: 0 }}>
-                    {role === 'admin' ? 'Pannello di controllo amministratore.' : 'Le tue lingue assegnate.'}
+                    {role === 'admin' ? 'Administrator control panel.' : 'Your assigned languages.'}
                 </p>
             </header>
 
@@ -253,7 +253,7 @@ function AdminDashboard() {
             setData(dash);
             setSiteContents(contents || {});
         }).catch(err => {
-            setError(err.response?.data?.detail || 'Errore caricamento dashboard.');
+            setError(err.response?.data?.detail || 'Error loading the dashboard.');
         }).finally(() => setLoading(false));
     }, []);
 
@@ -261,7 +261,7 @@ function AdminDashboard() {
         setSiteContents(prev => ({ ...prev, [key]: newHtml }));
     };
 
-    if (loading) return <div className="container">Caricamento...</div>;
+    if (loading) return <div className="container">Loading...</div>;
     if (error) return <div className="container alert alert-error">{error}</div>;
     if (!data) return null;
 
@@ -280,32 +280,32 @@ function AdminDashboard() {
                 {/* Stat strip: 4 card verbose con numero + descrizione + link */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                     <VerboseStatCard
-                        label="Da revisionare"
+                        label="To review"
                         value={stats.to_review_count}
                         accent="#f59e0b"
-                        link={{ to: "/languages?status=waiting_for_approval", text: "Vedi lista →" }}
+                        link={{ to: "/languages?status=waiting_for_approval", text: "View list →" }}
                         anchor="#section-review"
                     />
                     <VerboseStatCard
-                        label="Completate"
+                        label="Completed"
                         value={stats.completed_count}
                         accent="#16a34a"
-                        link={{ to: "/languages?status=approved", text: "Lingue approvate →" }}
+                        link={{ to: "/languages?status=approved", text: "Approved languages →" }}
                         anchor="#section-completed"
                     />
                     <VerboseStatCard
-                        label="Lingue con red flags"
+                        label="Languages with red flags"
                         value={stats.languages_with_red}
                         accent="#dc2626"
                         anchor="#section-red"
-                        link={{ to: "/languages", text: "Tutte le lingue →" }}
+                        link={{ to: "/languages", text: "All languages →" }}
                     />
                     <VerboseStatCard
-                        label="Parametri rossi totali"
+                        label="Total red parameters"
                         value={stats.total_red_params}
                         accent="#b91c1c"
                         anchor="#section-red"
-                        link={{ to: "/admin/parameters", text: "Vai ai parametri →" }}
+                        link={{ to: "/admin/parameters", text: "Go to parameters →" }}
                     />
                 </div>
 
@@ -339,7 +339,7 @@ function VerboseStatCard({ label, value, accent = '#3b82f6', link, anchor }) {
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                 {anchor && (
                     <a href={anchor} style={{ fontSize: '0.78rem', color: accent, textDecoration: 'none', fontWeight: 600 }}>
-                        Scrolla giù ↓
+                        Scroll down ↓
                     </a>
                 )}
                 {link && (
@@ -355,18 +355,18 @@ function VerboseStatCard({ label, value, accent = '#3b82f6', link, anchor }) {
 // ----- 1. To Review -----
 function ToReviewSection({ items }) {
     return (
-        <CollapsibleSection id="section-review" title="⏳ Lingue da revisionare" badge={items.length}>
+        <CollapsibleSection id="section-review" title="Languages to review" badge={items.length}>
             {items.length === 0 ? (
-                <p className="muted small">Nessuna lingua in attesa di approvazione.</p>
+                <p className="muted small">No languages awaiting approval.</p>
             ) : (
                 <table className="table">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Lingua</th>
-                            <th>Inviata da</th>
-                            <th>Inviata il</th>
-                            <th style={{ textAlign: 'right' }}>Azioni</th>
+                            <th>Language</th>
+                            <th>Submitted by</th>
+                            <th>Submitted on</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -391,18 +391,18 @@ function ToReviewSection({ items }) {
 // ----- 2. Completed -----
 function CompletedSection({ items }) {
     return (
-        <CollapsibleSection id="section-completed" title="✅ Lingue completate" badge={items.length} defaultOpen={false}>
+        <CollapsibleSection id="section-completed" title="Completed languages" badge={items.length} defaultOpen={false}>
             {items.length === 0 ? (
-                <p className="muted small">Nessuna lingua approvata finora.</p>
+                <p className="muted small">No languages approved so far.</p>
             ) : (
                 <table className="table">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Lingua</th>
-                            <th>Compilata da</th>
-                            <th>Approvata il</th>
-                            <th style={{ textAlign: 'right' }}>Azioni</th>
+                            <th>Language</th>
+                            <th>Filled by</th>
+                            <th>Approved on</th>
+                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -437,13 +437,13 @@ function RedParamsSection({ items }) {
     };
 
     return (
-        <CollapsibleSection id="section-red" title="🚩 Parametri rossi per lingua" badge={items.length}>
+        <CollapsibleSection id="section-red" title="Red parameters by language" badge={items.length}>
             <p className="small muted" style={{ marginTop: 0 }}>
-                <strong>Unsure</strong>: blocco marcato come incerto.
-                <strong> Incomplete</strong>: domande senza risposta.
+                <strong>Unsure</strong>: block marked as uncertain.
+                <strong> Incomplete</strong>: questions without an answer.
             </p>
             {items.length === 0 ? (
-                <p className="muted small">Nessun blocco rosso. Tutto pulito.</p>
+                <p className="muted small">No red blocks. All clean.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {items.map(g => {
@@ -502,7 +502,7 @@ function RedParamsSection({ items }) {
                                                 </div>
                                             ))}
                                         </div>
-                                        <Link to={`/languages/${g.language_id}/data`} className="btn btn--primary btn--small">Apri compilazione</Link>
+                                        <Link to={`/languages/${g.language_id}/data`} className="btn btn--primary btn--small">Open form</Link>
                                     </div>
                                 )}
                             </div>
@@ -520,14 +520,14 @@ function HowToCiteSection({ contents, onSaved, isAdmin }) {
     const dataHtml = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds.). 2026. The PCM_Hub (version 1).";
 
     return (
-        <CollapsibleSection id="section-cite" title="📖 How to cite" defaultOpen={false}>
+        <CollapsibleSection id="section-cite" title="How to cite" defaultOpen={false}>
             <p className="small muted" style={{ marginTop: 0 }}>
-                Citazioni dinamiche modificabili (HTML rich text). Le modifiche sono visibili a tutti gli utenti del sito.
+                Editable dynamic citations (HTML rich text). Changes are visible to all users of the site.
             </p>
             <CiteBox
                 keyName="params_cite"
                 role="Parameters & Manifestations"
-                description="Riferimento per parametri e manifestazioni."
+                description="Reference for parameters and manifestations."
                 html={paramsHtml}
                 onSaved={onSaved}
                 isAdmin={isAdmin}
@@ -535,13 +535,13 @@ function HowToCiteSection({ contents, onSaved, isAdmin }) {
             <CiteBox
                 keyName="data_cite"
                 role="Data, Map & Scripts"
-                description="Riferimento per ogni altro contenuto del PCM Hub."
+                description="Reference for any other content of the PCM Hub."
                 html={dataHtml}
                 onSaved={onSaved}
                 isAdmin={isAdmin}
             />
             <div style={{ marginTop: '0.5rem' }}>
-                <Link to="/how-to-cite" className="small">Vedi pagina pubblica completa →</Link>
+                <Link to="/how-to-cite" className="small">View full public page →</Link>
             </div>
         </CollapsibleSection>
     );
@@ -552,14 +552,14 @@ function RecentChangesSection({ items }) {
     return (
         <section className="card dashboard-section" style={{ padding: '0.85rem 1rem' }}>
             <h3 style={{ marginTop: 0, marginBottom: '0.6rem', fontSize: '1rem' }}>
-                📋 Cronologia modifiche
+                Change history
                 <span style={{
                     marginLeft: '0.5rem', background: '#e2e8f0', color: '#475569',
                     padding: '0.05rem 0.5rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
                 }}>{items.length}</span>
             </h3>
             {items.length === 0 ? (
-                <p className="muted small">Nessuna modifica registrata.</p>
+                <p className="muted small">No changes recorded.</p>
             ) : (
                 <div style={{ maxHeight: 'calc(100vh - 12rem)', overflowY: 'auto', paddingRight: '0.25rem' }}>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -604,11 +604,11 @@ function UserDashboard() {
     useEffect(() => {
         api.get('/api/user/dashboard')
             .then(res => setData(res.data))
-            .catch(err => setError(err.response?.data?.detail || 'Errore caricamento dashboard.'))
+            .catch(err => setError(err.response?.data?.detail || 'Error loading the dashboard.'))
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="container">Caricamento...</div>;
+    if (loading) return <div className="container">Loading...</div>;
     if (error) return <div className="container alert alert-error">{error}</div>;
     if (!data) return null;
 
@@ -616,9 +616,9 @@ function UserDashboard() {
 
     return (
         <section className="card dashboard-section">
-            <h3 style={{ marginTop: 0 }}>Le tue lingue assegnate ({languages.length})</h3>
+            <h3 style={{ marginTop: 0 }}>Your assigned languages ({languages.length})</h3>
             {languages.length === 0 ? (
-                <p className="muted">Nessuna lingua assegnata. Contatta un admin se pensi sia un errore.</p>
+                <p className="muted">No languages assigned. Contact an admin if you think this is an error.</p>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {languages.map(l => (
@@ -633,12 +633,12 @@ function UserDashboard() {
                                     <StatusBadge status={l.status} />
                                 </div>
                                 <Link to={`/languages/${l.id}/data`} className="btn btn--primary btn--small">
-                                    {l.status === 'rejected' ? 'Vedi rifiuto e riapri' : 'Compila'}
+                                    {l.status === 'rejected' ? 'View rejection and reopen' : 'Fill in'}
                                 </Link>
                             </div>
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.2rem' }}>
-                                    <span>Progresso: {l.answered}/{l.total} risposte</span>
+                                    <span>Progress: {l.answered}/{l.total} answers</span>
                                     <span>{l.progress_pct}%</span>
                                 </div>
                                 <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
@@ -650,7 +650,7 @@ function UserDashboard() {
                             </div>
                             {l.status === 'rejected' && l.rejection_note && (
                                 <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#7f1d1d', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem' }}>
-                                    <strong>Nota admin:</strong> {l.rejection_note}
+                                    <strong>Admin note:</strong> {l.rejection_note}
                                 </div>
                             )}
                         </div>

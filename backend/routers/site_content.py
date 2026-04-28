@@ -80,4 +80,4 @@ def update_site_content(key: str, data: SiteContentUpdate, db: Session = Depends
         content_obj.updated_by_id = current_user.id
 
     db.commit()
-    return {"detail": f"Contenuto '{key}' aggiornato con successo."}
+    return {"detail": f"Content '{key}' updated successfully."}

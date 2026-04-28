@@ -16,7 +16,7 @@ export default function BackupList() {
             setFolders(res.data || []);
         } catch (err) {
             console.error('Errore nel recupero dei backup', err);
-            setError('Impossibile caricare lo storico dei backup.');
+            setError('Could not load the backup history.');
         } finally {
             setLoading(false);
         }
@@ -28,7 +28,7 @@ export default function BackupList() {
 
     const handleCreateBackup = async (e) => {
         e.preventDefault();
-        if (!window.confirm('Sei sicuro di voler avviare un backup globale di tutte le lingue? Potrebbe volerci del tempo.')) return;
+        if (!window.confirm('Are you sure you want to start a global backup of every language? This may take a while.')) return;
 
         setIsBackingUp(true);
         setError('');
@@ -39,21 +39,21 @@ export default function BackupList() {
             await fetchFolders(); // Ricarica la lista per mostrare la nuova cartella
         } catch (err) {
             console.error(err);
-            setError('Errore durante la creazione del backup: ' + (err.response?.data?.detail || err.message));
+            setError('Error while creating the backup: ' + (err.response?.data?.detail || err.message));
         } finally {
             setIsBackingUp(false);
         }
     };
 
     const handleDelete = async (timestamp) => {
-        if (!window.confirm('Sei sicuro di voler eliminare tutto questo backup? L\'operazione è irreversibile.')) return;
+        if (!window.confirm('Are you sure you want to delete this entire backup? The operation is irreversible.')) return;
 
         try {
             await api.delete(`/api/admin/backups/${timestamp}`);
             await fetchFolders(); // Ricarica la lista dopo aver eliminato
         } catch (err) {
             console.error(err);
-            setError('Errore durante l\'eliminazione del backup.');
+            setError('Error while deleting the backup.');
         }
     };
 
@@ -75,7 +75,7 @@ export default function BackupList() {
                             <div className="progress-bar-moving" style={{ height: '100%', background: '#ff4500', borderRadius: '6px', position: 'absolute', width: '30%', animation: 'progress-loop 2s infinite linear' }}></div>
                         </div>
                         <div className="alert" style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '0.75rem', display: 'inline-block', borderRadius: '4px', fontWeight: '600' }}>
-                            ⚠️ WARNING: Do NOT close this window or refresh the page until the process is complete!
+                            WARNING: Do NOT close this window or refresh the page until the process is complete!
                         </div>
                     </div>
                 ) : (
@@ -88,7 +88,7 @@ export default function BackupList() {
                                 className="form-control"
                                 value={backupNote}
                                 onChange={(e) => setBackupNote(e.target.value)}
-                                placeholder="Esempio: Prima della release v2.0"
+                                placeholder="Example: Before the v2.0 release"
                                 style={{ width: '100%', padding: '0.5rem' }}
                             />
                         </div>

@@ -17,7 +17,7 @@ export default function LanguageDebug() {
             setError('');
         } catch (err) {
             console.error(err);
-            setError('Impossibile caricare i dati di debug.');
+            setError('Could not load the debug data.');
         } finally {
             setLoading(false);
         }
@@ -31,13 +31,13 @@ export default function LanguageDebug() {
             await api.post(`/api/languages/${id}/workflow/run_dag`);
             fetchDebugData();
         } catch (err) {
-            setError(err.response?.data?.detail || "Errore durante l'esecuzione del DAG");
+            setError(err.response?.data?.detail || "Error while running the DAG");
         } finally {
             setIsRunningDag(false);
         }
     };
 
-    if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Caricamento...</div>;
+    if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Loading...</div>;
     if (error) return <div className="container alert alert-error" style={{ marginTop: '2rem' }}>{error}</div>;
     if (!debugData) return null;
 
@@ -62,7 +62,7 @@ export default function LanguageDebug() {
                         className="btn btn--primary"
                         disabled={isRunningDag}
                     >
-                        {isRunningDag ? 'Elaborazione in corso...' : 'Apply implicational condition(s)'}
+                        {isRunningDag ? 'Processing...' : 'Apply implicational condition(s)'}
                     </button>
                 </div>
             </div>
@@ -98,7 +98,7 @@ export default function LanguageDebug() {
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                                 {r.initial || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }}>{r.warn_init && <span style={{ color: 'red', fontWeight: 'bold' }}>⚠</span>}</td>
+                            <td style={{ textAlign: 'center' }}>{r.warn_init && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}</td>
                             <td>{r.cond ? <code>{r.cond}</code> : <span className="muted">—</span>}</td>
                             <td style={{ textAlign: 'center' }}>
                                 {r.cond_true === true && <span style={{ background: '#d1e7dd', color: '#0f5132', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>TRUE</span>}
@@ -108,7 +108,7 @@ export default function LanguageDebug() {
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                                 {r.final === '?' ? <span style={{ color: '#d63384' }}>?</span> : r.final || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }}>{r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>⚠</span>}</td>
+                            <td style={{ textAlign: 'center' }}>{r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}</td>
                         </tr>
                     ))}
                     </tbody>
