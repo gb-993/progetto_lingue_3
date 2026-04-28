@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional, Dict
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,6 +10,8 @@ from dependencies import get_db, get_current_user, require_admin
 from services.logic_parser import evaluate_with_parser
 from services.dag_eval import run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
+
+logger = logging.getLogger(__name__)
 
 
 # Stati in cui la lingua è bloccata in scrittura per gli utenti normali
@@ -264,6 +267,17 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     db.commit()
     recompute_and_persist_language_parameter(language.id, param_id, db)
     db.commit()
+
+    # DAG auto-run: dopo ogni save aggiorniamo value_eval/warning_eval per
+    # tutti i parametri della lingua, così Queries/TableA mostrano valori live.
+    # Se il DAG fallisce NON rollback-iamo il save: i parametri restano salvati.
+    try:
+        run_dag_for_language(language.id, db)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error("DAG auto-run failed for language %s: %s", language.id, e, exc_info=True)
+
     return {
         "detail": "Parametro salvato correttamente",
         "last_modified": _block_last_modified_iso(db, language.id, param_id)
@@ -430,24 +444,19 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
 # --- ENDPOINT: ESECUZIONE MANUALE DAG E APPROVAZIONE ---
 @router.post("/{lang_id}/workflow/run_dag")
 def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """
+    Esecuzione manuale del DAG: ricalcola value_orig (consolidate) e value_eval
+    (DAG implicazionale) per tutti i parametri attivi della lingua.
+    Non tocca lo status della lingua né delle answer.
+    """
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
     if not language: raise HTTPException(status_code=404, detail="Lingua non trovata")
 
-    # 1. Forza l'approvazione di tutte le risposte
-    db.query(models.Answer).filter(
-        models.Answer.language_id == language.id,
-        models.Answer.status != "approved"
-    ).update({"status": "approved"})
-    db.commit()
-
-    # CRITICO: Prima di lanciare il DAG, ricalcoliamo i valori originali (value_orig)
-    # per tutti i parametri attivi usando param_consolidate per essere sicuri al 100% che i dati siano freschi.
     active_params = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
     for (pid,) in active_params:
         recompute_and_persist_language_parameter(language.id, pid, db)
     db.commit()
 
-    # 2. Lancia il DAG
     try:
         report = run_dag_for_language(language.id, db)
         db.commit()

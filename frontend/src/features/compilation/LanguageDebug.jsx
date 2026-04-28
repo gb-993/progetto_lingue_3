@@ -26,15 +26,12 @@ export default function LanguageDebug() {
     useEffect(() => { fetchDebugData(); }, [id]);
 
     const handleRunDag = async () => {
-        if (!window.confirm("Attenzione: questo approverà tutte le risposte e forzerà il ricalcolo. Procedere?")) return;
-
         setIsRunningDag(true);
         try {
-            const res = await api.post(`/api/languages/${id}/workflow/run_dag`);
-            alert(res.data.detail);
-            fetchDebugData(); // Ricarica la tabella per mostrare i nuovi valori ricalcolati
+            await api.post(`/api/languages/${id}/workflow/run_dag`);
+            fetchDebugData();
         } catch (err) {
-            alert(err.response?.data?.detail || "Errore durante l'esecuzione del DAG");
+            setError(err.response?.data?.detail || "Errore durante l'esecuzione del DAG");
         } finally {
             setIsRunningDag(false);
         }
@@ -65,7 +62,7 @@ export default function LanguageDebug() {
                         className="btn btn--primary"
                         disabled={isRunningDag}
                     >
-                        {isRunningDag ? 'Elaborazione in corso...' : 'Apply implicational condition(s) & Approve'}
+                        {isRunningDag ? 'Elaborazione in corso...' : 'Apply implicational condition(s)'}
                     </button>
                 </div>
             </div>

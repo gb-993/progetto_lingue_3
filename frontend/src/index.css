@@ -1415,3 +1415,175 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 .hide-on-desktop {
   display: none !important;
 }
+
+/* =========================================================
+   Instructions page – rendered HTML + Quill editor
+   ========================================================= */
+
+/* Tipografia della vista (rendering HTML salvato dall'admin). */
+.instructions-view {
+  color: var(--text);
+  line-height: 1.6;
+}
+.instructions-view h2 {
+  font-size: var(--fs-4);
+  margin: 1.25rem 0 .6rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--border);
+}
+.instructions-view h3 {
+  font-size: var(--fs-3);
+  margin: 1.1rem 0 .5rem;
+}
+.instructions-view p {
+  margin: .6rem 0;
+}
+.instructions-view a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.instructions-view a:hover { color: var(--link-hover); }
+.instructions-view ul,
+.instructions-view ol {
+  margin: .5rem 0 .8rem 1.4rem;
+  padding-left: .4rem;
+}
+.instructions-view li { margin: .25rem 0; }
+.instructions-view code,
+.instructions-view pre {
+  font-family: var(--mono);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .15rem .35rem;
+  font-size: .92em;
+}
+.instructions-view pre {
+  padding: .75rem 1rem;
+  overflow-x: auto;
+}
+.instructions-view blockquote {
+  margin: .75rem 0;
+  padding: .5rem .9rem;
+  border-left: 3px solid var(--brand);
+  background: var(--brand-50);
+  color: var(--text);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Tabelle dentro alla vista (gloss table del template legacy). */
+.instructions-view table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.instructions-view table th,
+.instructions-view table td {
+  padding: .55rem .75rem;
+  border: 1px solid var(--border);
+  vertical-align: top;
+  text-align: left;
+}
+.instructions-view table thead th {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.instructions-view table tbody tr:nth-child(odd) {
+  background: color-mix(in oklab, var(--surface) 80%, var(--surface-2));
+}
+
+/* Editor Quill: contenitore arrotondato e coerente. */
+.instructions-editor .ql-toolbar.ql-snow,
+.instructions-editor .ql-container.ql-snow {
+  border-color: var(--border);
+}
+.instructions-editor .ql-toolbar.ql-snow {
+  background: var(--surface-2);
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+}
+.instructions-editor .ql-container.ql-snow {
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  background: var(--surface);
+  font-family: var(--ff);
+  font-size: var(--fs-1);
+}
+.instructions-editor .ql-editor {
+  min-height: 360px;
+  color: var(--text);
+}
+.instructions-editor .ql-editor.ql-blank::before {
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* Quill in DARK mode: icone, dropdown e separatori vanno ricolorati,
+   altrimenti rimangono nere su sfondo scuro. */
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-stroke {
+  stroke: var(--text);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-fill,
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-stroke.ql-fill {
+  fill: var(--text);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-picker {
+  color: var(--text);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-picker-options {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-picker-label:hover,
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-picker-item:hover,
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button:hover,
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button.ql-active {
+  color: var(--brand);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button:hover .ql-stroke,
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+  stroke: var(--brand);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button:hover .ql-fill,
+:root[data-theme="dark"] .instructions-editor .ql-snow.ql-toolbar button.ql-active .ql-fill {
+  fill: var(--brand);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-tooltip {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+:root[data-theme="dark"] .instructions-editor .ql-snow .ql-tooltip input[type="text"] {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Source HTML mode (textarea raw). */
+.instructions-editor .instructions-source {
+  width: 100%;
+  min-height: 420px;
+  font-family: var(--mono);
+  font-size: .9rem;
+  line-height: 1.5;
+  padding: .9rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+.instructions-editor .instructions-source:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
