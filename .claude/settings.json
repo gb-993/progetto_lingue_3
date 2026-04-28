@@ -24,7 +24,13 @@
       "Bash(python -m py_compile routers/history.py main.py)",
       "Bash(npx --yes eslint src/features/history/History.jsx src/features/history/BackupsTab.jsx src/App.jsx src/components/Layout.jsx)",
       "Bash(npx --yes eslint src/features/history/History.jsx)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(python -m alembic heads)",
+      "Bash(alembic heads *)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pytest tests/test_versioning.py -x --tb=short)",
+      "Bash(npx eslint *)",
+      "Bash(npx --no-install eslint src/features/dashboard/Dashboard.jsx)"
     ]
   }
 }

@@ -171,4 +171,7 @@ def toggle_question_active(id: str, db: Session = Depends(get_db), current_user:
     db.add(log)
 
     db.commit()
+    record_version(db, db_item, operation="update", source="manual",
+                   user_id=current_user.id, note=azione)
+    db.commit()
     return {"detail": "Question status updated", "is_active": db_item.is_active}

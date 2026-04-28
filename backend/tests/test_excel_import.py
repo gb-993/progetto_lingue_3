@@ -54,7 +54,7 @@ def _seed_full(db_session):
                          is_stop_question=False, is_active=True)
     db_session.add_all([q1, q2])
 
-    mot = models.Motivation(id=1, code="MOT_X", label="Old label", is_active=True)
+    mot = models.Motivation(id=1, code="MOT_X", label="Old label")
     db_session.add(mot)
     db_session.flush()
 

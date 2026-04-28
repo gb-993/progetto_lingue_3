@@ -10,6 +10,7 @@ from dependencies import get_db, get_current_user, require_admin
 from services.logic_parser import evaluate_with_parser
 from services.dag_eval import run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
+from services.versioning import record_version, serialize_entity
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +225,11 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         db.add(status_entry)
     status_entry.is_unsure = payload.is_unsure
 
-    # 2. Salva tutte le risposte fornite
+    # 2. Salva tutte le risposte fornite. Per ogni risposta toccata teniamo
+    #    traccia di (answer, was_new, old_snapshot) così a fine ciclo possiamo
+    #    registrare una EntityVersion solo per quelle effettivamente cambiate.
+    touched: list[tuple[models.Answer, bool, Optional[dict]]] = []
+
     for ans_payload in payload.answers:
         # La colonna response_text è Enum("yes","no") nullable: "" non è valido,
         # va convertito in None per indicare "non risposta".
@@ -243,6 +248,9 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         # Se non c'è ancora una Answer e la risposta è vuota, non creiamo righe vuote
         if not answer and normalized_response is None and not (ans_payload.comments or "").strip():
             continue
+
+        was_new = answer is None
+        old_snapshot = None if was_new else serialize_entity(answer)
 
         if not answer:
             answer = models.Answer(language_id=language.id, question_id=ans_payload.question_id)
@@ -263,6 +271,24 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
                     db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))
+
+        touched.append((answer, was_new, old_snapshot))
+
+    # Flush per allineare DB; poi expire delle relazioni così serialize_entity
+    # rilegge la collection examples/motivations attuale e non quella in cache.
+    db.flush()
+    for answer, _, _ in touched:
+        db.expire(answer)
+
+    for answer, was_new, old_snapshot in touched:
+        new_snapshot = serialize_entity(answer)
+        if was_new or new_snapshot != old_snapshot:
+            record_version(
+                db, answer,
+                operation="create" if was_new else "update",
+                source="manual",
+                user_id=current_user.id,
+            )
 
     db.commit()
     recompute_and_persist_language_parameter(language.id, param_id, db)

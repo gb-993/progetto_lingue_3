@@ -167,7 +167,6 @@ class Motivation(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), nullable=False)
     label = Column(Text, nullable=False)
-    is_active = Column(Boolean, default=True)
 
 class QuestionAllowedMotivation(Base):
     __tablename__ = "question_allowed_motivations"

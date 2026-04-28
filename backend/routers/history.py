@@ -66,6 +66,9 @@ def _summary_label(v: models.EntityVersion) -> str:
         return f"{snap.get('code', v.entity_id)} — {snap.get('label', '')[:60]}"
     if v.entity_type == "language":
         return f"{v.entity_id} — {snap.get('name_full', '')}"
+    if v.entity_type == "answer":
+        resp = snap.get("response_text") or "—"
+        return f"{snap.get('language_id', '')} / {snap.get('question_id', '')} ({resp})"
     return v.entity_id
 
 
@@ -92,6 +95,7 @@ def list_versions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
     entity_type: Optional[str] = Query(None),
+    exclude_entity_type: Optional[str] = Query(None),
     entity_id: Optional[str] = Query(None),
     user_id: Optional[int] = Query(None),
     source: Optional[str] = Query(None),
@@ -106,6 +110,8 @@ def list_versions(
 
     if entity_type:
         q = q.filter(models.EntityVersion.entity_type == entity_type)
+    if exclude_entity_type:
+        q = q.filter(models.EntityVersion.entity_type != exclude_entity_type)
     if entity_id:
         q = q.filter(models.EntityVersion.entity_id == entity_id)
     if user_id is not None:

@@ -168,6 +168,10 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
         db.add(log)
 
     db.commit()
+    record_version(db, db_item, operation="update", source="manual",
+                   user_id=current_user.id,
+                   note=f"Deactivated{f': {payload.reason}' if payload.reason else ''}")
+    db.commit()
     return {"detail": "Parameter successfully deactivated."}
 
 @router.post("/{id}/reactivate")
@@ -177,6 +181,9 @@ def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: m
         raise HTTPException(status_code=404, detail="Parameter not found")
 
     db_item.is_active = True
+    db.commit()
+    record_version(db, db_item, operation="update", source="manual",
+                   user_id=current_user.id, note="Reactivated")
     db.commit()
     return {"detail": "Parameter successfully reactivated."}
 

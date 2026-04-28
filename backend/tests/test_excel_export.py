@@ -145,7 +145,7 @@ def _seed_basic(db_session):
     )
     db_session.add_all([q1, q2])
 
-    mot = models.Motivation(code="MOT_X", label="Not applicable", is_active=True)
+    mot = models.Motivation(code="MOT_X", label="Not applicable")
     db_session.add(mot); db_session.flush()
 
     qam = models.QuestionAllowedMotivation(question_id="FGM_02", motivation_id=mot.id)

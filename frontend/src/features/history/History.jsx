@@ -9,6 +9,7 @@ const ENTITY_LABELS = {
     question: { name: 'Question', color: '#8b5cf6' },
     motivation: { name: 'Motivation', color: '#ec4899' },
     language: { name: 'Language', color: '#16a34a' },
+    answer: { name: 'Answer', color: '#0ea5e9' },
 };
 
 const OPERATION_LABELS = {
@@ -28,6 +29,25 @@ const fmtValue = (v) => {
     if (v === null || v === undefined) return <span className="muted">—</span>;
     if (v === '') return <span className="muted">(empty)</span>;
     if (typeof v === 'boolean') return v ? 'true' : 'false';
+    if (Array.isArray(v)) {
+        if (v.length === 0) return <span className="muted">(none)</span>;
+        if (typeof v[0] === 'object' && v[0] !== null) {
+            // lista di oggetti (es. examples) -> render compatto
+            return (
+                <ol style={{ margin: 0, paddingLeft: '1.2em' }}>
+                    {v.map((item, i) => (
+                        <li key={i} style={{ marginBottom: '0.35rem' }}>
+                            {Object.entries(item).filter(([, val]) => val !== '' && val !== null && val !== undefined).map(([k, val]) => (
+                                <div key={k}><strong>{k}:</strong> {String(val)}</div>
+                            ))}
+                        </li>
+                    ))}
+                </ol>
+            );
+        }
+        return v.join(', ');
+    }
+    if (typeof v === 'object') return <pre style={{ margin: 0, fontSize: '0.78rem' }}>{JSON.stringify(v, null, 2)}</pre>;
     return String(v);
 };
 
@@ -50,6 +70,7 @@ export default function History() {
             <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border)', marginBottom: '1.25rem' }}>
                 {[
                     { id: 'versions', label: 'Change history' },
+                    { id: 'answers', label: 'Answer changes' },
                     { id: 'backups', label: 'Full backups (language snapshots)' },
                 ].map(t => (
                     <button
@@ -74,7 +95,8 @@ export default function History() {
                 ))}
             </div>
 
-            {tab === 'versions' && <VersionsTab />}
+            {tab === 'versions' && <VersionsTab key="versions" excludeEntityType="answer" />}
+            {tab === 'answers' && <VersionsTab key="answers" lockEntityType="answer" />}
             {tab === 'backups' && <BackupsTab />}
         </div>
     );
@@ -83,7 +105,10 @@ export default function History() {
 // ============================================================================
 // TAB CRONOLOGIA MODIFICHE
 // ============================================================================
-function VersionsTab() {
+// Props:
+//   lockEntityType: se passato, filtra solo quel type e nasconde il dropdown
+//   excludeEntityType: se passato, esclude quel type dai risultati e dal dropdown
+function VersionsTab({ lockEntityType, excludeEntityType }) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -118,6 +143,8 @@ function VersionsTab() {
             for (const [k, v] of Object.entries(filters)) {
                 if (v !== '' && v !== null && v !== undefined) params[k] = v;
             }
+            if (lockEntityType) params.entity_type = lockEntityType;
+            if (excludeEntityType) params.exclude_entity_type = excludeEntityType;
             const res = await api.get('/api/admin/versions', { params });
             setItems(res.data.items || []);
             setTotal(res.data.total || 0);
@@ -130,7 +157,7 @@ function VersionsTab() {
         }
     };
 
-    useEffect(() => { fetchVersions(1); /* eslint-disable-next-line */ }, []);
+    useEffect(() => { fetchVersions(1); /* eslint-disable-next-line */ }, [lockEntityType, excludeEntityType]);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -152,14 +179,16 @@ function VersionsTab() {
             {/* Pannello filtri */}
             <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
-                    <FilterField label="Entity type">
-                        <select name="entity_type" value={filters.entity_type} onChange={handleFilterChange} style={inputStyle}>
-                            <option value="">All</option>
-                            {options.entity_types.map(t => (
-                                <option key={t} value={t}>{ENTITY_LABELS[t]?.name || t}</option>
-                            ))}
-                        </select>
-                    </FilterField>
+                    {!lockEntityType && (
+                        <FilterField label="Entity type">
+                            <select name="entity_type" value={filters.entity_type} onChange={handleFilterChange} style={inputStyle}>
+                                <option value="">All</option>
+                                {options.entity_types.filter(t => t !== excludeEntityType).map(t => (
+                                    <option key={t} value={t}>{ENTITY_LABELS[t]?.name || t}</option>
+                                ))}
+                            </select>
+                        </FilterField>
+                    )}
                     <FilterField label="Entity ID">
                         <input
                             name="entity_id" value={filters.entity_id} onChange={handleFilterChange}
@@ -364,6 +393,10 @@ function VersionDiffView({ data, onClose }) {
             case 'question': return `/admin/questions/${data.entity_id}/edit`;
             case 'language': return `/languages/${data.entity_id}/edit`;
             case 'motivation': return `/admin/motivations`;
+            case 'answer': {
+                const langId = data.snapshot?.language_id;
+                return langId ? `/languages/${langId}/data` : null;
+            }
             default: return null;
         }
     }, [data]);

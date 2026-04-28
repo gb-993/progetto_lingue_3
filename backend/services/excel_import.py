@@ -266,11 +266,9 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             continue
 
         label = _str(_get(row, hmap, "Label"))
-        is_active = _bool_yn(_get(row, hmap, "Is Active"))
 
         def apply():
             existing.label = label or existing.label
-            existing.is_active = is_active
 
         ok, err = _safe_apply(db, apply)
         if ok:

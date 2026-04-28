@@ -45,7 +45,7 @@ export default function QuestionForm() {
             try {
                 const [paramsRes, motsRes, qsRes] = await Promise.all([
                     api.get('/api/admin/parameters'),
-                    api.get('/api/admin/motivations?include_inactive=false'),
+                    api.get('/api/admin/motivations'),
                     api.get('/api/admin/questions')
                 ]);
                 setParameters(paramsRes.data || []);

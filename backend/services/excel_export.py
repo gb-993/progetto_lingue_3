@@ -67,7 +67,7 @@ ANSWERS_HEADERS = [
 ]
 
 # Schema sheets (nuovi, non presenti nel vecchio progetto)
-MOTIVATIONS_HEADERS = ["ID", "Code", "Label", "Is Active"]
+MOTIVATIONS_HEADERS = ["ID", "Code", "Label"]
 
 PARAMETERS_HEADERS = [
     "ID", "Position", "Name", "Schema", "Type", "Level",
@@ -440,9 +440,8 @@ def _append_schema_sheets(db: Session, wb: Workbook) -> None:
             m.id,
             m.code or "",
             m.label or "",
-            "Yes" if m.is_active else "No",
         ])
-    _style_table(ws_mot, "Motivations", len(MOTIVATIONS_HEADERS), [8, 14, 50, 10])
+    _style_table(ws_mot, "Motivations", len(MOTIVATIONS_HEADERS), [8, 14, 50])
 
     # Parameters
     ws_par = wb.create_sheet("Parameters")

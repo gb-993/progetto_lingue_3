@@ -14,7 +14,6 @@ router = APIRouter(prefix="/api/admin/motivations", tags=["Motivations"])
 class MotivationBase(BaseModel):
     code: str
     label: str
-    is_active: bool = True
 
 class MotivationRead(MotivationBase):
     id: int
@@ -24,12 +23,9 @@ class MotivationRead(MotivationBase):
 
 # --- ENDPOINT ---
 @router.get("", response_model=List[MotivationRead])
-def get_motivations(include_inactive: bool = False, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Recupera la lista delle motivazioni. Se include_inactive=True, prende anche quelle disattivate."""
-    query = db.query(models.Motivation)
-    if not include_inactive:
-        query = query.filter(models.Motivation.is_active == True)
-    return query.order_by(models.Motivation.code).all()
+def get_motivations(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Recupera la lista delle motivazioni."""
+    return db.query(models.Motivation).order_by(models.Motivation.code).all()
 
 @router.post("", response_model=MotivationRead, status_code=status.HTTP_201_CREATED)
 def create_motivation(item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
@@ -37,7 +33,6 @@ def create_motivation(item: MotivationBase, db: Session = Depends(get_db), curre
     db_item = models.Motivation(
         code=item.code,
         label=item.label,
-        is_active=item.is_active
     )
     db.add(db_item)
     try:
@@ -52,7 +47,7 @@ def create_motivation(item: MotivationBase, db: Session = Depends(get_db), curre
 
 @router.put("/{id}", response_model=MotivationRead)
 def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Aggiorna testo o disattiva una motivazione e propaga il log ai parametri e domande interessate"""
+    """Aggiorna testo di una motivazione e propaga il log ai parametri e domande interessate"""
     db_item = db.query(models.Motivation).filter(models.Motivation.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
@@ -63,12 +58,9 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
         changes.append(f"code changed from '{db_item.code}' to '{item.code}'")
     if db_item.label != item.label:
         changes.append("description updated")
-    if db_item.is_active != item.is_active:
-        changes.append("reactivated" if item.is_active else "deactivated")
 
     db_item.code = item.code
     db_item.label = item.label
-    db_item.is_active = item.is_active
 
     # Se ci sono state modifiche effettive, loggale sui parametri associati specificando la domanda
     if changes:
@@ -109,10 +101,13 @@ def delete_motivation(id: int, db: Session = Depends(get_db), current_user: mode
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
 
+    # Snapshot finale registrato PRIMA del delete: dopo db.delete + commit
+    # l'entità non è più caricabile e perderemmo lo storico.
+    record_version(db, db_item, operation="delete", source="manual", user_id=current_user.id)
     db.delete(db_item)
     try:
         db.commit()
         return {"detail": "Motivation deleted successfully"}
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Cannot delete: the motivation is already used in some answers or questions. Try deactivating it instead of deleting it.")
+        raise HTTPException(status_code=409, detail="Cannot delete: the motivation is already used in some answers or questions.")

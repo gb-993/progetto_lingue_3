@@ -29,6 +29,7 @@ ENTITY_TYPE_MAP = {
     "Question": "question",
     "Motivation": "motivation",
     "Language": "language",
+    "Answer": "answer",
 }
 
 # Inverso per recuperare la classe modello da entity_type
@@ -60,13 +61,41 @@ def _coerce(v: Any) -> Any:
 def serialize_entity(entity: Any) -> dict:
     """
     Snapshot dei campi colonna dell'entità (no relationship, no internal state).
+
+    Per Answer includiamo anche examples e motivation_codes come liste dentro lo
+    snapshot: cambiamenti a esempi/motivazioni vanno tracciati come parte della
+    Answer stessa, non come entità separate.
     """
     state = inspect(entity)
     out = {}
     for col in state.mapper.columns:
         name = col.key
         out[name] = _coerce(getattr(entity, name))
+
+    if type(entity).__name__ == "Answer":
+        examples = []
+        for ex in sorted(entity.examples, key=lambda e: (e.number or "", e.id or 0)):
+            examples.append({
+                "number": ex.number or "",
+                "textarea": ex.textarea or "",
+                "transliteration": ex.transliteration or "",
+                "gloss": ex.gloss or "",
+                "translation": ex.translation or "",
+                "reference": ex.reference or "",
+            })
+        out["examples"] = examples
+        out["motivation_codes"] = sorted(
+            am.motivation.code for am in entity.answer_motivations if am.motivation
+        )
+
     return out
+
+
+def _entity_id_for(entity: Any, snapshot: dict) -> str:
+    """Identificativo human-readable usato in entity_versions.entity_id."""
+    if type(entity).__name__ == "Answer":
+        return f"{snapshot.get('language_id', '')}:{snapshot.get('question_id', '')}"
+    return str(snapshot.get("id", ""))
 
 
 # ============================================================================
@@ -93,7 +122,7 @@ def record_version(
     """
     snapshot = serialize_entity(entity)
     entity_type = _entity_type_for(entity)
-    entity_id = str(snapshot.get("id", ""))
+    entity_id = _entity_id_for(entity, snapshot)
 
     version = models.EntityVersion(
         entity_type=entity_type,

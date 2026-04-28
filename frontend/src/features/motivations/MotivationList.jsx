@@ -10,13 +10,12 @@ export default function MotivationList() {
 
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({ code: '', label: '', is_active: true });
+    const [formData, setFormData] = useState({ code: '', label: '' });
 
     const fetchMotivations = async () => {
         setLoading(true);
         try {
-            // Include anche quelle inattive per la pagina di gestione
-            const res = await api.get('/api/admin/motivations?include_inactive=true');
+            const res = await api.get('/api/admin/motivations');
             setMotivations(res.data);
         } catch (err) {
             setError("Could not load the motivations.");
@@ -32,10 +31,10 @@ export default function MotivationList() {
     const handleOpenModal = (mot = null) => {
         if (mot) {
             setEditingId(mot.id);
-            setFormData({ code: mot.code, label: mot.label, is_active: mot.is_active });
+            setFormData({ code: mot.code, label: mot.label });
         } else {
             setEditingId(null);
-            setFormData({ code: '', label: '', is_active: true });
+            setFormData({ code: '', label: '' });
         }
         setShowModal(true);
     };
@@ -92,16 +91,14 @@ export default function MotivationList() {
                     <tr>
                         <th>Code</th>
                         <th>Description (Label)</th>
-                        <th>Status</th>
                         <th style={{textAlign: 'right'}}>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     {!loading && filteredMots.map(m => (
-                        <tr key={m.id} style={{ opacity: m.is_active ? 1 : 0.5 }}>
+                        <tr key={m.id}>
                             <td style={{fontWeight: 'bold'}}>{m.code}</td>
                             <td>{m.label}</td>
-                            <td>{m.is_active ? <span className="badge">Active</span> : <span className="badge badge--error">Inactive</span>}</td>
                             <td className="row-actions">
                                 <button className="btn" onClick={() => handleOpenModal(m)}>Edit</button>
                                 <button className="btn btn--danger" style={{color: 'red'}} onClick={() => handleDelete(m.id)}>Delete</button>
@@ -122,13 +119,9 @@ export default function MotivationList() {
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Code</label>
                                 <input type="text" value={formData.code} onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})} required style={{ width: '100%', padding: '0.5rem' }} />
                             </div>
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Description</label>
                                 <textarea rows="3" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} required style={{ width: '100%', padding: '0.5rem' }} />
-                            </div>
-                            <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                <input type="checkbox" id="is_active" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
-                                <label htmlFor="is_active" style={{fontWeight: 'bold'}}>Is Active</label>
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>

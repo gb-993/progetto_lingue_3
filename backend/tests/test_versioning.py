@@ -116,7 +116,7 @@ def test_entity_type_for_models(db_session):
     v = record_version(db_session, q)
     assert v.entity_type == "question"
 
-    m = models.Motivation(code="X", label="x", is_active=True)
+    m = models.Motivation(code="X", label="x")
     db_session.add(m); db_session.commit()
     v = record_version(db_session, m)
     assert v.entity_type == "motivation"
