@@ -90,24 +90,35 @@ export default function LanguageData() {
         callWorkflow('submit');
     };
 
-    const handleApprove = () => {
-        if (!window.confirm('Definitively approve this language?')) return;
-        callWorkflow('approve');
+    const handleReopen = () => {
+        if (!window.confirm("Reopen the form? The status will go back to 'pending' and you will be able to edit it.")) return;
+        callWorkflow('reopen');
     };
 
-    const handleReject = () => {
+    // Admin: force transitions su qualsiasi stato corrente
+    const handleForceApprove = () => {
+        if (!window.confirm('Force this language to APPROVED? The DAG will run in background.')) return;
+        callWorkflow('admin_force_approve');
+    };
+
+    const handleForceReject = () => {
         setRejectNote('');
         setShowRejectModal(true);
     };
 
     const submitReject = async () => {
-        await callWorkflow('reject', { note: rejectNote });
+        await callWorkflow('admin_force_reject', { note: rejectNote });
         setShowRejectModal(false);
     };
 
-    const handleReopen = () => {
-        if (!window.confirm("Reopen the form? The status will go back to 'pending' and you will be able to edit it.")) return;
-        callWorkflow('reopen');
+    const handleForcePending = () => {
+        if (!window.confirm("Force this language to PENDING? Users will be able to edit it again.")) return;
+        callWorkflow('admin_force_pending');
+    };
+
+    const handleForceWaiting = () => {
+        if (!window.confirm('Force this language to WAITING FOR APPROVAL?')) return;
+        callWorkflow('admin_force_waiting');
     };
 
     if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Loading...</div>;
@@ -192,28 +203,63 @@ export default function LanguageData() {
 
                 {/* Bottoni di workflow */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                    {/* Submit: solo l'utente assegnato (non admin) */}
+                    {/* --- UTENTE NON ADMIN --- */}
                     {!isAdmin && status === 'pending' && (
                         <button className="btn btn--primary" disabled={actionInProgress} onClick={handleSubmit}>
                             {actionInProgress ? '...' : 'Submit for approval'}
                         </button>
                     )}
-                    {/* Reopen: utente assegnato o admin */}
-                    {status === 'rejected' && (
+                    {!isAdmin && status === 'rejected' && (
                         <button className="btn btn--primary" disabled={actionInProgress} onClick={handleReopen}>
                             {actionInProgress ? '...' : 'Reopen'}
                         </button>
                     )}
-                    {/* Approve/Reject: solo admin durante waiting_for_approval */}
-                    {status === 'waiting_for_approval' && isAdmin && (
-                        <>
-                            <button className="btn" style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d' }} disabled={actionInProgress} onClick={handleApprove}>
-                                Approve
-                            </button>
-                            <button className="btn" style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c' }} disabled={actionInProgress} onClick={handleReject}>
-                                Reject
-                            </button>
-                        </>
+
+                    {/* --- ADMIN: pannello con tutte le force-transitions --- */}
+                    {isAdmin && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end', minWidth: '200px' }}>
+                            <span className="small muted" style={{ alignSelf: 'flex-end' }}>Admin: change status</span>
+                            {status !== 'approved' && (
+                                <button
+                                    className="btn"
+                                    style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d', width: '100%' }}
+                                    disabled={actionInProgress}
+                                    onClick={handleForceApprove}
+                                >
+                                    {actionInProgress ? '...' : 'Approve'}
+                                </button>
+                            )}
+                            {status !== 'rejected' && (
+                                <button
+                                    className="btn"
+                                    style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c', width: '100%' }}
+                                    disabled={actionInProgress}
+                                    onClick={handleForceReject}
+                                >
+                                    Reject
+                                </button>
+                            )}
+                            {status !== 'pending' && (
+                                <button
+                                    className="btn"
+                                    style={{ width: '100%' }}
+                                    disabled={actionInProgress}
+                                    onClick={handleForcePending}
+                                >
+                                    Mark as Pending
+                                </button>
+                            )}
+                            {status !== 'waiting_for_approval' && (
+                                <button
+                                    className="btn"
+                                    style={{ width: '100%' }}
+                                    disabled={actionInProgress}
+                                    onClick={handleForceWaiting}
+                                >
+                                    Mark as Waiting
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

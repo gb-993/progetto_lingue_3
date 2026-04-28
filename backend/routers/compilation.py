@@ -431,6 +431,81 @@ def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     return {"detail": "Language reopened.", "status": language.status}
 
 
+# --- ADMIN FORCE TRANSITIONS ---
+# Permettono all'admin di portare la lingua a qualsiasi stato saltando il flusso
+# normale submit/approve/reject. Utili per fix manuali, lingue importate da bundle,
+# rollback dopo errori. Nessun vincolo di stato sorgente.
+
+@router.post("/{lang_id}/workflow/admin_force_approve")
+def admin_force_approve_language(
+    lang_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Admin: porta la lingua ad 'approved' da qualsiasi stato. Esegue il DAG in background."""
+    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
+
+    language.status = "approved"
+    language.reviewed_at = datetime.utcnow()
+    language.rejection_note = None
+    db.commit()
+    background_tasks.add_task(_run_dag_in_background, language.id)
+    return {"detail": "Language forced to approved.", "status": language.status}
+
+
+@router.post("/{lang_id}/workflow/admin_force_reject")
+def admin_force_reject_language(
+    lang_id: str,
+    payload: RejectPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Admin: porta la lingua a 'rejected' da qualsiasi stato. Nota opzionale."""
+    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
+
+    language.status = "rejected"
+    language.reviewed_at = datetime.utcnow()
+    language.rejection_note = (payload.note or "").strip() or None
+    db.commit()
+    return {"detail": "Language forced to rejected.", "status": language.status, "rejection_note": language.rejection_note}
+
+
+@router.post("/{lang_id}/workflow/admin_force_pending")
+def admin_force_pending_language(
+    lang_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Admin: porta la lingua a 'pending' da qualsiasi stato (rimette in compilazione)."""
+    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
+
+    language.status = "pending"
+    language.rejection_note = None
+    db.commit()
+    return {"detail": "Language forced to pending.", "status": language.status}
+
+
+@router.post("/{lang_id}/workflow/admin_force_waiting")
+def admin_force_waiting_language(
+    lang_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Admin: porta la lingua a 'waiting_for_approval' da qualsiasi stato."""
+    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
+
+    language.status = "waiting_for_approval"
+    language.submitted_at = datetime.utcnow()
+    language.rejection_note = None
+    db.commit()
+    return {"detail": "Language forced to waiting_for_approval.", "status": language.status}
+
+
 @router.get("/{lang_id}/debug")
 def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
