@@ -222,13 +222,14 @@ function AdminDashboard() {
     if (error) return <div className="container alert alert-error">{error}</div>;
     if (!data) return null;
 
-    const { stats, to_review, recent_changes, languages_by_status } = data;
+    const { stats, to_review, recent_changes, red_by_language, languages_by_status } = data;
 
     return (
         <div className="dashboard-grid-admin">
             <div className="admin-counters">
                 <PendingApprovalsCard count={stats.to_review_count} items={to_review} />
                 <LanguagesByStatusCard byStatus={stats.by_status} byStatusList={languages_by_status} />
+                <RedParamsCard total={stats.total_red_params} languages={red_by_language} />
                 <HowToCiteCard contents={siteContents} onSaved={handleCiteSaved} />
             </div>
             <div className="admin-activity">
@@ -380,7 +381,46 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
     );
 }
 
-// ----- Card 3: How to cite (always open, compact) -----
+// ----- Card 3: Red Parameters (unsure or partially compiled) -----
+function RedParamsCard({ total, languages }) {
+    const list = languages || [];
+    return (
+        <div className={`card counter-card${total > 0 ? ' border-bad' : ''}`}>
+            <h3 className="admin-label">Red Parameters</h3>
+            <p className="muted small" style={{ margin: '0.1rem 0 0.25rem', fontSize: '0.72rem' }}>
+                Unsure or partially compiled (empty parameters excluded).
+            </p>
+            <div className="admin-big-number">{total || 0}</div>
+            {list.length > 0 ? (
+                <div style={{ maxHeight: '140px', overflowY: 'auto', paddingRight: '0.4rem', marginTop: '0.25rem' }}>
+                    {list.map(l => (
+                        <div
+                            key={l.language_id}
+                            style={{
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                fontSize: '0.82rem', marginBottom: '0.2rem',
+                                borderBottom: '1px solid var(--border)', paddingBottom: '0.15rem',
+                            }}
+                        >
+                            <Link
+                                to={`/languages/${l.language_id}/data`}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                                title={l.language_name}
+                            >
+                                {l.language_name.length > 28 ? l.language_name.slice(0, 28) + '…' : l.language_name}
+                            </Link>
+                            <strong style={{ color: 'var(--bad)' }}>{l.red_count}</strong>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="muted small" style={{ margin: '0.25rem 0 0' }}>No red parameters.</p>
+            )}
+        </div>
+    );
+}
+
+// ----- Card 4: How to cite (always open, compact) -----
 function HowToCiteCard({ contents, onSaved }) {
     const paramsHtml = contents.params_cite || "Longobardi, Giuseppe & Cristina Guardiano. 2009. Evidence for syntax as a signal of historical relatedness. <em>Lingua</em> 119. 1679-1706.";
     const dataHtml = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds.). 2026. The PCM_Hub (version 1).";

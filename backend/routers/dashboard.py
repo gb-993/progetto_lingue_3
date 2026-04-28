@@ -107,7 +107,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
                 continue  # parametro senza domande attive: skip
             ans_q = answered_count.get((lang.id, p.id), 0)
             is_unsure = (lang.id, p.id) in unsure_set
-            is_incomplete = ans_q < total_q
+            is_incomplete = 0 < ans_q < total_q
             if not (is_unsure or is_incomplete):
                 continue
             reasons = []
