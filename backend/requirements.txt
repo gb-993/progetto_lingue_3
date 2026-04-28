@@ -17,3 +17,4 @@ matplotlib
 openpyxl
 adjustText
 pyparsing
+fpdf2

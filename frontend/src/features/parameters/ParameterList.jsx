@@ -77,7 +77,8 @@ export default function ParameterList() {
             if (filters.active === 'yes' && !p.is_active) return false;
             if (filters.active === 'no' && p.is_active) return false;
             return searchMatches(p, search, [
-                'id', 'name', 'short_description', 'implicational_condition',
+                'id', 'name', 'short_description', 'long_description',
+                'implicational_condition', 'description_of_the_implicational_condition',
                 'schema', 'param_type', 'level_of_comparison',
             ]);
         });
@@ -216,23 +217,6 @@ export default function ParameterList() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                try {
-                                    await downloadBlob(
-                                        api.get('/api/admin/export/schema/xlsx', { responseType: 'blob' }),
-                                        'PCM_schema.xlsx'
-                                    );
-                                } catch {
-                                    alert("Error while exporting the schema.");
-                                }
-                            }}
-                            className="btn btn--small"
-                            title="Export full schema: parameters, questions, motivations, links"
-                        >
-                            Export schema (.xlsx)
-                        </button>
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
                 </div>
@@ -248,6 +232,9 @@ export default function ParameterList() {
                             <th>Schema</th>
                             <th>Type</th>
                             <th>Level</th>
+                            <th title="Number of non-stop questions" style={{ textAlign: 'center' }}>#Q</th>
+                            <th title="Number of stop questions" style={{ textAlign: 'center' }}>#QS</th>
+                            <th>Status</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -263,8 +250,11 @@ export default function ParameterList() {
                             return (
                                 <tr
                                     key={param.id}
+                                    className={param.is_active ? '' : 'is-disabled'}
                                     style={{
-                                        opacity: isDragging ? 0.4 : (param.is_active ? 1 : 0.5),
+                                        opacity: isDragging ? 0.4 : (param.is_active ? 1 : 0.55),
+                                        color: param.is_active ? undefined : 'var(--text-muted)',
+                                        background: param.is_active ? undefined : 'var(--surface-2)',
                                         boxShadow: isDropAbove
                                             ? 'inset 0 2px 0 var(--brand, #3b82f6)'
                                             : isDropBelow
@@ -291,11 +281,34 @@ export default function ParameterList() {
                                         </td>
                                     )}
                                     <td style={{ fontWeight: 'bold' }}>{param.id}</td>
-                                    <td>{param.name} {param.is_active ? '' : '(Inactive)'}</td>
+                                    <td>{param.name}</td>
                                     <td className="muted small">{param.schema || '—'}</td>
                                     <td>{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
                                     <td className="muted small">{param.level_of_comparison || '—'}</td>
-                                    <td className="row-actions">
+                                    <td style={{ textAlign: 'center' }}>{param.questions_count ?? 0}</td>
+                                    <td style={{ textAlign: 'center' }}>{param.stop_count ?? 0}</td>
+                                    <td>
+                                        <span className={`status ${param.is_active ? 'ok' : 'bad'}`}>
+                                            {param.is_active ? 'Active' : 'Disabled'}
+                                        </span>
+                                    </td>
+                                    <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                                        <button
+                                            type="button"
+                                            className="btn"
+                                            onClick={async () => {
+                                                try {
+                                                    await downloadBlob(
+                                                        api.get(`/api/admin/parameters/${param.id}/pdf`, { responseType: 'blob' }),
+                                                        `Parameter_${param.id}.pdf`
+                                                    );
+                                                } catch {
+                                                    alert('Error while downloading the PDF.');
+                                                }
+                                            }}
+                                        >
+                                            PDF
+                                        </button>
                                         <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
                                     </td>
                                 </tr>
@@ -303,7 +316,7 @@ export default function ParameterList() {
                         })}
                         {filteredParams.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={canReorder ? 7 : 6} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
+                                <td colSpan={canReorder ? 10 : 9} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
                             </tr>
                         )}
                     </tbody>

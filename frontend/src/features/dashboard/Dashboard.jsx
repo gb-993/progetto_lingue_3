@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
@@ -20,157 +20,6 @@ function StatusBadge({ status }) {
 }
 
 const fmtDateShort = (iso) => iso ? new Date(iso).toLocaleDateString() : '—';
-
-// ============================================================================
-// Mini WYSIWYG editor con contentEditable + execCommand
-// ============================================================================
-function RichTextEditor({ initialHtml, onSave, onCancel, isSaving }) {
-    const editorRef = useRef(null);
-
-    useEffect(() => {
-        if (editorRef.current && initialHtml !== undefined) {
-            editorRef.current.innerHTML = initialHtml || '';
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const exec = (cmd, val = null) => {
-        document.execCommand(cmd, false, val);
-        editorRef.current?.focus();
-    };
-
-    const handleLink = () => {
-        const url = window.prompt('Link URL:', 'https://');
-        if (url) exec('createLink', url);
-    };
-
-    const handleSave = () => {
-        const html = editorRef.current?.innerHTML || '';
-        onSave(html);
-    };
-
-    const btnStyle = {
-        padding: '0.3rem 0.55rem', border: '1px solid var(--border)', background: 'var(--surface)',
-        color: 'var(--text)',
-        borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', minWidth: '32px',
-    };
-
-    return (
-        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text)' }}>
-            <div style={{
-                display: 'flex', gap: '0.3rem', padding: '0.4rem',
-                borderBottom: '1px solid var(--border)', background: 'var(--surface-2)', flexWrap: 'wrap',
-            }}>
-                <button type="button" onClick={() => exec('bold')} style={{ ...btnStyle, fontWeight: 'bold' }} title="Bold">B</button>
-                <button type="button" onClick={() => exec('italic')} style={{ ...btnStyle, fontStyle: 'italic' }} title="Italic">I</button>
-                <button type="button" onClick={() => exec('underline')} style={{ ...btnStyle, textDecoration: 'underline' }} title="Underline">U</button>
-                <button type="button" onClick={handleLink} style={btnStyle} title="Link">Link</button>
-                <button type="button" onClick={() => exec('removeFormat')} style={btnStyle} title="Clear formatting">Clear</button>
-            </div>
-            <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                style={{
-                    padding: '0.8rem', minHeight: '90px', fontSize: '0.9rem',
-                    fontFamily: 'inherit', outline: 'none', lineHeight: 1.5,
-                    color: 'var(--text)',
-                }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem', borderTop: '1px solid var(--border)', justifyContent: 'flex-end', background: 'var(--surface-2)' }}>
-                <button type="button" className="btn btn--small" onClick={onCancel} disabled={isSaving}>Cancel</button>
-                <button type="button" className="btn btn--small btn--primary" onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save'}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// ============================================================================
-// Cite box: visualizza + permette edit inline (admin)
-// ============================================================================
-function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
-    const [editing, setEditing] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        navigator.clipboard.writeText((tmp.innerText || '').trim()).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1800);
-        });
-    };
-
-    const handleSave = async (newHtml) => {
-        setSaving(true);
-        try {
-            await api.put(`/api/admin/site-content/${keyName}`, { content: newHtml });
-            onSaved(keyName, newHtml);
-            setEditing(false);
-        } catch {
-            alert('Error saving the citation.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    return (
-        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0.55rem 0.65rem', background: 'var(--surface)', marginBottom: '0.45rem' }}>
-            <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {role}
-            </div>
-            <div className="small muted" style={{ marginBottom: '0.3rem', fontSize: '0.75rem' }}>{description}</div>
-
-            {editing ? (
-                <RichTextEditor
-                    initialHtml={html}
-                    onSave={handleSave}
-                    onCancel={() => setEditing(false)}
-                    isSaving={saving}
-                />
-            ) : (
-                <>
-                    <div style={{
-                        background: 'var(--surface-2)', padding: '0.5rem 2.5rem 0.5rem 0.6rem',
-                        borderRadius: '5px', border: '1px solid var(--border)', position: 'relative',
-                        fontSize: '0.78rem', lineHeight: 1.4, color: 'var(--text)',
-                    }}>
-                        <button
-                            type="button"
-                            onClick={handleCopy}
-                            style={{
-                                position: 'absolute', top: '6px', right: '6px',
-                                padding: '3px 7px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copied ? '#16a34a' : 'var(--surface)',
-                                color: copied ? '#fff' : 'var(--text)',
-                                border: '1px solid var(--border)', borderRadius: '4px', fontWeight: 600,
-                            }}
-                            title="Copy citation (plain text)"
-                        >
-                            {copied ? 'Copied' : 'Copy'}
-                        </button>
-                        <div dangerouslySetInnerHTML={{ __html: html }} />
-                    </div>
-                    {isAdmin && (
-                        <div style={{ marginTop: '0.4rem', textAlign: 'right' }}>
-                            <button
-                                type="button"
-                                onClick={() => setEditing(true)}
-                                className="btn btn--small"
-                                style={{ fontSize: '0.78rem' }}
-                            >
-                                Edit reference
-                            </button>
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
-}
 
 // ============================================================================
 // Dashboard Root
@@ -197,23 +46,13 @@ function AdminDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [siteContents, setSiteContents] = useState({});
 
     useEffect(() => {
-        Promise.all([
-            api.get('/api/admin/dashboard').then(r => r.data),
-            api.get('/api/public/site-content').then(r => r.data).catch(() => ({})),
-        ]).then(([dash, contents]) => {
-            setData(dash);
-            setSiteContents(contents || {});
-        }).catch(err => {
-            setError(err.response?.data?.detail || 'Error loading the dashboard.');
-        }).finally(() => setLoading(false));
+        api.get('/api/admin/dashboard')
+            .then(res => setData(res.data))
+            .catch(err => setError(err.response?.data?.detail || 'Error loading the dashboard.'))
+            .finally(() => setLoading(false));
     }, []);
-
-    const handleCiteSaved = (key, newHtml) => {
-        setSiteContents(prev => ({ ...prev, [key]: newHtml }));
-    };
 
     if (loading) return <div className="container">Loading...</div>;
     if (error) return <div className="container alert alert-error">{error}</div>;
@@ -227,7 +66,6 @@ function AdminDashboard() {
                 <PendingApprovalsCard count={stats.to_review_count} items={to_review} />
                 <LanguagesByStatusCard byStatus={stats.by_status} byStatusList={languages_by_status} />
                 <RedParamsCard total={stats.total_red_params} languages={red_by_language} />
-                <HowToCiteCard contents={siteContents} onSaved={handleCiteSaved} />
             </div>
             <div className="admin-activity">
                 <LatestChangesCard items={recent_changes} />
@@ -414,40 +252,6 @@ function RedParamsCard({ total, languages }) {
             ) : (
                 <p className="muted small" style={{ margin: '0.25rem 0 0' }}>No flagged/unsure parameters.</p>
             )}
-        </div>
-    );
-}
-
-// ----- Card 4: How to cite (always open, compact) -----
-function HowToCiteCard({ contents, onSaved }) {
-    const paramsHtml = contents.params_cite || "Longobardi, Giuseppe & Cristina Guardiano. 2009. Evidence for syntax as a signal of historical relatedness. <em>Lingua</em> 119. 1679-1706.";
-    const dataHtml = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds.). 2026. The PCM_Hub (version 1).";
-
-    return (
-        <div className="card counter-card">
-            <h3 className="admin-label">How to cite</h3>
-            <p className="small muted" style={{ margin: '0.15rem 0 0.35rem', fontSize: '0.75rem' }}>
-                Editable references shown to all site users.
-            </p>
-            <CiteBox
-                keyName="params_cite"
-                role="Parameters & Manifestations"
-                description="Reference for parameters and manifestations."
-                html={paramsHtml}
-                onSaved={onSaved}
-                isAdmin={true}
-            />
-            <CiteBox
-                keyName="data_cite"
-                role="Data, Map & Scripts"
-                description="Reference for any other content of the PCM Hub."
-                html={dataHtml}
-                onSaved={onSaved}
-                isAdmin={true}
-            />
-            <div style={{ marginTop: '0.25rem' }}>
-                <Link to="/how-to-cite" className="small">View full public page →</Link>
-            </div>
         </div>
     );
 }

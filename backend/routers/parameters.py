@@ -1,7 +1,10 @@
 from typing import Optional, List
 from datetime import datetime
+import io
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import func, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 import auth
@@ -9,6 +12,7 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
+from services.pdf_export import build_parameter_pdf
 
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
@@ -45,6 +49,10 @@ class ParameterBase(BaseModel):
     param_type: str = ""
     level_of_comparison: str = ""
 
+class ParameterListItem(ParameterBase):
+    questions_count: int = 0
+    stop_count: int = 0
+
 # Schema per l'aggiornamento che accetta la motivazione opzionale
 class ParameterUpdate(ParameterBase):
     change_note: Optional[str] = ""
@@ -64,9 +72,42 @@ class DeactivatePayload(BaseModel):
 
 # --- ENDPOINT ---
 
-@router.get("", response_model=List[ParameterBase])
+@router.get("", response_model=List[ParameterListItem])
 def get_admin_parameters(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    return db.query(models.ParameterDef).order_by(models.ParameterDef.position, models.ParameterDef.id).all()
+    Q = models.Question
+    questions_count = func.coalesce(
+        func.sum(case((Q.is_stop_question == False, 1), else_=0)), 0
+    ).label("questions_count")
+    stop_count = func.coalesce(
+        func.sum(case((Q.is_stop_question == True, 1), else_=0)), 0
+    ).label("stop_count")
+
+    rows = (
+        db.query(models.ParameterDef, questions_count, stop_count)
+        .outerjoin(Q, Q.parameter_id == models.ParameterDef.id)
+        .group_by(models.ParameterDef.id)
+        .order_by(models.ParameterDef.position, models.ParameterDef.id)
+        .all()
+    )
+
+    out: List[ParameterListItem] = []
+    for p, qc, sc in rows:
+        out.append(ParameterListItem(
+            id=p.id,
+            name=p.name,
+            position=p.position,
+            short_description=p.short_description or "",
+            long_description=p.long_description or "",
+            implicational_condition=p.implicational_condition,
+            description_of_the_implicational_condition=p.description_of_the_implicational_condition or "",
+            is_active=p.is_active,
+            schema=p.schema or "",
+            param_type=p.param_type or "",
+            level_of_comparison=p.level_of_comparison or "",
+            questions_count=int(qc or 0),
+            stop_count=int(sc or 0),
+        ))
+    return out
 
 @router.get("/{id}", response_model=ParameterDetail)
 def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
@@ -249,6 +290,31 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
                    note=f"Deactivated{f': {payload.reason}' if payload.reason else ''}")
     db.commit()
     return {"detail": "Parameter successfully deactivated."}
+
+@router.get("/{id}/pdf")
+def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    parameter = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not parameter:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+
+    questions = (
+        db.query(models.Question)
+        .options(selectinload(models.Question.allowed_motivations).joinedload(models.QuestionAllowedMotivation.motivation))
+        .filter(models.Question.parameter_id == id)
+        .order_by(models.Question.is_stop_question, models.Question.id)
+        .all()
+    )
+
+    pdf_bytes = build_parameter_pdf(parameter, questions)
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    filename = f"Parameter_{parameter.id}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 @router.post("/{id}/reactivate")
 def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):

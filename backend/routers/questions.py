@@ -35,7 +35,12 @@ class QuestionCreate(QuestionBase):
 # --- ENDPOINT ---
 @router.get("")
 def get_admin_questions(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    questions = db.query(models.Question).all()
+    questions = (
+        db.query(models.Question)
+        .join(models.ParameterDef, models.Question.parameter_id == models.ParameterDef.id)
+        .order_by(models.ParameterDef.position, models.Question.id)
+        .all()
+    )
     return questions
 
 

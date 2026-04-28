@@ -35,7 +35,10 @@
       "Bash(xargs grep *)",
       "Bash(sort -t: -k2)",
       "Bash(python -c \"import models; print\\('TopFamily:', models.TopFamily.__tablename__\\); print\\('Family:', models.Family.__tablename__\\); print\\('Group:', models.Group.__tablename__\\)\")",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(python -c \"import matplotlib, os; d = os.path.join\\(os.path.dirname\\(matplotlib.__file__\\), 'mpl-data', 'fonts', 'ttf'\\); print\\(d\\); print\\([f for f in os.listdir\\(d\\) if 'DejaVu' in f]\\)\")",
+      "Bash(docker exec *)",
+      "Bash(npx --no-install vite build)"
     ]
   }
 }
