@@ -36,6 +36,7 @@ import LogicTree  from "./features/queries/LogicTree.jsx";
 import QueriesDashboard from "./features/queries/QueriesDashboard.jsx";
 import ImportExcel from './features/admin/ImportExcel';
 import History from './features/history/History';
+import Taxonomy from './features/taxonomy/Taxonomy';
 
 export default function App() {
     return (
@@ -88,6 +89,7 @@ export default function App() {
                     <Route path="/admin/edit-content/:key" element={<AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute>} />
                     <Route path="/admin/import-excel" element={<AdminRoute><Layout><ImportExcel /></Layout></AdminRoute>} />
                     <Route path="/admin/history" element={<AdminRoute><Layout><History /></Layout></AdminRoute>} />
+                    <Route path="/admin/taxonomy" element={<AdminRoute><Layout><Taxonomy /></Layout></AdminRoute>} />
                     <Route path="/tablea" element={<Layout><TableA /></Layout>} />
                     <Route path="/tablea/:id" element={<Layout><TableA /></Layout>} />
                     <Route path="/queries" element={<Layout><QueriesDashboard /></Layout>} />

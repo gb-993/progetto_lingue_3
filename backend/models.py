@@ -36,6 +36,10 @@ class Language(Base):
     family = Column(String(255), default="")
     top_level_family = Column(String(255), default="")
     grp = Column(String(255), default="")
+    # FK alla tassonomia (parallele alle stringhe sopra, mantenute sincronizzate al save)
+    top_family_id = Column(Integer, ForeignKey("top_families.id", ondelete="SET NULL"), nullable=True)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="SET NULL"), nullable=True)
+    group_id = Column(Integer, ForeignKey("groups.id", ondelete="SET NULL"), nullable=True)
     latitude = Column(Numeric(precision=10, scale=6), nullable=True)
     longitude = Column(Numeric(precision=11, scale=6), nullable=True)
     historical_language = Column(Boolean, default=False)
@@ -63,6 +67,43 @@ class Language(Base):
 
     assigned_user = relationship("User", back_populates="assigned_languages")
     answers = relationship("Answer", back_populates="language")
+
+
+# ==========================================
+# 2.bis TASSONOMIA: top-family > family > group
+# I campi stringa su Language (top_level_family, family, grp) restano come
+# fonte di verità per filtri/export; queste tabelle sono il dizionario
+# gerarchico modificabile dall'admin via /admin/taxonomy.
+# ==========================================
+class TopFamily(Base):
+    __tablename__ = "top_families"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True, nullable=False)
+    position = Column(Integer, nullable=False, default=0)
+
+    families = relationship("Family", back_populates="top_family")
+
+
+class Family(Base):
+    __tablename__ = "families"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True, nullable=False)
+    top_family_id = Column(Integer, ForeignKey("top_families.id", ondelete="SET NULL"), nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+
+    top_family = relationship("TopFamily", back_populates="families")
+    groups = relationship("Group", back_populates="family")
+
+
+class Group(Base):
+    __tablename__ = "groups"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True, nullable=False)
+    family_id = Column(Integer, ForeignKey("families.id", ondelete="SET NULL"), nullable=True)
+    position = Column(Integer, nullable=False, default=0)
+
+    family = relationship("Family", back_populates="groups")
+
 
 # ==========================================
 # 3. PARAMETRI E DOMANDE

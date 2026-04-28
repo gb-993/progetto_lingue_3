@@ -134,12 +134,28 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
                 "params": red_params,
             })
 
-    # ---- 3.5 Conteggio lingue per status ----
+    # ---- 3.5 Conteggio lingue per status + elenco lingue per status ----
     status_counts_rows = db.query(
         models.Language.status,
         func.count(models.Language.id),
     ).group_by(models.Language.status).all()
     status_counts = {s: c for s, c in status_counts_rows}
+
+    all_langs_rows = db.query(
+        models.Language.id,
+        models.Language.name_full,
+        models.Language.status,
+    ).order_by(models.Language.position).all()
+
+    languages_by_status: dict[str, list[dict]] = {
+        "pending": [],
+        "waiting_for_approval": [],
+        "approved": [],
+        "rejected": [],
+    }
+    for lid, lname, lstatus in all_langs_rows:
+        if lstatus in languages_by_status:
+            languages_by_status[lstatus].append({"id": lid, "name_full": lname})
 
     # ---- 4. Cronologia delle modifiche ----
     changes_rows = db.query(models.ParameterChangeLog).options(
@@ -165,6 +181,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         "completed": completed,
         "red_by_language": red_by_language,
         "recent_changes": recent_changes,
+        "languages_by_status": languages_by_status,
         "stats": {
             "to_review_count": len(to_review),
             "completed_count": len(completed),

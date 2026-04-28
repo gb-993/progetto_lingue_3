@@ -121,11 +121,11 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
     };
 
     return (
-        <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '0.85rem', background: '#fff', marginBottom: '0.75rem' }}>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0.55rem 0.65rem', background: '#fff', marginBottom: '0.45rem' }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {role}
             </div>
-            <div className="small muted" style={{ marginBottom: '0.5rem' }}>{description}</div>
+            <div className="small muted" style={{ marginBottom: '0.3rem', fontSize: '0.75rem' }}>{description}</div>
 
             {editing ? (
                 <RichTextEditor
@@ -137,9 +137,9 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
             ) : (
                 <>
                     <div style={{
-                        background: '#f8f9fa', padding: '0.85rem 3rem 0.85rem 0.85rem',
-                        borderRadius: '6px', border: '1px solid #e2e8f0', position: 'relative',
-                        fontSize: '0.83rem', lineHeight: 1.5,
+                        background: '#f8f9fa', padding: '0.5rem 2.5rem 0.5rem 0.6rem',
+                        borderRadius: '5px', border: '1px solid #e2e8f0', position: 'relative',
+                        fontSize: '0.78rem', lineHeight: 1.4,
                     }}>
                         <button
                             type="button"
@@ -222,13 +222,13 @@ function AdminDashboard() {
     if (error) return <div className="container alert alert-error">{error}</div>;
     if (!data) return null;
 
-    const { stats, to_review, recent_changes, red_by_language } = data;
+    const { stats, to_review, recent_changes, red_by_language, languages_by_status } = data;
 
     return (
         <div className="dashboard-grid-admin">
             <div className="admin-counters">
                 <PendingApprovalsCard count={stats.to_review_count} items={to_review} />
-                <LanguagesByStatusCard byStatus={stats.by_status} />
+                <LanguagesByStatusCard byStatus={stats.by_status} byStatusList={languages_by_status} />
                 <FlaggedParamsCard total={stats.total_red_params} languages={red_by_language} />
                 <HowToCiteCard contents={siteContents} onSaved={handleCiteSaved} />
             </div>
@@ -246,9 +246,9 @@ function PendingApprovalsCard({ count, items }) {
             <h3 className="admin-label">Waiting for Approvals</h3>
             <div className="admin-big-number">{count}</div>
             {items.length > 0 ? (
-                <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ marginTop: '0.3rem', maxHeight: '120px', overflowY: 'auto', paddingRight: '0.25rem' }}>
                     {items.map(l => (
-                        <div key={l.id} style={{ marginBottom: '0.4rem' }}>
+                        <div key={l.id} style={{ marginBottom: '0.2rem', fontSize: '0.85rem' }}>
                             <Link
                                 to={`/languages/${l.id}/data`}
                                 style={{ fontWeight: 600, textDecoration: 'none', color: 'var(--brand)' }}
@@ -259,15 +259,18 @@ function PendingApprovalsCard({ count, items }) {
                     ))}
                 </div>
             ) : (
-                <p className="muted small" style={{ margin: '0.25rem 0 0' }}>No waiting reviews.</p>
+                <p className="muted small" style={{ margin: '0.15rem 0 0' }}>No waiting reviews.</p>
             )}
         </div>
     );
 }
 
 // ----- Card 2: Languages by Status -----
-function LanguagesByStatusCard({ byStatus }) {
+function LanguagesByStatusCard({ byStatus, byStatusList }) {
     const safe = byStatus || {};
+    const lists = byStatusList || {};
+    const [expanded, setExpanded] = useState(null);
+
     const total =
         (safe.pending || 0) +
         (safe.waiting_for_approval || 0) +
@@ -281,20 +284,97 @@ function LanguagesByStatusCard({ byStatus }) {
         { key: 'rejected', label: 'Rejected', color: 'var(--bad)' },
     ];
 
+    const toggle = (key) => setExpanded(prev => (prev === key ? null : key));
+    const expandedCell = cells.find(c => c.key === expanded);
+    const expandedList = expanded ? (lists[expanded] || []) : [];
+
     return (
         <div className="card counter-card">
             <h3 className="admin-label">Languages by Status</h3>
             <div className="status-grid">
-                {cells.map(c => (
-                    <div key={c.key} className="status-cell">
-                        <div className="status-num" style={{ color: c.color }}>
-                            {safe[c.key] || 0}
-                        </div>
-                        <div className="status-lab">{c.label}</div>
-                    </div>
-                ))}
+                {cells.map(c => {
+                    const isActive = expanded === c.key;
+                    return (
+                        <button
+                            key={c.key}
+                            type="button"
+                            onClick={() => toggle(c.key)}
+                            className="status-cell"
+                            style={{
+                                background: isActive ? 'rgba(59,130,246,0.08)' : 'transparent',
+                                border: isActive ? '1px solid #3b82f6' : '1px solid transparent',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                padding: '0.4rem',
+                                font: 'inherit',
+                                color: 'inherit',
+                                textAlign: 'center',
+                            }}
+                            title={`Show ${c.label.toLowerCase()} languages`}
+                        >
+                            <div className="status-num" style={{ color: c.color }}>
+                                {safe[c.key] || 0}
+                            </div>
+                            <div className="status-lab">{c.label}</div>
+                        </button>
+                    );
+                })}
             </div>
-            <div className="muted small" style={{ marginTop: '0.6rem', textAlign: 'right' }}>
+
+            {expanded && (
+                <div style={{
+                    marginTop: '0.4rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: '5px',
+                    background: '#fff',
+                }}>
+                    <div style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--border)',
+                        fontSize: '0.72rem', fontWeight: 600, color: '#475569',
+                    }}>
+                        <span>{expandedCell?.label} ({expandedList.length})</span>
+                        <button
+                            type="button"
+                            onClick={() => setExpanded(null)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                color: '#64748b', fontSize: '0.95rem', lineHeight: 1, padding: '0 0.2rem',
+                            }}
+                            title="Close"
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    {expandedList.length === 0 ? (
+                        <p className="muted small" style={{ margin: 0, padding: '0.4rem 0.5rem' }}>
+                            No languages with this status.
+                        </p>
+                    ) : (
+                        <div style={{ maxHeight: '160px', overflowY: 'auto', padding: '0.2rem 0.5rem' }}>
+                            {expandedList.map(l => (
+                                <div key={l.id} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    fontSize: '0.78rem', padding: '0.15rem 0',
+                                    borderBottom: '1px solid var(--border)',
+                                }}>
+                                    <Link
+                                        to={`/languages/${l.id}/data`}
+                                        style={{ textDecoration: 'none', color: 'inherit' }}
+                                        title={l.name_full}
+                                    >
+                                        {l.name_full}
+                                    </Link>
+                                    <span className="muted" style={{ fontSize: '0.7rem' }}>{l.id}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="muted small" style={{ marginTop: '0.4rem', textAlign: 'right', fontSize: '0.75rem' }}>
                 Total: <strong>{total}</strong>
             </div>
         </div>
@@ -309,14 +389,14 @@ function FlaggedParamsCard({ total, languages }) {
             <h3 className="admin-label">Flagged / Unsure Parameters</h3>
             <div className="admin-big-number">{total || 0}</div>
             {list.length > 0 ? (
-                <div style={{ maxHeight: '260px', overflowY: 'auto', paddingRight: '0.5rem', marginTop: '0.4rem' }}>
+                <div style={{ maxHeight: '140px', overflowY: 'auto', paddingRight: '0.4rem', marginTop: '0.25rem' }}>
                     {list.map(l => (
                         <div
                             key={l.language_id}
                             style={{
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                fontSize: '0.9rem', marginBottom: '0.35rem',
-                                borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem',
+                                fontSize: '0.82rem', marginBottom: '0.2rem',
+                                borderBottom: '1px solid var(--border)', paddingBottom: '0.15rem',
                             }}
                         >
                             <Link
@@ -345,7 +425,7 @@ function HowToCiteCard({ contents, onSaved }) {
     return (
         <div className="card counter-card">
             <h3 className="admin-label">How to cite</h3>
-            <p className="small muted" style={{ margin: '0.25rem 0 0.5rem' }}>
+            <p className="small muted" style={{ margin: '0.15rem 0 0.35rem', fontSize: '0.75rem' }}>
                 Editable references shown to all site users.
             </p>
             <CiteBox

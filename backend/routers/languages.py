@@ -19,6 +19,10 @@ class LanguageBase(BaseModel):
     family: str = ""
     top_level_family: str = ""
     grp: str = ""
+    # FK opzionali alla tassonomia (preferite rispetto alle stringhe se passate)
+    top_family_id: Optional[int] = None
+    family_id: Optional[int] = None
+    group_id: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     historical_language: bool = False
@@ -45,6 +49,55 @@ def ensure_assigned_user_exists(user_id: Optional[int], db: Session):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Assigned user not found")
+
+
+def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
+    """
+    Risolve la gerarchia top → family → group:
+    - se passi group_id, deduce family_id e top_family_id dai parent
+    - se passi family_id, deduce top_family_id dal parent
+    - sincronizza i campi stringa (top_level_family, family, grp) con i nomi delle entità
+    Ritorna un dict {top_family_id, family_id, group_id, top_level_family, family, grp}.
+    """
+    top_id = item.top_family_id
+    fam_id = item.family_id
+    grp_id = item.group_id
+    top_str = item.top_level_family or ""
+    fam_str = item.family or ""
+    grp_str = item.grp or ""
+
+    if grp_id is not None:
+        g = db.get(models.Group, grp_id)
+        if not g:
+            raise HTTPException(status_code=400, detail="Group not found")
+        grp_str = g.name
+        if g.family_id is not None:
+            fam_id = g.family_id
+        elif fam_id is None:
+            fam_id = None  # group orfano: lascia family vuota se non specificata
+
+    if fam_id is not None:
+        f = db.get(models.Family, fam_id)
+        if not f:
+            raise HTTPException(status_code=400, detail="Family not found")
+        fam_str = f.name
+        if f.top_family_id is not None:
+            top_id = f.top_family_id
+
+    if top_id is not None:
+        t = db.get(models.TopFamily, top_id)
+        if not t:
+            raise HTTPException(status_code=400, detail="Top-family not found")
+        top_str = t.name
+
+    return {
+        "top_family_id": top_id,
+        "family_id": fam_id,
+        "group_id": grp_id,
+        "top_level_family": top_str,
+        "family": fam_str,
+        "grp": grp_str,
+    }
 
 
 @router.get("/public/languages")
@@ -82,6 +135,9 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
         "family": l.family,
         "top_level_family": l.top_level_family,
         "grp": l.grp,
+        "top_family_id": l.top_family_id,
+        "family_id": l.family_id,
+        "group_id": l.group_id,
         "latitude": float(l.latitude) if l.latitude is not None else None,
         "longitude": float(l.longitude) if l.longitude is not None else None,
         "historical_language": l.historical_language,
@@ -119,14 +175,18 @@ def get_admin_language(id: str, db: Session = Depends(get_db), current_user: mod
 def create_admin_language(item: LanguageBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     validate_coordinates(item.latitude, item.longitude)
     ensure_assigned_user_exists(item.assigned_user_id, db)
+    tax = resolve_taxonomy(item, db)
 
     db_item = models.Language(
         id=item.id,
         name_full=item.name_full,
         position=item.position,
-        family=item.family,
-        top_level_family=item.top_level_family,
-        grp=item.grp,
+        family=tax["family"],
+        top_level_family=tax["top_level_family"],
+        grp=tax["grp"],
+        top_family_id=tax["top_family_id"],
+        family_id=tax["family_id"],
+        group_id=tax["group_id"],
         latitude=item.latitude,
         longitude=item.longitude,
         historical_language=item.historical_language,
@@ -158,13 +218,17 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
 
     validate_coordinates(item.latitude, item.longitude)
     ensure_assigned_user_exists(item.assigned_user_id, db)
+    tax = resolve_taxonomy(item, db)
 
     db_item.id = item.id
     db_item.name_full = item.name_full
     db_item.position = item.position
-    db_item.family = item.family
-    db_item.top_level_family = item.top_level_family
-    db_item.grp = item.grp
+    db_item.family = tax["family"]
+    db_item.top_level_family = tax["top_level_family"]
+    db_item.grp = tax["grp"]
+    db_item.top_family_id = tax["top_family_id"]
+    db_item.family_id = tax["family_id"]
+    db_item.group_id = tax["group_id"]
     db_item.latitude = item.latitude
     db_item.longitude = item.longitude
     db_item.historical_language = item.historical_language
