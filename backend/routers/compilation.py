@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func
+from sqlalchemy import func, or_, case
 import models
 from database import SessionLocal
 from dependencies import get_db, get_current_user, require_admin
@@ -83,17 +83,31 @@ class ParameterBlockSavePayload(BaseModel):
     # rispondiamo 409 e il client deve ricaricare prima di sovrascrivere.
     expected_last_modified: Optional[str] = None
 
-# --- ENDPOINT: TUTTI GLI ESEMPI (per import in fase di compilazione) ---
-@router.get("/examples/all")
-def get_all_examples(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+# --- ENDPOINT: RICERCA ESEMPI (per import in fase di compilazione) ---
+@router.get("/examples/search")
+def search_examples(
+    q: str = "",
+    question_id: Optional[str] = None,
+    language_id: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     """
-    Restituisce tutti gli esempi del sistema con contesto (lingua + domanda),
-    usato dal selettore di import esempi nella pagina di compilazione.
-    Filtra fuori esempi con textarea vuota.
+    Ricerca paginata di esempi per il selettore di import della pagina di compilazione.
+
+    Filtri:
+      - q: full-text ILIKE su textarea/translation/gloss (case-insensitive)
+      - question_id / language_id: usati per ordinamento prioritario (stessa domanda
+        e/o stessa lingua emergono prima), non per filtrare
+      - limit: clampato a [1, 200]; default 50
+
+    L'endpoint sostituisce il vecchio /examples/all (che scaricava ~37k record).
     """
-    rows = db.query(
+    limit = max(1, min(int(limit or 50), 200))
+
+    base = db.query(
         models.Example.id,
-        models.Example.number,
         models.Example.textarea,
         models.Example.transliteration,
         models.Example.gloss,
@@ -102,22 +116,35 @@ def get_all_examples(db: Session = Depends(get_db), current_user: models.User = 
         models.Answer.language_id,
         models.Answer.question_id,
         models.Language.name_full,
-        models.Question.text,
-        models.Question.parameter_id,
     ).join(
         models.Answer, models.Answer.id == models.Example.answer_id
     ).join(
         models.Language, models.Language.id == models.Answer.language_id
-    ).join(
-        models.Question, models.Question.id == models.Answer.question_id
     ).filter(
         models.Example.textarea.isnot(None),
-        models.Example.textarea != ""
-    ).all()
+        models.Example.textarea != "",
+    )
+
+    q = (q or "").strip()
+    if q:
+        like = f"%{q}%"
+        base = base.filter(or_(
+            models.Example.textarea.ilike(like),
+            models.Example.translation.ilike(like),
+            models.Example.gloss.ilike(like),
+        ))
+
+    order_cols = []
+    if question_id:
+        order_cols.append(case((models.Answer.question_id == question_id, 0), else_=1))
+    if language_id:
+        order_cols.append(case((models.Answer.language_id == language_id, 0), else_=1))
+    order_cols.extend([models.Language.name_full, models.Example.id])
+
+    rows = base.order_by(*order_cols).limit(limit).all()
 
     return [{
         "id": r.id,
-        "number": r.number or "",
         "textarea": r.textarea or "",
         "transliteration": r.transliteration or "",
         "gloss": r.gloss or "",
@@ -126,8 +153,6 @@ def get_all_examples(db: Session = Depends(get_db), current_user: models.User = 
         "language_id": r.language_id,
         "language_name": r.name_full,
         "question_id": r.question_id,
-        "question_text": r.text or "",
-        "parameter_id": r.parameter_id,
     } for r in rows]
 
 

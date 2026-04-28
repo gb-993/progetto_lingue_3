@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../../api';
 import QuestionRow from './QuestionRow';
 
-export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly, allExamples = [] }) {
+export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly }) {
     const [isSaving, setIsSaving] = useState(false);
 
     // Stato locale: mappa { [questionId]: { response_text, comments, motivation_ids, examples } }
@@ -80,7 +80,6 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly,
                         value={localAnswers[q.id]}
                         onChange={(newData) => updateAnswer(q.id, newData)}
                         isReadOnly={isReadOnly}
-                        allExamples={allExamples}
                         currentLangId={langId}
                     />
                 ))}

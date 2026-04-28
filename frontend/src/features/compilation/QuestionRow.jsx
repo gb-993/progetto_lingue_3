@@ -1,7 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Select from 'react-select';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AsyncSelect from 'react-select/async';
+import api from '../../api';
 
-export default function QuestionRow({ question, value, onChange, isReadOnly, allExamples = [], currentLangId }) {
+const formatExampleOption = (ex, currentQuestionId) => {
+    const txt = (ex.textarea || '').trim();
+    const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
+    const sameQ = ex.question_id === currentQuestionId ? ' (same question)' : '';
+    return {
+        value: ex.id,
+        label: `[${ex.language_id} · ${ex.question_id}${sameQ}] ${snippet}`,
+        example: ex,
+    };
+};
+
+export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId }) {
     const [localError, setLocalError] = useState('');
 
     // Validazione base in tempo reale per gli esempi
@@ -51,47 +63,43 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
         });
     };
 
-    // --- IMPORT ESEMPI ---
-    // Opzioni raggruppate per lingua: lingua corrente prima, poi le altre in ordine alfabetico
-    const importExampleOptions = useMemo(() => {
-        if (!allExamples || allExamples.length === 0) return [];
+    // --- IMPORT ESEMPI (server-side search) ---
+    // Niente più download massivo: si chiama /examples/search con il testo digitato.
+    // Il backend ordina per priorità (stessa domanda → stessa lingua → resto) e limita a 50.
+    const debounceRef = useRef(null);
 
-        const byLang = {};
-        for (const ex of allExamples) {
-            const k = ex.language_id;
-            if (!byLang[k]) {
-                byLang[k] = { language_id: ex.language_id, language_name: ex.language_name, items: [] };
-            }
-            byLang[k].items.push(ex);
-        }
-
-        Object.values(byLang).forEach(g => {
-            g.items.sort((a, b) => {
-                const c = String(a.question_id).localeCompare(String(b.question_id));
-                return c !== 0 ? c : String(a.textarea).localeCompare(String(b.textarea));
+    const fetchExamples = useCallback(async (q) => {
+        try {
+            const res = await api.get('/api/languages/examples/search', {
+                params: {
+                    q: q || '',
+                    question_id: question.id,
+                    language_id: currentLangId,
+                    limit: 50,
+                },
             });
-        });
+            return (res.data || []).map(ex => formatExampleOption(ex, question.id));
+        } catch (err) {
+            console.warn('Example search failed', err);
+            return [];
+        }
+    }, [question.id, currentLangId]);
 
-        const groups = Object.values(byLang).sort((a, b) => {
-            if (a.language_id === currentLangId) return -1;
-            if (b.language_id === currentLangId) return 1;
-            return String(a.language_name).localeCompare(String(b.language_name));
+    // Debounce 300ms su loadOptions: AsyncSelect chiama loadOptions a ogni keystroke
+    // ma noi accumuliamo in un timer e risolviamo solo l'ultima richiesta.
+    const loadExampleOptions = useCallback((inputValue) => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current.timer);
+            debounceRef.current.reject();
+        }
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(async () => {
+                debounceRef.current = null;
+                resolve(await fetchExamples(inputValue));
+            }, 300);
+            debounceRef.current = { timer, reject: () => resolve([]) };
         });
-
-        return groups.map(g => ({
-            label: `${g.language_name} (${g.language_id})${g.language_id === currentLangId ? ' — this language' : ''}`,
-            options: g.items.map(ex => {
-                const txt = (ex.textarea || '').trim();
-                const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
-                const sameQ = ex.question_id === question.id ? ' (same question)' : '';
-                return {
-                    value: ex.id,
-                    label: `[${ex.question_id}${sameQ}] ${snippet}`,
-                    example: ex
-                };
-            })
-        }));
-    }, [allExamples, currentLangId, question.id]);
+    }, [fetchExamples]);
 
     const handleImportExample = (selected) => {
         if (!selected) return;
@@ -258,14 +266,17 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                                 + Add another example
                             </button>
                             <div style={{ flex: '1 1 280px', minWidth: '260px' }}>
-                                <Select
+                                <AsyncSelect
                                     isClearable
                                     isDisabled={isReadOnly}
-                                    options={importExampleOptions}
+                                    cacheOptions
+                                    defaultOptions
+                                    loadOptions={loadExampleOptions}
                                     value={null}
                                     onChange={handleImportExample}
                                     placeholder="+ Import example from another answer..."
-                                    noOptionsMessage={() => "No example available"}
+                                    noOptionsMessage={({ inputValue }) => inputValue ? "No matching example" : "Type to search..."}
+                                    loadingMessage={() => "Searching..."}
                                 />
                             </div>
                         </div>

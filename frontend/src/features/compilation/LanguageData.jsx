@@ -27,7 +27,6 @@ const STATUS_META = {
 export default function LanguageData() {
     const { id } = useParams();
     const [data, setData] = useState(null);
-    const [allExamples, setAllExamples] = useState([]);
     const [activeIndex, setActiveIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -49,17 +48,7 @@ export default function LanguageData() {
         }
     };
 
-    const fetchAllExamples = async () => {
-        try {
-            const res = await api.get('/api/languages/examples/all');
-            setAllExamples(res.data || []);
-        } catch (err) {
-            console.warn("Impossibile caricare gli esempi globali", err);
-        }
-    };
-
     useEffect(() => { fetchCompilationData(); }, [id]);
-    useEffect(() => { fetchAllExamples(); }, []);
 
     const callWorkflow = async (action, body) => {
         try {
@@ -317,10 +306,8 @@ export default function LanguageData() {
                     parameter={currentParam}
                     langId={language.id}
                     isReadOnly={isReadOnly}
-                    allExamples={allExamples}
                     onSaved={() => {
                         fetchCompilationData();
-                        fetchAllExamples();
                         if (activeIndex < parameters.length - 1) setActiveIndex(activeIndex + 1);
                     }}
                 />
