@@ -284,10 +284,9 @@ export default function Layout({ children }) {
                             <Breadcrumb pathname={location.pathname} />
                         </div>
                         <div className="top-bar-right">
-                            <Link to="/me" className="btn" style={{ background: 'transparent', border: 'none', fontWeight: 'bold' }}>
+                            <Link to="/me" className="btn" style={{ background: 'transparent', border: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>
                                 MyAccount
                             </Link>
-                            <span className="role-badge">{role} Access</span>
                             <button
                                 type="button"
                                 className="theme-toggle"

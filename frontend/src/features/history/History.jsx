@@ -61,38 +61,43 @@ export default function History() {
         <div className="container" style={{ maxWidth: '1300px' }}>
             <header className="dashboard-hero" style={{ marginBottom: '1rem' }}>
                 <h1>History & Backups</h1>
-                <p className="muted">
-                    History of every change and full language backups. Everything is permanent — nothing is ever deleted.
-                </p>
+
             </header>
 
             {/* Tab nav */}
-            <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border)', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', gap: '0.35rem', borderBottom: '1px solid var(--border)', marginBottom: '1.25rem' }}>
                 {[
                     { id: 'versions', label: 'Change history' },
                     { id: 'answers', label: 'Answer changes' },
                     { id: 'backups', label: 'Full backups (language snapshots)' },
-                ].map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => { setTab(t.id); setSearchParams({ tab: t.id }); }}
-                        style={{
-                            padding: '0.65rem 1rem', border: 'none', cursor: 'pointer',
-                            background: tab === t.id ? '#fff' : 'transparent',
-                            borderTop: tab === t.id ? '1px solid var(--border)' : '1px solid transparent',
-                            borderLeft: tab === t.id ? '1px solid var(--border)' : '1px solid transparent',
-                            borderRight: tab === t.id ? '1px solid var(--border)' : '1px solid transparent',
-                            borderBottom: tab === t.id ? '1px solid #fff' : '1px solid transparent',
-                            marginBottom: '-1px',
-                            fontWeight: tab === t.id ? 700 : 500,
-                            color: tab === t.id ? 'var(--text)' : 'var(--text-muted)',
-                            borderRadius: '6px 6px 0 0',
-                            fontSize: '0.95rem',
-                        }}
-                    >
-                        {t.label}
-                    </button>
-                ))}
+                ].map(t => {
+                    const active = tab === t.id;
+                    return (
+                        <button
+                            key={t.id}
+                            onClick={() => { setTab(t.id); setSearchParams({ tab: t.id }); }}
+                            onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--surface-2)'; }}
+                            onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'var(--surface-alt)'; }}
+                            style={{
+                                padding: '0.65rem 1rem',
+                                cursor: 'pointer',
+                                background: active ? 'var(--surface)' : 'var(--surface-alt)',
+                                borderTop: active ? '1px solid var(--border)' : '1px solid var(--border)',
+                                borderLeft: active ? '1px solid var(--border)' : '1px solid var(--border)',
+                                borderRight: active ? '1px solid var(--border)' : '1px solid var(--border)',
+                                borderBottom: active ? '1px solid var(--surface)' : '1px solid var(--border)',
+                                marginBottom: '-1px',
+                                fontWeight: active ? 700 : 500,
+                                color: active ? 'var(--text)' : 'var(--text-muted)',
+                                borderRadius: '6px 6px 0 0',
+                                fontSize: '0.95rem',
+                                transition: 'background 0.15s ease, color 0.15s ease',
+                            }}
+                        >
+                            {t.label}
+                        </button>
+                    );
+                })}
             </div>
 
             {tab === 'versions' && <VersionsTab key="versions" excludeEntityType="answer" />}
@@ -427,7 +432,7 @@ function VersionDiffView({ data, onClose }) {
                 )}
                 {editLink && (
                     <div style={{ marginTop: '0.6rem' }}>
-                        <Link to={editLink} onClick={onClose} className="small">Go to the edit page</Link>
+                        <Link to={editLink} onClick={onClose} className="small" style={{ textDecoration: 'underline' }}>Go to the edit page</Link>
                     </div>
                 )}
             </div>

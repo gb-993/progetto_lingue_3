@@ -71,11 +71,26 @@ export default function MotivationList() {
         <div className="container">
             <header className="dashboard-hero">
                 <h1>Motivations</h1>
-                <p className="muted dashboard-copy">Global dictionary for answer motivations</p>
             </header>
 
-            <section className="toolbar">
-                <div className="toolbar__form">
+            <section className="toolbar" style={{
+                position: 'sticky',
+                top: '5rem',
+                zIndex: 10,
+                background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                padding: '0.85rem 1rem',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                marginBottom: '1rem',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                alignItems: 'center',
+                gap: '1rem',
+            }}>
+                <div className="toolbar__form" style={{ maxWidth: 'none', width: '100%' }}>
                     <input type="search" placeholder="Search every field (code, label, ...)" value={search} onChange={(e) => setSearch(e.target.value)} />
                 </div>
                 <div className="toolbar__add">

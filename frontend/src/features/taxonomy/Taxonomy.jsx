@@ -139,9 +139,7 @@ export default function Taxonomy() {
             <header className="dashboard-hero">
                 <h1>Taxonomy</h1>
                 <p className="muted dashboard-copy">
-                    Manage the hierarchy <strong>Top-Family → Subfamily → Group</strong>. Click an item to drill down.
-                    Drag a Subfamily onto a Top-Family (or a Group onto a Subfamily) to reassign its parent. Lists are sorted alphabetically.
-                    Renaming an entity propagates the new label to all languages that referenced it.
+                    Click an item to view its children. Drag to reassign its parent. Renaming updates all linked languages.
                 </p>
             </header>
 

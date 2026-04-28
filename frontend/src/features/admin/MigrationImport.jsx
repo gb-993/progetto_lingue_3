@@ -43,7 +43,7 @@ export default function MigrationImport() {
     return (
         <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
             <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
-                <h1>Migration Import (one-shot)</h1>
+                <h1>Restore Database</h1>
                 <p className="muted">
                     Carica il <strong>Migration Bundle ZIP</strong> generato dal vecchio sito
                     per popolare il nuovo DB con lingue, parametri, domande, motivazioni e
@@ -56,7 +56,7 @@ export default function MigrationImport() {
                 <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
                     <li>Con <code>wipe</code> attivo, vengono <strong>cancellate tutte le tabelle dati</strong> (lingue, parametri, domande, risposte, esempi, motivazioni, glossario, snapshots, change logs, tassonomia).</li>
                     <li>Gli utenti esistenti NON vengono toccati. Viene comunque (ri)creato l'admin di default con le credenziali da env <code>ADMIN_EMAIL</code>/<code>ADMIN_PASSWORD</code> (default: <code>admin@pcm.local</code>/<code>admin</code>).</li>
-                    <li>Tutte le risposte importate sono salvate come <strong>approved</strong> e il DAG viene eseguito per ogni lingua a fine import (Tabella A e dashboard saranno subito popolate).</li>
+                    <li>Tutte le risposte importate sono salvate come <strong>pending</strong> e il DAG viene eseguito per ogni lingua a fine import (Tabella A e dashboard saranno subito popolate).</li>
                     <li>Pensato per essere usato <strong>una sola volta</strong> al primo avvio del nuovo sito. Dopo, nascondi/rimuovi questo bottone.</li>
                 </ul>
             </div>

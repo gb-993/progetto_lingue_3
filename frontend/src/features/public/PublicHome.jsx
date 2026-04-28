@@ -15,10 +15,22 @@ import VectorLayer from 'ol/layer/Vector';   // CORRETTO
 import VectorSource from 'ol/source/Vector'; // CORRETTO
 import { Style, Circle, Fill, Stroke } from 'ol/style';
 
+function dimHsl(cssColor, alpha) {
+    if (typeof cssColor !== 'string') return cssColor;
+    if (cssColor.startsWith('hsl(') && cssColor.endsWith(')')) {
+        return cssColor.replace('hsl(', 'hsla(').replace(/\)$/, `, ${alpha})`);
+    }
+    return cssColor;
+}
+
 export default function PublicHome() {
     const [loading, setLoading] = useState(true);
     const mapRef = useRef(null);
     const mapInstance = useRef(null);
+    const vectorSourceRef = useRef(null);
+
+    const [familyColors, setFamilyColors] = useState([]);
+    const [hoveredKey, setHoveredKey] = useState(null);
 
     useEffect(() => {
         const fetchMapData = async () => {
@@ -26,29 +38,38 @@ export default function PublicHome() {
                 const response = await api.get('/api/public/map-data');
                 const langs = response.data;
 
+                // Hue distribuita sulle top-level family (alfabetico)
+                const tops = [...new Set(langs.map(l => l.family).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                const colorByFamily = {};
+                tops.forEach((t, i) => {
+                    const hue = (i * 360) / Math.max(tops.length, 1);
+                    colorByFamily[t] = `hsl(${hue}, 65%, 50%)`;
+                });
+                setFamilyColors(tops.map(t => ({ name: t, color: colorByFamily[t] })));
+
                 if (!mapInstance.current && mapRef.current) {
-                    // Creazione dei marker per le lingue
                     const features = langs.map(l => {
-                        const feature = new Feature({
+                        const f = new Feature({
                             geometry: new Point(fromLonLat([l.lng, l.lat])),
                             name: l.name,
+                            family: l.family,
+                            baseColor: colorByFamily[l.family] || '#9ca3af',
                         });
-                        return feature;
+                        f.setStyle(new Style({
+                            image: new Circle({
+                                radius: 6,
+                                fill: new Fill({ color: colorByFamily[l.family] || '#9ca3af' }),
+                                stroke: new Stroke({ color: '#fff', width: 2 }),
+                            }),
+                        }));
+                        return f;
                     });
 
                     const vectorSource = new VectorSource({ features });
-                    const vectorLayer = new VectorLayer({
-                        source: vectorSource,
-                        style: new Style({
-                            image: new Circle({
-                                radius: 6,
-                                fill: new Fill({ color: '#ff4500' }),
-                                stroke: new Stroke({ color: '#fff', width: 2 }),
-                            }),
-                        }),
-                    });
+                    vectorSourceRef.current = vectorSource;
+                    const vectorLayer = new VectorLayer({ source: vectorSource });
 
-                    // Inizializzazione Mappa
                     mapInstance.current = new Map({
                         target: mapRef.current,
                         layers: [
@@ -56,7 +77,7 @@ export default function PublicHome() {
                             vectorLayer
                         ],
                         view: new View({
-                            center: fromLonLat([12, 42]), // Centro sull'Italia come default
+                            center: fromLonLat([12, 42]),
                             zoom: 3,
                         }),
                     });
@@ -77,6 +98,26 @@ export default function PublicHome() {
             }
         };
     }, []);
+
+    // Aggiorna lo stile dei marker quando cambia la voce di legenda sotto al mouse
+    useEffect(() => {
+        const src = vectorSourceRef.current;
+        if (!src) return;
+        src.getFeatures().forEach(f => {
+            const baseColor = f.get('baseColor') || '#9ca3af';
+            const family = f.get('family');
+            const isHighlighted = hoveredKey === null || hoveredKey === family;
+            const fillColor = isHighlighted ? baseColor : dimHsl(baseColor, 0.15);
+            const strokeColor = isHighlighted ? '#fff' : 'rgba(255,255,255,0.3)';
+            f.setStyle(new Style({
+                image: new Circle({
+                    radius: isHighlighted ? (hoveredKey ? 8 : 6) : 5,
+                    fill: new Fill({ color: fillColor }),
+                    stroke: new Stroke({ color: strokeColor, width: 2 }),
+                }),
+            }));
+        });
+    }, [hoveredKey]);
 
     return (
         <div className="page-shell">
@@ -99,6 +140,53 @@ export default function PublicHome() {
                         </div>
                     )}
                 </div>
+                {familyColors.length > 0 && (
+                    <div style={{
+                        padding: '0.55rem 0.75rem',
+                        borderTop: '1px solid var(--border)',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.35rem 0.9rem',
+                        alignItems: 'center',
+                        background: 'var(--surface-alt)',
+                    }}>
+                        <span className="small" style={{ fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.7rem', marginRight: '0.4rem' }}>
+                            Top-Family
+                        </span>
+                        {familyColors.map(({ name, color }) => {
+                            const isActive = hoveredKey === name;
+                            return (
+                                <span
+                                    key={name}
+                                    onMouseEnter={() => setHoveredKey(name)}
+                                    onMouseLeave={() => setHoveredKey(null)}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                        fontSize: '0.78rem',
+                                        cursor: 'pointer',
+                                        padding: '0.15rem 0.4rem',
+                                        borderRadius: '4px',
+                                        background: isActive ? 'var(--surface-2)' : 'transparent',
+                                        transition: 'background 0.12s ease',
+                                        opacity: hoveredKey && !isActive ? 0.5 : 1,
+                                    }}
+                                >
+                                    <span style={{
+                                        width: '12px', height: '12px',
+                                        borderRadius: '50%',
+                                        background: color,
+                                        border: '1px solid rgba(0,0,0,0.2)',
+                                        display: 'inline-block',
+                                        flexShrink: 0,
+                                    }} />
+                                    <span>{name}</span>
+                                </span>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>

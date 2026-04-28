@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import LanguageMap from './LanguageMap';
 
 const STATUS_BADGE = {
     pending: { label: 'Pending', cls: '' },
@@ -86,6 +87,46 @@ export default function LanguageList() {
         setFilters(INITIAL_FILTERS);
         setSearch('');
     };
+
+    // Opzioni concatenate: subfamily ristretta dal top_family scelto,
+    // group ristretto da top_family/family scelti.
+    const filteredFamilyOptions = useMemo(() => {
+        if (!filters.top_family) return options.opt_families;
+        const set = new Set(
+            languages
+                .filter(l => l.top_level_family === filters.top_family)
+                .map(l => l.family)
+                .filter(Boolean)
+        );
+        return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }, [languages, options.opt_families, filters.top_family]);
+
+    const filteredGroupOptions = useMemo(() => {
+        if (!filters.top_family && !filters.family) return options.opt_groups;
+        const set = new Set(
+            languages
+                .filter(l =>
+                    (!filters.top_family || l.top_level_family === filters.top_family) &&
+                    (!filters.family || l.family === filters.family)
+                )
+                .map(l => l.grp)
+                .filter(Boolean)
+        );
+        return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }, [languages, options.opt_groups, filters.top_family, filters.family]);
+
+    // Se il filtro selezionato non è più valido dopo un cambio del padre, lo azzero.
+    useEffect(() => {
+        if (filters.family && !filteredFamilyOptions.includes(filters.family)) {
+            setFilters(prev => ({ ...prev, family: '' }));
+        }
+    }, [filteredFamilyOptions, filters.family]);
+
+    useEffect(() => {
+        if (filters.grp && !filteredGroupOptions.includes(filters.grp)) {
+            setFilters(prev => ({ ...prev, grp: '' }));
+        }
+    }, [filteredGroupOptions, filters.grp]);
 
     const filteredLanguages = useMemo(() => {
         return languages.filter(lang => {
@@ -179,7 +220,18 @@ export default function LanguageList() {
             </header>
 
             {/* ==== FILTRI ==== */}
-            <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem', border: '1px solid var(--border)' }}>
+            <div className="card" style={{
+                padding: '1rem 1.25rem',
+                marginBottom: '1rem',
+                border: '1px solid var(--border)',
+                position: 'sticky',
+                top: '5rem',
+                zIndex: 10,
+                background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+            }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
                     <FilterField label="Search">
                         <input
@@ -199,13 +251,13 @@ export default function LanguageList() {
                     <FilterField label="Subfamily">
                         <select name="family" value={filters.family} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {options.opt_families.map(v => <option key={v} value={v}>{v}</option>)}
+                            {filteredFamilyOptions.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Group">
                         <select name="grp" value={filters.grp} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {options.opt_groups.map(v => <option key={v} value={v}>{v}</option>)}
+                            {filteredGroupOptions.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Historical">
@@ -272,6 +324,15 @@ export default function LanguageList() {
                 )}
             </div>
 
+            {/* ==== MAPPA ==== */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1rem' }}>
+                <LanguageMap
+                    languages={filteredLanguages}
+                    filters={filters}
+                    allTopFamilies={options.opt_top_families}
+                />
+            </div>
+
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {error && <div style={{ color: 'red', padding: '1rem' }}>{error}</div>}
                 <table className="table">
@@ -286,7 +347,7 @@ export default function LanguageList() {
                                 />
                             </th>
                             <th>ID</th>
-                            <th style={{ width: '22%' }}>Name</th>
+                            <th style={{ width: '14%' }}>Name</th>
                             <th>Status</th>
                             <th>Subfamily</th>
                             <th>Group</th>
@@ -305,7 +366,7 @@ export default function LanguageList() {
                                     />
                                 </td>
                                 <td style={{ fontWeight: 'bold' }}>{lang.id}</td>
-                                <td>{lang.name_full}</td>
+                                <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{lang.name_full}</td>
                                 <td><StatusBadge status={lang.status} /></td>
                                 <td className="muted">{lang.family || '—'}</td>
                                 <td className="muted small">{lang.grp || '—'}</td>

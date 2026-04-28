@@ -48,7 +48,7 @@ export default function LanguageDebug() {
             <div className="sticky-debug-header" style={{
                 position: 'sticky', top: '1rem', zIndex: 1000, padding: '1.25rem 1.5rem', marginBottom: '2rem',
                 borderRadius: '12px', border: '1px solid var(--border)',
-                background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                background: 'color-mix(in oklab, var(--surface) 75%, transparent)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
             }}>
                 <h1 style={{ margin: '0 0 1rem 0', fontSize: '1.5rem', color: 'var(--text)' }}>

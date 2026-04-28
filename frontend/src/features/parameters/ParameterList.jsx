@@ -167,11 +167,21 @@ export default function ParameterList() {
         <div className="container">
             <header className="dashboard-hero">
                 <h1>Parameter Management</h1>
-                <p className="muted dashboard-copy">Manage syntactic parameters (Admin)</p>
             </header>
 
             {/* ==== FILTRI ==== */}
-            <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem', border: '1px solid var(--border)' }}>
+            <div className="card" style={{
+                padding: '1rem 1.25rem',
+                marginBottom: '1rem',
+                border: '1px solid var(--border)',
+                position: 'sticky',
+                top: '5rem',
+                zIndex: 10,
+                background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+            }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
                     <FilterField label="Search">
                         <input

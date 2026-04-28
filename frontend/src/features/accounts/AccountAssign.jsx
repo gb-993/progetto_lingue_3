@@ -58,7 +58,9 @@ export default function AccountAssign() {
                 {error && <div className="alert alert-error mb-1">{error}</div>}
 
                 <div className="alert alert-warning" style={{ marginBottom: '1.5rem' }}>
-                    <strong>Warning:</strong> If you select a language labelled "Assigned to others", it will be <strong>immediately revoked</strong> from the previous owner and transferred to this user.
+                    <span>
+                        <strong>Warning:</strong> If you select a language labelled "Assigned to others", it will be <strong>immediately revoked</strong> from the previous owner and transferred to this user.
+                    </span>
                 </div>
 
                 <form onSubmit={handleSubmit}>
