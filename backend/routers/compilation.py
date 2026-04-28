@@ -172,6 +172,26 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "submitted_at": language.submitted_at.isoformat() if language.submitted_at else None,
             "reviewed_at": language.reviewed_at.isoformat() if language.reviewed_at else None,
             "assigned_user_id": language.assigned_user_id,
+            "assigned_user": (
+                {
+                    "id": language.assigned_user.id,
+                    "name": language.assigned_user.name,
+                    "surname": language.assigned_user.surname,
+                }
+                if language.assigned_user else None
+            ),
+            "top_level_family": language.top_level_family,
+            "family": language.family,
+            "grp": language.grp,
+            "historical_language": language.historical_language,
+            "isocode": language.isocode,
+            "glottocode": language.glottocode,
+            "location": language.location,
+            "latitude": float(language.latitude) if language.latitude is not None else None,
+            "longitude": float(language.longitude) if language.longitude is not None else None,
+            "supervisor": language.supervisor,
+            "informant": language.informant,
+            "source": language.source,
         },
         "parameters": []
     }

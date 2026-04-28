@@ -139,33 +139,37 @@ export default function LanguageData() {
         <main className="container" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
 
             {/* Header Lingua */}
-            <div className="card lang-header-card" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 style={{ margin: 0 }}>
-                    {language.name_full} <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em' }}>({language.id})</span>
-                </h2>
-                <button
-                    type="button"
-                    className="btn btn--small"
-                    onClick={async () => {
-                        try {
-                            const res = await api.get(`/api/export/language/${language.id}/xlsx`, { responseType: 'blob' });
-                            const cd = res.headers['content-disposition'] || '';
-                            const m = cd.match(/filename="?([^";]+)"?/);
-                            const filename = m ? m[1] : `PCM_${language.id}.xlsx`;
-                            const blob = new Blob([res.data]);
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url; a.download = filename;
-                            document.body.appendChild(a); a.click(); a.remove();
-                            URL.revokeObjectURL(url);
-                        } catch {
-                            alert("Error during export.");
-                        }
-                    }}
-                    title={isAdmin ? "Export everything (Database_model + Examples + Answers + schema)" : "Export the examples of this language"}
-                >
-                    Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
-                </button>
+            <div className="card lang-header-card" style={{ marginBottom: '1rem', padding: '1.5rem 2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <h2 style={{ margin: 0 }}>
+                        {language.name_full} <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em' }}>({language.id})</span>
+                    </h2>
+                    <button
+                        type="button"
+                        className="btn btn--small"
+                        onClick={async () => {
+                            try {
+                                const res = await api.get(`/api/export/language/${language.id}/xlsx`, { responseType: 'blob' });
+                                const cd = res.headers['content-disposition'] || '';
+                                const m = cd.match(/filename="?([^";]+)"?/);
+                                const filename = m ? m[1] : `PCM_${language.id}.xlsx`;
+                                const blob = new Blob([res.data]);
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url; a.download = filename;
+                                document.body.appendChild(a); a.click(); a.remove();
+                                URL.revokeObjectURL(url);
+                            } catch {
+                                alert("Error during export.");
+                            }
+                        }}
+                        title={isAdmin ? "Export everything (Database_model + Examples + Answers + schema)" : "Export the examples of this language"}
+                    >
+                        Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
+                    </button>
+                </div>
+
+                <LanguageMetaGrid language={language} isAdmin={isAdmin} />
             </div>
 
             {/* Banner Status */}
@@ -376,5 +380,59 @@ export default function LanguageData() {
                 />
             )}
         </main>
+    );
+}
+
+function MetaRow({ label, value }) {
+    const display = value === null || value === undefined || value === '' ? <span className="muted">—</span> : value;
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'baseline', gap: '1rem' }}>
+            <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--text-muted)',
+                textAlign: 'right',
+            }}>{label}</span>
+            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1.4 }}>
+                {display}
+            </span>
+        </div>
+    );
+}
+
+function LanguageMetaGrid({ language, isAdmin }) {
+    const fmtCoord = (v) => (v === null || v === undefined ? null : Number(v).toFixed(2));
+    const assigned = language.assigned_user
+        ? `${language.assigned_user.name || ''} ${language.assigned_user.surname || ''}`.trim() || null
+        : null;
+
+    return (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
+            columnGap: '4rem',
+            rowGap: '0.8rem',
+            alignItems: 'start',
+        }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <MetaRow label="Top-level family" value={language.top_level_family} />
+                <MetaRow label="SubFamily" value={language.family} />
+                <MetaRow label="Historical" value={language.historical_language ? 'Yes' : 'No'} />
+                <MetaRow label="ISO code" value={language.isocode} />
+                <MetaRow label="Glottocode" value={language.glottocode} />
+                <MetaRow label="Location" value={language.location} />
+                <MetaRow label="Latitude" value={fmtCoord(language.latitude)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <MetaRow label="Longitude" value={fmtCoord(language.longitude)} />
+                <MetaRow label="Supervisor" value={language.supervisor} />
+                <MetaRow label="Informant" value={language.informant} />
+                <MetaRow label="Group" value={language.grp} />
+                <MetaRow label="Source" value={language.source} />
+                {isAdmin && <MetaRow label="Assigned to" value={assigned} />}
+            </div>
+        </div>
     );
 }

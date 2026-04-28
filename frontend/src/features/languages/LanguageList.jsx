@@ -105,7 +105,9 @@ export default function LanguageList() {
                 'id', 'name_full', 'family', 'top_level_family', 'grp',
                 'status', 'rejection_note',
             ]);
-        });
+        }).sort((a, b) =>
+            (a.name_full || '').localeCompare(b.name_full || '', undefined, { sensitivity: 'base' })
+        );
     }, [languages, filters, search]);
 
     const activeFilterCount =
