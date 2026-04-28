@@ -404,7 +404,7 @@ def _import_questions(db: Session, ws: Worksheet, report: MigrationReport) -> No
         return
 
     by_id = {q.id: q for q in db.query(models.Question).all()}
-    valid_param_ids = {p.id for (p,) in db.query(models.ParameterDef.id).all()}
+    valid_param_ids = {p for (p,) in db.query(models.ParameterDef.id).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -472,7 +472,7 @@ def _import_qam(db: Session, ws: Worksheet, report: MigrationReport) -> None:
         ))
         return
 
-    by_qid = {q.id for (q,) in db.query(models.Question.id).all()}
+    by_qid = {q for (q,) in db.query(models.Question.id).all()}
     by_code = {m.code: m for m in db.query(models.Motivation).all()}
 
     questions_seen: Set[str] = set()
@@ -736,8 +736,8 @@ def _import_unsure_flags(db: Session, ws: Worksheet, report: MigrationReport) ->
         ))
         return
 
-    valid_lang = {l.id for (l,) in db.query(models.Language.id).all()}
-    valid_param = {p.id for (p,) in db.query(models.ParameterDef.id).all()}
+    valid_lang = {l for (l,) in db.query(models.Language.id).all()}
+    valid_param = {p for (p,) in db.query(models.ParameterDef.id).all()}
 
     seen: Set[Tuple[str, str]] = set()
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -891,7 +891,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
         try:
             answer = models.Answer(
                 language_id=lang.id, question_id=qid,
-                response_text=response, comments=comments or None,
+                response_text=response, comments=comments or "",
                 status="approved",
             )
             db.add(answer)
@@ -907,10 +907,11 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
                     continue
                 db.add(models.Example(
                     answer_id=answer.id, number=str(i + 1),
-                    textarea=txt or None,
-                    gloss=gl or None,
-                    translation=tr or None,
-                    reference=rf or None,
+                    textarea=txt,
+                    gloss=gl,
+                    translation=tr,
+                    reference=rf,
+                    transliteration="",
                 ))
             summary.inserted += 1
         except (IntegrityError, DataError) as e:

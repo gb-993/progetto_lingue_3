@@ -1,11 +1,12 @@
 import logging
 from typing import List, Optional, Dict
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 import models
+from database import SessionLocal
 from dependencies import get_db, get_current_user, require_admin
 from services.logic_parser import evaluate_with_parser
 from services.dag_eval import run_dag_for_language
@@ -13,6 +14,24 @@ from services.param_consolidate import recompute_and_persist_language_parameter
 from services.versioning import record_version, serialize_entity
 
 logger = logging.getLogger(__name__)
+
+
+def _run_dag_in_background(language_id: str) -> None:
+    """Esegue run_dag_for_language su una sessione DB dedicata.
+
+    La dependency `db` di FastAPI viene chiusa appena la response parte, quindi i
+    BackgroundTasks devono aprirsi una loro sessione. Errori loggati ma mai
+    propagati (il task gira fuori dal ciclo request/response).
+    """
+    db = SessionLocal()
+    try:
+        run_dag_for_language(language_id, db)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error("DAG background run failed for language %s: %s", language_id, e, exc_info=True)
+    finally:
+        db.close()
 
 
 # Stati in cui la lingua è bloccata in scrittura per gli utenti normali
@@ -118,8 +137,26 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
-    parameters = db.query(models.ParameterDef).filter(models.ParameterDef.is_active == True).order_by(models.ParameterDef.position).all()
-    answers = db.query(models.Answer).filter(models.Answer.language_id == language.id).all()
+    parameters = (
+        db.query(models.ParameterDef)
+        .filter(models.ParameterDef.is_active == True)
+        .order_by(models.ParameterDef.position)
+        .options(
+            selectinload(models.ParameterDef.questions)
+            .selectinload(models.Question.allowed_motivations)
+            .selectinload(models.QuestionAllowedMotivation.motivation)
+        )
+        .all()
+    )
+    answers = (
+        db.query(models.Answer)
+        .filter(models.Answer.language_id == language.id)
+        .options(
+            selectinload(models.Answer.answer_motivations),
+            selectinload(models.Answer.examples),
+        )
+        .all()
+    )
     ans_dict = {a.question_id: a for a in answers}
 
     # Carica gli stati "unsure" dei parametri
@@ -173,9 +210,18 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             if q.id in ans_dict:
                 ans = ans_dict[q.id]
                 q_data["answer"] = {
-                    "response_text": ans.response_text, "comments": ans.comments,
+                    "response_text": ans.response_text or "",
+                    "comments": ans.comments or "",
                     "motivation_ids": [m.motivation_id for m in ans.answer_motivations],
-                    "examples": [{"id": ex.id, "number": ex.number or "", "textarea": ex.textarea, "transliteration": ex.transliteration, "gloss": ex.gloss, "translation": ex.translation, "reference": ex.reference} for ex in ans.examples]
+                    "examples": [{
+                        "id": ex.id,
+                        "number": ex.number or "",
+                        "textarea": ex.textarea or "",
+                        "transliteration": ex.transliteration or "",
+                        "gloss": ex.gloss or "",
+                        "translation": ex.translation or "",
+                        "reference": ex.reference or "",
+                    } for ex in ans.examples]
                 }
             param_data["questions"].append(q_data)
         result["parameters"].append(param_data)
@@ -194,7 +240,7 @@ def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Op
 
 # --- ENDPOINT: SALVATAGGIO MASSIVO PARAMETRO ---
 @router.post("/{lang_id}/parameters/{param_id}/save_block")
-def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSavePayload, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSavePayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     _ensure_can_modify(language, current_user)
@@ -294,15 +340,10 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     recompute_and_persist_language_parameter(language.id, param_id, db)
     db.commit()
 
-    # DAG auto-run: dopo ogni save aggiorniamo value_eval/warning_eval per
-    # tutti i parametri della lingua, così Queries/TableA mostrano valori live.
-    # Se il DAG fallisce NON rollback-iamo il save: i parametri restano salvati.
-    try:
-        run_dag_for_language(language.id, db)
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.error("DAG auto-run failed for language %s: %s", language.id, e, exc_info=True)
+    # DAG auto-run: schedulato come BackgroundTask, parte dopo che la response
+    # è stata inviata al client. value_eval/warning_eval di TableA/Queries
+    # restano stale per ~1-2s, accettabile. Errori loggati nel task stesso.
+    background_tasks.add_task(_run_dag_in_background, language.id)
 
     return {
         "detail": "Parameter saved successfully",
