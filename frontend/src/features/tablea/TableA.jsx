@@ -286,7 +286,7 @@ export default function TableA() {
                     {/* Download Dropdown simulato con HTML standard */}
                     <div className="download-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
                         <button className="btn" style={{ background: '#333', color: 'white' }}>Download Data ▾</button>
-                        <div className="download-content" style={{ display: 'none', position: 'absolute', right: 0, background: 'white', minWidth: '220px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', border: '1px solid #ddd', borderRadius: '4px', zIndex: 100 }}>
+                        <div className="download-content" style={{ display: 'none', position: 'absolute', right: 0, background: 'var(--surface)', color: 'var(--text)', minWidth: '220px', boxShadow: '0 4px 14px rgba(0,0,0,0.18)', border: '1px solid var(--border)', borderRadius: '4px', zIndex: 100 }}>
                             <button onClick={() => handleDownload('xlsx', `tableA_${view}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>Export .xlsx (Standard)</button>
                             <button onClick={() => handleDownload('csv', `tableA_${view}_transposed.csv`, 'text/csv')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>Export .csv (Transposed)</button>
 
@@ -315,18 +315,18 @@ export default function TableA() {
                     {loading ? (
                         <div style={{ padding: '3rem', textAlign: 'center' }}>Loading data...</div>
                     ) : matrixData.rows.length === 0 ? (
-                        <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>No data matches the selected filters.</div>
+                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No data matches the selected filters.</div>
                     ) : (
                         <table className="table table--freeze" style={{ margin: 0, whiteSpace: 'nowrap' }}>
-                            <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8f9fa' }}>
+                            <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--surface-2)' }}>
                             <tr>
-                                <th style={{ width: '45px', textAlign: 'center', position: 'sticky', left: 0, background: '#f8f9fa', zIndex: 11, borderRight: '1px solid #ddd' }}>
+                                <th style={{ width: '45px', textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 11, borderRight: '1px solid var(--border)' }}>
                                     <input type="checkbox" onChange={handleMasterCheckbox} checked={selectedRows.length > 0 && selectedRows.length === matrixData.rows.length} />
                                 </th>
-                                <th style={{ position: 'sticky', left: '45px', background: '#f8f9fa', zIndex: 11, minWidth: '80px', borderRight: '1px solid #ddd' }}>
+                                <th style={{ position: 'sticky', left: '45px', background: 'var(--surface-2)', zIndex: 11, minWidth: '80px', borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'ID' : 'Q.ID'}
                                 </th>
-                                <th style={{ minWidth: view === 'params' ? '200px' : '400px', whiteSpace: 'normal', position: 'sticky', left: '125px', background: '#f8f9fa', zIndex: 11, borderRight: '1px solid #ddd' }}>
+                                <th style={{ minWidth: view === 'params' ? '200px' : '400px', whiteSpace: 'normal', position: 'sticky', left: '125px', background: 'var(--surface-2)', zIndex: 11, borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'Parameter Name' : 'Question Text'}
                                 </th>
                                 {view === 'params' && (
@@ -340,21 +340,21 @@ export default function TableA() {
                             <tbody>
                             {matrixData.rows.map(row => (
                                 <tr key={row.item.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td style={{ textAlign: 'center', position: 'sticky', left: 0, background: 'white', zIndex: 5, borderRight: '1px solid #ddd' }}>
+                                    <td style={{ textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 5, borderRight: '1px solid var(--border)' }}>
                                         <input
                                             type="checkbox"
                                             checked={selectedRows.includes(row.item.id)}
                                             onChange={() => handleRowCheckbox(row.item.id)}
                                         />
                                     </td>
-                                    <td style={{ position: 'sticky', left: '45px', background: 'white', zIndex: 5, fontWeight: 'bold', borderRight: '1px solid #ddd' }}>
+                                    <td style={{ position: 'sticky', left: '45px', background: 'var(--surface)', zIndex: 5, fontWeight: 'bold', borderRight: '1px solid var(--border)' }}>
                                         {row.item.id}
                                     </td>
-                                    <td style={{ whiteSpace: 'normal', position: 'sticky', left: '125px', background: 'white', zIndex: 5, borderRight: '1px solid #ddd' }}>
+                                    <td style={{ whiteSpace: 'normal', position: 'sticky', left: '125px', background: 'var(--surface)', zIndex: 5, borderRight: '1px solid var(--border)' }}>
                                         {row.item.name}
                                     </td>
                                     {view === 'params' && (
-                                        <td style={{ color: '#666', whiteSpace: 'normal', fontSize: '0.85em' }}>
+                                        <td style={{ color: 'var(--text-muted)', whiteSpace: 'normal', fontSize: '0.85em' }}>
                                             {row.item.extra}
                                         </td>
                                     )}

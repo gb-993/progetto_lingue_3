@@ -296,11 +296,11 @@ export default function QuestionForm() {
                                     <p className="small muted" style={{ marginBottom: '0.5rem' }}>
                                         Use this list to choose a progressive ID for the new question.
                                     </p>
-                                    <div style={{ background: '#fff', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
+                                    <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
                                         {currentParamQuestions.length > 0 ? (
                                             currentParamQuestions.map(q => (
-                                                <div key={q.id} style={{ fontSize: '0.85rem', padding: '0.3rem 0', borderBottom: '1px solid #eee' }}>
-                                                    <strong style={{ color: '#0056b3' }}>{q.id}</strong>
+                                                <div key={q.id} style={{ fontSize: '0.85rem', padding: '0.3rem 0', borderBottom: '1px solid var(--border)' }}>
+                                                    <strong style={{ color: 'var(--link)' }}>{q.id}</strong>
                                                     {q.is_stop_question ? <span className="small muted"> [stop]</span> : null}
                                                     {q.is_active === false ? <span className="small muted"> (inactive)</span> : null}
                                                     : {(q.text || '').slice(0, 90)}{(q.text || '').length > 90 ? '…' : ''}
@@ -454,7 +454,7 @@ export default function QuestionForm() {
                                 </button>
                             </div>
 
-                            <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
+                            <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
                                 <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>
                                     Latest Changes {formData.parameter_id ? `(Parameter: ${formData.parameter_id})` : ''}
                                 </h5>
@@ -465,15 +465,15 @@ export default function QuestionForm() {
                                             && !log.change_note.startsWith("DEACTIVATED"))
                                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                         .map(log => (
-                                            <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
-                                                <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
+                                            <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>
+                                                <strong style={{ color: 'var(--link)' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
                                             </div>
                                         ))
                                     }
                                     {changeLogs.filter(log => log.change_note !== "Test edit"
                                         && !log.change_note.startsWith("Test new question")
                                         && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
-                                        <span style={{ fontSize: '0.8rem', color: '#999' }}>No recent changes recorded.</span>
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No recent changes recorded.</span>
                                     )}
                                 </div>
                             </div>

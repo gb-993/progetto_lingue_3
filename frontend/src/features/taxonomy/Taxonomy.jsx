@@ -465,8 +465,8 @@ function UnnormalizedSection({ data, allTops, allFamilies, onPromote }) {
 
     if (totalUnnorm === 0) {
         return (
-            <div className="card" style={{ padding: '0.75rem 1rem', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <strong style={{ color: '#15803d' }}>All language strings are normalized.</strong>{' '}
+            <div className="card" style={{ padding: '0.75rem 1rem', background: 'var(--pill-ok-bg)', border: '1px solid color-mix(in oklab, var(--ok) 25%, var(--border))' }}>
+                <strong style={{ color: 'var(--ok)' }}>All language strings are normalized.</strong>{' '}
                 <span className="muted small">Every Top-Family / Family / Group used on languages exists as an entity above.</span>
             </div>
         );
@@ -535,7 +535,7 @@ function UnnormGroup({ title, rows, renderActions }) {
                     <div key={r.name} style={{
                         border: '1px dashed var(--border)', borderRadius: '5px',
                         padding: '0.4rem 0.5rem', display: 'flex', flexDirection: 'column', gap: '0.3rem',
-                        background: '#fffbeb',
+                        background: 'var(--pill-warn-bg)', color: 'var(--text)',
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{r.name}</span>

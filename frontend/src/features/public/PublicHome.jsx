@@ -94,7 +94,7 @@ export default function PublicHome() {
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '3rem' }}>
                 <div ref={mapRef} style={{ width: '100%', height: '450px' }}>
                     {loading && (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', background: '#f8f9fa' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', background: 'var(--surface-2)', color: 'var(--text)' }}>
                             <span>Loading interactive map...</span>
                         </div>
                     )}

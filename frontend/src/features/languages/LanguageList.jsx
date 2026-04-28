@@ -4,21 +4,16 @@ import api from '../../api';
 import { searchMatches } from '../../utils/search';
 
 const STATUS_BADGE = {
-    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d' },
-    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
-    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+    pending: { label: 'Pending', cls: '' },
+    waiting_for_approval: { label: 'Waiting', cls: 'warn' },
+    approved: { label: 'Approved', cls: 'ok' },
+    rejected: { label: 'Rejected', cls: 'bad' },
 };
 
 function StatusBadge({ status }) {
     const meta = STATUS_BADGE[status] || STATUS_BADGE.pending;
     return (
-        <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`,
-            padding: '0.15rem 0.55rem', borderRadius: '999px', fontSize: '0.75rem',
-            fontWeight: 600, lineHeight: 1.6, whiteSpace: 'nowrap',
-        }}>
+        <span className={`status ${meta.cls}`} style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem' }}>
             {meta.label}
         </span>
     );

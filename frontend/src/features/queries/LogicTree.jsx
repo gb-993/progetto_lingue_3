@@ -54,7 +54,7 @@ export default function LogicTree({ tree }) {
     }, [tree, mermaidId, generateMermaidString]);
 
     return (
-        <div style={{ background: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid #ddd', overflowX: 'auto' }}>
+        <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)', overflowX: 'auto' }}>
             <p className="muted small mb-3">Logic Signal Flow (Green: TRUE, Red: FALSE):</p>
             <div ref={containerRef} id={`${mermaidId}-container`}></div>
         </div>

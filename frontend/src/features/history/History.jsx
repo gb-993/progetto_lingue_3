@@ -354,8 +354,9 @@ function VersionDetailDrawer({ versionId, onClose }) {
             <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                    width: '760px', maxWidth: '95vw', height: '100%', background: '#fff',
-                    overflowY: 'auto', boxShadow: '-4px 0 20px rgba(0,0,0,0.2)',
+                    width: '760px', maxWidth: '95vw', height: '100%',
+                    background: 'var(--surface)', color: 'var(--text)',
+                    overflowY: 'auto', boxShadow: '-4px 0 20px rgba(0,0,0,0.4)',
                     padding: '1.5rem',
                 }}
             >
@@ -405,7 +406,7 @@ function VersionDiffView({ data, onClose }) {
         <>
             {/* Header info */}
             <div style={{
-                background: '#f8fafc', border: '1px solid var(--border)',
+                background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
                 padding: '0.85rem', borderRadius: '6px', marginBottom: '1rem',
             }}>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
@@ -415,12 +416,12 @@ function VersionDiffView({ data, onClose }) {
                         {op.label}
                     </span>
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     {fmtDateTime(data.created_at)} · {src.label}
                     {data.user && ` · ${data.user.name}`}
                 </div>
                 {data.note && (
-                    <div style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', background: '#fff7ed', borderLeft: '3px solid #f59e0b', fontSize: '0.85rem' }}>
+                    <div className="alert alert-warning" style={{ marginTop: '0.5rem', padding: '0.4rem 0.6rem', borderLeft: '3px solid var(--warn)', fontSize: '0.85rem' }}>
                         <strong>Note:</strong> {data.note}
                     </div>
                 )}
@@ -433,7 +434,7 @@ function VersionDiffView({ data, onClose }) {
 
             {/* Diff */}
             {!data.previous_snapshot ? (
-                <div className="alert" style={{ background: '#dcfce7', color: '#15803d', padding: '0.6rem', marginBottom: '1rem', borderRadius: '6px' }}>
+                <div className="alert alert-success" style={{ padding: '0.6rem', marginBottom: '1rem', borderRadius: '6px' }}>
                     First recorded version of this entity — no diff available.
                 </div>
             ) : changedFields.length === 0 ? (
@@ -454,10 +455,10 @@ function VersionDiffView({ data, onClose }) {
                                 {changedFields.map(f => (
                                     <tr key={f}>
                                         <td style={{ fontWeight: 700 }}>{f}</td>
-                                        <td style={{ background: '#fee2e2', whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>
+                                        <td style={{ background: 'var(--pill-bad-bg)', whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>
                                             {fmtValue(data.diff[f].old)}
                                         </td>
-                                        <td style={{ background: '#dcfce7', whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>
+                                        <td style={{ background: 'var(--pill-ok-bg)', whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>
                                             {fmtValue(data.diff[f].new)}
                                         </td>
                                     </tr>
@@ -494,11 +495,13 @@ function VersionDiffView({ data, onClose }) {
             </details>
 
             {/* Placeholder rollback */}
-            <div style={{ marginTop: '1.5rem', padding: '0.85rem', background: '#fff7ed', border: '1px dashed #fcd34d', borderRadius: '6px' }}>
-                <h4 style={{ marginTop: 0, marginBottom: '0.4rem', color: '#9a3412' }}>Rollback (coming soon)</h4>
-                <p className="small" style={{ margin: 0, color: '#7c2d12' }}>
-                    The feature to restore this version will be available shortly. For now, use the "Go to the edit page" link above and copy the values from the <em>Before</em> column manually.
-                </p>
+            <div className="alert alert-warning" style={{ marginTop: '1.5rem', padding: '0.85rem', borderStyle: 'dashed', borderRadius: '6px' }}>
+                <div>
+                    <h4 style={{ marginTop: 0, marginBottom: '0.4rem' }}>Rollback (coming soon)</h4>
+                    <p className="small" style={{ margin: 0 }}>
+                        The feature to restore this version will be available shortly. For now, use the "Go to the edit page" link above and copy the values from the <em>Before</em> column manually.
+                    </p>
+                </div>
             </div>
         </>
     );

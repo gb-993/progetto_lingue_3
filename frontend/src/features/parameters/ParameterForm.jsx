@@ -201,8 +201,8 @@ export default function ParameterForm() {
             {/* MODAL DISATTIVAZIONE */}
             {showDeactivateModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '400px', background: '#fff', padding: '2rem' }}>
-                        <h3 style={{ color: 'red', marginTop: 0 }}>Deactivate Parameter</h3>
+                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                        <h3 style={{ color: 'var(--bad)', marginTop: 0 }}>Deactivate Parameter</h3>
                         <p className="small muted">Enter your admin password to confirm the operation.</p>
                         <form onSubmit={submitDeactivation}>
                             <div style={{ marginBottom: '1rem' }}>
@@ -335,7 +335,7 @@ export default function ParameterForm() {
                                 </button>
                             )}
                             {usage.length > 0 && formData.is_active && (
-                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Locked by dependencies</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Locked by dependencies</span>
                             )}
                         </div>
                         {/* --- FINE CAMPI FORM --- */}
@@ -393,20 +393,20 @@ export default function ParameterForm() {
                                         </button>
                                     </div>
 
-                                    <div style={{ background: '#fff', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
+                                    <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
                                         <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Latest Recorded Changes</h5>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {changeLogs
                                                 .filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED"))
                                                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                                 .map(log => (
-                                                    <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid #eee', paddingBottom: '0.25rem' }}>
-                                                        <strong style={{ color: '#0056b3' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
+                                                    <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>
+                                                        <strong style={{ color: 'var(--link)' }}>{new Date(log.created_at).toLocaleDateString()}</strong>: {log.change_note}
                                                     </div>
                                                 ))
                                             }
                                             {changeLogs.filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
-                                                <span style={{ fontSize: '0.8rem', color: '#999' }}>No recent changes recorded.</span>
+                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No recent changes recorded.</span>
                                             )}
                                         </div>
                                     </div>

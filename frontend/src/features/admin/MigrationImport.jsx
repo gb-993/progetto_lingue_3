@@ -237,7 +237,7 @@ function MigrationReport({ report }) {
                         border: '1px solid var(--border)', borderRadius: '6px',
                     }}>
                         <table className="table" style={{ marginBottom: 0 }}>
-                            <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa' }}>
+                            <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)' }}>
                                 <tr>
                                     <th>Sezione</th>
                                     <th>Riga</th>

@@ -34,7 +34,8 @@
       "Bash(python -c \"from alembic.config import Config; from alembic.script import ScriptDirectory; cfg = Config\\('alembic.ini'\\); script = ScriptDirectory.from_config\\(cfg\\); print\\('current head:', script.get_current_head\\(\\)\\)\")",
       "Bash(xargs grep *)",
       "Bash(sort -t: -k2)",
-      "Bash(python -c \"import models; print\\('TopFamily:', models.TopFamily.__tablename__\\); print\\('Family:', models.Family.__tablename__\\); print\\('Group:', models.Group.__tablename__\\)\")"
+      "Bash(python -c \"import models; print\\('TopFamily:', models.TopFamily.__tablename__\\); print\\('Family:', models.Family.__tablename__\\); print\\('Group:', models.Group.__tablename__\\)\")",
+      "Bash(npx vite *)"
     ]
   }
 }

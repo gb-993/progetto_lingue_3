@@ -106,7 +106,7 @@ export default function GlossaryList() {
                     ))}
                     {filteredGlossary.length === 0 && (
                         <tr>
-                            <td colSpan={isAdmin ? "4" : "2"} style={{textAlign: 'center', padding: '2rem', color: '#666'}}>
+                            <td colSpan={isAdmin ? "4" : "2"} style={{textAlign: 'center', padding: '2rem', color: 'var(--text-muted)'}}>
                                 No term found.
                             </td>
                         </tr>

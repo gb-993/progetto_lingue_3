@@ -3,34 +3,23 @@ import { useParams } from 'react-router-dom';
 import api from '../../api';
 import ParameterBlock from './ParameterBlock';
 
-// Mappa colori/etichette per lo status della lingua
+// Mappa etichette/descrizioni per lo status della lingua.
+// I colori sono gestiti via CSS (.status-banner.is-<status>) per supportare dark mode.
 const STATUS_META = {
     pending: {
         label: 'Pending',
-        bg: '#f1f5f9',
-        color: '#475569',
-        border: '#cbd5e1',
         description: 'You are filling in this language. Changes persist between sessions.'
     },
     waiting_for_approval: {
         label: 'Waiting for approval',
-        bg: '#fff8e1',
-        color: '#92400e',
-        border: '#fcd34d',
         description: 'Awaiting admin review. The form is locked until a decision is made.'
     },
     approved: {
         label: 'Approved',
-        bg: '#dcfce7',
-        color: '#15803d',
-        border: '#86efac',
         description: 'Approved. The form is locked.'
     },
     rejected: {
         label: 'Rejected',
-        bg: '#fee2e2',
-        color: '#b91c1c',
-        border: '#fca5a5',
         description: 'Rejected. Reopen to edit and resubmit it.'
     },
 };
@@ -173,10 +162,7 @@ export default function LanguageData() {
             </div>
 
             {/* Banner Status */}
-            <div style={{
-                background: meta.bg,
-                color: meta.color,
-                border: `1px solid ${meta.border}`,
+            <div className={`status-banner is-${status}`} style={{
                 padding: '1rem 1.25rem',
                 borderRadius: '8px',
                 marginBottom: '1rem',
@@ -191,15 +177,7 @@ export default function LanguageData() {
                     </div>
                     <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>{meta.description}</div>
                     {status === 'rejected' && language.rejection_note && (
-                        <div style={{
-                            background: '#fff',
-                            border: '1px solid #fca5a5',
-                            borderRadius: '6px',
-                            padding: '0.6rem 0.8rem',
-                            marginTop: '0.6rem',
-                            color: '#7f1d1d',
-                            whiteSpace: 'pre-wrap',
-                        }}>
+                        <div className="status-banner__note">
                             <strong>Admin note:</strong> {language.rejection_note}
                         </div>
                     )}
@@ -270,15 +248,7 @@ export default function LanguageData() {
 
             {/* Banner override admin: chiarisce che admin sta editando una lingua bloccata */}
             {isAdmin && isLocked && (
-                <div style={{
-                    background: '#eef2ff',
-                    color: '#3730a3',
-                    border: '1px solid #c7d2fe',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: '6px',
-                    marginBottom: '1rem',
-                    fontSize: '0.9rem',
-                }}>
+                <div className="admin-override-banner">
                     <strong>Admin override:</strong> you are editing a language in <code>{status}</code> state.
                     Your changes are saved immediately and the status does not change automatically.
                 </div>
@@ -287,8 +257,8 @@ export default function LanguageData() {
             {/* Modal Reject */}
             {showRejectModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '500px', background: '#fff', padding: '1.5rem' }}>
-                        <h3 style={{ marginTop: 0, color: '#b91c1c' }}>Reject Language</h3>
+                    <div className="card" style={{ width: '500px', padding: '1.5rem' }}>
+                        <h3 style={{ marginTop: 0, color: 'var(--bad)' }}>Reject Language</h3>
                         <p className="small muted">Enter a note (optional) that will be shown to the assigned user.</p>
                         <textarea
                             rows="4"
@@ -313,23 +283,16 @@ export default function LanguageData() {
             )}
 
             {/* Navigazione Wizard (Quadratini) */}
-            <div className="param-nav" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem', background: '#fff', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div className="param-nav">
                 {parameters.map((p, idx) => {
                     const { answered = 0, total = 0 } = p.stats || {};
                     const isFlagged = p.is_flagged || false;
 
-                    let bg = '#f8f9fa';
-                    let color = '#333';
-                    let borderColor = '#ddd';
-
+                    let stateClass = 'is-empty';
                     if (isFlagged || (answered > 0 && answered < total)) {
-                        bg = '#dc3545';
-                        color = '#fff';
-                        borderColor = '#a71d2a';
+                        stateClass = 'is-incomplete';
                     } else if (answered === total && total > 0) {
-                        bg = '#198754';
-                        color = '#fff';
-                        borderColor = '#0f5132';
+                        stateClass = 'is-complete';
                     }
 
                     const isActive = idx === activeIndex;
@@ -338,24 +301,7 @@ export default function LanguageData() {
                         <button
                             key={p.id}
                             onClick={() => setActiveIndex(idx)}
-                            className="param-btn"
-                            style={{
-                                background: bg,
-                                color: color,
-                                border: `1px solid ${borderColor}`,
-                                borderBottom: isActive ? '3px solid #000' : `1px solid ${borderColor}`,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '2.5rem',
-                                height: '2.5rem',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                padding: 0
-                            }}
+                            className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}`}
                             title={isFlagged ? "Marked as unsure" : `Progress: ${answered}/${total}`}
                         >
                             {p.id}

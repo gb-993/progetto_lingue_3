@@ -7,20 +7,19 @@ const AccordionItem = ({ title, defaultOpen = false, children }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-        <div style={{ border: '1px solid #ccc', borderRadius: '6px', marginBottom: '1rem', overflow: 'hidden', background: '#fff' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '1rem', overflow: 'hidden', background: 'var(--surface)', color: 'var(--text)' }}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
+                className="backup-accordion-head"
                 style={{
-                    background: '#f8f9fa', padding: '1rem 1.5rem', cursor: 'pointer',
+                    padding: '1rem 1.5rem', cursor: 'pointer',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    userSelect: 'none', transition: 'background 0.2s'
+                    userSelect: 'none', transition: 'background 0.2s',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#e9ecef'}
-                onMouseOut={(e) => e.currentTarget.style.background = '#f8f9fa'}
             >
-                <strong style={{ fontSize: '1.1rem', color: '#333' }}>{title}</strong>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--text)' }}>{title}</strong>
                 <span style={{
-                    fontSize: '0.8rem', color: '#666',
+                    fontSize: '0.8rem', color: 'var(--text-muted)',
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.3s ease'
                 }}>
@@ -28,7 +27,7 @@ const AccordionItem = ({ title, defaultOpen = false, children }) => {
                 </span>
             </div>
             {isOpen && (
-                <div style={{ borderTop: '1px solid #ccc', background: '#fff' }}>
+                <div style={{ borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
                     {children}
                 </div>
             )}
@@ -76,7 +75,7 @@ export default function BackupDetail() {
             {/* HEADER CARD (Identica al tuo CSS originale) */}
             <div className="card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', border: '1px solid var(--border)' }}>
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: '#ff4500' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--brand)' }}>
                         {sub.language ? sub.language.name : 'Unknown Language'}
                         <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em', verticalAlign: 'middle', marginLeft: '0.5rem' }}>
                             ({sub.language ? sub.language.id : 'N/A'})
@@ -86,17 +85,17 @@ export default function BackupDetail() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', columnGap: '4rem', rowGap: '0.8rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '1rem', alignItems: 'baseline' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#666', textAlign: 'right' }}>Backup Date</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'right' }}>Backup Date</span>
                         <span style={{ fontSize: '1rem', fontWeight: 500 }}>{displayDate}</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '1rem', alignItems: 'baseline' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#666', textAlign: 'right' }}>Created By</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'right' }}>Created By</span>
                         <span style={{ fontSize: '1rem', fontWeight: 500 }}>{sub.submitted_by}</span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '1rem', alignItems: 'baseline', gridColumn: '1 / -1' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#666', textAlign: 'right' }}>Note</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'right' }}>Note</span>
                         <span style={{ fontSize: '1rem', fontWeight: 500 }}>{sub.note || <span className="muted">—</span>}</span>
                     </div>
                 </div>

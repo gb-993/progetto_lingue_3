@@ -161,15 +161,15 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
 
             {/* Istruzione condizionale YES/NO */}
             {value.response_text === 'yes' && question.instruction_yes && (
-                <div className="info-row muted" style={{ borderLeft: '3px solid green', paddingLeft: '1rem', background: '#f0fdf4' }}>
-                    <div className="info-row__label" style={{ color: 'green' }}>Instructions (YES)</div>
+                <div className="info-row instructions-yn instructions-yn--yes">
+                    <div className="info-row__label">Instructions (YES)</div>
                     <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.instruction_yes}</div>
                 </div>
             )}
 
             {value.response_text === 'no' && question.instruction_no && (
-                <div className="info-row muted" style={{ borderLeft: '3px solid red', paddingLeft: '1rem', background: '#fef2f2' }}>
-                    <div className="info-row__label" style={{ color: 'red' }}>Instructions (NO)</div>
+                <div className="info-row instructions-yn instructions-yn--no">
+                    <div className="info-row__label">Instructions (NO)</div>
                     <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.instruction_no}</div>
                 </div>
             )}
@@ -219,7 +219,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, all
                     <div className="info-row__label">Examples</div>
                     <div className="info-row__content">
 
-                        {localError && <div style={{ background: '#ffe8e8', color: '#842029', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
+                        {localError && <div className="alert alert-warning" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
 
                         {value.examples.map((ex, index) => (
                             <div key={ex.tempId} className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>

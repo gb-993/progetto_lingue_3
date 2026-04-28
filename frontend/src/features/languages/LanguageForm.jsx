@@ -274,10 +274,7 @@ export default function LanguageForm() {
                         </div>
 
                         {orphanText.length > 0 && (
-                            <div style={{
-                                marginTop: '0.6rem', padding: '0.4rem 0.6rem', fontSize: '0.78rem',
-                                background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', color: '#92400e',
-                            }}>
+                            <div className="alert alert-warning" style={{ marginTop: '0.6rem', padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}>
                                 <strong>Heads up:</strong>{' '}
                                 {orphanText.join('; ')}.
                                 Promote them in <Link to="/admin/taxonomy">/admin/taxonomy</Link> or pick replacements above.

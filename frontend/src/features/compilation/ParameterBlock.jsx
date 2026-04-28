@@ -66,7 +66,7 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly,
     };
 
     return (
-        <section className="card" style={{ padding: '1.5rem', backgroundColor: '#f9f9f9' }}>
+        <section className="card parameter-block" style={{ padding: '1.5rem' }}>
             <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                 {parameter.id} — {parameter.name}
             </h3>
@@ -88,17 +88,17 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly,
 
             <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {isReadOnly && (
-                    <div style={{ padding: '0.75rem 1rem', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontSize: '0.9rem' }}>
+                    <div className="form-locked-banner">
                         Form locked by the current language status. Changes cannot be saved.
                     </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
+                <div className="parameter-finalize-row" style={{ opacity: isReadOnly ? 0.6 : 1 }}>
                     <span>Everything ready and verified?</span>
                     <button className="btn btn--ok" onClick={() => handleFinalSave(false)} disabled={isSaving || isReadOnly}>
                         {isSaving ? 'Saving...' : `Confident -> Next ${parameter.id}`}
                     </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px solid #ddd', opacity: isReadOnly ? 0.6 : 1 }}>
+                <div className="parameter-finalize-row" style={{ opacity: isReadOnly ? 0.6 : 1 }}>
                     <span>Any doubts? Flag for later.</span>
                     <button className="btn btn--bad" onClick={() => handleFinalSave(true)} disabled={isSaving || isReadOnly}>
                         {isSaving ? 'Saving...' : 'Unsure -> Next'}

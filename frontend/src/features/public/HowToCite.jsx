@@ -46,24 +46,25 @@ export default function HowToCite() {
 
                 {/* CARD 1: PARAMETERS */}
                 <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                    <small style={{ fontWeight: 'bold', color: '#888' }}>For Admins and Users</small>
+                    <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Admins and Users</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Parameters & Manifestations</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                         Unless otherwise specified, if you quote a parameter description, please refer to:
                     </p>
 
                     <div style={{
-                        background: '#f8f9fa', padding: '1.2rem', borderRadius: '8px',
-                        fontSize: '0.85rem', border: '1px solid #ddd', position: 'relative', flexGrow: 1
+                        background: 'var(--surface-2)', padding: '1.2rem', borderRadius: '8px',
+                        fontSize: '0.85rem', border: '1px solid var(--border)', position: 'relative', flexGrow: 1,
+                        color: 'var(--text)',
                     }}>
                         <button
                             onClick={() => copyToClipboard(paramsText, 'params')}
                             style={{
                                 position: 'absolute', top: '8px', right: '8px',
                                 padding: '4px 8px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copyStatus.params === 'Copy' ? '#fff' : '#28a745',
-                                color: copyStatus.params === 'Copy' ? '#333' : '#fff',
-                                border: '1px solid #ddd', borderRadius: '4px'
+                                background: copyStatus.params === 'Copy' ? 'var(--surface)' : '#28a745',
+                                color: copyStatus.params === 'Copy' ? 'var(--text)' : '#fff',
+                                border: '1px solid var(--border)', borderRadius: '4px'
                             }}
                         >
                             {copyStatus.params}
@@ -73,7 +74,7 @@ export default function HowToCite() {
 
                     {isAdmin && (
                         <div style={{ marginTop: '10px', textAlign: 'right' }}>
-                            <Link to="/admin/edit-content/params_cite" style={{ fontSize: '0.85rem', color: '#ff4500', fontWeight: 'bold', textDecoration: 'none' }}>
+                            <Link to="/admin/edit-content/params_cite" style={{ fontSize: '0.85rem', color: 'var(--brand)', fontWeight: 'bold', textDecoration: 'none' }}>
                                 Edit reference
                             </Link>
                         </div>
@@ -82,24 +83,25 @@ export default function HowToCite() {
 
                 {/* CARD 2: DATA & MAP */}
                 <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                    <small style={{ fontWeight: 'bold', color: '#888' }}>For Public and Admins</small>
+                    <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Public and Admins</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Data, Map & Scripts</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                         To cite any content of the PCM Hub (except for parameters):
                     </p>
 
                     <div style={{
-                        background: '#f8f9fa', padding: '1.2rem', borderRadius: '8px',
-                        fontSize: '0.85rem', border: '1px solid #ddd', position: 'relative', flexGrow: 1
+                        background: 'var(--surface-2)', padding: '1.2rem', borderRadius: '8px',
+                        fontSize: '0.85rem', border: '1px solid var(--border)', position: 'relative', flexGrow: 1,
+                        color: 'var(--text)',
                     }}>
                         <button
                             onClick={() => copyToClipboard(dataText, 'data')}
                             style={{
                                 position: 'absolute', top: '8px', right: '8px',
                                 padding: '4px 8px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copyStatus.data === 'Copy' ? '#fff' : '#28a745',
-                                color: copyStatus.data === 'Copy' ? '#333' : '#fff',
-                                border: '1px solid #ddd', borderRadius: '4px'
+                                background: copyStatus.data === 'Copy' ? 'var(--surface)' : '#28a745',
+                                color: copyStatus.data === 'Copy' ? 'var(--text)' : '#fff',
+                                border: '1px solid var(--border)', borderRadius: '4px'
                             }}
                         >
                             {copyStatus.data}
@@ -109,7 +111,7 @@ export default function HowToCite() {
 
                     {isAdmin && (
                         <div style={{ marginTop: '10px', textAlign: 'right' }}>
-                            <Link to="/admin/edit-content/data_cite" style={{ fontSize: '0.85rem', color: '#ff4500', fontWeight: 'bold', textDecoration: 'none' }}>
+                            <Link to="/admin/edit-content/data_cite" style={{ fontSize: '0.85rem', color: 'var(--brand)', fontWeight: 'bold', textDecoration: 'none' }}>
                                 Edit reference
                             </Link>
                         </div>

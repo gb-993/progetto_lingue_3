@@ -1384,16 +1384,31 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 .graph-layout { display:grid; grid-template-columns: 1fr minmax(260px,320px); gap:1rem; align-items:start; }
 @media (max-width: 900px){ .graph-layout { grid-template-columns:1fr; } }
 .param-card { border:1px solid var(--border,#ddd); border-radius:8px; padding:.5rem .75rem; background:var(--surface,#fff); }
-.card-plus { background:#e8f7ec; }
-.card-minus { background:#fde8e7; }
-.card-zero { background:#eef1f5; }
-.card-unset { background:#f8f8f8; }
-.card-inactive { background:repeating-linear-gradient(45deg,#f8f8f8,#f8f8f8 6px,#eee 6px,#eee 12px); }
+.card-plus { background:#e8f7ec; color:#0c4a2a; }
+.card-minus { background:#fde8e7; color:#7f1d1d; }
+.card-zero { background:#eef1f5; color:#1f2937; }
+.card-unset { background:#f8f8f8; color:#1f2937; }
+.card-inactive { background:repeating-linear-gradient(45deg,#f8f8f8,#f8f8f8 6px,#eee 6px,#eee 12px); color:#1f2937; }
 .legend .badge { display:inline-block; padding:.125rem .375rem; border-radius:4px; border:1px solid var(--border,#ddd); }
 .legend .sep { display:inline-block; width:.75rem; }
-.b-plus { background:#e8f7ec; } .b-minus { background:#fde8e7; } .b-zero { background:#eef1f5; } .b-unset { background:#f8f8f8; }
-.b-focus { background:#fff6da; border-color:#eed68a; }
-.b-up { background:#e5efff; } .b-down { background:#fff0e5; }
+.b-plus { background:#e8f7ec; color:#0c4a2a; } .b-minus { background:#fde8e7; color:#7f1d1d; } .b-zero { background:#eef1f5; color:#1f2937; } .b-unset { background:#f8f8f8; color:#1f2937; }
+.b-focus { background:#fff6da; border-color:#eed68a; color:#1f2937; }
+.b-up { background:#e5efff; color:#1f2937; } .b-down { background:#fff0e5; color:#1f2937; }
+
+/* Graph cards in dark mode: usiamo le stesse hue ma con luminosità invertita.
+   Il testo passa a chiaro così resta leggibile. */
+:root[data-theme="dark"] .card-plus,
+:root[data-theme="dark"] .b-plus { background: rgba(74,222,128,.18); color: var(--text); }
+:root[data-theme="dark"] .card-minus,
+:root[data-theme="dark"] .b-minus { background: rgba(255,122,133,.20); color: var(--text); }
+:root[data-theme="dark"] .card-zero,
+:root[data-theme="dark"] .b-zero { background: var(--surface-2); color: var(--text); }
+:root[data-theme="dark"] .card-unset,
+:root[data-theme="dark"] .b-unset { background: var(--surface-alt); color: var(--text); }
+:root[data-theme="dark"] .card-inactive { background: repeating-linear-gradient(45deg, var(--surface-alt), var(--surface-alt) 6px, var(--surface-2) 6px, var(--surface-2) 12px); color: var(--text); }
+:root[data-theme="dark"] .b-focus { background: rgba(251,191,36,.20); border-color: color-mix(in oklab, var(--warn) 35%, var(--border)); color: var(--text); }
+:root[data-theme="dark"] .b-up { background: rgba(109,163,255,.18); color: var(--text); }
+:root[data-theme="dark"] .b-down { background: rgba(233,87,59,.18); color: var(--text); }
 
 /* Allineamento del nuovo logo */
 .pcm-logo-img {
@@ -1703,4 +1718,179 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
     position: static;
     max-height: 420px;
   }
+}
+
+/* =========================================================
+   Language data: status banner, param-nav, admin override
+   Colori legati alle CSS variables così il dark mode si
+   aggiorna automaticamente.
+   ========================================================= */
+
+/* Banner di status (Pending / Waiting / Approved / Rejected) */
+.status-banner {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.status-banner.is-pending {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.status-banner.is-waiting_for_approval {
+  background: var(--pill-warn-bg);
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 25%, var(--border));
+}
+.status-banner.is-approved {
+  background: var(--pill-ok-bg);
+  color: var(--ok);
+  border-color: color-mix(in oklab, var(--ok) 25%, var(--border));
+}
+.status-banner.is-rejected {
+  background: var(--pill-bad-bg);
+  color: var(--bad);
+  border-color: color-mix(in oklab, var(--bad) 25%, var(--border));
+}
+
+/* Note dell'admin nel banner Rejected */
+.status-banner__note,
+.lang-rejection-note {
+  background: var(--surface);
+  border: 1px solid color-mix(in oklab, var(--bad) 30%, var(--border));
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  margin-top: 0.6rem;
+  color: var(--bad);
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+}
+
+/* Banner "Admin override" sopra una lingua bloccata */
+.admin-override-banner {
+  background: color-mix(in oklab, var(--focus) 12%, var(--surface));
+  color: var(--text);
+  border: 1px solid color-mix(in oklab, var(--focus) 35%, var(--border));
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.admin-override-banner code {
+  background: var(--surface-2);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-family: var(--mono);
+}
+
+/* Wizard parameters nav (quadratini numerati) */
+.param-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.param-nav .param-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.param-nav .param-btn.is-empty {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.param-nav .param-btn.is-incomplete {
+  background: #dc3545;
+  color: #fff;
+  border-color: #a71d2a;
+}
+.param-nav .param-btn.is-complete {
+  background: #198754;
+  color: #fff;
+  border-color: #0f5132;
+}
+.param-nav .param-btn.is-active {
+  border-bottom: 3px solid var(--text);
+}
+:root[data-theme="dark"] .param-nav .param-btn.is-incomplete {
+  background: #b3303f;
+  border-color: #7a1d27;
+}
+:root[data-theme="dark"] .param-nav .param-btn.is-complete {
+  background: #1f9b62;
+  border-color: #135f3d;
+}
+
+/* ParameterBlock: card di sfondo + righe di "finalizzazione" */
+.parameter-block {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+.parameter-finalize-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.form-locked-banner {
+  padding: 0.75rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* QuestionRow: istruzioni condizionali YES/NO */
+.instructions-yn {
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
+}
+.instructions-yn--yes {
+  border-left: 3px solid var(--ok);
+  background: var(--pill-ok-bg);
+  color: var(--text);
+}
+.instructions-yn--yes .info-row__label {
+  color: var(--ok);
+  font-weight: 700;
+}
+.instructions-yn--no {
+  border-left: 3px solid var(--bad);
+  background: var(--pill-bad-bg);
+  color: var(--text);
+}
+.instructions-yn--no .info-row__label {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* Backup detail: accordion header */
+.backup-accordion-head {
+  background: var(--surface-2);
+}
+.backup-accordion-head:hover {
+  background: color-mix(in oklab, var(--surface-2) 80%, var(--text));
 }

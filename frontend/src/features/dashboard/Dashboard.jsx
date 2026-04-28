@@ -4,21 +4,16 @@ import api from '../../api';
 
 // ===== Palette status (coerente con LanguageList / LanguageData) =====
 const STATUS_BADGE = {
-    pending: { label: 'Pending', bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' },
-    waiting_for_approval: { label: 'Waiting', bg: '#fff8e1', color: '#92400e', border: '#fcd34d' },
-    approved: { label: 'Approved', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
-    rejected: { label: 'Rejected', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+    pending: { label: 'Pending', cls: '' },
+    waiting_for_approval: { label: 'Waiting', cls: 'warn' },
+    approved: { label: 'Approved', cls: 'ok' },
+    rejected: { label: 'Rejected', cls: 'bad' },
 };
 
 function StatusBadge({ status }) {
     const meta = STATUS_BADGE[status] || STATUS_BADGE.pending;
     return (
-        <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-            background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`,
-            padding: '0.1rem 0.5rem', borderRadius: '999px', fontSize: '0.72rem',
-            fontWeight: 600, lineHeight: 1.6, whiteSpace: 'nowrap',
-        }}>
+        <span className={`status ${meta.cls}`} style={{ fontSize: '0.72rem', padding: '0.1rem 0.5rem' }}>
             {meta.label}
         </span>
     );
@@ -55,15 +50,16 @@ function RichTextEditor({ initialHtml, onSave, onCancel, isSaving }) {
     };
 
     const btnStyle = {
-        padding: '0.3rem 0.55rem', border: '1px solid #cbd5e1', background: '#fff',
+        padding: '0.3rem 0.55rem', border: '1px solid var(--border)', background: 'var(--surface)',
+        color: 'var(--text)',
         borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem', minWidth: '32px',
     };
 
     return (
-        <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', background: '#fff' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--surface)', color: 'var(--text)' }}>
             <div style={{
                 display: 'flex', gap: '0.3rem', padding: '0.4rem',
-                borderBottom: '1px solid #e2e8f0', background: '#f8fafc', flexWrap: 'wrap',
+                borderBottom: '1px solid var(--border)', background: 'var(--surface-2)', flexWrap: 'wrap',
             }}>
                 <button type="button" onClick={() => exec('bold')} style={{ ...btnStyle, fontWeight: 'bold' }} title="Bold">B</button>
                 <button type="button" onClick={() => exec('italic')} style={{ ...btnStyle, fontStyle: 'italic' }} title="Italic">I</button>
@@ -78,9 +74,10 @@ function RichTextEditor({ initialHtml, onSave, onCancel, isSaving }) {
                 style={{
                     padding: '0.8rem', minHeight: '90px', fontSize: '0.9rem',
                     fontFamily: 'inherit', outline: 'none', lineHeight: 1.5,
+                    color: 'var(--text)',
                 }}
             />
-            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem', borderTop: '1px solid #e2e8f0', justifyContent: 'flex-end', background: '#f8fafc' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.5rem', borderTop: '1px solid var(--border)', justifyContent: 'flex-end', background: 'var(--surface-2)' }}>
                 <button type="button" className="btn btn--small" onClick={onCancel} disabled={isSaving}>Cancel</button>
                 <button type="button" className="btn btn--small btn--primary" onClick={handleSave} disabled={isSaving}>
                     {isSaving ? 'Saving...' : 'Save'}
@@ -121,8 +118,8 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
     };
 
     return (
-        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0.55rem 0.65rem', background: '#fff', marginBottom: '0.45rem' }}>
-            <div style={{ fontSize: '0.66rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: '6px', padding: '0.55rem 0.65rem', background: 'var(--surface)', marginBottom: '0.45rem' }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {role}
             </div>
             <div className="small muted" style={{ marginBottom: '0.3rem', fontSize: '0.75rem' }}>{description}</div>
@@ -137,9 +134,9 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
             ) : (
                 <>
                     <div style={{
-                        background: '#f8f9fa', padding: '0.5rem 2.5rem 0.5rem 0.6rem',
-                        borderRadius: '5px', border: '1px solid #e2e8f0', position: 'relative',
-                        fontSize: '0.78rem', lineHeight: 1.4,
+                        background: 'var(--surface-2)', padding: '0.5rem 2.5rem 0.5rem 0.6rem',
+                        borderRadius: '5px', border: '1px solid var(--border)', position: 'relative',
+                        fontSize: '0.78rem', lineHeight: 1.4, color: 'var(--text)',
                     }}>
                         <button
                             type="button"
@@ -147,9 +144,9 @@ function CiteBox({ keyName, role, description, html, onSaved, isAdmin }) {
                             style={{
                                 position: 'absolute', top: '6px', right: '6px',
                                 padding: '3px 7px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copied ? '#16a34a' : '#fff',
-                                color: copied ? '#fff' : '#475569',
-                                border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 600,
+                                background: copied ? '#16a34a' : 'var(--surface)',
+                                color: copied ? '#fff' : 'var(--text)',
+                                border: '1px solid var(--border)', borderRadius: '4px', fontWeight: 600,
                             }}
                             title="Copy citation (plain text)"
                         >
@@ -326,12 +323,13 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
                     marginTop: '0.4rem',
                     border: '1px solid var(--border)',
                     borderRadius: '5px',
-                    background: '#fff',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
                 }}>
                     <div style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                         padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--border)',
-                        fontSize: '0.72rem', fontWeight: 600, color: '#475569',
+                        fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)',
                     }}>
                         <span>{expandedCell?.label} ({expandedList.length})</span>
                         <button
@@ -339,7 +337,7 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
                             onClick={() => setExpanded(null)}
                             style={{
                                 background: 'none', border: 'none', cursor: 'pointer',
-                                color: '#64748b', fontSize: '0.95rem', lineHeight: 1, padding: '0 0.2rem',
+                                color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: 1, padding: '0 0.2rem',
                             }}
                             title="Close"
                             aria-label="Close"
@@ -543,8 +541,9 @@ function UserDashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {languages.map(l => (
                         <div key={l.id} style={{
-                            background: '#fff', border: '1px solid var(--border)', borderRadius: '8px',
+                            background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px',
                             padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem',
+                            color: 'var(--text)',
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -557,11 +556,11 @@ function UserDashboard() {
                                 </Link>
                             </div>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '0.2rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
                                     <span>Progress: {l.answered}/{l.total} answers</span>
                                     <span>{l.progress_pct}%</span>
                                 </div>
-                                <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+                                <div style={{ height: '8px', background: 'var(--surface-2)', borderRadius: '4px', overflow: 'hidden' }}>
                                     <div style={{
                                         width: `${l.progress_pct}%`, height: '100%',
                                         background: l.status === 'approved' ? '#16a34a' : (l.status === 'rejected' ? '#dc2626' : '#3b82f6')
@@ -569,7 +568,7 @@ function UserDashboard() {
                                 </div>
                             </div>
                             {l.status === 'rejected' && l.rejection_note && (
-                                <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#7f1d1d', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.85rem' }}>
+                                <div className="lang-rejection-note">
                                     <strong>Admin note:</strong> {l.rejection_note}
                                 </div>
                             )}
