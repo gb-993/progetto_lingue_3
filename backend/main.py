@@ -35,6 +35,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "X-Skipped-Languages"],
 )
 
 app.include_router(auth.router)

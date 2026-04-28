@@ -18,3 +18,4 @@ openpyxl
 adjustText
 pyparsing
 fpdf2
+plotly

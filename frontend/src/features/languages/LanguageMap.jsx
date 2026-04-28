@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import 'ol/ol.css';
@@ -114,7 +114,7 @@ function computeColorPlan({ languages, filters, allTopFamilies }) {
     };
 }
 
-export default function LanguageMap({ languages, filters, allTopFamilies }) {
+function LanguageMap({ languages, filters, allTopFamilies }, ref) {
     const navigate = useNavigate();
     const mapRef = useRef(null);
     const tooltipRef = useRef(null);
@@ -124,6 +124,67 @@ export default function LanguageMap({ languages, filters, allTopFamilies }) {
     const [hoveredKey, setHoveredKey] = useState(null);
 
     useEffect(() => { navigateRef.current = navigate; }, [navigate]);
+
+    // Esporto exportPng al parent: cattura tutti i canvas OL renderizzati e li
+    // fonde su un canvas finale, restituendo un Blob PNG. Ricalca l'esempio
+    // ufficiale di OpenLayers (https://openlayers.org/en/latest/examples/export-map.html).
+    useImperativeHandle(ref, () => ({
+        exportPng: () => new Promise((resolve, reject) => {
+            const map = mapInstance.current;
+            if (!map) {
+                reject(new Error('Map not ready'));
+                return;
+            }
+            map.once('rendercomplete', () => {
+                try {
+                    const size = map.getSize();
+                    const out = document.createElement('canvas');
+                    out.width = size[0];
+                    out.height = size[1];
+                    const ctx = out.getContext('2d');
+
+                    const viewport = map.getViewport();
+                    const canvases = viewport.querySelectorAll('.ol-layer canvas, canvas.ol-layer');
+                    canvases.forEach(canvas => {
+                        if (canvas.width === 0) return;
+                        const opacity = canvas.parentNode?.style.opacity || canvas.style.opacity;
+                        ctx.globalAlpha = opacity === '' || opacity === undefined ? 1 : Number(opacity);
+
+                        const transform = canvas.style.transform;
+                        let matrix;
+                        if (transform && transform.startsWith('matrix(')) {
+                            matrix = transform.match(/^matrix\(([^)]*)\)$/)[1].split(',').map(Number);
+                        } else {
+                            matrix = [
+                                parseFloat(canvas.style.width) / canvas.width || 1,
+                                0, 0,
+                                parseFloat(canvas.style.height) / canvas.height || 1,
+                                0, 0,
+                            ];
+                        }
+                        ctx.setTransform(...matrix);
+
+                        const bg = canvas.parentNode?.style.backgroundColor;
+                        if (bg) {
+                            ctx.fillStyle = bg;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        }
+                        ctx.drawImage(canvas, 0, 0);
+                    });
+                    ctx.globalAlpha = 1;
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                    out.toBlob(blob => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Canvas toBlob failed (tainted canvas?)'));
+                    }, 'image/png');
+                } catch (err) {
+                    reject(err);
+                }
+            });
+            map.renderSync();
+        }),
+    }), []);
 
     const plan = useMemo(
         () => computeColorPlan({ languages, filters, allTopFamilies }),
@@ -147,7 +208,7 @@ export default function LanguageMap({ languages, filters, allTopFamilies }) {
         const map = new Map({
             target: mapRef.current,
             layers: [
-                new TileLayer({ source: new OSM() }),
+                new TileLayer({ source: new OSM({ crossOrigin: 'anonymous' }) }),
                 vectorLayer,
             ],
             view: new View({
@@ -305,3 +366,5 @@ export default function LanguageMap({ languages, filters, allTopFamilies }) {
         </div>
     );
 }
+
+export default forwardRef(LanguageMap);

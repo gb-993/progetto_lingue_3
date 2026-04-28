@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
@@ -51,6 +51,9 @@ export default function LanguageList() {
     const [error, setError] = useState('');
     const [selectedIds, setSelectedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
+    const [downloadOpen, setDownloadOpen] = useState(false);
+    const downloadRef = useRef(null);
+    const mapExportRef = useRef(null);
 
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
@@ -213,6 +216,84 @@ export default function LanguageList() {
         }
     };
 
+    const onExportMap = async () => {
+        if (!mapExportRef.current) {
+            alert('Map is not ready yet.');
+            return;
+        }
+        setExporting(true);
+        try {
+            const blob = await mapExportRef.current.exportPng();
+            const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `PCM_map_${ts}.png`;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error(err);
+            alert('Could not export the map (rendering not complete or canvas blocked).');
+        } finally {
+            setExporting(false);
+            setDownloadOpen(false);
+        }
+    };
+
+    const onExportGcd = async () => {
+        setExporting(true);
+        try {
+            const res = await api.post(
+                '/api/admin/export/languages/gcd-txt',
+                { lang_ids: targetIds },
+                { responseType: 'blob' }
+            );
+            const skippedHeader = res.headers['x-skipped-languages'];
+            if (skippedHeader) {
+                const ids = skippedHeader.split(',').filter(Boolean);
+                alert(
+                    `Warning: ${ids.length} language(s) have no coordinates and have been excluded from the GCD matrix:\n\n` +
+                    ids.join(', ')
+                );
+            }
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^";]+)"?/);
+            const filename = m ? m[1] : 'gcd.txt';
+            const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            // Il backend può restituire un dettaglio di errore in JSON dentro il blob
+            let msg = "Error while exporting the GCD distances.";
+            const blob = err?.response?.data;
+            if (blob instanceof Blob) {
+                try {
+                    const text = await blob.text();
+                    const json = JSON.parse(text);
+                    if (json?.detail) msg = json.detail;
+                } catch { /* non-JSON, ignora */ }
+            }
+            alert(msg);
+        } finally {
+            setExporting(false);
+            setDownloadOpen(false);
+        }
+    };
+
+    // Chiusura dropdown al click fuori
+    useEffect(() => {
+        if (!downloadOpen) return;
+        const onDocClick = (e) => {
+            if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+                setDownloadOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [downloadOpen]);
+
     return (
         <div className="container">
             <header className="dashboard-hero">
@@ -284,7 +365,55 @@ export default function LanguageList() {
                         {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
                         {selectedIds.size > 0 && <span> · <strong>{selectedIds.size} selected</strong></span>}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div ref={downloadRef} style={{ position: 'relative' }}>
+                            <button
+                                type="button"
+                                onClick={() => setDownloadOpen(o => !o)}
+                                disabled={exporting || targetIds.length === 0 || !isAdmin}
+                                className="btn btn--small"
+                                title={!isAdmin ? "Admin only" : ""}
+                                aria-haspopup="menu"
+                                aria-expanded={downloadOpen}
+                            >
+                                Download Data ▾
+                            </button>
+                            {downloadOpen && (
+                                <div
+                                    role="menu"
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 4px)',
+                                        right: 0,
+                                        minWidth: 260,
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-sm, 6px)',
+                                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                                        zIndex: 50,
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <DropdownItem onClick={() => { setDownloadOpen(false); onExportMetadata(); }} disabled={exporting}>
+                                        Export language metadata (.xlsx)
+                                    </DropdownItem>
+                                    <DropdownItem onClick={() => { setDownloadOpen(false); onExportZip(); }} disabled={exporting}>
+                                        Export parametric data (.zip)
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onExportMap} disabled={exporting}>
+                                        Map (.png)
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onExportGcd} disabled={exporting}>
+                                        Geo distances (.txt)
+                                    </DropdownItem>
+                                </div>
+                            )}
+                        </div>
+                        {isAdmin && (
+                            <Link to="/admin/import-excel" className="btn btn--small">
+                                Import from Excel
+                            </Link>
+                        )}
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
                         {isAdmin && (
                             <Link to="/languages/add" className="btn btn--primary btn--small">Add Language</Link>
@@ -293,40 +422,10 @@ export default function LanguageList() {
                 </div>
             </div>
 
-            {/* ==== BARRA EXPORT / IMPORT ==== */}
-            <div className="card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', border: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
-                <span className="small muted" style={{ marginRight: '0.5rem' }}>
-                    {selectedIds.size > 0
-                        ? `Action on ${selectedIds.size} selected language(s)`
-                        : `Action on ${filteredLanguages.length} filtered languages`}
-                </span>
-                <button
-                    onClick={onExportMetadata}
-                    disabled={exporting || targetIds.length === 0 || !isAdmin}
-                    className="btn btn--small"
-                    title={!isAdmin ? "Admin only" : ""}
-                >
-                    Export language metadata (.xlsx)
-                </button>
-                {isAdmin && (
-                    <button
-                        onClick={onExportZip}
-                        disabled={exporting || targetIds.length === 0}
-                        className="btn btn--small"
-                    >
-                        Export parametric data (.zip)
-                    </button>
-                )}
-                {isAdmin && (
-                    <Link to="/admin/import-excel" className="btn btn--small">
-                        Import from Excel
-                    </Link>
-                )}
-            </div>
-
             {/* ==== MAPPA ==== */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1rem' }}>
                 <LanguageMap
+                    ref={mapExportRef}
                     languages={filteredLanguages}
                     filters={filters}
                     allTopFamilies={options.opt_top_families}
@@ -407,5 +506,32 @@ function FilterField({ label, children }) {
             </label>
             {children}
         </div>
+    );
+}
+
+function DropdownItem({ onClick, disabled, children }) {
+    return (
+        <button
+            type="button"
+            role="menuitem"
+            onClick={onClick}
+            disabled={disabled}
+            style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.6rem 0.9rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text)',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                fontSize: '0.85rem',
+                opacity: disabled ? 0.55 : 1,
+            }}
+            onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--surface-2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
+            {children}
+        </button>
     );
 }

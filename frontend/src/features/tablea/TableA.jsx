@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
@@ -29,6 +29,13 @@ export default function TableA() {
     const [matrixData, setMatrixData] = useState({ languages: [], rows: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // Dropdown download + modale Mantel
+    const [downloadOpen, setDownloadOpen] = useState(false);
+    const downloadRef = useRef(null);
+    const [mantelOpen, setMantelOpen] = useState(false);
+    const [mantelOpts, setMantelOpts] = useState({ gcd: true, hamming: true, jaccard: true });
+    const [mantelRunning, setMantelRunning] = useState(false);
 
     // Caricamento opzioni iniziali
     useEffect(() => {
@@ -133,6 +140,71 @@ export default function TableA() {
             alert("Error while generating the file. Check the applied filters.");
         }
     };
+
+    const runMantel = async () => {
+        const selectedCount = Number(mantelOpts.gcd) + Number(mantelOpts.hamming) + Number(mantelOpts.jaccard);
+        if (selectedCount < 2) {
+            alert("Select at least 2 distances for the Mantel test.");
+            return;
+        }
+        setMantelRunning(true);
+        try {
+            const payload = {
+                view, ...filters,
+                f_lang_specific: selectedLangs,
+                selected_ids: selectedRows,
+                include_gcd: mantelOpts.gcd,
+                include_hamming: mantelOpts.hamming,
+                include_jaccard: mantelOpts.jaccard,
+            };
+            const res = await api.post('/api/tablea/export/mantel', payload, { responseType: 'blob' });
+
+            const skippedHeader = res.headers['x-skipped-languages'];
+            if (skippedHeader) {
+                const ids = skippedHeader.split(',').filter(Boolean);
+                alert(
+                    `Warning: ${ids.length} language(s) without coordinates have been excluded ` +
+                    `from all matrices (because GCD was selected):\n\n` + ids.join(', ')
+                );
+            }
+
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^";]+)"?/);
+            const filename = m ? m[1] : 'mantel_test.zip';
+            const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+
+            setMantelOpen(false);
+        } catch (err) {
+            let msg = "Error while running the Mantel test.";
+            const blob = err?.response?.data;
+            if (blob instanceof Blob) {
+                try {
+                    const text = await blob.text();
+                    const json = JSON.parse(text);
+                    if (json?.detail) msg = json.detail;
+                } catch { /* non-JSON */ }
+            }
+            alert(msg);
+        } finally {
+            setMantelRunning(false);
+        }
+    };
+
+    // Chiusura dropdown al click fuori
+    useEffect(() => {
+        if (!downloadOpen) return;
+        const onDocClick = (e) => {
+            if (downloadRef.current && !downloadRef.current.contains(e.target)) {
+                setDownloadOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [downloadOpen]);
 
     return (
         <div className="container" style={{ maxWidth: '100%' }}>
@@ -283,21 +355,45 @@ export default function TableA() {
                         <button onClick={resetFilters} className="btn">Reset</button>
                     </div>
 
-                    {/* Download Dropdown simulato con HTML standard */}
-                    <div className="download-dropdown" style={{ position: 'relative', display: 'inline-block' }}>
-                        <button className="btn" style={{ background: '#333', color: 'white' }}>Download Data ▾</button>
-                        <div className="download-content" style={{ display: 'none', position: 'absolute', right: 0, background: 'var(--surface)', color: 'var(--text)', minWidth: '220px', boxShadow: '0 4px 14px rgba(0,0,0,0.18)', border: '1px solid var(--border)', borderRadius: '4px', zIndex: 100 }}>
-                            <button onClick={() => handleDownload('xlsx', `tableA_${view}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>Export .xlsx (Standard)</button>
-                            <button onClick={() => handleDownload('csv', `tableA_${view}_transposed.csv`, 'text/csv')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>Export .csv (Transposed)</button>
-
-                            {view === 'params' && (
-                                <>
-                                    <button onClick={() => handleDownload('distances', 'distances_txt.zip', 'application/zip')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer', borderTop: '1px solid #ddd' }}>Distances (.txt zip)</button>
-                                    <button onClick={() => handleDownload('dendrograms', 'dendrograms.zip', 'application/zip')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>Dendrograms (.png zip)</button>
-                                    <button onClick={() => handleDownload('pca', `pca_scatterplot_${view}.png`, 'image/png')} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', border: 'none', background: 'none', cursor: 'pointer' }}>PCA Scatterplot (.png)</button>
-                                </>
-                            )}
-                        </div>
+                    {/* Download Dropdown click-toggle */}
+                    <div ref={downloadRef} style={{ position: 'relative', display: 'inline-block' }}>
+                        <button
+                            type="button"
+                            className="btn"
+                            style={{ background: '#333', color: 'white' }}
+                            onClick={() => setDownloadOpen(o => !o)}
+                            aria-haspopup="menu"
+                            aria-expanded={downloadOpen}
+                        >
+                            Download Data ▾
+                        </button>
+                        {downloadOpen && (
+                            <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: 'var(--surface)', color: 'var(--text)', minWidth: 240, boxShadow: '0 6px 18px rgba(0,0,0,0.18)', border: '1px solid var(--border)', borderRadius: 6, zIndex: 100, overflow: 'hidden' }}>
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('xlsx', `tableA_${view}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }}>
+                                    Export .xlsx (Standard)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('csv', `tableA_${view}_transposed.csv`, 'text/csv'); }}>
+                                    Export .csv (Transposed)
+                                </DropItem>
+                                {view === 'params' && (
+                                    <>
+                                        <div style={{ borderTop: '1px solid var(--border)' }} />
+                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('distances', 'distances_txt.zip', 'application/zip'); }}>
+                                            Distances (.txt zip)
+                                        </DropItem>
+                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('dendrograms', 'dendrograms.zip', 'application/zip'); }}>
+                                            Dendrograms (.png zip)
+                                        </DropItem>
+                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('pca', `pca_scatterplot_${view}.png`, 'image/png'); }}>
+                                            PCA Scatterplot (.png)
+                                        </DropItem>
+                                        <DropItem onClick={() => { setDownloadOpen(false); setMantelOpen(true); }}>
+                                            Mantel test (.zip)
+                                        </DropItem>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -377,11 +473,86 @@ export default function TableA() {
                 </div>
             </div>
 
-            {/* CSS per il menu a tendina */}
-            <style>{`
-                .download-dropdown:hover .download-content { display: block !important; }
-                .download-content button:hover { background-color: #f8f9fa !important; color: #ff4500 !important; }
-            `}</style>
+            {/* ===== MODALE MANTEL TEST ===== */}
+            {mantelOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    onClick={(e) => { if (e.target === e.currentTarget && !mantelRunning) setMantelOpen(false); }}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+                    }}
+                >
+                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(440px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Mantel test</h3>
+                        <p className="muted small" style={{ marginTop: 0 }}>
+                            Choose at least two distance matrices. Pearson, Spearman and Kendall's τ
+                            are computed for each pair (999 permutations, two-sided, seed 42).
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '1rem 0' }}>
+                            <CheckRow label="Geographic distance (GCD)"
+                                checked={mantelOpts.gcd}
+                                onChange={(v) => setMantelOpts(o => ({ ...o, gcd: v }))} />
+                            <CheckRow label="Hamming"
+                                checked={mantelOpts.hamming}
+                                onChange={(v) => setMantelOpts(o => ({ ...o, hamming: v }))} />
+                            <CheckRow label="Jaccard[+]"
+                                checked={mantelOpts.jaccard}
+                                onChange={(v) => setMantelOpts(o => ({ ...o, jaccard: v }))} />
+                        </div>
+
+                        {mantelOpts.gcd && (
+                            <div className="small muted" style={{ marginBottom: '0.75rem' }}>
+                                Note: languages without coordinates will be excluded from all matrices.
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                            <button type="button" className="btn" disabled={mantelRunning} onClick={() => setMantelOpen(false)}>
+                                Cancel
+                            </button>
+                            <button type="button" className="btn btn--primary" disabled={mantelRunning} onClick={runMantel}>
+                                {mantelRunning ? 'Running…' : 'Perform Mantel test and download (.zip)'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+    );
+}
+
+function DropItem({ onClick, children }) {
+    return (
+        <button
+            type="button"
+            role="menuitem"
+            onClick={onClick}
+            style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '0.6rem 0.9rem', border: 'none', background: 'transparent',
+                color: 'var(--text)', cursor: 'pointer', fontSize: '0.88rem',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
+            {children}
+        </button>
+    );
+}
+
+function CheckRow({ label, checked, onChange }) {
+    return (
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.92rem' }}>
+            <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                style={{ width: 16, height: 16 }}
+            />
+            <span>{label}</span>
+        </label>
     );
 }

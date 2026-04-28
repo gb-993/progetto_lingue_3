@@ -6,7 +6,9 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import io
 import csv
+import math
 import zipfile
+from itertools import combinations
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -14,6 +16,8 @@ matplotlib.use('Agg') # Necessario per il rendering server-side
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, dendrogram
 from scipy.spatial.distance import squareform
+from scipy.stats import pearsonr, spearmanr, kendalltau
+import plotly.express as px
 from openpyxl import Workbook
 from adjustText import adjust_text
 
@@ -36,6 +40,12 @@ class TableAFilterRequest(BaseModel):
     f_q_template: Optional[str] = ""
     f_q_stop: Optional[str] = "all"
     selected_ids: List[str] = []
+
+
+class MantelRequest(TableAFilterRequest):
+    include_gcd: bool = True
+    include_hamming: bool = True
+    include_jaccard: bool = True
 
 # --- FUNZIONI CORE (PORTING MATEMATICO ESATTO) ---
 
@@ -97,10 +107,20 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
 
         items = p_query.order_by(models.ParameterDef.position).all()
         item_ids = [p.id for p in items]
-        evals = db.query(models.LanguageParameterEval).join(models.LanguageParameter).filter(
-            models.LanguageParameter.parameter_id.in_(item_ids), models.LanguageParameter.language_id.in_(lang_ids)
+        # Query a colonne (niente lazy-load di e.language_parameter): evita
+        # l'N+1 storico — con N lingue × M parametri si emetteva 1 SELECT per ogni eval.
+        eval_rows = db.query(
+            models.LanguageParameter.parameter_id,
+            models.LanguageParameter.language_id,
+            models.LanguageParameterEval.value_eval,
+        ).join(
+            models.LanguageParameterEval,
+            models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id,
+        ).filter(
+            models.LanguageParameter.parameter_id.in_(item_ids),
+            models.LanguageParameter.language_id.in_(lang_ids),
         ).all()
-        ev_dict = {(e.language_parameter.parameter_id, e.language_parameter.language_id): e.value_eval for e in evals}
+        ev_dict = {(p_id, l_id): val for (p_id, l_id, val) in eval_rows}
 
         for p in items:
             matrix.append({
@@ -278,3 +298,185 @@ def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db)):
     buf.seek(0)
     return Response(content=buf.getvalue(), media_type="image/png",
                     headers={"Content-Disposition": f"attachment; filename=pca_scatterplot_{filters.view}.png"})
+
+
+# ==========================================
+# ENDPOINT: MANTEL TEST (ZIP)
+# ==========================================
+
+def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance (miglia nautiche) via legge dei coseni.
+
+    Porting esatto da gcd.py (Ceolin): conversione gradi→radianti, arrotondamento
+    a 5 decimali per evitare argomenti >1 dell'acos dovuti al floating point,
+    output gradi×60 (1° = 60 nautical miles).
+    """
+    x1, y1 = math.radians(lat1), math.radians(lon1)
+    x2, y2 = math.radians(lat2), math.radians(lon2)
+    cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
+    return 60.0 * math.degrees(math.acos(round(cos_val, 5)))
+
+
+def _matrix_to_tsv(ids: List[str], mat: np.ndarray) -> str:
+    """Serializza una matrice quadrata in TSV con header come gcd.py / distance.py."""
+    lines = ["Language\t" + "\t".join(ids)]
+    for i, id1 in enumerate(ids):
+        lines.append(id1 + "\t" + "\t".join(str(mat[i, j]) for j in range(len(ids))))
+    return "\n".join(lines) + "\n"
+
+
+_CORR_FUNCS = {
+    "pearson": lambda x, y: pearsonr(x, y)[0],
+    "spearman": lambda x, y: spearmanr(x, y)[0],
+    "kendalltau": lambda x, y: kendalltau(x, y)[0],
+}
+
+
+def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
+                 permutations: int = 999, seed: int = 42):
+    """Mantel test two-sided con permutation test (default skbio: 999 perm, seed=42).
+
+    P-value = (count(|r_perm| >= |r_obs|) + 1) / (permutations + 1).
+    Permuto contemporaneamente righe e colonne di B per preservare la simmetria.
+    """
+    n = mat_a.shape[0]
+    iu = np.triu_indices(n, k=1)
+    a_flat = mat_a[iu]
+    b_flat = mat_b[iu]
+    corr = _CORR_FUNCS[method]
+    obs = corr(a_flat, b_flat)
+
+    rng = np.random.default_rng(seed)
+    count = 0
+    abs_obs = abs(obs)
+    for _ in range(permutations):
+        perm = rng.permutation(n)
+        b_perm = mat_b[perm][:, perm]
+        r = corr(a_flat, b_perm[iu])
+        if abs(r) >= abs_obs:
+            count += 1
+    p_value = (count + 1) / (permutations + 1)
+    return obs, p_value, n
+
+
+@router.post("/export/mantel")
+def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db)):
+    """Mantel test su sottoinsieme di {GCD, Hamming, Jaccard[+]}.
+
+    Restituisce uno zip con matrici .txt, scatterplot PNG (matplotlib) +
+    HTML interattivi (plotly), e mantel_results.csv (pearson/spearman/kendalltau
+    con permutation test 999 perm, seed=42, two-sided).
+    """
+    if filters.view != "params":
+        raise HTTPException(400, "Mantel test only available for Parameters View")
+
+    selected = []
+    if filters.include_gcd: selected.append("gcd")
+    if filters.include_hamming: selected.append("hamming")
+    if filters.include_jaccard: selected.append("jaccard[+]")
+    if len(selected) < 2:
+        raise HTTPException(400, "Select at least 2 distances for the Mantel test.")
+
+    langs, rows = _get_filtered_data(db, filters)
+    if not langs or not rows:
+        raise HTTPException(400, "No data available with the current filters.")
+
+    # Esclude lingue senza coords se è inclusa la GCD (così tutte le matrici
+    # sono allineate sulle stesse lingue)
+    skipped: List[str] = []
+    if filters.include_gcd:
+        keep_idx = [i for i, l in enumerate(langs) if l.latitude is not None and l.longitude is not None]
+        skipped = [langs[i].id for i in range(len(langs)) if i not in keep_idx]
+        if skipped:
+            langs = [langs[i] for i in keep_idx]
+            for r in rows:
+                r["cells"] = [r["cells"][i] for i in keep_idx]
+
+    n = len(langs)
+    if n < 3:
+        raise HTTPException(400, "Need at least 3 languages with coordinates to run Mantel.")
+
+    ids = [l.id for l in langs]
+
+    # Costruisce le matrici richieste
+    matrices: Dict[str, np.ndarray] = {}
+
+    if filters.include_gcd:
+        coords = [(float(l.latitude), float(l.longitude)) for l in langs]
+        m = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i + 1, n):
+                d = _gcd_nautical_miles(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
+                m[i, j] = m[j, i] = d
+        matrices["gcd"] = m
+
+    if filters.include_hamming or filters.include_jaccard:
+        lang_vectors = [[r["cells"][i] for r in rows] for i in range(n)]
+        if filters.include_hamming:
+            m = np.zeros((n, n))
+            for i in range(n):
+                for j in range(i + 1, n):
+                    d = _hamming_core(lang_vectors[i], lang_vectors[j])
+                    m[i, j] = m[j, i] = d
+            matrices["hamming"] = m
+        if filters.include_jaccard:
+            m = np.zeros((n, n))
+            for i in range(n):
+                for j in range(i + 1, n):
+                    d = _jaccard_core(lang_vectors[i], lang_vectors[j])
+                    m[i, j] = m[j, i] = d
+            matrices["jaccard[+]"] = m
+
+    # Costruisce lo zip
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w") as zf:
+        for name, mat in matrices.items():
+            zf.writestr(f"{name}.txt", _matrix_to_tsv(ids, mat))
+
+        names_sorted = sorted(matrices.keys())  # gcd < hamming < jaccard[+]
+        results = []
+        iu = np.triu_indices(n, k=1)
+        pair_labels = [f"{ids[i]} - {ids[j]}" for i, j in zip(*iu)]
+
+        for n1, n2 in combinations(names_sorted, 2):
+            mat1, mat2 = matrices[n1], matrices[n2]
+            v1 = mat1[iu]
+            v2 = mat2[iu]
+
+            for method in ("pearson", "spearman", "kendalltau"):
+                corr, p, samples = _mantel_test(mat1, mat2, method)
+                results.append({"matrix1": n1, "matrix2": n2, "method": method,
+                                "correlation": corr, "p_value": p})
+
+            # Scatterplot PNG (matplotlib)
+            fig = plt.figure(figsize=(12, 8))
+            plt.scatter(v1, v2, s=10, alpha=0.75)
+            plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.75)
+            plt.xlabel(n1); plt.ylabel(n2)
+            png_buf = io.BytesIO()
+            plt.savefig(png_buf, format='png', dpi=300, bbox_inches='tight')
+            plt.close(fig)
+            zf.writestr(f"{n1}-{n2}_mantel_scatterplot.png", png_buf.getvalue())
+
+            # Scatterplot HTML interattivo (plotly)
+            df_plot = pd.DataFrame({"x": v1, "y": v2, "pair": pair_labels})
+            fig_pl = px.scatter(df_plot, x="x", y="y", hover_data=["pair"],
+                                labels={"x": n1, "y": n2})
+            fig_pl.update_traces(marker=dict(size=10, opacity=0.75))
+            zf.writestr(f"{n1}-{n2}_mantel_scatterplot_interactive.html",
+                        fig_pl.to_html(include_plotlyjs="cdn"))
+
+        zf.writestr("mantel_results.csv", pd.DataFrame(results).to_csv(index=False))
+
+        if skipped:
+            zf.writestr(
+                "mantel_warnings.txt",
+                "The following languages were excluded because they have no coordinates:\n"
+                + "\n".join(skipped) + "\n"
+            )
+
+    zip_buf.seek(0)
+    headers = {"Content-Disposition": "attachment; filename=mantel_test.zip"}
+    if skipped:
+        headers["X-Skipped-Languages"] = ",".join(skipped)
+    return StreamingResponse(zip_buf, media_type="application/zip", headers=headers)

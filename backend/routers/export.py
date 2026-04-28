@@ -11,9 +11,10 @@ from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
 import io
+import math
 import zipfile
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -136,7 +137,65 @@ def export_languages_zip(
 
 
 # ============================================================================
-# 4. Schema export (admin, da ParameterList)
+# 4. Geographic distances export (GCD matrix, admin only)
+# ============================================================================
+
+
+def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in nautical miles via law of cosines.
+
+    Porting esatto da gcd.py (Ceolin, Boundaries repo): conversione gradi→radianti,
+    arrotondamento a 5 decimali per evitare argomenti >1 di acos dovuti al floating
+    point, conversione finale gradi×60 (ogni grado = 60 miglia nautiche).
+    """
+    x1, y1 = math.radians(lat1), math.radians(lon1)
+    x2, y2 = math.radians(lat2), math.radians(lon2)
+    cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
+    angle_rad = math.acos(round(cos_val, 5))
+    return 60.0 * math.degrees(angle_rad)
+
+
+@router.post("/admin/export/languages/gcd-txt")
+def export_languages_gcd(
+    payload: LanguageListExportPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    q = db.query(models.Language).order_by(models.Language.position, models.Language.name_full)
+    if payload.lang_ids:
+        q = q.filter(models.Language.id.in_(payload.lang_ids))
+    languages = q.all()
+
+    if not languages:
+        raise HTTPException(status_code=400, detail="No language to export.")
+
+    with_coords = [l for l in languages if l.latitude is not None and l.longitude is not None]
+    skipped = [l.id for l in languages if l.latitude is None or l.longitude is None]
+
+    if not with_coords:
+        raise HTTPException(status_code=400, detail="None of the selected languages has coordinates.")
+
+    ids = [l.id for l in with_coords]
+    coords = [(float(l.latitude), float(l.longitude)) for l in with_coords]
+
+    lines = ["\t" + "\t".join(ids)]
+    for i, id1 in enumerate(ids):
+        row = [id1]
+        for j in range(len(ids)):
+            row.append(str(_gcd_nautical_miles(coords[i][0], coords[i][1],
+                                               coords[j][0], coords[j][1])))
+        lines.append("\t".join(row))
+    content = "\n".join(lines) + "\n"
+
+    headers = {"Content-Disposition": f'attachment; filename="gcd_{_ts()}.txt"'}
+    if skipped:
+        headers["X-Skipped-Languages"] = ",".join(skipped)
+
+    return Response(content=content, media_type="text/plain; charset=utf-8", headers=headers)
+
+
+# ============================================================================
+# 5. Schema export (admin, da ParameterList)
 # ============================================================================
 
 @router.get("/admin/export/schema/xlsx")
