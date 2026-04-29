@@ -182,12 +182,12 @@ def _read_workbook_from_memory(wb: Workbook) -> Workbook:
     return load_workbook(buf, data_only=True)
 
 
-def test_language_workbook_admin_has_seven_sheets(db_session):
+def test_language_workbook_admin_has_eight_sheets(db_session):
     lang = _seed_basic(db_session)
     wb = build_language_workbook(db_session, lang, is_admin=True)
     wb2 = _read_workbook_from_memory(wb)
     assert wb2.sheetnames == [
-        "Database_model", "Answers", "Examples",
+        "Database_model", "Answers", "Examples", "Admin Notes",
         "Motivations", "Parameters", "Questions", "QuestionAllowedMotivations",
     ]
 

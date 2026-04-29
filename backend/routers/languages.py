@@ -1,3 +1,4 @@
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +9,8 @@ from sqlalchemy.orm import Session
 import models
 from dependencies import get_db, require_admin, get_current_user
 from services.versioning import record_version
+
+ID_MAX_LEN = 10  # Length(Language.id) — vincolo schema
 
 router = APIRouter(prefix="/api", tags=["Languages"])
 
@@ -264,3 +267,163 @@ def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: 
         db.rollback()
         raise HTTPException(status_code=409, detail="Could not delete the language: related records exist")
     return {"detail": "Language deleted successfully"}
+
+
+# ==========================================
+# DUPLICATE LANGUAGE
+# Copia integrale della lingua con tutte le risposte, esempi, motivazioni
+# e i parametri/eval. Non copia: Submissions (storico) ed EntityVersion (audit).
+# Il nuovo ID e il nuovo nome ottengono un suffisso numerico progressivo a
+# partire da 2 (es. "It"/"Italian" -> "It2"/"Italian2").
+# ==========================================
+def _strip_trailing_digits(s: str) -> str:
+    return re.sub(r"\d+$", "", s or "")
+
+
+def _next_duplicate_suffix(db: Session, base_id: str) -> int:
+    """Trova il più piccolo N >= 2 tale che base_id+str(N) non sia già in uso."""
+    n = 2
+    while True:
+        candidate = f"{base_id}{n}"
+        exists = db.query(models.Language.id).filter(models.Language.id == candidate).first()
+        if not exists:
+            return n
+        n += 1
+
+
+@router.post("/admin/languages/{id}/duplicate", status_code=status.HTTP_201_CREATED)
+def duplicate_admin_language(
+    id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    src = db.query(models.Language).filter(models.Language.id == id).first()
+    if not src:
+        raise HTTPException(status_code=404, detail="Language not found")
+
+    base_id = _strip_trailing_digits(src.id) or src.id
+    base_name = _strip_trailing_digits(src.name_full) or src.name_full
+
+    n = _next_duplicate_suffix(db, base_id)
+    new_id = f"{base_id}{n}"
+    new_name = f"{base_name}{n}"
+
+    if len(new_id) > ID_MAX_LEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Generated id '{new_id}' exceeds {ID_MAX_LEN} characters; rename the source language first.",
+        )
+
+    max_pos = db.query(models.Language.position).order_by(models.Language.position.desc()).first()
+    new_position = (max_pos[0] if max_pos else 0) + 1
+
+    new_lang = models.Language(
+        id=new_id,
+        name_full=new_name,
+        position=new_position,
+        family=src.family,
+        top_level_family=src.top_level_family,
+        grp=src.grp,
+        top_family_id=src.top_family_id,
+        family_id=src.family_id,
+        group_id=src.group_id,
+        latitude=src.latitude,
+        longitude=src.longitude,
+        historical_language=src.historical_language,
+        isocode=src.isocode,
+        glottocode=src.glottocode,
+        informant=src.informant,
+        supervisor=src.supervisor,
+        source=src.source,
+        location=src.location,
+        assigned_user_id=src.assigned_user_id,
+        status=src.status,
+        rejection_note=src.rejection_note,
+        submitted_at=src.submitted_at,
+        reviewed_at=src.reviewed_at,
+    )
+    db.add(new_lang)
+    db.flush()
+
+    # Answers (+ esempi, + answer_motivations) — copia integrale.
+    src_answers = db.query(models.Answer).filter(models.Answer.language_id == src.id).all()
+    for a in src_answers:
+        new_a = models.Answer(
+            language_id=new_lang.id,
+            question_id=a.question_id,
+            status=a.status,
+            response_text=a.response_text,
+            comments=a.comments,
+        )
+        db.add(new_a)
+        db.flush()
+
+        for ex in a.examples:
+            db.add(models.Example(
+                answer_id=new_a.id,
+                number=ex.number,
+                textarea=ex.textarea,
+                transliteration=ex.transliteration,
+                gloss=ex.gloss,
+                translation=ex.translation,
+                reference=ex.reference,
+            ))
+
+        for am in a.answer_motivations:
+            db.add(models.AnswerMotivation(
+                answer_id=new_a.id,
+                motivation_id=am.motivation_id,
+            ))
+
+    # Stato di compilazione per parametro (is_unsure)
+    src_statuses = (
+        db.query(models.LanguageParameterStatus)
+        .filter(models.LanguageParameterStatus.language_id == src.id)
+        .all()
+    )
+    for s in src_statuses:
+        db.add(models.LanguageParameterStatus(
+            language_id=new_lang.id,
+            parameter_id=s.parameter_id,
+            is_unsure=s.is_unsure,
+        ))
+
+    # Valori dei parametri + valutazione DAG
+    src_params = (
+        db.query(models.LanguageParameter)
+        .filter(models.LanguageParameter.language_id == src.id)
+        .all()
+    )
+    for lp in src_params:
+        new_lp = models.LanguageParameter(
+            language_id=new_lang.id,
+            parameter_id=lp.parameter_id,
+            value_orig=lp.value_orig,
+            warning_orig=lp.warning_orig,
+        )
+        db.add(new_lp)
+        db.flush()
+        if lp.eval is not None:
+            db.add(models.LanguageParameterEval(
+                language_parameter_id=new_lp.id,
+                value_eval=lp.eval.value_eval,
+                warning_eval=lp.eval.warning_eval,
+            ))
+
+    try:
+        db.commit()
+        db.refresh(new_lang)
+        record_version(
+            db, new_lang, operation="create", source="manual",
+            user_id=current_user.id, note=f"Duplicated from {src.id}",
+        )
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not duplicate the language (data conflict).")
+
+    return {
+        "id": new_lang.id,
+        "name_full": new_lang.name_full,
+        "source_id": src.id,
+    }

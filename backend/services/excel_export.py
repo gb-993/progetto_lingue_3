@@ -85,6 +85,9 @@ QUESTIONS_HEADERS = [
 
 QUESTION_ALLOWED_MOTIVATIONS_HEADERS = ["Question ID", "Motivation Code"]
 
+# Admin-only sheet: nota libera per (lingua, parametro)
+ADMIN_NOTES_HEADERS = ["Parameter ID", "Parameter Name", "Admin Note"]
+
 # Header per la lista lingue
 LANGUAGE_LIST_HEADERS = [
     "Name",
@@ -334,6 +337,28 @@ def build_language_workbook(
                 ])
 
     _style_table(ws_ans, "Answers", len(ANSWERS_HEADERS), [14, 18, 14, 36, 18, 10, 16, 28, 26])
+
+    # === Sheet Admin Notes (admin) ===
+    # Nota libera (testo) per ogni (lingua, parametro). Vivono su
+    # LanguageParameterStatus.admin_note. Lo sheet contiene solo i parametri
+    # con una nota non vuota, ordinati come gli altri sheet.
+    ws_notes = wb.create_sheet("Admin Notes")
+    ws_notes.append(ADMIN_NOTES_HEADERS)
+    _bold_header_row(ws_notes, len(ADMIN_NOTES_HEADERS))
+
+    notes_by_pid = {
+        s.parameter_id: (s.admin_note or "")
+        for s in db.query(models.LanguageParameterStatus)
+        .filter(models.LanguageParameterStatus.language_id == lang.id)
+        .all()
+        if s.admin_note
+    }
+    for p in params:
+        note = notes_by_pid.get(p.id, "")
+        if note:
+            ws_notes.append([p.id, p.name or "", note])
+
+    _style_table(ws_notes, "AdminNotes", len(ADMIN_NOTES_HEADERS), [14, 36, 60])
 
     # === Sheet schema (Motivations, Parameters, Questions, QuestionAllowedMotivations) ===
     _append_schema_sheets(db, wb)

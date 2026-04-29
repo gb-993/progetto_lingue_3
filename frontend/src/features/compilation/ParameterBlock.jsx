@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../../api';
 import QuestionRow from './QuestionRow';
 
-export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly }) {
+export default function ParameterBlock({
+    parameter, langId, onSaved, isReadOnly,
+    isAdmin = false, onAdminNoteDirtyChange,
+}) {
     const [isSaving, setIsSaving] = useState(false);
+
+    // Admin-only: nota libera per (lingua, parametro). Il valore originale viene
+    // dal payload /compilation (solo se admin). Viene persistita insieme al
+    // save_block: il backend riceve `admin_note` nel payload e aggiorna la riga
+    // LanguageParameterStatus. Niente endpoint dedicato.
+    const initialAdminNote = parameter.admin_note || '';
+    const [adminNote, setAdminNote] = useState(initialAdminNote);
+    const [savedAdminNote, setSavedAdminNote] = useState(initialAdminNote);
+    const [adminNoteOpen, setAdminNoteOpen] = useState(initialAdminNote.length > 0);
+    const adminNoteDirty = isAdmin && adminNote !== savedAdminNote;
+
+    useEffect(() => {
+        onAdminNoteDirtyChange && onAdminNoteDirtyChange(adminNoteDirty);
+    }, [adminNoteDirty, onAdminNoteDirtyChange]);
 
     // Stato locale: mappa { [questionId]: { response_text, comments, motivation_ids, examples } }
     const [localAnswers, setLocalAnswers] = useState(() => {
@@ -37,10 +54,20 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly 
                 answers: Object.values(localAnswers),
                 expected_last_modified: blockLastModified,
             };
+            // Includi la admin_note solo se admin: il backend la ignora per gli
+            // utenti normali, ma evitiamo di mandarla del tutto per sicurezza.
+            if (isAdmin) {
+                payload.admin_note = adminNote;
+            }
             const res = await api.post(`/api/languages/${langId}/parameters/${parameter.id}/save_block`, payload);
             // Aggiorna il fingerprint locale (utile se l'utente continua senza onSaved che rimonta il componente)
             if (res.data && res.data.last_modified) {
                 setBlockLastModified(res.data.last_modified);
+            }
+            // Allinea lo stato saved della admin-note: dopo un save_block andato a
+            // buon fine la nota è persistita in DB ed equivale a quella locale.
+            if (isAdmin) {
+                setSavedAdminNote(adminNote);
             }
             onSaved();
         } catch (err) {
@@ -71,6 +98,79 @@ export default function ParameterBlock({ parameter, langId, onSaved, isReadOnly 
                 {parameter.id} — {parameter.name}
             </h3>
             <p className="muted">{parameter.short_description}</p>
+
+            {isAdmin && (
+                <div style={{
+                    marginTop: '1rem',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    background: 'var(--surface-alt, var(--surface-2))',
+                }}>
+                    <button
+                        type="button"
+                        onClick={() => setAdminNoteOpen(o => !o)}
+                        style={{
+                            width: '100%',
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '0.55rem 0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            color: 'var(--text)',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                        }}
+                        aria-expanded={adminNoteOpen}
+                    >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{
+                                fontSize: '0.7rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                color: 'var(--text-muted)',
+                            }}>
+                                Admin notes
+                            </span>
+                            {savedAdminNote && !adminNoteDirty && (
+                                <span className="status ok" style={{ fontSize: '0.7rem', padding: '0.1rem 0.45rem' }}>
+                                    saved
+                                </span>
+                            )}
+                            {adminNoteDirty && (
+                                <span className="status warn" style={{ fontSize: '0.7rem', padding: '0.1rem 0.45rem' }}>
+                                    unsaved
+                                </span>
+                            )}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                            {adminNoteOpen ? '▴' : '▾'}
+                        </span>
+                    </button>
+                    {adminNoteOpen && (
+                        <div style={{ padding: '0 0.85rem 0.85rem 0.85rem' }}>
+                            <textarea
+                                rows={3}
+                                value={adminNote}
+                                onChange={(e) => setAdminNote(e.target.value)}
+                                disabled={isSaving}
+                                placeholder="Free-text note visible only to admins. Not exported to users."
+                                style={{
+                                    width: '100%',
+                                    padding: '0.5rem',
+                                    fontSize: '0.85rem',
+                                    resize: 'vertical',
+                                    fontFamily: 'inherit',
+                                }}
+                            />
+                            <div className="small muted" style={{ marginTop: '0.35rem' }}>
+                                Saved together with the block when you click <em>Confident</em> or <em>Unsure</em> below.
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
                 {parameter.questions.map(q => (

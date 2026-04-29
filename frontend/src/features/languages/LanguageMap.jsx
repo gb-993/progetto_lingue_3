@@ -46,30 +46,38 @@ function buildTopHueMap(allTopFamilies) {
     return map;
 }
 
-function spreadByLightness(items, hue) {
-    const sorted = [...items].sort((a, b) =>
-        (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
-    );
-    const map = {};
-    sorted.forEach((item, i) => {
-        const t = sorted.length === 1 ? 0.5 : i / (sorted.length - 1);
-        const lightness = 32 + t * 38; // 32% -> 70%
-        map[item] = `hsl(${hue}, 65%, ${lightness}%)`;
+// Distribuisce la lightness all'interno di ciascun "gruppo padre" (top-family),
+// usando la hue presa da topHueMap. Così subfamily/group ereditano il colore
+// della propria top anche quando la selezione abbraccia top diverse.
+function spreadByLightnessGrouped(items, itemToTop, topHueMap) {
+    const byTop = {};
+    items.forEach(item => {
+        const top = itemToTop[item] || '';
+        if (!byTop[top]) byTop[top] = [];
+        byTop[top].push(item);
     });
-    return map;
-}
-
-function pickBaseHue(filters, languages, topHueMap) {
-    if (filters.top_family && topHueMap[filters.top_family] !== undefined) {
-        return topHueMap[filters.top_family];
-    }
-    const first = languages.find(l => l.top_level_family && topHueMap[l.top_level_family] !== undefined);
-    return first ? topHueMap[first.top_level_family] : 210;
+    const colorMap = {};
+    Object.entries(byTop).forEach(([top, list]) => {
+        const sorted = [...list].sort((a, b) =>
+            (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
+        );
+        const hue = topHueMap[top] ?? 210;
+        sorted.forEach((item, i) => {
+            const t = sorted.length === 1 ? 0.5 : i / (sorted.length - 1);
+            const lightness = 32 + t * 38; // 32% -> 70%
+            colorMap[item] = `hsl(${hue}, 65%, ${lightness}%)`;
+        });
+    });
+    return colorMap;
 }
 
 function computeColorPlan({ languages, filters, allTopFamilies }) {
     const topHueMap = buildTopHueMap(allTopFamilies);
-    const mode = filters.family ? 'group' : filters.top_family ? 'family' : 'top_family';
+    // La modalità è guidata dal filtro più "fine" attivo: group > family > top_family.
+    // Selezioni multiple sulla sola top_family non cambiano modalità (resta top-family).
+    const hasFamily = (filters.family?.length || 0) > 0;
+    const hasGroup = (filters.grp?.length || 0) > 0;
+    const mode = hasGroup ? 'group' : hasFamily ? 'family' : 'top_family';
 
     if (mode === 'top_family') {
         const tops = [...new Set(languages.map(l => l.top_level_family).filter(Boolean))]
@@ -89,28 +97,44 @@ function computeColorPlan({ languages, filters, allTopFamilies }) {
     }
 
     if (mode === 'family') {
-        const hue = pickBaseHue(filters, languages, topHueMap);
         const families = [...new Set(languages.map(l => l.family).filter(Boolean))];
-        const colorMap = spreadByLightness(families, hue);
+        const familyToTop = {};
+        languages.forEach(l => {
+            if (l.family && l.top_level_family && !familyToTop[l.family]) {
+                familyToTop[l.family] = l.top_level_family;
+            }
+        });
+        const colorMap = spreadByLightnessGrouped(families, familyToTop, topHueMap);
+        const sortedKeys = Object.keys(colorMap).sort((a, b) =>
+            (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
+        );
         return {
             mode,
             modeLabel: 'by Subfamily',
             colorOf: (l) => (l.family && colorMap[l.family]) || NULL_COLOR,
             labelOf: (l) => l.family || NULL_LABEL,
-            entries: Object.entries(colorMap).map(([key, color]) => ({ key, color })),
+            entries: sortedKeys.map(key => ({ key, color: colorMap[key] })),
         };
     }
 
     // mode === 'group'
-    const hue = pickBaseHue(filters, languages, topHueMap);
     const groups = [...new Set(languages.map(l => l.grp).filter(Boolean))];
-    const colorMap = spreadByLightness(groups, hue);
+    const groupToTop = {};
+    languages.forEach(l => {
+        if (l.grp && l.top_level_family && !groupToTop[l.grp]) {
+            groupToTop[l.grp] = l.top_level_family;
+        }
+    });
+    const colorMap = spreadByLightnessGrouped(groups, groupToTop, topHueMap);
+    const sortedKeys = Object.keys(colorMap).sort((a, b) =>
+        (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
+    );
     return {
         mode,
         modeLabel: 'by Group',
         colorOf: (l) => (l.grp && colorMap[l.grp]) || NULL_COLOR,
         labelOf: (l) => l.grp || NULL_LABEL,
-        entries: Object.entries(colorMap).map(([key, color]) => ({ key, color })),
+        entries: sortedKeys.map(key => ({ key, color: colorMap[key] })),
     };
 }
 

@@ -21,9 +21,9 @@ function StatusBadge({ status }) {
 }
 
 const INITIAL_FILTERS = {
-    top_family: '',
-    family: '',
-    grp: '',
+    top_family: [],        // multi-select: [] significa tutte
+    family: [],            // multi-select: [] significa tutte
+    grp: [],               // multi-select: [] significa tutti
     historical: 'all',     // 'all' | 'yes' | 'no'
     status: 'all',         // 'all' | pending | waiting_for_approval | approved | rejected
 };
@@ -58,6 +58,11 @@ export default function LanguageList() {
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
 
+    const reloadLanguages = async () => {
+        const res = await api.get('/api/admin/languages');
+        setLanguages(res.data || []);
+    };
+
     useEffect(() => {
         const load = async () => {
             try {
@@ -81,9 +86,61 @@ export default function LanguageList() {
         load();
     }, []);
 
+    const onDuplicate = async (lang) => {
+        const ok = window.confirm(
+            `Duplicate "${lang.name_full}" (${lang.id}) with all answers, examples and parameters?\n\n` +
+            `A new language will be created with a numeric suffix appended to id and name.`
+        );
+        if (!ok) return;
+        try {
+            const res = await api.post(`/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`);
+            await reloadLanguages();
+            alert(`Created "${res.data.name_full}" (${res.data.id}).`);
+        } catch (err) {
+            const detail = err?.response?.data?.detail || 'Could not duplicate the language.';
+            alert(detail);
+        }
+    };
+
     const handleFilter = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Cambio multi-select con pulizia transitiva: cambiando top_family invalido
+    // le subfamily/group non più appartenenti; cambiando family invalido i group.
+    const handleMultiFilter = (name, value) => {
+        setFilters(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'top_family') {
+                if (value.length > 0) {
+                    const allowedFamilies = new Set(
+                        languages
+                            .filter(l => value.includes(l.top_level_family))
+                            .map(l => l.family)
+                            .filter(Boolean)
+                    );
+                    next.family = prev.family.filter(f => allowedFamilies.has(f));
+                }
+            }
+            if (name === 'top_family' || name === 'family') {
+                const tops = next.top_family;
+                const fams = next.family;
+                if (tops.length > 0 || fams.length > 0) {
+                    const allowedGroups = new Set(
+                        languages
+                            .filter(l =>
+                                (tops.length === 0 || tops.includes(l.top_level_family)) &&
+                                (fams.length === 0 || fams.includes(l.family))
+                            )
+                            .map(l => l.grp)
+                            .filter(Boolean)
+                    );
+                    next.grp = prev.grp.filter(g => allowedGroups.has(g));
+                }
+            }
+            return next;
+        });
     };
 
     const resetAll = () => {
@@ -91,13 +148,13 @@ export default function LanguageList() {
         setSearch('');
     };
 
-    // Opzioni concatenate: subfamily ristretta dal top_family scelto,
-    // group ristretto da top_family/family scelti.
+    // Opzioni concatenate: subfamily ristretta dalle top_family scelte,
+    // group ristretto da top_family/family scelti. Array vuoto = nessun vincolo.
     const filteredFamilyOptions = useMemo(() => {
-        if (!filters.top_family) return options.opt_families;
+        if (filters.top_family.length === 0) return options.opt_families;
         const set = new Set(
             languages
-                .filter(l => l.top_level_family === filters.top_family)
+                .filter(l => filters.top_family.includes(l.top_level_family))
                 .map(l => l.family)
                 .filter(Boolean)
         );
@@ -105,12 +162,12 @@ export default function LanguageList() {
     }, [languages, options.opt_families, filters.top_family]);
 
     const filteredGroupOptions = useMemo(() => {
-        if (!filters.top_family && !filters.family) return options.opt_groups;
+        if (filters.top_family.length === 0 && filters.family.length === 0) return options.opt_groups;
         const set = new Set(
             languages
                 .filter(l =>
-                    (!filters.top_family || l.top_level_family === filters.top_family) &&
-                    (!filters.family || l.family === filters.family)
+                    (filters.top_family.length === 0 || filters.top_family.includes(l.top_level_family)) &&
+                    (filters.family.length === 0 || filters.family.includes(l.family))
                 )
                 .map(l => l.grp)
                 .filter(Boolean)
@@ -118,24 +175,11 @@ export default function LanguageList() {
         return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     }, [languages, options.opt_groups, filters.top_family, filters.family]);
 
-    // Se il filtro selezionato non è più valido dopo un cambio del padre, lo azzero.
-    useEffect(() => {
-        if (filters.family && !filteredFamilyOptions.includes(filters.family)) {
-            setFilters(prev => ({ ...prev, family: '' }));
-        }
-    }, [filteredFamilyOptions, filters.family]);
-
-    useEffect(() => {
-        if (filters.grp && !filteredGroupOptions.includes(filters.grp)) {
-            setFilters(prev => ({ ...prev, grp: '' }));
-        }
-    }, [filteredGroupOptions, filters.grp]);
-
     const filteredLanguages = useMemo(() => {
         return languages.filter(lang => {
-            if (filters.top_family && lang.top_level_family !== filters.top_family) return false;
-            if (filters.family && lang.family !== filters.family) return false;
-            if (filters.grp && lang.grp !== filters.grp) return false;
+            if (filters.top_family.length > 0 && !filters.top_family.includes(lang.top_level_family)) return false;
+            if (filters.family.length > 0 && !filters.family.includes(lang.family)) return false;
+            if (filters.grp.length > 0 && !filters.grp.includes(lang.grp)) return false;
             if (filters.historical === 'yes' && !lang.historical_language) return false;
             if (filters.historical === 'no' && lang.historical_language) return false;
             if (filters.status !== 'all' && lang.status !== filters.status) return false;
@@ -150,9 +194,9 @@ export default function LanguageList() {
     }, [languages, filters, search]);
 
     const activeFilterCount =
-        (filters.top_family ? 1 : 0) +
-        (filters.family ? 1 : 0) +
-        (filters.grp ? 1 : 0) +
+        (filters.top_family.length > 0 ? 1 : 0) +
+        (filters.family.length > 0 ? 1 : 0) +
+        (filters.grp.length > 0 ? 1 : 0) +
         (filters.historical !== 'all' ? 1 : 0) +
         (filters.status !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
@@ -324,22 +368,28 @@ export default function LanguageList() {
                         />
                     </FilterField>
                     <FilterField label="Top Family">
-                        <select name="top_family" value={filters.top_family} onChange={handleFilter} style={inputStyle}>
-                            <option value="">All</option>
-                            {options.opt_top_families.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
+                        <MultiSelect
+                            value={filters.top_family}
+                            options={options.opt_top_families}
+                            onChange={(v) => handleMultiFilter('top_family', v)}
+                            placeholder="All"
+                        />
                     </FilterField>
                     <FilterField label="Subfamily">
-                        <select name="family" value={filters.family} onChange={handleFilter} style={inputStyle}>
-                            <option value="">All</option>
-                            {filteredFamilyOptions.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
+                        <MultiSelect
+                            value={filters.family}
+                            options={filteredFamilyOptions}
+                            onChange={(v) => handleMultiFilter('family', v)}
+                            placeholder="All"
+                        />
                     </FilterField>
                     <FilterField label="Group">
-                        <select name="grp" value={filters.grp} onChange={handleFilter} style={inputStyle}>
-                            <option value="">All</option>
-                            {filteredGroupOptions.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
+                        <MultiSelect
+                            value={filters.grp}
+                            options={filteredGroupOptions}
+                            onChange={(v) => handleMultiFilter('grp', v)}
+                            placeholder="All"
+                        />
                     </FilterField>
                     <FilterField label="Historical">
                         <select name="historical" value={filters.historical} onChange={handleFilter} style={inputStyle}>
@@ -477,6 +527,14 @@ export default function LanguageList() {
                                     {isAdmin && (
                                         <>
                                             <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+                                            <button
+                                                type="button"
+                                                className="btn"
+                                                onClick={() => onDuplicate(lang)}
+                                                title="Duplicate this language with all its answers, examples and parameters"
+                                            >
+                                                Duplicate
+                                            </button>
                                             <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
                                         </>
                                     )}
@@ -505,6 +563,145 @@ function FilterField({ label, children }) {
                 {label}
             </label>
             {children}
+        </div>
+    );
+}
+
+function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const onDocClick = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [open]);
+
+    const toggle = (opt) => {
+        if (value.includes(opt)) onChange(value.filter(v => v !== opt));
+        else onChange([...value, opt]);
+    };
+
+    const clear = (e) => {
+        e.stopPropagation();
+        onChange([]);
+    };
+
+    const label = value.length === 0
+        ? placeholder
+        : value.length <= 2
+            ? value.join(', ')
+            : `${value.slice(0, 2).join(', ')} +${value.length - 2}`;
+
+    return (
+        <div ref={ref} style={{ position: 'relative' }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                style={{
+                    ...inputStyle,
+                    textAlign: 'left',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.35rem',
+                    color: value.length === 0 ? 'var(--text-muted)' : 'var(--text)',
+                    overflow: 'hidden',
+                }}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                title={value.length > 0 ? value.join(', ') : ''}
+            >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {label}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                    {value.length > 0 && (
+                        <span
+                            onClick={clear}
+                            role="button"
+                            aria-label="Clear"
+                            title="Clear"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                background: 'var(--surface-2)',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.7rem',
+                                lineHeight: 1,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            ×
+                        </span>
+                    )}
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>▾</span>
+                </span>
+            </button>
+            {open && (
+                <div
+                    role="listbox"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        minWidth: '100%',
+                        maxHeight: 280,
+                        overflowY: 'auto',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '6px',
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                        zIndex: 60,
+                    }}
+                >
+                    {options.length === 0 ? (
+                        <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            No options
+                        </div>
+                    ) : options.map(opt => {
+                        const checked = value.includes(opt);
+                        return (
+                            <label
+                                key={opt}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.45rem 0.75rem',
+                                    fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    background: checked ? 'var(--surface-2)' : 'transparent',
+                                }}
+                                onMouseEnter={(e) => { if (!checked) e.currentTarget.style.background = 'var(--surface-2)'; }}
+                                onMouseLeave={(e) => { if (!checked) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggle(opt)}
+                                    style={{ flexShrink: 0 }}
+                                />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {opt}
+                                </span>
+                            </label>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

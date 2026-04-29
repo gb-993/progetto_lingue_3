@@ -78,6 +78,9 @@ class QuestionAnswerPayload(BaseModel):
 class ParameterBlockSavePayload(BaseModel):
     answers: List[QuestionAnswerPayload]
     is_unsure: bool
+    # Nota libera admin-only per (lingua, parametro). None = non passare in update;
+    # stringa vuota = svuotare la nota. Ignorata per utenti non admin.
+    admin_note: Optional[str] = None
     # Timestamp del blocco visto dal client al caricamento (ISO 8601). Se al save
     # il MAX(updated_at) corrente è diverso, qualcun altro ha modificato nel mentre:
     # rispondiamo 409 e il client deve ricaricare prima di sovrascrivere.
@@ -186,9 +189,11 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     )
     ans_dict = {a.question_id: a for a in answers}
 
-    # Carica gli stati "unsure" dei parametri
+    # Carica gli stati "unsure" dei parametri (e admin_note solo per admin)
     statuses = db.query(models.LanguageParameterStatus).filter(models.LanguageParameterStatus.language_id == language.id).all()
     status_dict = {s.parameter_id: s.is_unsure for s in statuses}
+    is_admin = current_user.role == "admin"
+    admin_note_dict = {s.parameter_id: (s.admin_note or "") for s in statuses} if is_admin else {}
 
     result = {
         "language": {
@@ -246,6 +251,8 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "last_modified": block_last_modified.isoformat() if block_last_modified else None,
             "questions": []
         }
+        if is_admin:
+            param_data["admin_note"] = admin_note_dict.get(p.id, "")
         for q in active_questions:
             q_data = {
                 "id": q.id, "text": q.text, "instruction": q.instruction,
@@ -308,7 +315,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
                 }
             )
 
-    # 1. Aggiorna o crea il flag Unsure
+    # 1. Aggiorna o crea il flag Unsure (e admin_note se admin)
     status_entry = db.query(models.LanguageParameterStatus).filter(
         models.LanguageParameterStatus.language_id == language.id,
         models.LanguageParameterStatus.parameter_id == param_id
@@ -317,6 +324,10 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         status_entry = models.LanguageParameterStatus(language_id=language.id, parameter_id=param_id)
         db.add(status_entry)
     status_entry.is_unsure = payload.is_unsure
+    # admin_note: solo per admin e solo se il client lo passa esplicitamente
+    if current_user.role == "admin" and payload.admin_note is not None:
+        note = payload.admin_note.strip()
+        status_entry.admin_note = note or None
 
     # 2. Salva tutte le risposte fornite. Per ogni risposta toccata teniamo
     #    traccia di (answer, was_new, old_snapshot) così a fine ciclo possiamo
@@ -396,6 +407,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         "detail": "Parameter saved successfully",
         "last_modified": _block_last_modified_iso(db, language.id, param_id)
     }
+
 
 # --- WORKFLOW ENDPOINTS ---
 class RejectPayload(BaseModel):

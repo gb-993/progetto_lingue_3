@@ -142,12 +142,17 @@ class ParamLevelOfComparison(Base):
 
 
 class LanguageParameterStatus(Base):
-    """Traccia lo stato di completamento/revisione di un parametro per una lingua"""
+    """Traccia lo stato di completamento/revisione di un parametro per una lingua.
+
+    Contiene anche la `admin_note`: un testo libero per (lingua, parametro)
+    visibile e modificabile solo dagli admin.
+    """
     __tablename__ = "language_parameter_statuses"
     id = Column(Integer, primary_key=True)
     language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
     is_unsure = Column(Boolean, default=False)
+    admin_note = Column(Text, nullable=True)
 
     __table_args__ = (UniqueConstraint('language_id', 'parameter_id', name='uq_lang_param_status'),)
 

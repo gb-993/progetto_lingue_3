@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../api';
 import ParameterBlock from './ParameterBlock';
@@ -33,6 +33,40 @@ export default function LanguageData() {
     const [actionInProgress, setActionInProgress] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectNote, setRejectNote] = useState('');
+    // Tracciamento delle modifiche non salvate alla admin-note del parametro corrente.
+    // Sollevato dal ParameterBlock per intercettare cambi parametro / chiusura pagina.
+    const [adminNoteDirty, setAdminNoteDirty] = useState(false);
+
+    useEffect(() => {
+        if (!adminNoteDirty) return;
+        const handler = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [adminNoteDirty]);
+
+    const confirmDiscardAdminNote = () => {
+        if (!adminNoteDirty) return true;
+        return window.confirm(
+            'You have an unsaved admin note for this parameter. Discard the changes and continue?'
+        );
+    };
+
+    // Scroll automatico in cima al wizard quando si cambia parametro.
+    // Evitato al primo mount così l'utente non viene "saltato" su all'apertura.
+    const wizardTopRef = useRef(null);
+    const skipScrollRef = useRef(true);
+    useEffect(() => {
+        if (skipScrollRef.current) {
+            skipScrollRef.current = false;
+            return;
+        }
+        if (wizardTopRef.current) {
+            wizardTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [activeIndex]);
 
     const fetchCompilationData = async () => {
         try {
@@ -272,7 +306,7 @@ export default function LanguageData() {
             )}
 
             {/* Navigazione Wizard (Quadratini) */}
-            <div className="param-nav">
+            <div ref={wizardTopRef} className="param-nav" style={{ scrollMarginTop: '1rem' }}>
                 {parameters.map((p, idx) => {
                     const { answered = 0, total = 0 } = p.stats || {};
                     const isFlagged = p.is_flagged || false;
@@ -289,7 +323,12 @@ export default function LanguageData() {
                     return (
                         <button
                             key={p.id}
-                            onClick={() => setActiveIndex(idx)}
+                            onClick={() => {
+                                if (idx === activeIndex) return;
+                                if (!confirmDiscardAdminNote()) return;
+                                setAdminNoteDirty(false);
+                                setActiveIndex(idx);
+                            }}
                             className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}`}
                             title={isFlagged ? "Marked as unsure" : `Progress: ${answered}/${total}`}
                         >
@@ -306,9 +345,19 @@ export default function LanguageData() {
                     parameter={currentParam}
                     langId={language.id}
                     isReadOnly={isReadOnly}
-                    onSaved={() => {
-                        fetchCompilationData();
-                        if (activeIndex < parameters.length - 1) setActiveIndex(activeIndex + 1);
+                    isAdmin={isAdmin}
+                    onAdminNoteDirtyChange={setAdminNoteDirty}
+                    onSaved={async () => {
+                        // Aspetta il refetch PRIMA di cambiare parametro: altrimenti
+                        // setLoading(true) di fetchCompilationData smonta il wizard
+                        // (`Loading...` lo sostituisce) e il ref usato per lo scroll
+                        // diventa null nel render in cui activeIndex cambia,
+                        // facendo perdere lo scroll automatico in cima.
+                        await fetchCompilationData();
+                        if (activeIndex < parameters.length - 1) {
+                            setAdminNoteDirty(false);
+                            setActiveIndex(activeIndex + 1);
+                        }
                     }}
                 />
             )}
