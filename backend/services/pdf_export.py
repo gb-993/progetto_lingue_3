@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Iterable
 
 from fpdf import FPDF
+from fpdf.fonts import FontFace
 
 
 def _font_dir() -> str:
@@ -230,54 +231,33 @@ def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
     pdf.ln(2)
 
     # Colonne dell'indice: larghezze ottimizzate per A4 portrait (~190mm utili)
-    cols = [
-        ("ID", 18),
-        ("Name", 60),
-        ("Schema", 32),
-        ("Type", 30),
-        ("Level", 28),
-        ("Status", 22),
-    ]
-    # Header riga tabella
-    pdf.set_font(FONT_FAMILY, style="B", size=9)
-    pdf.set_text_color(97, 101, 107)
-    pdf.set_fill_color(248, 249, 250)
-    pdf.set_draw_color(218, 221, 226)
-    for label, w in cols:
-        pdf.cell(w, 7, label, border=1, fill=True)
-    pdf.ln(7)
+    col_widths = (18, 60, 32, 30, 28, 22)
+    headers = ("ID", "Name", "Schema", "Type", "Level", "Status")
 
-    # Righe dati
     pdf.set_font(FONT_FAMILY, size=9)
     pdf.set_text_color(27, 29, 32)
-    for p in parameters:
-        # Calcolo numero di righe necessarie per la riga più lunga (Name)
-        name_lines = pdf.multi_cell(
-            cols[1][1], 5, str(p.name or "-"), border=0, align="L",
-            split_only=True,
-        )
-        row_h = max(6, 5 * len(name_lines))
+    pdf.set_draw_color(218, 221, 226)
 
-        # Salvataggio Y di partenza per allineare verticalmente le celle
-        y_start = pdf.get_y()
-        x_start = pdf.get_x()
-
-        def cell_text(value: str, w: float) -> None:
-            x = pdf.get_x()
-            y = pdf.get_y()
-            pdf.multi_cell(w, 5, str(value or "-"), border=1, align="L")
-            # multi_cell sposta y; riposiziono accanto
-            pdf.set_xy(x + w, y)
-
-        cell_text(str(p.id), cols[0][1])
-        cell_text(p.name, cols[1][1])
-        cell_text(p.schema, cols[2][1])
-        cell_text(p.param_type, cols[3][1])
-        cell_text(p.level_of_comparison, cols[4][1])
-        cell_text("Active" if p.is_active else "Disabled", cols[5][1])
-
-        # Sposto a riga successiva (la cella più alta determina l'altezza)
-        pdf.set_xy(x_start, y_start + row_h)
+    # API nativa fpdf2: gestisce word-wrap, page break per riga intera,
+    # ripetizione automatica dell'header su ogni pagina.
+    with pdf.table(
+        col_widths=col_widths,
+        headings_style=FontFace(emphasis="B", color=(97, 101, 107), fill_color=(248, 249, 250)),
+        line_height=5,
+        text_align="LEFT",
+        first_row_as_headings=True,
+    ) as table:
+        head = table.row()
+        for h in headers:
+            head.cell(h)
+        for p in parameters:
+            row = table.row()
+            row.cell(str(p.id))
+            row.cell(str(p.name or "-"))
+            row.cell(str(p.schema or "-"))
+            row.cell(str(p.param_type or "-"))
+            row.cell(str(p.level_of_comparison or "-"))
+            row.cell("Active" if p.is_active else "Disabled")
 
     pdf.ln(6)
 
@@ -349,22 +329,32 @@ def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
             pdf.add_page()
 
         # Header parametro: ID grosso colorato + Name grigio + badge status sulla riga
+        header_y = pdf.get_y()
         pdf.set_font(FONT_FAMILY, style="B", size=15)
         pdf.set_text_color(209, 65, 36)
         id_w = pdf.get_string_width(str(p.id) + "  ")
         pdf.cell(id_w, 9, str(p.id), ln=False)
-        pdf.set_font(FONT_FAMILY, style="B", size=12)
-        pdf.set_text_color(27, 29, 32)
-        # Calcolo larghezza disponibile per il nome (riservo spazio al badge)
+
+        # Badge status piazzato a destra prima, così il nome può andare a capo
+        # nello spazio rimanente senza sforare l'A4.
         badge_label = "Active" if p.is_active else "Disabled"
         pdf.set_font(FONT_FAMILY, style="B", size=8)
         badge_w = pdf.get_string_width(badge_label) + 6
-        pdf.set_font(FONT_FAMILY, style="B", size=12)
         name_w = page_width - id_w - badge_w - 2
-        pdf.cell(name_w, 9, str(p.name or ""), ln=False)
-        # Badge a destra
+
+        # Nome con word-wrap (multi_cell). new_x/new_y posizionano il cursore
+        # subito dopo il nome senza scendere a capo, così il badge resta in linea.
+        pdf.set_font(FONT_FAMILY, style="B", size=12)
+        pdf.set_text_color(27, 29, 32)
+        name_x = pdf.get_x()
+        pdf.multi_cell(name_w, 7, str(p.name or ""), align="L",
+                       new_x="RIGHT", new_y="TOP", max_line_height=7)
+
+        # Allinea il badge al bordo destro sulla riga d'intestazione
+        pdf.set_xy(pdf.l_margin + page_width - badge_w, header_y + 2)
         status_badge(p.is_active)
-        pdf.ln(11)
+        # Vai sotto la sezione header (almeno una riga di nome)
+        pdf.set_y(max(pdf.get_y(), header_y) + 9)
 
         # Basic info
         section_title("Basic Information")
