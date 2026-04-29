@@ -102,7 +102,17 @@ const router = createBrowserRouter([
 
             { path: 'admin/parameters', element: <AdminRoute><Layout><ParameterList /></Layout></AdminRoute> },
             { path: 'admin/parameters/add', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
-            { path: 'admin/parameters/:id/edit', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
+            // Edit di un parametro: la rotta ha figli nested per la edit/aggiunta
+            // di una question, che vengono renderizzate come drawer sopra il
+            // parametro stesso (vedi ParameterForm + Drawer).
+            {
+                path: 'admin/parameters/:id/edit',
+                element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute>,
+                children: [
+                    { path: 'questions/add', element: <QuestionForm mode="drawer" /> },
+                    { path: 'questions/:qid/edit', element: <QuestionForm mode="drawer" /> },
+                ],
+            },
 
             { path: 'admin/questions', element: <AdminRoute><Layout><QuestionList /></Layout></AdminRoute> },
             { path: 'admin/questions/add', element: <AdminRoute><Layout><QuestionForm /></Layout></AdminRoute> },

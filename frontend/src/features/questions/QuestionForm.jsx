@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
-import Select from 'react-select';
+import Select, { components as RSComponents } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
@@ -12,12 +12,23 @@ const Q_DRAFT_FIELDS = [
     'example_yes', 'help_info', 'is_stop_question',
 ];
 
-export default function QuestionForm() {
-    const { id } = useParams();
+export default function QuestionForm({ mode = 'page' }) {
+    // Il QuestionForm vive in due modalità:
+    //  - "page"   → rotta autonoma /admin/questions/:id/edit (param: id)
+    //  - "drawer" → rotta nested /admin/parameters/:id/edit/questions/:qid/edit
+    //               (param: id=parameterId, qid=questionId). In add: solo :id.
+    // Usiamo nomi di param distinti (id vs qid) per non shadoware l'id del
+    // parametro genitore quando siamo dentro la nested route.
+    const params = useParams();
+    const isDrawerMode = mode === 'drawer';
+    const id = isDrawerMode ? params.qid : params.id;
+    // In drawer mode il parameterId arriva dal route parent (params.id).
+    // In page mode, lo si passa via querystring ?param_id=...
+    const drawerParentParamId = isDrawerMode ? params.id : null;
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
     const [searchParams] = useSearchParams();
-    const paramFromUrl = searchParams.get('param_id');
+    const paramFromUrl = searchParams.get('param_id') || drawerParentParamId;
 
     const [initialData, setInitialData] = useState(null);
     const [formData, setFormData] = useState({
@@ -43,6 +54,15 @@ export default function QuestionForm() {
 
     const [showCreator, setShowCreator] = useState(false);
     const [newMotData, setNewMotData] = useState({ code: '', label: '' });
+
+    // Editor inline di una motivation esistente (clic sul chip selezionato).
+    // Distinto dal "creator": qui modifichiamo o eliminiamo, non creiamo.
+    // Le modifiche al code/label si propagano ovunque la motivation sia
+    // referenziata: l'utente vede un warning prima di salvare.
+    const [editingMotivationId, setEditingMotivationId] = useState(null);
+    const [editMotData, setEditMotData] = useState({ code: '', label: '' });
+    const [motSaving, setMotSaving] = useState(false);
+    const [motDeleting, setMotDeleting] = useState(false);
 
     // Stati per Audit Log (mutuati da ParameterForm)
     const [changeNote, setChangeNote] = useState('');
@@ -73,9 +93,13 @@ export default function QuestionForm() {
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // Usiamo /with-usage anziché l'endpoint base così abbiamo
+                // `linked_questions` per ogni motivation: serve nel modal di
+                // edit per mostrare quante altre domande sono toccate dalla
+                // modifica e per il blocco preventivo della delete.
                 const [paramsRes, motsRes, qsRes] = await Promise.all([
                     api.get('/api/admin/parameters'),
-                    api.get('/api/admin/motivations'),
+                    api.get('/api/admin/motivations/with-usage'),
                     api.get('/api/admin/questions')
                 ]);
                 setParameters(paramsRes.data || []);
@@ -289,6 +313,100 @@ export default function QuestionForm() {
         setShowCreator(true);
     };
 
+    // --- EDIT/DELETE INLINE DI UNA MOTIVATION ESISTENTE ---
+    // Apre il modal di edit per la motivation cliccata sul chip selezionato.
+    // useCallback così l'identità non cambia a ogni render: il custom
+    // MultiValueLabel di react-select dipende da questo handler.
+    const openMotivationEditor = useCallback((motivationId) => {
+        const m = allMotivations.find(x => x.id === motivationId);
+        if (!m) return;
+        setEditingMotivationId(motivationId);
+        setEditMotData({ code: m.code || '', label: m.label || '' });
+    }, [allMotivations]);
+
+    const closeMotivationEditor = () => {
+        if (motSaving || motDeleting) return; // non chiudere durante un'azione
+        setEditingMotivationId(null);
+        setEditMotData({ code: '', label: '' });
+    };
+
+    const saveEditedMotivation = async () => {
+        if (!editingMotivationId) return;
+        const code = (editMotData.code || '').trim().toUpperCase();
+        const label = (editMotData.label || '').trim();
+        if (!code || !label) return;
+        setMotSaving(true);
+        try {
+            const res = await api.put(`/api/admin/motivations/${editingMotivationId}`, { code, label });
+            // Aggiorniamo la lista locale così il chip mostra subito il nuovo
+            // testo. `linked_questions` viene preservato dalla risposta server
+            // (con-usage) o lasciato com'è (PUT base): la fonte di verità è il
+            // server, qui ci basta che la UI rifletta i nuovi code/label.
+            setAllMotivations(prev => prev.map(m =>
+                m.id === editingMotivationId
+                    ? { ...m, ...res.data, linked_questions: m.linked_questions }
+                    : m
+            ));
+            setEditingMotivationId(null);
+            setEditMotData({ code: '', label: '' });
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Errore nel salvataggio della motivation.');
+        } finally {
+            setMotSaving(false);
+        }
+    };
+
+    const deleteCurrentMotivation = async () => {
+        if (!editingMotivationId) return;
+        const m = allMotivations.find(x => x.id === editingMotivationId);
+        const linked = m?.linked_questions?.length || 0;
+        const confirmMsg = linked > 1
+            ? `Questa motivation è usata da ${linked} domande. Eliminandola la rimuoveresti da tutte. Continuare?`
+            : 'Eliminare questa motivation? L\'operazione viene bloccata se è usata da altre domande.';
+        if (!window.confirm(confirmMsg)) return;
+        setMotDeleting(true);
+        try {
+            await api.delete(`/api/admin/motivations/${editingMotivationId}`);
+            // Rimuovi dalla lista globale e dalla selezione corrente
+            setAllMotivations(prev => prev.filter(x => x.id !== editingMotivationId));
+            setFormData(prev => ({
+                ...prev,
+                allowed_motivations: prev.allowed_motivations.filter(id => id !== editingMotivationId),
+            }));
+            setEditingMotivationId(null);
+            setEditMotData({ code: '', label: '' });
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Eliminazione bloccata: la motivation è in uso.');
+        } finally {
+            setMotDeleting(false);
+        }
+    };
+
+    // Custom chip di react-select: l'intera label è cliccabile e apre l'editor
+    // della motivation. La "x" di rimozione locale (MultiValueRemove) resta
+    // intatta — la distinzione è chiara: x = rimuovi da QUESTA domanda;
+    // click sul testo = modifica/elimina globalmente.
+    const motivationSelectComponents = useMemo(() => ({
+        MultiValueLabel: (props) => (
+            <div
+                onClick={(e) => {
+                    e.stopPropagation();
+                    openMotivationEditor(props.data.value);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    textUnderlineOffset: '3px',
+                }}
+                title="Clicca per modificare o eliminare globalmente questa motivation"
+            >
+                <RSComponents.MultiValueLabel {...props} />
+            </div>
+        ),
+    }), [openMotivationEditor]);
+
     const saveNewMotivation = async () => {
         if (!newMotData.code || !newMotData.label) return;
         try {
@@ -382,7 +500,7 @@ export default function QuestionForm() {
         : (paramFromUrl ? `/admin/parameters/${paramFromUrl}/edit` : '/admin/questions');
 
     return (
-        <div className="container" style={{ maxWidth: '900px', marginTop: '2rem', position: 'relative' }}>
+        <div className="container" style={{ maxWidth: '900px', marginTop: isDrawerMode ? 0 : '2rem', position: 'relative' }}>
             <div className="card">
                 <header style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                     <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
@@ -545,7 +663,12 @@ export default function QuestionForm() {
                             onCreateOption={handleCreateOption}
                             placeholder="Search or create motivation..."
                             formatCreateLabel={(inputValue) => `Create new: "${inputValue.toUpperCase()}"`}
+                            components={motivationSelectComponents}
                         />
+                        <p className="small muted" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
+                            Suggerimento: clicca il <em>testo</em> di un chip per modificare o eliminare la motivation
+                            globalmente; clicca la <em>×</em> per rimuoverla solo da questa domanda.
+                        </p>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
@@ -674,6 +797,90 @@ export default function QuestionForm() {
                     </div>
                 </div>
             )}
+
+            {/* MODAL EDIT/DELETE MOTIVATION ESISTENTE
+                Aperto dal click sul testo di un chip selezionato.
+                Le modifiche al code/label si propagano ovunque la motivation
+                sia referenziata: viene mostrato il warning prima di salvare.
+                La delete è bloccata server-side se la motivation è in uso. */}
+            {editingMotivationId && (() => {
+                const m = allMotivations.find(x => x.id === editingMotivationId);
+                const linkedCount = m?.linked_questions?.length || 0;
+                const linkedOthers = (m?.linked_questions || []).filter(qid => qid !== id);
+                return (
+                    <div style={modalOverlayStyle}>
+                        <div className="card" style={{ width: '460px' }}>
+                            <h3 style={{ marginTop: 0 }}>Modifica motivation</h3>
+                            <div className="alert alert-warning" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
+                                <strong>Attenzione.</strong> Le modifiche al <em>code</em> o al <em>label</em>
+                                sono globali: si propagano in tutte le risposte già date e in tutte le
+                                domande che la usano. {linkedCount > 0 && (
+                                    <>Questa motivation è attualmente collegata a <strong>{linkedCount}</strong>{' '}
+                                    domand{linkedCount === 1 ? 'a' : 'e'}
+                                    {linkedOthers.length > 0 && (
+                                        <> (oltre a quella corrente: {linkedOthers.slice(0, 3).join(', ')}
+                                            {linkedOthers.length > 3 ? ` e altre ${linkedOthers.length - 3}` : ''})</>
+                                    )}.</>
+                                )}
+                            </div>
+
+                            <div style={{ marginBottom: '1rem' }}>
+                                <label className="small" style={{ fontWeight: 'bold' }}>Code</label>
+                                <input
+                                    type="text"
+                                    value={editMotData.code}
+                                    onChange={e => setEditMotData({ ...editMotData, code: e.target.value.toUpperCase() })}
+                                    disabled={motSaving || motDeleting}
+                                    style={{ width: '100%', padding: '0.4rem' }}
+                                />
+                            </div>
+                            <div style={{ marginBottom: '1.2rem' }}>
+                                <label className="small" style={{ fontWeight: 'bold' }}>Description (Label)</label>
+                                <textarea
+                                    rows="3"
+                                    value={editMotData.label}
+                                    onChange={e => setEditMotData({ ...editMotData, label: e.target.value })}
+                                    disabled={motSaving || motDeleting}
+                                    style={{ width: '100%', padding: '0.4rem' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn--danger"
+                                    style={{ color: 'red', borderColor: 'red' }}
+                                    onClick={deleteCurrentMotivation}
+                                    disabled={motSaving || motDeleting}
+                                    title={linkedCount > 1
+                                        ? `Bloccata se in uso da altre domande (${linkedCount} link)`
+                                        : 'Elimina globalmente questa motivation'}
+                                >
+                                    {motDeleting ? 'Eliminazione...' : 'Elimina globalmente'}
+                                </button>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button
+                                        type="button"
+                                        className="btn"
+                                        onClick={closeMotivationEditor}
+                                        disabled={motSaving || motDeleting}
+                                    >
+                                        Annulla
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn--primary"
+                                        onClick={saveEditedMotivation}
+                                        disabled={motSaving || motDeleting || !editMotData.code.trim() || !editMotData.label.trim()}
+                                    >
+                                        {motSaving ? 'Salvataggio...' : 'Salva modifiche'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, Link, useOutlet } from 'react-router-dom';
 import api from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
+import Drawer from '../../components/Drawer';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -28,6 +29,11 @@ export default function ParameterForm() {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
+    // Se attiva, una nested route (questions/add o questions/:qid/edit)
+    // viene mostrata sopra come drawer. `outlet` è l'elemento React della
+    // child route oppure null.
+    const outlet = useOutlet();
+    const isDrawerOpen = !!outlet;
 
     const [initialData, setInitialData] = useState(null);
     const [formData, setFormData] = useState({
@@ -101,6 +107,30 @@ export default function ParameterForm() {
         };
         fetchInitialData();
     }, [id, isEditMode]);
+
+    // Quando il drawer si chiude (es. dopo save di una question dentro la
+    // nested route), ricarichiamo soltanto la lista delle question del
+    // parametro così i nomi/stati appena modificati si riflettono nella UI.
+    // Volutamente non ri-fetchamo l'intero parametro: sovrascriverebbe le
+    // modifiche eventualmente in corso sui suoi campi.
+    const wasDrawerOpenRef = useRef(false);
+    useEffect(() => {
+        const wasOpen = wasDrawerOpenRef.current;
+        wasDrawerOpenRef.current = isDrawerOpen;
+        if (!wasOpen || isDrawerOpen || !isEditMode || !id) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const paramRes = await api.get(`/api/admin/parameters/${id}`);
+                if (cancelled) return;
+                setQuestions(paramRes.data.questions || []);
+                // Aggiorniamo anche i log: il salvataggio di una question
+                // aggiunge un'entry alla history del parametro genitore.
+                setChangeLogs(paramRes.data.change_logs || []);
+            } catch { /* ignore: la prossima azione lo riproverà */ }
+        })();
+        return () => { cancelled = true; };
+    }, [isDrawerOpen, isEditMode, id]);
 
     // --- DEBOUNCE PER IL TUO PARSER PYTHON ---
     useEffect(() => {
@@ -282,6 +312,7 @@ export default function ParameterForm() {
     };
 
     return (
+        <>
         <div className="container" style={{maxWidth: '1200px', marginTop: '2rem', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem'}}>
 
             {/* MODAL DISATTIVAZIONE */}
@@ -546,7 +577,7 @@ export default function ParameterForm() {
                                                     <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
-                                                    <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
+                                                    <Link to={`/admin/parameters/${id}/edit/questions/${encodeURIComponent(q.id)}/edit`} className="btn btn--small">Edit</Link>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleToggleQuestionActive(q.id, q.is_active)}
@@ -576,7 +607,7 @@ export default function ParameterForm() {
                                                     <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
                                                 <div style={{ flex: '0 0 auto', display: 'flex', gap: '0.5rem' }}>
-                                                    <Link to={`/admin/questions/${q.id}/edit`} className="btn btn--small">Edit</Link>
+                                                    <Link to={`/admin/parameters/${id}/edit/questions/${encodeURIComponent(q.id)}/edit`} className="btn btn--small">Edit</Link>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleToggleQuestionActive(q.id, q.is_active)}
@@ -597,7 +628,7 @@ export default function ParameterForm() {
 
                         <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
                             {/* Assicurati che in React Router tu abbia una rotta per /admin/questions/add */}
-                            <Link to={`/admin/questions/add?param_id=${id}`} className="btn btn--primary">
+                            <Link to={`/admin/parameters/${id}/edit/questions/add`} className="btn btn--primary">
                                 Add a new question
                             </Link>
                         </div>
@@ -623,6 +654,20 @@ export default function ParameterForm() {
                 </div>
             </aside>
         </div>
+
+        {/* DRAWER per la edit/aggiunta di una question dentro questo parametro.
+            Si apre quando una nested route (questions/add o questions/:qid/edit)
+            è attiva. Chiusura → torna alla rotta parent; il guard delle
+            modifiche non salvate vive nel QuestionForm e intercetta da solo
+            la transizione. */}
+        <Drawer
+            open={isDrawerOpen}
+            onClose={() => navigate(`/admin/parameters/${id}/edit`)}
+            ariaLabel="Modifica domanda"
+        >
+            {outlet}
+        </Drawer>
+        </>
     );
 }
 

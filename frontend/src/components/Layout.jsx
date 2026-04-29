@@ -42,7 +42,16 @@ const PATH_LABELS = {
 };
 
 function Breadcrumb({ pathname }) {
-    const segments = pathname.split('/').filter(Boolean);
+    // Quando siamo dentro una nested route che si presenta come drawer
+    // (es. /admin/parameters/P12/edit/questions/P12_Qa/edit), il breadcrumb
+    // deve riflettere la pagina di contesto (il parametro), non l'overlay
+    // temporaneo. Tronchiamo il pathname al segmento parent.
+    const drawerMatch = pathname.match(
+        /^(\/admin\/parameters\/[^/]+\/edit)\/questions\b/
+    );
+    const effectivePath = drawerMatch ? drawerMatch[1] : pathname;
+
+    const segments = effectivePath.split('/').filter(Boolean);
     const crumbs = [{ to: '/dashboard', label: 'Dashboard', clickable: true }];
     let acc = '';
 

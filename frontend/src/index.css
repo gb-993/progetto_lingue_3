@@ -2024,3 +2024,71 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
     gap: 1rem;
   }
 }
+
+/* =============================================================================
+ * Drawer (pannello laterale a scorrimento)
+ * Usato per aprire la edit di una question dentro la edit del suo parametro,
+ * senza staccare l'utente dal contesto. Vedi components/Drawer.jsx.
+ * ============================================================================= */
+.drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+}
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  animation: drawer-fade-in 0.18s ease-out;
+}
+.drawer-panel {
+  position: relative;
+  background: var(--surface, #ffffff);
+  color: var(--text, inherit);
+  width: min(960px, 92vw);
+  height: 100%;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+  animation: drawer-slide-in 0.22s cubic-bezier(.2,.7,.2,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+.drawer-close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.85rem;
+  z-index: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+.drawer-close:hover {
+  color: var(--text);
+  background: var(--surface-2, rgba(0,0,0,0.06));
+}
+@keyframes drawer-slide-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes drawer-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer-panel {
+    animation: none;
+  }
+}
