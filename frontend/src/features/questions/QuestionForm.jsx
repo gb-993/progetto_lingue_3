@@ -4,6 +4,8 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
+import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
+import DraftIndicator from '../../components/DraftIndicator';
 
 const Q_DRAFT_FIELDS = [
     'text', 'instruction', 'instruction_yes', 'instruction_no',
@@ -53,7 +55,7 @@ export default function QuestionForm() {
     const draftKey = isEditMode
         ? `draft_question_${id}`
         : `draft_question_new_${formData.parameter_id || paramFromUrl || 'noparam'}`;
-    const { clearDraft } = useFormDraft({
+    const { clearDraft, lastSavedAt } = useFormDraft({
         storageKey: draftKey,
         formData,
         setFormData,
@@ -357,6 +359,24 @@ export default function QuestionForm() {
         !isArraysEqual(formData.allowed_motivations, initialData.allowed_motivations)
     ));
 
+    // Variante per il guard: in creazione "dirty" se almeno un campo
+    // tracciato è stato compilato. Senza questo, il guard scatterebbe anche
+    // quando l'utente è appena arrivato sulla pagina e non ha toccato nulla.
+    const isCreatingDirty = !isEditMode && (
+        Q_DRAFT_FIELDS.some(f => {
+            const v = formData[f];
+            if (v === null || v === undefined || v === '' || v === false) return false;
+            if (typeof v === 'string') return v.trim().length > 0;
+            return true;
+        }) || (formData.allowed_motivations || []).length > 0
+    );
+    const isDirtyForGuard = isEditMode ? !!isDirty : isCreatingDirty;
+
+    // Doppia rete: beforeunload (chiusura tab/refresh) + useBlocker (Link,
+    // breadcrumb, back-button). Disattivata durante save o clone in corso
+    // così il navigate volontario post-azione non viene bloccato da se stesso.
+    useUnsavedChangesGuard(isDirtyForGuard && !isLoading && !cloning);
+
     const cancelLink = formData.parameter_id
         ? `/admin/parameters/${formData.parameter_id}/edit`
         : (paramFromUrl ? `/admin/parameters/${paramFromUrl}/edit` : '/admin/questions');
@@ -364,8 +384,9 @@ export default function QuestionForm() {
     return (
         <div className="container" style={{ maxWidth: '900px', marginTop: '2rem', position: 'relative' }}>
             <div className="card">
-                <header style={{ marginBottom: '1.5rem'}}>
-                    <h2>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
+                <header style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                    <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
+                    <DraftIndicator lastSavedAt={lastSavedAt} />
                 </header>
 
                 {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}

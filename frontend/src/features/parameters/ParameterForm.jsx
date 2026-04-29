@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
+import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
+import DraftIndicator from '../../components/DraftIndicator';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -41,6 +43,9 @@ export default function ParameterForm() {
     const [usage, setUsage] = useState([]);
     const [error, setError] = useState('');
     const [syntaxError, setSyntaxError] = useState('');
+    // Disattiva il guard "modifiche non salvate" durante un submit in corso
+    // (altrimenti il navigate post-save verrebbe bloccato da se stesso).
+    const [isSaving, setIsSaving] = useState(false);
 
     const [lookups, setLookups] = useState({ schemas: [], types: [], levels: [] });
     const [newLookupInputs, setNewLookupInputs] = useState({ schema: '', type: '', level: '' });
@@ -51,7 +56,7 @@ export default function ParameterForm() {
     const [draftReady, setDraftReady] = useState(false);
 
     // Persistenza locale della bozza: chiave per-id (o "new" in creazione)
-    const { clearDraft } = useFormDraft({
+    const { clearDraft, lastSavedAt } = useFormDraft({
         storageKey: `draft_parameter_${id || 'new'}`,
         formData,
         setFormData,
@@ -144,6 +149,7 @@ export default function ParameterForm() {
             alert("Fix the syntax errors in the formula before saving!");
             return;
         }
+        setIsSaving(true);
         try {
             const payload = { ...formData, position: parseInt(formData.position, 10), change_note: changeNote };
             isEditMode ? await api.put(`/api/admin/parameters/${id}`, payload) : await api.post('/api/admin/parameters', payload);
@@ -151,6 +157,7 @@ export default function ParameterForm() {
             navigate('/admin/parameters');
         } catch (err) {
             setError(err.response?.data?.detail || 'Error while saving.');
+            setIsSaving(false);
         }
     };
 
@@ -247,6 +254,21 @@ export default function ParameterForm() {
         safeString(formData.level_of_comparison) !== safeString(initialData.level_of_comparison)
     );
 
+    // In creazione "dirty" significa che l'utente ha digitato qualcosa nei
+    // campi tracciati. Diversamente da `isDirty` non c'è uno snapshot iniziale
+    // con cui confrontarsi: ci basiamo sulla presenza di valori non vuoti.
+    const isCreatingDirty = !isEditMode && DRAFT_FIELDS.some(f => {
+        const v = formData[f];
+        if (v === null || v === undefined || v === '') return false;
+        if (typeof v === 'string') return v.trim().length > 0;
+        return true;
+    });
+
+    // Doppia rete: beforeunload (chiusura tab/refresh) + useBlocker (Link,
+    // breadcrumb, back-button). Disattivata durante il submit per non
+    // bloccare il navigate volontario di post-save.
+    useUnsavedChangesGuard((isDirty || isCreatingDirty) && !isSaving);
+
     // Separazione delle domande per la visualizzazione
     const normalQuestions = questions.filter(q => !q.is_stop_question);
     const stopQuestions = questions.filter(q => q.is_stop_question);
@@ -288,8 +310,21 @@ export default function ParameterForm() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div className="card">
-                    <header style={{marginBottom: '1.5rem'}}>
-                        <h2>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
+                    <header style={{marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                        <h2 style={{margin: 0}}>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <DraftIndicator lastSavedAt={lastSavedAt} />
+                            {isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadParameterPdf}
+                                    className="btn"
+                                    title="Download a PDF detail report of this parameter"
+                                >
+                                    Download PDF
+                                </button>
+                            )}
+                        </div>
                     </header>
 
                     {error && <div className="alert alert-error" style={{marginBottom: '1rem'}}>{error}</div>}
@@ -490,17 +525,6 @@ export default function ParameterForm() {
                                 Save Parameter
                             </button>
                             <Link to="/admin/parameters" className="btn">Cancel</Link>
-                            {isEditMode && (
-                                <button
-                                    type="button"
-                                    onClick={handleDownloadParameterPdf}
-                                    className="btn"
-                                    style={{ marginLeft: 'auto' }}
-                                    title="Download a PDF detail report of this parameter"
-                                >
-                                    Download PDF
-                                </button>
-                            )}
                         </div>
                     </form>
                 </div>

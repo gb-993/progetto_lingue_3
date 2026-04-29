@@ -53,7 +53,8 @@
       "Bash(python -c \"from services.pdf_export import build_all_parameters_pdf, build_parameter_pdf; print\\('OK'\\)\")",
       "Bash(python -c \"import matplotlib\")",
       "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(npm run *)"
     ]
   }
 }

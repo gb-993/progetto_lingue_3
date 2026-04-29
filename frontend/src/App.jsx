@@ -1,5 +1,10 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import {
+    createBrowserRouter,
+    RouterProvider,
+    Outlet,
+    useLocation,
+} from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
@@ -53,69 +58,80 @@ function ScrollToTop() {
     return null;
 }
 
-export default function App() {
+// Root element del Data Router: AuthProvider deve restare DENTRO il
+// RouterProvider (cioè qui dentro l'Outlet) perché alcuni hook usati da
+// AuthProvider o dai suoi consumer assumono il context del router.
+function AppRoot() {
     return (
         <AuthProvider>
-            <Router>
-                <ScrollToTop />
-                <Routes>
-                    {/* Rotte pubbliche */}
-                    <Route path="/" element={<PublicHome />} />
-                    <Route path="/how-to-cite" element={<HowToCite />} />
-                    <Route path="/login" element={<Login />} />
-
-                    {/* Rotta protetta generica */}
-                    <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-                    <Route path="/me" element={<Layout><MyAccount /></Layout>} />
-
-                    {/* GLOSSARIO UNIFICATO */}
-                    <Route path="/glossary" element={<Layout><GlossaryList /></Layout>} />
-
-                    {/* ROTTE LINGUE */}
-                    <Route path="/languages" element={<Layout><LanguageList /></Layout>} />
-                    <Route path="/languages/:id/data" element={<Layout><LanguageData /></Layout>} />
-                    <Route path="/instructions" element={<Layout><Instructions /></Layout>} />
-
-                    {/* ROTTE ESCLUSIVE ADMIN */}
-                    <Route path="/languages/add" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
-                    <Route path="/languages/:id/edit" element={<AdminRoute><Layout><LanguageForm /></Layout></AdminRoute>} />
-                    <Route path="/languages/:id/debug" element={<AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/glossary/add" element={<AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute>} />
-                    <Route path="/admin/glossary/:id/edit" element={<AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/parameters" element={<AdminRoute><Layout><ParameterList /></Layout></AdminRoute>} />
-                    <Route path="/admin/parameters/add" element={<AdminRoute><Layout><ParameterForm /></Layout></AdminRoute>} />
-                    <Route path="/admin/parameters/:id/edit" element={<AdminRoute><Layout><ParameterForm /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/questions" element={<AdminRoute><Layout><QuestionList /></Layout></AdminRoute>} />
-                    <Route path="/admin/questions/add" element={<AdminRoute><Layout><QuestionForm /></Layout></AdminRoute>} />
-                    <Route path="/admin/questions/:id/edit" element={<AdminRoute><Layout><QuestionForm /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/accounts" element={<AdminRoute><Layout><AccountList /></Layout></AdminRoute>} />
-                    <Route path="/admin/accounts/add" element={<AdminRoute><Layout><AccountCreate /></Layout></AdminRoute>} />
-                    <Route path="/admin/accounts/:id/assign" element={<AdminRoute><Layout><AccountAssign /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/motivations" element={<AdminRoute><Layout><MotivationList /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/backups" element={<AdminRoute><Layout><BackupList /></Layout></AdminRoute>} />
-                    <Route path="/admin/backups/parameters/:timestamp" element={<AdminRoute><Layout><ParameterBackupFolder /></Layout></AdminRoute>} />
-                    <Route path="/admin/backups/parameters/submissions/:id" element={<AdminRoute><Layout><ParameterBackupDetail /></Layout></AdminRoute>} />
-                    <Route path="/admin/backups/:timestamp" element={<AdminRoute><Layout><BackupFolder /></Layout></AdminRoute>} />
-                    <Route path="/admin/backups/submissions/:id" element={<AdminRoute><Layout><BackupDetail /></Layout></AdminRoute>} />
-
-                    <Route path="/admin/edit-content/:key" element={<AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute>} />
-                    <Route path="/admin/import-excel" element={<AdminRoute><Layout><ImportExcel /></Layout></AdminRoute>} />
-                    <Route path="/admin/migration-import" element={<AdminRoute><Layout><MigrationImport /></Layout></AdminRoute>} />
-                    <Route path="/admin/history" element={<AdminRoute><Layout><History /></Layout></AdminRoute>} />
-                    <Route path="/admin/taxonomy" element={<AdminRoute><Layout><Taxonomy /></Layout></AdminRoute>} />
-                    <Route path="/tablea" element={<Layout><TableA /></Layout>} />
-                    <Route path="/tablea/:id" element={<Layout><TableA /></Layout>} />
-                    <Route path="/queries" element={<Layout><QueriesDashboard /></Layout>} />
-
-
-                </Routes>
-            </Router>
+            <ScrollToTop />
+            <Outlet />
         </AuthProvider>
     );
+}
+
+const router = createBrowserRouter([
+    {
+        path: '/',
+        element: <AppRoot />,
+        children: [
+            // Rotte pubbliche
+            { index: true, element: <PublicHome /> },
+            { path: 'how-to-cite', element: <HowToCite /> },
+            { path: 'login', element: <Login /> },
+
+            // Rotta protetta generica
+            { path: 'dashboard', element: <Layout><Dashboard /></Layout> },
+            { path: 'me', element: <Layout><MyAccount /></Layout> },
+
+            // GLOSSARIO UNIFICATO
+            { path: 'glossary', element: <Layout><GlossaryList /></Layout> },
+
+            // ROTTE LINGUE
+            { path: 'languages', element: <Layout><LanguageList /></Layout> },
+            { path: 'languages/:id/data', element: <Layout><LanguageData /></Layout> },
+            { path: 'instructions', element: <Layout><Instructions /></Layout> },
+
+            // ROTTE ESCLUSIVE ADMIN
+            { path: 'languages/add', element: <AdminRoute><Layout><LanguageForm /></Layout></AdminRoute> },
+            { path: 'languages/:id/edit', element: <AdminRoute><Layout><LanguageForm /></Layout></AdminRoute> },
+            { path: 'languages/:id/debug', element: <AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute> },
+
+            { path: 'admin/glossary/add', element: <AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute> },
+            { path: 'admin/glossary/:id/edit', element: <AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute> },
+
+            { path: 'admin/parameters', element: <AdminRoute><Layout><ParameterList /></Layout></AdminRoute> },
+            { path: 'admin/parameters/add', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
+            { path: 'admin/parameters/:id/edit', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
+
+            { path: 'admin/questions', element: <AdminRoute><Layout><QuestionList /></Layout></AdminRoute> },
+            { path: 'admin/questions/add', element: <AdminRoute><Layout><QuestionForm /></Layout></AdminRoute> },
+            { path: 'admin/questions/:id/edit', element: <AdminRoute><Layout><QuestionForm /></Layout></AdminRoute> },
+
+            { path: 'admin/accounts', element: <AdminRoute><Layout><AccountList /></Layout></AdminRoute> },
+            { path: 'admin/accounts/add', element: <AdminRoute><Layout><AccountCreate /></Layout></AdminRoute> },
+            { path: 'admin/accounts/:id/assign', element: <AdminRoute><Layout><AccountAssign /></Layout></AdminRoute> },
+
+            { path: 'admin/motivations', element: <AdminRoute><Layout><MotivationList /></Layout></AdminRoute> },
+
+            { path: 'admin/backups', element: <AdminRoute><Layout><BackupList /></Layout></AdminRoute> },
+            { path: 'admin/backups/parameters/:timestamp', element: <AdminRoute><Layout><ParameterBackupFolder /></Layout></AdminRoute> },
+            { path: 'admin/backups/parameters/submissions/:id', element: <AdminRoute><Layout><ParameterBackupDetail /></Layout></AdminRoute> },
+            { path: 'admin/backups/:timestamp', element: <AdminRoute><Layout><BackupFolder /></Layout></AdminRoute> },
+            { path: 'admin/backups/submissions/:id', element: <AdminRoute><Layout><BackupDetail /></Layout></AdminRoute> },
+
+            { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
+            { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },
+            { path: 'admin/migration-import', element: <AdminRoute><Layout><MigrationImport /></Layout></AdminRoute> },
+            { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
+            { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
+            { path: 'tablea', element: <Layout><TableA /></Layout> },
+            { path: 'tablea/:id', element: <Layout><TableA /></Layout> },
+            { path: 'queries', element: <Layout><QueriesDashboard /></Layout> },
+        ],
+    },
+]);
+
+export default function App() {
+    return <RouterProvider router={router} />;
 }

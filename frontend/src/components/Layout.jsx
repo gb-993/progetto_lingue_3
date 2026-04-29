@@ -43,7 +43,7 @@ const PATH_LABELS = {
 
 function Breadcrumb({ pathname }) {
     const segments = pathname.split('/').filter(Boolean);
-    const crumbs = [{ to: '/dashboard', label: 'Dashboard' }];
+    const crumbs = [{ to: '/dashboard', label: 'Dashboard', clickable: true }];
     let acc = '';
 
     segments.forEach((seg) => {
@@ -51,20 +51,28 @@ function Breadcrumb({ pathname }) {
         if (seg === 'dashboard') return;
         const mapped = PATH_LABELS[seg];
         if (mapped === null) return; // segmenti da nascondere (es. "admin")
+        // Se il segmento non è nel dizionario, è un ID dinamico (es. P12,
+        // P12_Qa, uuid di una lingua): mostrato letterale ma NON cliccabile,
+        // perché la rotta `/admin/parameters/P12` da sola non esiste — solo
+        // `/admin/parameters/P12/edit`. Cliccarlo porterebbe a una 404.
+        const isDynamic = mapped === undefined;
         const label = mapped || seg;
-        crumbs.push({ to: acc, label });
+        crumbs.push({ to: acc, label, clickable: !isDynamic });
     });
 
     return (
         <nav className="breadcrumb" aria-label="Breadcrumb">
             <ol>
-                {crumbs.map((c, i) => (
-                    <li key={c.to + i}>
-                        {i < crumbs.length - 1
-                            ? <Link to={c.to}>{c.label}</Link>
-                            : <span>{c.label}</span>}
-                    </li>
-                ))}
+                {crumbs.map((c, i) => {
+                    const isLast = i === crumbs.length - 1;
+                    return (
+                        <li key={c.to + i}>
+                            {(!isLast && c.clickable)
+                                ? <Link to={c.to}>{c.label}</Link>
+                                : <span>{c.label}</span>}
+                        </li>
+                    );
+                })}
             </ol>
         </nav>
     );
