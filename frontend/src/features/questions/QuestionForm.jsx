@@ -666,8 +666,7 @@ export default function QuestionForm({ mode = 'page' }) {
                             components={motivationSelectComponents}
                         />
                         <p className="small muted" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                            Suggerimento: clicca il <em>testo</em> di un chip per modificare o eliminare la motivation
-                            globalmente; clicca la <em>×</em> per rimuoverla solo da questa domanda.
+                            <strong>click on the motivation to edit</strong> 
                         </p>
                     </div>
 
