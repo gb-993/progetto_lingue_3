@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
@@ -119,6 +119,44 @@ export default function QuestionForm() {
             .filter(q => q.parameter_id === formData.parameter_id)
             .sort((a, b) => String(a.id).localeCompare(String(b.id)));
     }, [allQuestions, formData.parameter_id]);
+
+    // Calcola la prossima lettera libera per gli ID di tipo `{paramId}_Q{lettera}`.
+    // Le stop question hanno pattern `_QS...` (S maiuscola) e vengono ignorate dal
+    // matching grazie al group [a-z] case-sensitive. Ritorna null se tutte le
+    // lettere a-z sono già occupate.
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const suggestedQuestionId = useMemo(() => {
+        if (!formData.parameter_id) return '';
+        const re = new RegExp(`^${escapeRegex(formData.parameter_id)}_Q([a-z])`);
+        const used = new Set();
+        for (const q of currentParamQuestions) {
+            const m = String(q.id).match(re);
+            if (m) used.add(m[1]);
+        }
+        for (let i = 0; i < 26; i++) {
+            const letter = String.fromCharCode(97 + i);
+            if (!used.has(letter)) return `${formData.parameter_id}_Q${letter}`;
+        }
+        return ''; // tutte le lettere occupate (>26 domande)
+    }, [formData.parameter_id, currentParamQuestions]);
+
+    // Pre-compila il campo ID col suggerimento quando si sceglie un parametro.
+    // Sovrascriviamo solo se l'utente non ha digitato un ID custom: tracciamo
+    // l'ultimo valore auto-generato e lo aggiorniamo solo se l'attuale combacia.
+    const lastAutoFilledRef = useRef('');
+    useEffect(() => {
+        if (isEditMode) return;
+        if (!suggestedQuestionId) return;
+        setFormData(prev => {
+            const isEmpty = !prev.id;
+            const isStillAuto = prev.id === lastAutoFilledRef.current;
+            if (isEmpty || isStillAuto) {
+                lastAutoFilledRef.current = suggestedQuestionId;
+                return { ...prev, id: suggestedQuestionId };
+            }
+            return prev;
+        });
+    }, [suggestedQuestionId, isEditMode]);
 
     // Opzioni raggruppate per parametro per il select di import
     const groupedQuestionOptions = useMemo(() => {
@@ -262,60 +300,27 @@ export default function QuestionForm() {
                 {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                    {/* --- IMPORT / EXISTING (solo in creazione) --- */}
+                    {/* --- IMPORT (solo in creazione, riga compatta) --- */}
                     {!isEditMode && (
-                        <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                            <h4 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Import / Existing</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
-                                        Import from another question (optional)
-                                    </label>
-                                    <p className="small muted" style={{ marginBottom: '0.5rem' }}>
-                                        Load text, instructions, motivations and stop flag from an existing question.
-                                        The ID and parameter remain the ones you chose here.
-                                    </p>
-                                    <Select
-                                        isClearable
-                                        options={groupedQuestionOptions}
-                                        value={importedFrom}
-                                        onChange={handleImportQuestion}
-                                        placeholder="Select a question to import..."
-                                        noOptionsMessage={() => "No question available"}
-                                    />
-                                    {importedFrom && (
-                                        <p className="small" style={{ color: '#0056b3', marginTop: '0.4rem' }}>
-                                            Content imported from <strong>{importedFrom.value}</strong>. Edit freely before saving.
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>
-                                        Existing questions in parameter {formData.parameter_id ? `(${formData.parameter_id})` : ''}
-                                    </label>
-                                    <p className="small muted" style={{ marginBottom: '0.5rem' }}>
-                                        Use this list to choose a progressive ID for the new question.
-                                    </p>
-                                    <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '180px', overflowY: 'auto' }}>
-                                        {currentParamQuestions.length > 0 ? (
-                                            currentParamQuestions.map(q => (
-                                                <div key={q.id} style={{ fontSize: '0.85rem', padding: '0.3rem 0', borderBottom: '1px solid var(--border)' }}>
-                                                    <strong style={{ color: 'var(--link)' }}>{q.id}</strong>
-                                                    {q.is_stop_question ? <span className="small muted"> [stop]</span> : null}
-                                                    {q.is_active === false ? <span className="small muted"> (inactive)</span> : null}
-                                                    : {(q.text || '').slice(0, 90)}{(q.text || '').length > 90 ? '…' : ''}
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <span className="small muted">
-                                                {formData.parameter_id
-                                                    ? 'No questions in the selected parameter.'
-                                                    : 'Select a parameter first.'}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                        <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                Import from another question
+                            </label>
+                            <div style={{ flex: '1 1 320px', minWidth: '260px' }}>
+                                <Select
+                                    isClearable
+                                    options={groupedQuestionOptions}
+                                    value={importedFrom}
+                                    onChange={handleImportQuestion}
+                                    placeholder="Select to copy text, instructions and motivations..."
+                                    noOptionsMessage={() => "No question available"}
+                                />
                             </div>
+                            {importedFrom && (
+                                <span className="small" style={{ color: '#0056b3' }}>
+                                    Imported from <strong>{importedFrom.value}</strong>
+                                </span>
+                            )}
                         </div>
                     )}
 
@@ -323,9 +328,26 @@ export default function QuestionForm() {
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question ID</label>
                             <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem' }} />
+                            {!isEditMode && formData.parameter_id && (
+                                <div className="small muted" style={{ marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: 1.35 }}>
+                                    {currentParamQuestions.length > 0 ? (
+                                        <>
+                                            Existing in this parameter:{' '}
+                                            {currentParamQuestions.map((q, i) => (
+                                                <span key={q.id}>
+                                                    <code style={{ fontSize: '0.78rem' }}>{q.id}</code>
+                                                    {i < currentParamQuestions.length - 1 ? ', ' : ''}
+                                                </span>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <>No questions yet in this parameter.</>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Parameter</label>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Destination Parameter</label>
                             <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem', backgroundColor: isEditMode ? '#e2e8f0' : 'white' }}>
                                 <option value="">Select parameter...</option>
                                 {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}

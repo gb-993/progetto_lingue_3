@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import AdminRoute from './components/AdminRoute';
@@ -39,10 +40,22 @@ import MigrationImport from './features/admin/MigrationImport';
 import History from './features/history/History';
 import Taxonomy from './features/taxonomy/Taxonomy';
 
+// Scroll automatico in cima ad ogni cambio di rotta. Senza questo, React Router
+// preserva la posizione di scroll fra navigazioni, dando l'impressione che le
+// nuove pagine si aprano "a metà".
+function ScrollToTop() {
+    const { pathname } = useLocation();
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+    return null;
+}
+
 export default function App() {
     return (
         <AuthProvider>
             <Router>
+                <ScrollToTop />
                 <Routes>
                     {/* Rotte pubbliche */}
                     <Route path="/" element={<PublicHome />} />
