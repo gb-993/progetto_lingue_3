@@ -47,7 +47,8 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/languages.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"from routers import languages; print\\('import OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/compilation.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/services/excel_export.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/models.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/alembic/versions/5b9c1d3f7a2e_admin_note_on_lang_param_status.py', encoding='utf-8'\\).read\\(\\)\\); print\\('All Python files parse OK'\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/compilation.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/compilation.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/questions.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/parameters.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('c:/Users/Gb/Desktop/pcm-hub/backend/routers/motivations.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

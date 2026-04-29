@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
 
@@ -15,7 +16,8 @@ export default function MotivationList() {
     const fetchMotivations = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/api/admin/motivations');
+            // /with-usage include il campo linked_questions per ogni motivation.
+            const res = await api.get('/api/admin/motivations/with-usage');
             setMotivations(res.data);
         } catch (err) {
             setError("Could not load the motivations.");
@@ -106,6 +108,7 @@ export default function MotivationList() {
                     <tr>
                         <th>Code</th>
                         <th>Description (Label)</th>
+                        <th>Linked Questions</th>
                         <th style={{textAlign: 'right'}}>Actions</th>
                     </tr>
                     </thead>
@@ -114,6 +117,33 @@ export default function MotivationList() {
                         <tr key={m.id}>
                             <td style={{fontWeight: 'bold'}}>{m.code}</td>
                             <td>{m.label}</td>
+                            <td>
+                                {(m.linked_questions || []).length === 0 ? (
+                                    <span className="muted small" style={{ fontStyle: 'italic' }}>None</span>
+                                ) : (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                        {m.linked_questions.map(qid => (
+                                            <Link
+                                                key={qid}
+                                                to={`/admin/questions/${encodeURIComponent(qid)}/edit`}
+                                                title={`Open question ${qid}`}
+                                                style={{ textDecoration: 'none' }}
+                                            >
+                                                <code style={{
+                                                    background: 'var(--surface-2)',
+                                                    color: 'var(--text)',
+                                                    padding: '0.15rem 0.4rem',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid var(--border)',
+                                                    fontSize: '0.78rem',
+                                                }}>
+                                                    {qid}
+                                                </code>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </td>
                             <td className="row-actions">
                                 <button className="btn" onClick={() => handleOpenModal(m)}>Edit</button>
                                 <button className="btn btn--danger" style={{color: 'red'}} onClick={() => handleDelete(m.id)}>Delete</button>
@@ -127,8 +157,18 @@ export default function MotivationList() {
             {/* MODALE CREAZIONE/MODIFICA */}
             {showModal && (
                 <div style={modalOverlayStyle}>
-                    <div className="card" style={{ width: '400px' }}>
+                    <div className="card" style={{ width: '440px' }}>
                         <h3>{editingId ? 'Edit Motivation' : 'New Motivation'}</h3>
+                        {editingId && (
+                            <div className="alert alert-warning" style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
+                                <strong>Heads up.</strong> Editing this motivation propagates everywhere it's used:
+                                the new <em>label</em> appears in the compilation form, in all answers already given
+                                across all languages, in the linked questions and in the Excel exports
+                                (the answers table stores only the motivation id, the label is read live).
+                                Changing the <em>code</em> additionally breaks the match with frozen submission
+                                snapshots in the history.
+                            </div>
+                        )}
                         <form onSubmit={handleSave}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Code</label>

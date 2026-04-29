@@ -27,6 +27,34 @@ def get_motivations(db: Session = Depends(get_db), current_user: models.User = D
     """Recupera la lista delle motivazioni."""
     return db.query(models.Motivation).order_by(models.Motivation.code).all()
 
+
+@router.get("/with-usage")
+def get_motivations_with_usage(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Lista motivazioni + per ognuna le question_id in cui è abilitata.
+
+    Una sola query per QuestionAllowedMotivation, raggruppata in memoria così
+    evitiamo N+1. Usato dalla pagina admin per mostrare i link "where used".
+    """
+    mots = db.query(models.Motivation).order_by(models.Motivation.code).all()
+    links = (
+        db.query(models.QuestionAllowedMotivation.motivation_id, models.QuestionAllowedMotivation.question_id)
+        .all()
+    )
+    by_mid: dict[int, list[str]] = {}
+    for mid, qid in links:
+        by_mid.setdefault(mid, []).append(qid)
+    for qids in by_mid.values():
+        qids.sort()
+    return [
+        {
+            "id": m.id,
+            "code": m.code,
+            "label": m.label,
+            "linked_questions": by_mid.get(m.id, []),
+        }
+        for m in mots
+    ]
+
 @router.post("", response_model=MotivationRead, status_code=status.HTTP_201_CREATED)
 def create_motivation(item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Crea una nuova motivazione (usata sia in pagina che 'on the fly' nel creatable select)"""

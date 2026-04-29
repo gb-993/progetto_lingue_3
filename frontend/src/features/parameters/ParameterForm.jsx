@@ -1,6 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../api';
+import useFormDraft from '../../utils/useFormDraft';
+
+async function downloadBlob(request, fallbackName) {
+    const res = await request;
+    const cd = res.headers['content-disposition'] || '';
+    const m = cd.match(/filename="?([^";]+)"?/);
+    const filename = m ? m[1] : fallbackName;
+    const blob = new Blob([res.data]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+}
+
+const DRAFT_FIELDS = [
+    'name', 'short_description', 'long_description',
+    'implicational_condition', 'description_of_the_implicational_condition',
+    'schema', 'param_type', 'level_of_comparison',
+];
 
 export default function ParameterForm() {
     const { id } = useParams();
@@ -28,6 +48,16 @@ export default function ParameterForm() {
     // Stati per logica Modifiche
     const [changeNote, setChangeNote] = useState('');
     const [changeLogs, setChangeLogs] = useState([]);
+    const [draftReady, setDraftReady] = useState(false);
+
+    // Persistenza locale della bozza: chiave per-id (o "new" in creazione)
+    const { clearDraft } = useFormDraft({
+        storageKey: `draft_parameter_${id || 'new'}`,
+        formData,
+        setFormData,
+        fields: DRAFT_FIELDS,
+        enabled: draftReady,
+    });
 
     // Stati per il Modal di Disattivazione
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -57,6 +87,11 @@ export default function ParameterForm() {
                 }
             } catch (err) {
                 setError('Error loading the data.');
+            } finally {
+                // Solo dopo aver fetchato i dati lasciamo che il draft eventuale
+                // venga ripristinato sopra: evita che una bozza vecchia
+                // sovrascriva i dati appena letti dal server.
+                setDraftReady(true);
             }
         };
         fetchInitialData();
@@ -112,9 +147,38 @@ export default function ParameterForm() {
         try {
             const payload = { ...formData, position: parseInt(formData.position, 10), change_note: changeNote };
             isEditMode ? await api.put(`/api/admin/parameters/${id}`, payload) : await api.post('/api/admin/parameters', payload);
+            clearDraft();
             navigate('/admin/parameters');
         } catch (err) {
             setError(err.response?.data?.detail || 'Error while saving.');
+        }
+    };
+
+    const handleDeleteLookup = async (kind, lookupId, label) => {
+        const labels = { schemas: 'schema', types: 'type', levels: 'level' };
+        if (!window.confirm(`Delete ${labels[kind]} "${label}"? This cannot be undone.`)) return;
+        try {
+            await api.delete(`/api/admin/parameters/lookups/${kind}/${lookupId}`);
+            setLookups(prev => ({ ...prev, [kind]: prev[kind].filter(x => x.id !== lookupId) }));
+            // Se il valore corrente del form puntava a questa label, lo svuoto
+            const fieldByKind = { schemas: 'schema', types: 'param_type', levels: 'level_of_comparison' };
+            const field = fieldByKind[kind];
+            if (field && formData[field] === label) {
+                setFormData(prev => ({ ...prev, [field]: '' }));
+            }
+        } catch (err) {
+            alert(err.response?.data?.detail || `Could not delete ${labels[kind]}.`);
+        }
+    };
+
+    const handleDownloadParameterPdf = async () => {
+        try {
+            await downloadBlob(
+                api.get(`/api/admin/parameters/${id}/pdf`, { responseType: 'blob' }),
+                `Parameter_${id}.pdf`
+            );
+        } catch {
+            alert('Error while downloading the PDF.');
         }
     };
 
@@ -249,39 +313,42 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>
-                            <div>
-                                <label style={{fontWeight: 'bold'}}>Schema</label>
-                                <select name="schema" value={formData.schema} onChange={handleChange} style={{width: '100%', padding: '0.5rem', marginBottom: '0.5rem'}}>
-                                    <option value="">-- Select --</option>
-                                    {lookups.schemas.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
-                                </select>
-                                <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="New..." value={newLookupInputs.schema} onChange={e => setNewLookupInputs({...newLookupInputs, schema: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
-                                    <button type="button" onClick={() => handleAddLookup('schemas', 'schemas', 'schema')} className="btn btn--small">+</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label style={{fontWeight: 'bold'}}>Type</label>
-                                <select name="param_type" value={formData.param_type} onChange={handleChange} style={{width: '100%', padding: '0.5rem', marginBottom: '0.5rem'}}>
-                                    <option value="">-- Select --</option>
-                                    {lookups.types.map(t => <option key={t.id} value={t.label}>{t.label}</option>)}
-                                </select>
-                                <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="New..." value={newLookupInputs.type} onChange={e => setNewLookupInputs({...newLookupInputs, type: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
-                                    <button type="button" onClick={() => handleAddLookup('types', 'types', 'type')} className="btn btn--small">+</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label style={{fontWeight: 'bold'}}>Level</label>
-                                <select name="level_of_comparison" value={formData.level_of_comparison} onChange={handleChange} style={{width: '100%', padding: '0.5rem', marginBottom: '0.5rem'}}>
-                                    <option value="">-- Select --</option>
-                                    {lookups.levels.map(l => <option key={l.id} value={l.label}>{l.label}</option>)}
-                                </select>
-                                <div style={{display: 'flex', gap: '0.25rem'}}>
-                                    <input type="text" placeholder="New..." value={newLookupInputs.level} onChange={e => setNewLookupInputs({...newLookupInputs, level: e.target.value})} style={{flex: 1, padding: '0.25rem'}}/>
-                                    <button type="button" onClick={() => handleAddLookup('levels', 'levels', 'level')} className="btn btn--small">+</button>
-                                </div>
-                            </div>
+                            <LookupField
+                                label="Schema"
+                                name="schema"
+                                value={formData.schema}
+                                items={lookups.schemas}
+                                kind="schemas"
+                                onChange={handleChange}
+                                newInputValue={newLookupInputs.schema}
+                                onNewInputChange={(v) => setNewLookupInputs({ ...newLookupInputs, schema: v })}
+                                onAdd={() => handleAddLookup('schemas', 'schemas', 'schema')}
+                                onDelete={handleDeleteLookup}
+                            />
+                            <LookupField
+                                label="Type"
+                                name="param_type"
+                                value={formData.param_type}
+                                items={lookups.types}
+                                kind="types"
+                                onChange={handleChange}
+                                newInputValue={newLookupInputs.type}
+                                onNewInputChange={(v) => setNewLookupInputs({ ...newLookupInputs, type: v })}
+                                onAdd={() => handleAddLookup('types', 'types', 'type')}
+                                onDelete={handleDeleteLookup}
+                            />
+                            <LookupField
+                                label="Level"
+                                name="level_of_comparison"
+                                value={formData.level_of_comparison}
+                                items={lookups.levels}
+                                kind="levels"
+                                onChange={handleChange}
+                                newInputValue={newLookupInputs.level}
+                                onNewInputChange={(v) => setNewLookupInputs({ ...newLookupInputs, level: v })}
+                                onAdd={() => handleAddLookup('levels', 'levels', 'level')}
+                                onDelete={handleDeleteLookup}
+                            />
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
@@ -414,14 +481,27 @@ export default function ParameterForm() {
                             </div>
                         )}
 
-                        <button
-                            type="submit"
-                            className="btn btn--primary"
-                            disabled={isEditMode && (!isDirty || !changeNote.trim())} // Disabilitato se !isDirty
-                        >
-                            Save Parameter
-                        </button>
-                        <Link to="/admin/parameters" className="btn" style={{marginLeft: '1rem'}}>Cancel</Link>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                            <button
+                                type="submit"
+                                className="btn btn--primary"
+                                disabled={isEditMode && (!isDirty || !changeNote.trim())} // Disabilitato se !isDirty
+                            >
+                                Save Parameter
+                            </button>
+                            <Link to="/admin/parameters" className="btn">Cancel</Link>
+                            {isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadParameterPdf}
+                                    className="btn"
+                                    style={{ marginLeft: 'auto' }}
+                                    title="Download a PDF detail report of this parameter"
+                                >
+                                    Download PDF
+                                </button>
+                            )}
+                        </div>
                     </form>
                 </div>
 
@@ -518,6 +598,89 @@ export default function ParameterForm() {
                     </div>
                 </div>
             </aside>
+        </div>
+    );
+}
+
+// Select per uno dei lookup (schema/type/level) con bottone di aggiunta
+// inline e una piccola riga "manage" sotto: lista delle voci esistenti con
+// icona cestino discreta. Il delete chiede conferma e viene rifiutato lato
+// server se la voce è in uso da qualche parametro.
+function LookupField({
+    label, name, value, items, kind,
+    onChange, newInputValue, onNewInputChange, onAdd, onDelete,
+}) {
+    const [manageOpen, setManageOpen] = useState(false);
+    return (
+        <div>
+            <label style={{ fontWeight: 'bold' }}>{label}</label>
+            <select name={name} value={value} onChange={onChange} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}>
+                <option value="">-- Select --</option>
+                {items.map(it => <option key={it.id} value={it.label}>{it.label}</option>)}
+            </select>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                <input
+                    type="text"
+                    placeholder="New..."
+                    value={newInputValue}
+                    onChange={(e) => onNewInputChange(e.target.value)}
+                    style={{ flex: 1, padding: '0.25rem' }}
+                />
+                <button type="button" onClick={onAdd} className="btn btn--small">+</button>
+                <button
+                    type="button"
+                    onClick={() => setManageOpen(o => !o)}
+                    className="btn btn--small"
+                    title={manageOpen ? "Hide manage panel" : "Manage existing entries"}
+                    style={{ padding: '0.25rem 0.45rem' }}
+                >
+                    ⚙
+                </button>
+            </div>
+            {manageOpen && (
+                <div style={{
+                    marginTop: '0.4rem',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    maxHeight: '160px',
+                    overflowY: 'auto',
+                }}>
+                    {items.length === 0 ? (
+                        <div style={{ padding: '0.4rem 0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            No entries.
+                        </div>
+                    ) : items.map(it => (
+                        <div key={it.id} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0.3rem 0.5rem',
+                            fontSize: '0.8rem',
+                            borderBottom: '1px solid var(--border)',
+                        }}>
+                            <span>{it.label}</span>
+                            <button
+                                type="button"
+                                onClick={() => onDelete(kind, it.id, it.label)}
+                                title={`Delete "${it.label}"`}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '0.85rem',
+                                    padding: '0 0.25rem',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                            >
+                                🗑
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

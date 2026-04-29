@@ -365,7 +365,7 @@ def get_schemas(db: Session = Depends(get_db)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamSchema).all()]
 
 @router.post("/lookups/schemas")
-def create_schema(item: LookupBase, db: Session = Depends(get_db)):
+def create_schema(item: LookupBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = models.ParamSchema(label=item.label)
     db.add(db_item)
     try:
@@ -375,12 +375,27 @@ def create_schema(item: LookupBase, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="Schema already exists")
 
+@router.delete("/lookups/schemas/{lookup_id}")
+def delete_schema(lookup_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    item = db.query(models.ParamSchema).filter(models.ParamSchema.id == lookup_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Schema not found")
+    in_use = db.query(models.ParameterDef).filter(models.ParameterDef.schema == item.label).count()
+    if in_use > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete: schema '{item.label}' is used by {in_use} parameter(s).",
+        )
+    db.delete(item)
+    db.commit()
+    return {"detail": "Schema deleted"}
+
 @router.get("/lookups/types")
 def get_types(db: Session = Depends(get_db)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamType).all()]
 
 @router.post("/lookups/types")
-def create_type(item: LookupBase, db: Session = Depends(get_db)):
+def create_type(item: LookupBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = models.ParamType(label=item.label)
     db.add(db_item)
     try:
@@ -390,12 +405,27 @@ def create_type(item: LookupBase, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="Type already exists")
 
+@router.delete("/lookups/types/{lookup_id}")
+def delete_type(lookup_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    item = db.query(models.ParamType).filter(models.ParamType.id == lookup_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Type not found")
+    in_use = db.query(models.ParameterDef).filter(models.ParameterDef.param_type == item.label).count()
+    if in_use > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete: type '{item.label}' is used by {in_use} parameter(s).",
+        )
+    db.delete(item)
+    db.commit()
+    return {"detail": "Type deleted"}
+
 @router.get("/lookups/levels")
 def get_levels(db: Session = Depends(get_db)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamLevelOfComparison).all()]
 
 @router.post("/lookups/levels")
-def create_level(item: LookupBase, db: Session = Depends(get_db)):
+def create_level(item: LookupBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = models.ParamLevelOfComparison(label=item.label)
     db.add(db_item)
     try:
@@ -404,3 +434,18 @@ def create_level(item: LookupBase, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Level already exists")
+
+@router.delete("/lookups/levels/{lookup_id}")
+def delete_level(lookup_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    item = db.query(models.ParamLevelOfComparison).filter(models.ParamLevelOfComparison.id == lookup_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Level not found")
+    in_use = db.query(models.ParameterDef).filter(models.ParameterDef.level_of_comparison == item.label).count()
+    if in_use > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete: level '{item.label}' is used by {in_use} parameter(s).",
+        )
+    db.delete(item)
+    db.commit()
+    return {"detail": "Level deleted"}

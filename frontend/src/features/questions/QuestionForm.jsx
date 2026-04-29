@@ -3,6 +3,12 @@ import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import api from '../../api';
+import useFormDraft from '../../utils/useFormDraft';
+
+const Q_DRAFT_FIELDS = [
+    'text', 'instruction', 'instruction_yes', 'instruction_no',
+    'example_yes', 'help_info', 'is_stop_question',
+];
 
 export default function QuestionForm() {
     const { id } = useParams();
@@ -39,6 +45,28 @@ export default function QuestionForm() {
     // Stati per Audit Log (mutuati da ParameterForm)
     const [changeNote, setChangeNote] = useState('');
     const [changeLogs, setChangeLogs] = useState([]);
+    const [draftReady, setDraftReady] = useState(false);
+
+    // Persistenza locale della bozza dei testi della domanda. La key dipende
+    // dall'id (in edit) o dal parametro di destinazione (in creazione), così
+    // bozze di pagine diverse non si sovrappongono.
+    const draftKey = isEditMode
+        ? `draft_question_${id}`
+        : `draft_question_new_${formData.parameter_id || paramFromUrl || 'noparam'}`;
+    const { clearDraft } = useFormDraft({
+        storageKey: draftKey,
+        formData,
+        setFormData,
+        fields: Q_DRAFT_FIELDS,
+        enabled: draftReady,
+    });
+
+    // Stato per il "Clone with data" (azione che crea una nuova question
+    // copiando answers/examples/motivations dalla sorgente). Il nuovo ID viene
+    // letto dal campo "Question ID" del form (già auto-precompilato con la
+    // prossima lettera libera del parametro target).
+    const [cloneSource, setCloneSource] = useState(null);
+    const [cloning, setCloning] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -91,6 +119,8 @@ export default function QuestionForm() {
                 }
             } catch {
                 setError('Could not load the data.');
+            } finally {
+                setDraftReady(true);
             }
         };
         fetchData();
@@ -175,6 +205,46 @@ export default function QuestionForm() {
             .filter(g => g.options.length > 0);
     }, [parameters, allQuestions]);
 
+    const handleCloneWithData = async () => {
+        if (!cloneSource) {
+            alert('Pick a source question to clone.');
+            return;
+        }
+        if (!formData.parameter_id) {
+            alert('Pick a target parameter first.');
+            return;
+        }
+        const newId = (formData.id || '').trim();
+        const message =
+            `This creates a NEW question "${newId || '(auto)'}" in parameter "${formData.parameter_id}" ` +
+            `cloning "${cloneSource.value}" together with all its answers, examples and motivations ` +
+            `from every language. The source question will not be modified.\n\n` +
+            `Any unsaved changes in the form below will be discarded. Continue?`;
+        if (!window.confirm(message)) return;
+        setCloning(true);
+        try {
+            const res = await api.post('/api/admin/questions/clone', {
+                source_question_id: cloneSource.value,
+                target_parameter_id: formData.parameter_id,
+                new_id: newId || null,
+            });
+            clearDraft();
+            const newId = res.data?.id;
+            const stats = res.data?.stats || {};
+            alert(
+                `Cloned as ${newId}.\n` +
+                `Copied: ${stats.answers || 0} answers, ${stats.examples || 0} examples, ` +
+                `${stats.motivations || 0} answer-motivations, ${stats.allowed_motivations || 0} allowed motivations.`
+            );
+            navigate(`/admin/questions/${encodeURIComponent(newId)}/edit`);
+        } catch (err) {
+            const detail = err?.response?.data?.detail;
+            alert(typeof detail === 'string' ? detail : 'Could not clone the question.');
+        } finally {
+            setCloning(false);
+        }
+    };
+
     const handleImportQuestion = async (selected) => {
         if (!selected) {
             setImportedFrom(null);
@@ -254,6 +324,7 @@ export default function QuestionForm() {
             } else {
                 await api.post('/api/admin/questions', payload);
             }
+            clearDraft();
             navigate(`/admin/parameters/${formData.parameter_id}/edit`);
         } catch (err) {
             setError(err.response?.data?.detail || 'Error while saving.');
@@ -302,26 +373,73 @@ export default function QuestionForm() {
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                     {/* --- IMPORT (solo in creazione, riga compatta) --- */}
                     {!isEditMode && (
-                        <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                Import from another question
-                            </label>
-                            <div style={{ flex: '1 1 320px', minWidth: '260px' }}>
-                                <Select
-                                    isClearable
-                                    options={groupedQuestionOptions}
-                                    value={importedFrom}
-                                    onChange={handleImportQuestion}
-                                    placeholder="Select to copy text, instructions and motivations..."
-                                    noOptionsMessage={() => "No question available"}
-                                />
+                        <>  
+
+
+                            {/* --- CLONE WITH DATA (azione di duplicazione vera) --- */}
+                            <div style={{
+                                background: 'var(--surface-2, #f8fafc)',
+                                padding: '0.6rem 0.85rem',
+                                borderRadius: '8px',
+                                border: '1px dashed var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.6rem',
+                                flexWrap: 'wrap',
+                            }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                    Import WITH data
+                                </label>
+                                <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+                                    <Select
+                                        isClearable
+                                        options={groupedQuestionOptions}
+                                        value={cloneSource}
+                                        onChange={setCloneSource}
+                                        placeholder="Pick a question to clone with all its answers, examples and motivations..."
+                                        noOptionsMessage={() => "No question available"}
+                                        isDisabled={cloning}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleCloneWithData}
+                                    disabled={!cloneSource || !formData.parameter_id || cloning}
+                                    className="btn btn--small"
+                                >
+                                    {cloning ? 'Cloning...' : 'Clone now'}
+                                </button>
+                                <div className="small muted" style={{ flexBasis: '100%', fontSize: '0.72rem', lineHeight: 1.35, marginTop: '0.1rem' }}>
+                                    Creates immediately a new question in the target parameter (using the <strong>Question ID</strong> below)
+                                    by copying answers, examples and motivations from <em>every language</em>.
+                                    The source question is left untouched.
+                                </div>
                             </div>
-                            {importedFrom && (
-                                <span className="small" style={{ color: '#0056b3' }}>
-                                    Imported from <strong>{importedFrom.value}</strong>
-                                </span>
-                            )}
-                        </div>
+
+                            
+                            <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                                    Import template (text only)
+                                </label>
+                                <div style={{ flex: '1 1 320px', minWidth: '260px' }}>
+                                    <Select
+                                        isClearable
+                                        options={groupedQuestionOptions}
+                                        value={importedFrom}
+                                        onChange={handleImportQuestion}
+                                        placeholder="Pick a question to copy text, instructions, motivations into the form below..."
+                                        noOptionsMessage={() => "No question available"}
+                                    />
+                                </div>
+                                {importedFrom && (
+                                    <span className="small" style={{ color: '#0056b3' }}>
+                                        Imported from <strong>{importedFrom.value}</strong>
+                                    </span>
+                                )}
+                            </div>
+
+                            
+                        </>
                     )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
