@@ -39,6 +39,7 @@ export default function ParameterList() {
     // --- Backup state ---
     const [backingUpId, setBackingUpId] = useState(null);  // id del parametro per cui si sta facendo backup singolo
     const [globalBackup, setGlobalBackup] = useState(false);
+    const [exportingInfo, setExportingInfo] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -126,6 +127,29 @@ export default function ParameterList() {
         setDropTarget(prev =>
             (prev && prev.id === targetId && prev.above === above) ? prev : { id: targetId, above }
         );
+    };
+
+    // ---- Export overview PDF ----
+    const onExportInfoPdf = async () => {
+        if (filteredParams.length === 0) {
+            alert('No parameter to export — adjust the filters first.');
+            return;
+        }
+        setExportingInfo(true);
+        try {
+            await downloadBlob(
+                api.post(
+                    '/api/admin/parameters/export/info-pdf',
+                    { param_ids: filteredParams.map(p => p.id) },
+                    { responseType: 'blob' }
+                ),
+                'PCM_parameters_info.pdf'
+            );
+        } catch {
+            alert('Error while downloading the parameters info PDF.');
+        } finally {
+            setExportingInfo(false);
+        }
     };
 
     // ---- Backup handlers ----
@@ -272,6 +296,15 @@ export default function ParameterList() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
+                        <button
+                            type="button"
+                            onClick={onExportInfoPdf}
+                            disabled={exportingInfo || filteredParams.length === 0}
+                            className="btn btn--small"
+                            title="Download a PDF with the general info of every (filtered) parameter"
+                        >
+                            {exportingInfo ? 'Exporting…' : 'Download parameters info (.pdf)'}
+                        </button>
                         <button
                             type="button"
                             onClick={onGlobalBackup}

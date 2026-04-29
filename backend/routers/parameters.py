@@ -12,7 +12,7 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
-from services.pdf_export import build_parameter_pdf
+from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf
 
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
@@ -290,6 +290,40 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
                    note=f"Deactivated{f': {payload.reason}' if payload.reason else ''}")
     db.commit()
     return {"detail": "Parameter successfully deactivated."}
+
+class ParametersInfoPdfPayload(BaseModel):
+    # Lista opzionale di ID; se vuota/omessa, esporta tutti i parametri.
+    param_ids: Optional[List[str]] = None
+
+
+@router.post("/export/info-pdf")
+def export_parameters_info_pdf(
+    payload: ParametersInfoPdfPayload,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """PDF con le info generali (no domande) di tutti i parametri richiesti.
+
+    Pensato come overview compatta da stampare/condividere coi linguisti:
+    una pagina di indice + una sezione per parametro con info di base,
+    descrizioni e logica.
+    """
+    q = db.query(models.ParameterDef)
+    if payload.param_ids:
+        q = q.filter(models.ParameterDef.id.in_(payload.param_ids))
+    parameters = q.order_by(models.ParameterDef.position, models.ParameterDef.id).all()
+
+    pdf_bytes = build_all_parameters_pdf(parameters)
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"PCM_parameters_info_{ts}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 @router.get("/{id}/pdf")
 def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
