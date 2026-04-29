@@ -198,22 +198,28 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             </div>
 
             {/* BLOCCO NO: Motivazioni */}
-            {value.response_text === 'no' && question.allowed_motivations.length > 0 && (
+            {value.response_text === 'no' && (
                 <div className="info-row">
                     <div className="info-row__label">Motivations</div>
                     <div className="info-row__content">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px' }}>
-                            {question.allowed_motivations.map(m => (
-                                <label key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={value.motivation_ids.includes(m.id)}
-                                        onChange={() => handleMotivationToggle(m.id)}
-                                        disabled={isReadOnly}
-                                    />
-                                    <strong>{m.label}</strong>
-                                </label>
-                            ))}
+                            {question.allowed_motivations.length > 0 ? (
+                                question.allowed_motivations.map(m => (
+                                    <label key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={value.motivation_ids.includes(m.id)}
+                                            onChange={() => handleMotivationToggle(m.id)}
+                                            disabled={isReadOnly}
+                                        />
+                                        <strong>{m.label}</strong>
+                                    </label>
+                                ))
+                            ) : (
+                                <span className="muted small" style={{ fontStyle: 'italic' }}>
+                                    No motivations available for this question.
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
