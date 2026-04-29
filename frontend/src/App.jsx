@@ -31,6 +31,8 @@ import Instructions from './features/instructions/Instructions';
 import BackupList from './features/backups/BackupList';
 import BackupFolder from './features/backups/BackupFolder';
 import BackupDetail from './features/backups/BackupDetail';
+import ParameterBackupFolder from './features/backups/ParameterBackupFolder';
+import ParameterBackupDetail from './features/backups/ParameterBackupDetail';
 import EditSiteContent from './features/public/EditSiteContent';
 import TableA from './features/tablea/TableA';
 import LogicTree  from "./features/queries/LogicTree.jsx";
@@ -97,6 +99,8 @@ export default function App() {
                     <Route path="/admin/motivations" element={<AdminRoute><Layout><MotivationList /></Layout></AdminRoute>} />
 
                     <Route path="/admin/backups" element={<AdminRoute><Layout><BackupList /></Layout></AdminRoute>} />
+                    <Route path="/admin/backups/parameters/:timestamp" element={<AdminRoute><Layout><ParameterBackupFolder /></Layout></AdminRoute>} />
+                    <Route path="/admin/backups/parameters/submissions/:id" element={<AdminRoute><Layout><ParameterBackupDetail /></Layout></AdminRoute>} />
                     <Route path="/admin/backups/:timestamp" element={<AdminRoute><Layout><BackupFolder /></Layout></AdminRoute>} />
                     <Route path="/admin/backups/submissions/:id" element={<AdminRoute><Layout><BackupDetail /></Layout></AdminRoute>} />
 

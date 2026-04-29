@@ -354,6 +354,86 @@ class SubmissionParam(Base):
 
 
 # ==========================================
+# 6.bis BACKUP DEI PARAMETRI (snapshot della definizione)
+# Tabelle separate dalle Submissions: qui si congela la *definizione* del
+# parametro (ParameterDef + Questions + motivations ammesse), non i dati
+# linguistici (quelli sono nel backup lingue).
+# ==========================================
+class ParameterSubmission(Base):
+    __tablename__ = "parameter_submissions"
+    id = Column(Integer, primary_key=True, index=True)
+    # Salvato come stringa: lo snapshot resta valido anche se il parametro
+    # viene poi cancellato/rinominato.
+    parameter_id = Column(String(10), nullable=False, index=True)
+    parameter_name = Column(String(200), nullable=False, default="")
+    submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    submitted_at = Column(DateTime, default=datetime.utcnow, index=True)
+    note = Column(Text, default="")
+
+    # Snapshot dei campi del ParameterDef
+    short_description = Column(Text, default="")
+    long_description = Column(Text, default="")
+    implicational_condition = Column(String(255), nullable=True)
+    description_of_the_implicational_condition = Column(Text, default="")
+    is_active = Column(Boolean, default=True)
+    position = Column(Integer, nullable=True)
+    schema = Column(String(100), default="")
+    param_type = Column(String(100), default="")
+    level_of_comparison = Column(String(255), default="")
+
+    submitted_by = relationship("User")
+    questions = relationship(
+        "ParameterSubmissionQuestion",
+        back_populates="submission",
+        cascade="all, delete-orphan",
+    )
+
+
+class ParameterSubmissionQuestion(Base):
+    __tablename__ = "parameter_submission_questions"
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(
+        Integer,
+        ForeignKey("parameter_submissions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    # Codice della question (string), niente FK rigida verso `questions`
+    question_code = Column(String(40), nullable=False)
+    text = Column(Text, nullable=False, default="")
+    template_type = Column(String(100), default="")
+    instruction = Column(Text, nullable=True)
+    instruction_yes = Column(Text, nullable=True)
+    instruction_no = Column(Text, nullable=True)
+    example_yes = Column(Text, nullable=True)
+    help_info = Column(Text, nullable=True)
+    is_stop_question = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+
+    submission = relationship("ParameterSubmission", back_populates="questions")
+    allowed_motivations = relationship(
+        "ParameterSubmissionAllowedMotivation",
+        back_populates="question",
+        cascade="all, delete-orphan",
+    )
+
+
+class ParameterSubmissionAllowedMotivation(Base):
+    __tablename__ = "parameter_submission_allowed_motivations"
+    id = Column(Integer, primary_key=True, index=True)
+    question_id = Column(
+        Integer,
+        ForeignKey("parameter_submission_questions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    motivation_code = Column(String(50), nullable=False)
+    motivation_label = Column(Text, nullable=False, default="")
+
+    question = relationship(
+        "ParameterSubmissionQuestion", back_populates="allowed_motivations"
+    )
+
+
+# ==========================================
 # 7. CRONOLOGIA VERSIONI (per rollback / audit granulare)
 # ==========================================
 class EntityVersion(Base):

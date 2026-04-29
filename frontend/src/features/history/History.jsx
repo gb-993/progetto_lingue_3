@@ -69,7 +69,7 @@ export default function History() {
                 {[
                     { id: 'versions', label: 'Change history' },
                     { id: 'answers', label: 'Answer changes' },
-                    { id: 'backups', label: 'Full backups (language snapshots)' },
+                    { id: 'backups', label: 'Full backups (languages & parameters)' },
                 ].map(t => {
                     const active = tab === t.id;
                     return (

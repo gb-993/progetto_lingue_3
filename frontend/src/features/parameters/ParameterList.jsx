@@ -36,6 +36,10 @@ export default function ParameterList() {
     const [dropTarget, setDropTarget] = useState(null); // { id, above: bool }
     const [savingOrder, setSavingOrder] = useState(false);
 
+    // --- Backup state ---
+    const [backingUpId, setBackingUpId] = useState(null);  // id del parametro per cui si sta facendo backup singolo
+    const [globalBackup, setGlobalBackup] = useState(false);
+
     useEffect(() => {
         const load = async () => {
             try {
@@ -122,6 +126,47 @@ export default function ParameterList() {
         setDropTarget(prev =>
             (prev && prev.id === targetId && prev.above === above) ? prev : { id: targetId, above }
         );
+    };
+
+    // ---- Backup handlers ----
+    const onGlobalBackup = async () => {
+        const note = window.prompt(
+            'Optional note for the global parameters backup (leave empty to skip):',
+            ''
+        );
+        if (note === null) return; // cancel
+        if (!window.confirm('Start a global backup of every parameter (definition + questions + allowed motivations)? This may take a while.')) return;
+        setGlobalBackup(true);
+        try {
+            await api.post('/api/admin/backups/parameters/create-all', { note });
+            alert('Global parameters backup completed. You can find it in History → Full backups → Parameters.');
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.detail || 'Error while creating the parameters backup.');
+        } finally {
+            setGlobalBackup(false);
+        }
+    };
+
+    const onBackupParameter = async (param) => {
+        const note = window.prompt(
+            `Optional note for the backup of "${param.name}" (${param.id}):`,
+            ''
+        );
+        if (note === null) return; // cancel
+        setBackingUpId(param.id);
+        try {
+            await api.post(
+                `/api/admin/backups/parameters/create-one/${encodeURIComponent(param.id)}`,
+                { note }
+            );
+            alert(`Backup of "${param.name}" created. You can find it in History → Full backups → Parameters.`);
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.detail || 'Error while creating the parameter backup.');
+        } finally {
+            setBackingUpId(null);
+        }
     };
 
     const handleDrop = async (e, targetId) => {
@@ -227,6 +272,15 @@ export default function ParameterList() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
+                        <button
+                            type="button"
+                            onClick={onGlobalBackup}
+                            disabled={globalBackup}
+                            className="btn btn--small"
+                            title="Snapshot every parameter definition (questions + allowed motivations)"
+                        >
+                            {globalBackup ? 'Backing up…' : '+ Full Parameters Backup'}
+                        </button>
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
                 </div>
@@ -318,6 +372,15 @@ export default function ParameterList() {
                                             }}
                                         >
                                             PDF
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn"
+                                            disabled={backingUpId === param.id}
+                                            onClick={() => onBackupParameter(param)}
+                                            title="Snapshot this parameter (definition + questions + allowed motivations)"
+                                        >
+                                            {backingUpId === param.id ? '…' : 'Backup'}
                                         </button>
                                         <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
                                     </td>

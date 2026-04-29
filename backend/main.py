@@ -11,6 +11,7 @@ from routers import (auth,
                      glossary,
                      languages,
                      parameters,
+                     parameters_backup,
                      questions,
                      users,
                      motivations,
@@ -48,6 +49,7 @@ app.include_router(users.router)
 app.include_router(motivations.router)
 app.include_router(compilation.router)
 app.include_router(instructions.router)
+app.include_router(parameters_backup.router)
 app.include_router(backup.router)
 app.include_router(site_content.router)
 app.include_router(tablea.router)
