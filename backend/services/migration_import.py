@@ -894,6 +894,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
         db.flush()
 
     valid_qids = {q for (q,) in db.query(models.Question.id).all()}
+    motivation_id_by_code = {m.code: m.id for m in db.query(models.Motivation).all()}
 
     for ridx, row in rows:
         summary.rows_total += 1
@@ -931,9 +932,21 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
 
         comments = _str(_get(row, hmap, "Language_Comments"))
         ex_texts = _split_lines(_get(row, hmap, "Language_Examples"))
+        translit_lines = _split_lines(_get(row, hmap, "Language_Example_Transliteration"))
         gloss_lines = _split_lines(_get(row, hmap, "Language_Example_Gloss"))
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
+
+        # Codici motivazioni associate alla risposta: una sola cella, codici
+        # separati da "," o ";". Codici sconosciuti vengono segnalati ma non
+        # bloccano la creazione della risposta.
+        mot_codes_raw = _str(_get(row, hmap, "Language_Motivations"))
+        mot_codes: List[str] = []
+        if mot_codes_raw:
+            for token in mot_codes_raw.replace(";", ",").split(","):
+                code = token.strip()
+                if code:
+                    mot_codes.append(code)
 
         try:
             answer = models.Answer(
@@ -944,22 +957,41 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
             db.add(answer)
             db.flush()
 
-            n_ex = max(len(ex_texts), len(gloss_lines), len(transl_lines), len(ref_lines))
+            n_ex = max(len(ex_texts), len(translit_lines), len(gloss_lines),
+                       len(transl_lines), len(ref_lines))
             for i in range(n_ex):
                 txt = ex_texts[i] if i < len(ex_texts) else ""
+                tl = translit_lines[i] if i < len(translit_lines) else ""
                 gl = gloss_lines[i] if i < len(gloss_lines) else ""
                 tr = transl_lines[i] if i < len(transl_lines) else ""
                 rf = ref_lines[i] if i < len(ref_lines) else ""
-                if not (txt or gl or tr or rf):
+                if not (txt or tl or gl or tr or rf):
                     continue
                 db.add(models.Example(
                     answer_id=answer.id, number=str(i + 1),
                     textarea=txt,
+                    transliteration=tl,
                     gloss=gl,
                     translation=tr,
                     reference=rf,
-                    transliteration="",
                 ))
+
+            seen_mot_ids: Set[int] = set()
+            for code in mot_codes:
+                mid = motivation_id_by_code.get(code)
+                if mid is None:
+                    report.errors.append(MigrationError(
+                        section=section, row=ridx, column="Language_Motivations",
+                        value=code, reason=f"Motivation '{code}' not found"
+                    ))
+                    continue
+                if mid in seen_mot_ids:
+                    continue
+                seen_mot_ids.add(mid)
+                db.add(models.AnswerMotivation(
+                    answer_id=answer.id, motivation_id=mid,
+                ))
+
             summary.inserted += 1
         except (IntegrityError, DataError) as e:
             db.rollback()
