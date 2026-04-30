@@ -113,6 +113,7 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
             "id": g.id,
             "name": g.name,
             "position": g.position,
+            "family_id": g.family_id,
             "language_count": cnt_grp.get(g.name, 0),
         })
 
