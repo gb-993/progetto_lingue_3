@@ -165,8 +165,9 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* Istruzione condizionale YES/NO */}
-            {value.response_text === 'yes' && question.instruction_yes && (
+            {/* Istruzione condizionale YES/NO. instruction_yes mostrato anche per
+                'unsure' perché il flusso esempi è identico a YES. */}
+            {(value.response_text === 'yes' || value.response_text === 'unsure') && question.instruction_yes && (
                 <div className="info-row instructions-yn instructions-yn--yes">
                     <div className="info-row__label">Instructions (YES)</div>
                     <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.instruction_yes}</div>
