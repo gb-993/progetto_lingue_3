@@ -208,9 +208,20 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
         cond_ok = parsed_ok if parse_error is None else None
 
         if cond_ok is False:
+            # Cond falsa: il parametro vale 0 in modo deterministico, indipendentemente dalle answers.
+            # Un eventuale warning_orig (conflitto question/stop-question) resta visibile sulla colonna
+            # input lato UI (arancione), ma non blocca lo 0 e non si propaga ai figli: rimuoviamo
+            # quindi target dal set warnings cosi' i discendenti non short-circuitano.
             lpe.value_eval = "0"
+            lpe.warning_eval = False
+            warnings.discard(target)
             forced_zero.append(target)
-        elif cond_ok is True:
+            db.flush()
+            cond_values[target] = "0"
+            processed.append(target)
+            continue
+
+        if cond_ok is True:
             if v_orig is None:
                 lpe.value_eval = "?"
                 if target not in warnings:

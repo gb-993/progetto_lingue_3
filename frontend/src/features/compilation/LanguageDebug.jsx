@@ -65,6 +65,22 @@ export default function LanguageDebug() {
                         {isRunningDag ? 'Processing...' : 'Apply implicational condition(s)'}
                     </button>
                 </div>
+
+                <div style={{ marginTop: '0.85rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{
+                            display: 'inline-block', width: '0.9rem', height: '0.9rem',
+                            background: 'color-mix(in oklab, var(--warn) 18%, transparent)',
+                            borderLeft: '3px solid var(--warn)'
+                        }} />
+                        <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>
+                        <span>Input warning — conflict on answers (informational, does not block the result)</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>
+                        <span>Eval warning — uncertain final value (propagates downstream)</span>
+                    </span>
+                </div>
             </div>
 
             {/* Tabella Dati */}
@@ -95,10 +111,20 @@ export default function LanguageDebug() {
                             </td>
                             <td>{r.questions.map(q => <div key={q}><code>{q}</code></div>)}</td>
                             <td>{r.answers.map((a, idx) => <div key={idx}>{a || <span className="muted">—</span>}</div>)}</td>
-                            <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                            <td
+                                style={{
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    background: r.warn_init ? 'color-mix(in oklab, var(--warn) 18%, transparent)' : undefined,
+                                    borderLeft: r.warn_init ? '3px solid var(--warn)' : undefined,
+                                }}
+                                title={r.warn_init ? 'Conflict between question/stop-question answers' : undefined}
+                            >
                                 {r.initial || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }}>{r.warn_init && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}</td>
+                            <td style={{ textAlign: 'center' }} title={r.warn_init ? 'Conflict on the input answers (informational)' : undefined}>
+                                {r.warn_init && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
+                            </td>
                             <td>{r.cond ? <code>{r.cond}</code> : <span className="muted">—</span>}</td>
                             <td style={{ textAlign: 'center' }}>
                                 {r.cond_true === true && <span style={{ background: '#d1e7dd', color: '#0f5132', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>TRUE</span>}
@@ -108,7 +134,9 @@ export default function LanguageDebug() {
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                                 {r.final === '?' ? <span style={{ color: '#d63384' }}>?</span> : r.final || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }}>{r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}</td>
+                            <td style={{ textAlign: 'center' }} title={r.warn_final ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
+                                {r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
+                            </td>
                         </tr>
                     ))}
                     </tbody>

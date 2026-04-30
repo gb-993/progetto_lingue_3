@@ -123,10 +123,25 @@ export default function BackupDetail() {
                                 sub.params.map((p, idx) => (
                                     <tr key={idx}>
                                         <td>{p.parameter_id}</td>
-                                        <td>{p.value_orig || ""}</td>
-                                        <td>{p.warning_orig ? "yes" : ""}</td>
-                                        <td>{p.value_eval || ""}</td>
-                                        <td>{p.warning_eval ? "yes" : ""}</td>
+                                        <td
+                                            style={{
+                                                fontWeight: 'bold',
+                                                background: p.warning_orig ? 'color-mix(in oklab, var(--warn) 18%, transparent)' : undefined,
+                                                borderLeft: p.warning_orig ? '3px solid var(--warn)' : undefined,
+                                            }}
+                                            title={p.warning_orig ? 'Conflict between question/stop-question answers' : undefined}
+                                        >
+                                            {p.value_orig || ""}
+                                        </td>
+                                        <td title={p.warning_orig ? 'Conflict on the input answers (informational)' : undefined}>
+                                            {p.warning_orig && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
+                                        </td>
+                                        <td style={{ fontWeight: 'bold' }}>
+                                            {p.value_eval === '?' ? <span style={{ color: '#d63384' }}>?</span> : (p.value_eval || "")}
+                                        </td>
+                                        <td title={p.warning_eval ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
+                                            {p.warning_eval && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
+                                        </td>
                                     </tr>
                                 ))
                             )}
