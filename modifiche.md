@@ -53,7 +53,7 @@ L'idea è che la modifica al testo di una question potrebbe:
     2. far sì che i vecchi dati non vadano più bene con il nuovo testo della question. 
         -> Nel caso 2. i dati di tutte le lingue relativi a quella question dovrebbero essere rimossi ma non eliminati, ci vorrebbe una pagina che li conservasse, magari con anche la possibilità di scaricarli come xlsx. Tipo una pagina simile a "Questions" con la lista delle questions obsolete e la possibilità di scaricare i vecchi dati
 - [x] Spostare in alto a dx il download del pdf con le info del parametro "Download parameter info (.pdf)"
-- [ ] Il bottone "Download PDF" nel riquadro "Brief summary of changes" potrebbe scaricare la cronologia delle modifiche
+- [x] Il bottone "Download PDF" nel riquadro "Brief summary of changes" potrebbe scaricare la cronologia delle modifiche
 - [x] Fare in modo che le finestre di edit delle motivazioni, di schema/type ecc si aprano come pop up e quindi non si perdano le info inserite (funziona in edit parameter ma non in edit question)
 - [x] Mettere una barra di ricerca sotto a "Behavior & Motivations" per cercare tra le motivazioni senza doverle leggere tutte
 - [ ] Numerazione automatica delle motivazioni

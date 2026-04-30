@@ -12,7 +12,7 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
-from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf
+from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
 
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
@@ -343,6 +343,31 @@ def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user:
     buf = io.BytesIO(pdf_bytes)
     buf.seek(0)
     filename = f"Parameter_{parameter.id}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{id}/changelog-pdf")
+def download_parameter_changelog_pdf(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    parameter = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not parameter:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+
+    logs = (
+        db.query(models.ParameterChangeLog)
+        .options(joinedload(models.ParameterChangeLog.user))
+        .filter(models.ParameterChangeLog.parameter_id == id)
+        .order_by(models.ParameterChangeLog.created_at.desc())
+        .all()
+    )
+
+    pdf_bytes = build_parameter_changelog_pdf(parameter, logs)
+    buf = io.BytesIO(pdf_bytes)
+    buf.seek(0)
+    filename = f"Parameter_{parameter.id}_changelog.pdf"
     return StreamingResponse(
         buf,
         media_type="application/pdf",

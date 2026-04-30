@@ -7,6 +7,19 @@ import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 
+async function downloadBlob(request, fallbackName) {
+    const res = await request;
+    const cd = res.headers['content-disposition'] || '';
+    const m = cd.match(/filename="?([^";]+)"?/);
+    const filename = m ? m[1] : fallbackName;
+    const blob = new Blob([res.data]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+}
+
 const Q_DRAFT_FIELDS = [
     'text', 'instruction', 'instruction_yes', 'instruction_no',
     'example_yes', 'help_info', 'is_stop_question',
@@ -317,6 +330,22 @@ export default function QuestionForm({ mode = 'page' }) {
     const handleCreateOption = (inputValue) => {
         setNewMotData({ code: inputValue.toUpperCase(), label: '' });
         setShowCreator(true);
+    };
+
+    // Scarica la cronologia modifiche del parametro genitore: le question
+    // condividono i change_logs del proprio parameter, quindi qui usiamo
+    // l'endpoint del parametro corrente.
+    const handleDownloadChangelogPdf = async () => {
+        const paramId = formData.parameter_id;
+        if (!paramId) return;
+        try {
+            await downloadBlob(
+                api.get(`/api/admin/parameters/${paramId}/changelog-pdf`, { responseType: 'blob' }),
+                `Parameter_${paramId}_changelog.pdf`
+            );
+        } catch {
+            alert('Error while downloading the change history PDF.');
+        }
     };
 
     // --- EDIT/DELETE INLINE DI UNA MOTIVATION ESISTENTE ---
@@ -724,11 +753,23 @@ export default function QuestionForm({ mode = 'page' }) {
                         border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
                         marginTop: '1rem'
                     }}>
-                        <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
-                            {!isEditMode
-                                ? 'New Question — Note Required'
-                                : (isDirty ? 'Changes Detected' : 'Audit Log & Note (Parent Parameter)')}
-                        </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+                            <h4 style={{ margin: 0, color: isDirty ? '#664d03' : 'inherit' }}>
+                                {!isEditMode
+                                    ? 'New Question — Note Required'
+                                    : (isDirty ? 'Changes Detected' : 'Brief summary of changes (Parent Parameter)')}
+                            </h4>
+                            {formData.parameter_id && (
+                                <button
+                                    type="button"
+                                    className="btn btn--small"
+                                    onClick={handleDownloadChangelogPdf}
+                                    title="Download the change history of the parent parameter as PDF"
+                                >
+                                    Download PDF
+                                </button>
+                            )}
+                        </div>
                         <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
                             {!isEditMode
                                 ? 'You are adding a new question. Enter a description that will be saved in the history of the parent parameter.'

@@ -56,7 +56,12 @@
       "Bash(pip install *)",
       "Bash(npm run *)",
       "Bash(python -c \"import models; import services.archive_service; import routers.archived_questions; import routers.questions; import main; print\\('OK'\\)\")",
-      "Bash(python -m py_compile models.py services/archive_service.py routers/archived_questions.py routers/questions.py main.py alembic/versions/b1d4e7f0a3c5_archived_questions.py)"
+      "Bash(python -m py_compile models.py services/archive_service.py routers/archived_questions.py routers/questions.py main.py alembic/versions/b1d4e7f0a3c5_archived_questions.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('backend/services/pdf_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('backend/routers/parameters.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(node --check frontend/src/features/parameters/ParameterForm.jsx)",
+      "Bash(node --check frontend/src/features/questions/QuestionForm.jsx)",
+      "Bash(python -c \"from services.pdf_export import build_parameter_changelog_pdf; from routers.parameters import download_parameter_changelog_pdf; print\\('imports OK'\\)\")",
+      "Bash(python -c \"from services.pdf_export import build_parameter_changelog_pdf; print\\('OK', build_parameter_changelog_pdf\\)\")"
     ]
   }
 }

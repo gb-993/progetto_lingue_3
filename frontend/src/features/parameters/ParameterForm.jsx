@@ -219,6 +219,17 @@ export default function ParameterForm() {
         }
     };
 
+    const handleDownloadChangelogPdf = async () => {
+        try {
+            await downloadBlob(
+                api.get(`/api/admin/parameters/${id}/changelog-pdf`, { responseType: 'blob' }),
+                `Parameter_${id}_changelog.pdf`
+            );
+        } catch {
+            alert('Error while downloading the change history PDF.');
+        }
+    };
+
     // --- DISATTIVAZIONE / RIATTIVAZIONE DEL PARAMETRO ---
     const handleToggleActiveClick = async (e) => {
         e.preventDefault();
@@ -484,9 +495,19 @@ export default function ParameterForm() {
                                 border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
                                 marginBottom: '1.5rem'
                             }}>
-                                <h4 style={{ marginTop: 0, color: isDirty ? '#664d03' : 'inherit', marginBottom: '0.5rem' }}>
-                                    {isDirty ? 'Changes Detected' : 'Audit Log & Note'}
-                                </h4>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+                                    <h4 style={{ margin: 0, color: isDirty ? '#664d03' : 'inherit' }}>
+                                        {isDirty ? 'Changes Detected' : 'Brief summary of changes'}
+                                    </h4>
+                                    <button
+                                        type="button"
+                                        className="btn btn--small"
+                                        onClick={handleDownloadChangelogPdf}
+                                        title="Download the change history of this parameter as PDF"
+                                    >
+                                        Download PDF
+                                    </button>
+                                </div>
                                 <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
                                     {isDirty
                                         ? 'You have modified this parameter. You must enter a reason in order to save.'
