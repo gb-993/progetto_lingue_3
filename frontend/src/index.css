@@ -2148,3 +2148,17 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
     animation: none;
   }
 }
+
+/* Spinner: usato per loader in attesa (es. import Excel). */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import api from '../../api';
 
 export default function ImportExcel() {
@@ -7,6 +8,18 @@ export default function ImportExcel() {
     const [busy, setBusy] = useState(false);
     const [report, setReport] = useState(null);
     const [error, setError] = useState('');
+    const [elapsed, setElapsed] = useState(0);
+    const startedAtRef = useRef(null);
+
+    useEffect(() => {
+        if (!busy) return;
+        const id = setInterval(() => {
+            if (startedAtRef.current) {
+                setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
+            }
+        }, 500);
+        return () => clearInterval(id);
+    }, [busy]);
 
     const handleFile = (e) => {
         setFile(e.target.files[0] || null);
@@ -20,6 +33,8 @@ export default function ImportExcel() {
         setBusy(true);
         setError('');
         setReport(null);
+        setElapsed(0);
+        startedAtRef.current = Date.now();
         try {
             const fd = new FormData();
             fd.append('file', file);
@@ -98,12 +113,29 @@ export default function ImportExcel() {
                             {busy ? 'Importing...' : 'Start Import'}
                         </button>
                         <Link to="/languages" className="btn">Cancel</Link>
-                        {busy && (
-                            <span className="small muted">Do not close the page until completion.</span>
-                        )}
                     </div>
                 </form>
             </div>
+
+            {busy && (
+                <div className="card" style={{
+                    padding: '1.25rem 1.5rem', marginBottom: '1.5rem',
+                    display: 'flex', alignItems: 'center', gap: '1rem',
+                }}>
+                    <Loader2 size={28} className="spin" style={{ color: 'var(--brand, #3b82f6)' }} />
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>
+                            Import in progress
+                        </div>
+                        <div className="small muted">
+                            This may take up to a minute. Do not close the page.
+                        </div>
+                    </div>
+                    <div className="small muted" style={{ whiteSpace: 'nowrap' }}>
+                        Elapsed: {elapsed}s
+                    </div>
+                </div>
+            )}
 
             {error && (
                 <div className="alert alert-error" style={{ marginBottom: '1rem' }}>

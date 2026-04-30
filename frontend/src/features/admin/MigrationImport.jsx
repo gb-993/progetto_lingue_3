@@ -1,6 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+
+// Ordine e pesi delle fasi del backend (in services/migration_import.py).
+// I pesi sono stime: compilation e dag sono di gran lunga le fasi piĂą lunghe.
+const PHASE_ORDER = [
+    'queued',
+    'opening_zip',
+    'wipe',
+    'motivations',
+    'parameters',
+    'questions',
+    'qam',
+    'glossary',
+    'question_versions',
+    'languages',
+    'compilation',
+    'unsure_flags',
+    'dag',
+    'admin',
+    'done',
+];
+const PHASE_WEIGHTS = {
+    queued: 0,
+    opening_zip: 1,
+    wipe: 2,
+    motivations: 1,
+    parameters: 1,
+    questions: 1,
+    qam: 1,
+    glossary: 1,
+    question_versions: 1,
+    languages: 2,
+    compilation: 50,
+    unsure_flags: 1,
+    dag: 35,
+    admin: 1,
+    done: 0,
+};
+const TOTAL_WEIGHT = Object.values(PHASE_WEIGHTS).reduce((a, b) => a + b, 0);
+
+function computeOverallPercent(state) {
+    if (!state) return 0;
+    if (state.finished) return state.error ? 0 : 100;
+    const idx = PHASE_ORDER.indexOf(state.phase);
+    if (idx < 0) return 0;
+    let cumulative = 0;
+    for (let i = 0; i < idx; i++) {
+        cumulative += PHASE_WEIGHTS[PHASE_ORDER[i]] || 0;
+    }
+    const phaseWeight = PHASE_WEIGHTS[state.phase] || 0;
+    const phaseFraction = state.total > 0 ? Math.min(1, (state.current || 0) / state.total) : 0;
+    cumulative += phaseWeight * phaseFraction;
+    // Cap a 99 finchĂ© il backend non risponde finished:true (cosĂ¬ il 100% rappresenta solo il done effettivo).
+    return Math.min(99, Math.round((cumulative / TOTAL_WEIGHT) * 100));
+}
+
+function fmtElapsed(seconds) {
+    if (seconds == null) return '';
+    const s = Math.max(0, Math.floor(seconds));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}m ${r}s` : `${r}s`;
+}
 
 export default function MigrationImport() {
     const [file, setFile] = useState(null);
@@ -10,12 +72,20 @@ export default function MigrationImport() {
     const [report, setReport] = useState(null);
     const [error, setError] = useState('');
 
+    // Job tracking
+    const [jobId, setJobId] = useState(null);
+    const [jobState, setJobState] = useState(null);
+    const [elapsed, setElapsed] = useState(0);
+    const startedAtRef = useRef(null);
+
     const canSubmit = !!file && !busy && (!wipe || confirmText === 'WIPE');
 
     const handleFile = (e) => {
         setFile(e.target.files[0] || null);
         setReport(null);
         setError('');
+        setJobId(null);
+        setJobState(null);
     };
 
     const handleSubmit = async (e) => {
@@ -24,6 +94,9 @@ export default function MigrationImport() {
         setBusy(true);
         setError('');
         setReport(null);
+        setJobId(null);
+        setJobState(null);
+        startedAtRef.current = Date.now();
         try {
             const fd = new FormData();
             fd.append('file', file);
@@ -32,13 +105,66 @@ export default function MigrationImport() {
                 fd,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            setReport(res.data);
+            if (res.data?.job_id) {
+                setJobId(res.data.job_id);
+            } else {
+                setError('Server did not return a job_id.');
+                setBusy(false);
+            }
         } catch (err) {
-            setError(err.response?.data?.detail || 'Error during migration import.');
-        } finally {
+            setError(err.response?.data?.detail || 'Error starting migration import.');
             setBusy(false);
         }
     };
+
+    // Polling dello stato del job
+    useEffect(() => {
+        if (!jobId) return;
+        let cancelled = false;
+
+        const poll = async () => {
+            try {
+                const res = await api.get(`/api/admin/migration/status/${jobId}`);
+                if (cancelled) return;
+                setJobState(res.data);
+                if (res.data.finished) {
+                    if (res.data.error) {
+                        setError(res.data.error);
+                    } else {
+                        setReport(res.data.report);
+                    }
+                    setBusy(false);
+                }
+            } catch (err) {
+                if (cancelled) return;
+                setError(err.response?.data?.detail || 'Error polling job status.');
+                setBusy(false);
+            }
+        };
+
+        poll();
+        const intervalId = setInterval(() => {
+            if (jobState?.finished) return;
+            poll();
+        }, 1500);
+
+        return () => {
+            cancelled = true;
+            clearInterval(intervalId);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [jobId]);
+
+    // Timer "elapsed" lato client
+    useEffect(() => {
+        if (!busy) return;
+        const id = setInterval(() => {
+            if (startedAtRef.current) {
+                setElapsed((Date.now() - startedAtRef.current) / 1000);
+            }
+        }, 500);
+        return () => clearInterval(id);
+    }, [busy]);
 
     return (
         <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
@@ -142,15 +268,14 @@ export default function MigrationImport() {
                         >
                             {busy ? 'Importing...' : 'Start migration import'}
                         </button>
-                        <Link to="/dashboard" className="btn">Cancel</Link>
-                        {busy && (
-                            <span className="small muted">
-                                Operazione lunga (può richiedere alcuni minuti). Non chiudere la pagina.
-                            </span>
-                        )}
+                        <Link to="/dashboard" className={`btn ${busy ? 'is-disabled' : ''}`}>Cancel</Link>
                     </div>
                 </form>
             </div>
+
+            {busy && (
+                <ProgressPanel jobState={jobState} elapsed={elapsed} />
+            )}
 
             {error && (
                 <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
@@ -159,6 +284,70 @@ export default function MigrationImport() {
             )}
 
             {report && <MigrationReport report={report} />}
+        </div>
+    );
+}
+
+
+function ProgressPanel({ jobState, elapsed }) {
+    const percent = computeOverallPercent(jobState);
+    const phase = jobState?.phase || 'queued';
+    const label = jobState?.phase_label || 'Job queued, waiting for backend...';
+    const current = jobState?.current || 0;
+    const total = jobState?.total || 0;
+    const showPhaseCounter = total > 0;
+
+    return (
+        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ margin: 0 }}>Migration in progress</h3>
+                <span className="small muted">
+                    Elapsed: {fmtElapsed(elapsed)}
+                </span>
+            </div>
+
+            <div style={{
+                position: 'relative',
+                width: '100%',
+                height: '22px',
+                background: 'var(--surface-2)',
+                borderRadius: '11px',
+                overflow: 'hidden',
+                border: '1px solid var(--border)',
+                marginBottom: '0.75rem',
+            }}>
+                <div style={{
+                    width: `${percent}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, var(--brand, #3b82f6), #6366f1)',
+                    transition: 'width 0.4s ease',
+                }} />
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.78rem', fontWeight: 700, color: 'var(--text)',
+                    mixBlendMode: 'difference',
+                }}>
+                    {percent}%
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div className="small">
+                    <strong>Phase:</strong> {phase}{' '}
+                    <span className="muted">— {label}</span>
+                </div>
+                {showPhaseCounter && (
+                    <div className="small muted" style={{ whiteSpace: 'nowrap' }}>
+                        {current} / {total}
+                    </div>
+                )}
+            </div>
+
+            <div className="small muted" style={{ marginTop: '0.75rem' }}>
+                Operazione lunga (può richiedere alcuni minuti). Non chiudere la pagina —
+                potrai farlo riaprendola con la stessa URL, ma non vedresti il progresso live.
+            </div>
         </div>
     );
 }

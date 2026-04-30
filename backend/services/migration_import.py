@@ -66,6 +66,7 @@ import models
 from services.dag_eval import run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
 from services.versioning import record_version
+from services.migration_progress import ProgressReporter, NULL_PROGRESS
 
 
 # ============================================================================
@@ -1051,12 +1052,16 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
 # ============================================================================
 
 def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
-                                report: MigrationReport) -> None:
+                                report: MigrationReport,
+                                progress: ProgressReporter = NULL_PROGRESS) -> None:
     """Per ogni lingua: ricalcola LanguageParameter (consolidate) + esegue il DAG."""
     summary = report.section("DAG")
     param_ids = [p for (p,) in db.query(models.ParameterDef.id).all()]
 
-    for lid in language_ids:
+    language_ids = list(language_ids)
+    total = len(language_ids)
+    for i, lid in enumerate(language_ids, start=1):
+        progress.tick(current=i, label=f"DAG & consolidate ({i}/{total}): {lid}")
         summary.rows_total += 1
         # 1) consolidate per ogni parametro (popola value_orig)
         try:
@@ -1082,11 +1087,18 @@ def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
 # Main entry point
 # ============================================================================
 
-def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -> MigrationReport:
-    """Punto di ingresso. Apre il ZIP e orchestra tutte le fasi."""
+def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
+                            progress: ProgressReporter = NULL_PROGRESS) -> MigrationReport:
+    """Punto di ingresso. Apre il ZIP e orchestra tutte le fasi.
+
+    `progress` è un ProgressReporter opzionale: se passato, le fasi e gli
+    avanzamenti per-lingua vengono pubblicati nello stato job (vedi
+    `services/migration_progress.py`).
+    """
     report = MigrationReport()
 
     # 1. Apertura ZIP
+    progress.phase("opening_zip", label="Opening migration bundle...")
     try:
         zf = zipfile.ZipFile(io.BytesIO(file_bytes), "r")
     except Exception as e:
@@ -1097,6 +1109,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
 
     # 2. Wipe (opzionale)
     if wipe:
+        progress.phase("wipe", label="Wiping existing data...")
         try:
             _wipe_all(db)
             db.commit()
@@ -1108,18 +1121,19 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
 
     # 3. Schema (motivations -> parameters -> questions -> qam -> glossary)
     section_files = [
-        ("01_motivations.xlsx", _import_motivations),
-        ("02_parameters.xlsx", _import_parameters),
-        ("03_questions.xlsx", _import_questions),
-        ("04_question_allowed_motivations.xlsx", _import_qam),
-        ("06_glossary.xlsx", _import_glossary),
+        ("01_motivations.xlsx", _import_motivations, "motivations", "Importing motivations"),
+        ("02_parameters.xlsx", _import_parameters, "parameters", "Importing parameters"),
+        ("03_questions.xlsx", _import_questions, "questions", "Importing questions"),
+        ("04_question_allowed_motivations.xlsx", _import_qam, "qam", "Importing question/motivation links"),
+        ("06_glossary.xlsx", _import_glossary, "glossary", "Importing glossary"),
     ]
-    for fname, importer in section_files:
+    for fname, importer, phase_id, phase_label in section_files:
         if fname not in names:
             continue
         ws = _open_xlsx_from_zip(zf, fname)
         if ws is None:
             continue
+        progress.phase(phase_id, label=phase_label)
         try:
             importer(db, ws, report)
             db.commit()
@@ -1129,6 +1143,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
 
     # Registra la create iniziale per le Question dopo che le qam sono state
     # importate, così lo snapshot riflette le motivations associate.
+    progress.phase("question_versions", label="Recording initial Question versions...")
     try:
         _record_initial_create_for_questions(db)
         db.commit()
@@ -1143,6 +1158,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
     if "00_languages.xlsx" in names:
         ws = _open_xlsx_from_zip(zf, "00_languages.xlsx")
         if ws is not None:
+            progress.phase("languages", label="Importing languages and taxonomy")
             try:
                 _import_languages(db, ws, report)
                 db.commit()
@@ -1153,11 +1169,14 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
     # 5. Compilation per ogni file in data/
     data_files = sorted([n for n in names if n.startswith("data/") and n.endswith(".xlsx")])
     processed_lang_ids: List[str] = []
-    for fname in data_files:
+    total_files = len(data_files)
+    progress.phase("compilation", label=f"Importing compilation data (0/{total_files})", total=total_files)
+    for i, fname in enumerate(data_files, start=1):
         ws = _open_xlsx_from_zip(zf, fname)
         if ws is None:
             continue
         base = os.path.basename(fname)
+        progress.tick(current=i, label=f"Compilation ({i}/{total_files}): {base}")
         try:
             lid = _import_compilation_xlsx(db, ws, base, report)
             if lid:
@@ -1172,6 +1191,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
     if "08_unsure_flags.xlsx" in names:
         ws = _open_xlsx_from_zip(zf, "08_unsure_flags.xlsx")
         if ws is not None:
+            progress.phase("unsure_flags", label="Importing unsure flags")
             try:
                 _import_unsure_flags(db, ws, report)
                 db.commit()
@@ -1181,14 +1201,17 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
 
     # 7. Consolidate + DAG
     if processed_lang_ids:
+        progress.phase("dag", label=f"Computing parameters and DAG (0/{len(processed_lang_ids)})",
+                       total=len(processed_lang_ids))
         try:
-            _run_post_import_evaluation(db, processed_lang_ids, report)
+            _run_post_import_evaluation(db, processed_lang_ids, report, progress=progress)
             db.commit()
         except Exception as e:
             db.rollback()
             report.errors.append(MigrationError(section="DAG", reason=str(e)[:200]))
 
     # 8. Default admin (sempre, anche senza wipe — è idempotente)
+    progress.phase("admin", label="Ensuring default admin user")
     try:
         report.admin_email = _ensure_default_admin(db)
         db.commit()
