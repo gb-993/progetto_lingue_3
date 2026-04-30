@@ -196,7 +196,17 @@ def get_version_detail(
         raise HTTPException(404, "Version not found")
 
     prev = get_previous_version(db, v.entity_type, v.entity_id, v.id)
-    diff = compute_diff(prev.snapshot if prev else None, v.snapshot or {})
+    if v.operation == "delete":
+        # Per una cancellazione lo snapshot salvato rappresenta lo stato
+        # appena prima del delete: nel diff i valori vanno mostrati come
+        # "Before", e "Now" è null perché il record non esiste più.
+        diff = {
+            k: {"old": val, "new": None}
+            for k, val in (v.snapshot or {}).items()
+            if val not in (None, "")
+        }
+    else:
+        diff = compute_diff(prev.snapshot if prev else None, v.snapshot or {})
 
     return {
         **_to_summary(v),

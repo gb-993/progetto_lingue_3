@@ -38,8 +38,12 @@ Strategia operativa:
       e ricrea Answer come `approved` + Example;
     - alla fine: per ogni lingua, calcola LanguageParameter (consolidate) + esegue il DAG;
     - admin di default ricreato sempre (env: ADMIN_EMAIL, ADMIN_PASSWORD);
-    - il versioning (entity_versions) è disabilitato per questo flusso: è un
-      bulk seed iniziale, non un'operazione tracciabile granularmente.
+    - per ogni entità versionata (Motivation, Parameter, Question, Language,
+      Answer) viene registrata una EntityVersion con operation='create' e
+      source='migration_import'. Questo dà a ciascuna entità una "prima
+      versione" da cui partire: ogni modifica futura mostrerà diff puliti
+      contro questo snapshot iniziale, come se i dati fossero stati immessi
+      manualmente al momento del seed.
 
 Endpoint chiamante: routers/migration.py
 """
@@ -61,6 +65,7 @@ import bcrypt
 import models
 from services.dag_eval import run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
+from services.versioning import record_version
 
 
 # ============================================================================
@@ -302,6 +307,8 @@ def _import_motivations(db: Session, ws: Worksheet, report: MigrationReport) -> 
             db.add(obj)
             db.flush()
             by_code[code] = obj
+            record_version(db, obj, operation="create", source="migration_import",
+                           user_id=None, note="Initial seed (migration import)")
             summary.inserted += 1
 
 
@@ -417,6 +424,12 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
             target.level_of_comparison = _ensure_param_lookup(
                 db, models.ParamLevelOfComparison, target.level_of_comparison, level_cache
             )
+
+            # Versione iniziale solo per gli inserimenti (existing == None).
+            if existing is None:
+                db.flush()
+                record_version(db, target, operation="create", source="migration_import",
+                               user_id=None, note="Initial seed (migration import)")
         except (IntegrityError, DataError) as e:
             db.rollback()
             summary.errors += 1
@@ -496,6 +509,8 @@ def _import_questions(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 db.add(obj)
                 db.flush()
                 by_id[qid] = obj
+                # NB: la versione 'create' per Question viene registrata dopo
+                # _import_qam, così lo snapshot include allowed_motivation_codes.
                 summary.inserted += 1
         except (IntegrityError, DataError) as e:
             db.rollback()
@@ -563,6 +578,25 @@ def _import_qam(db: Session, ws: Worksheet, report: MigrationReport) -> None:
         for qid, mid in pairs:
             db.add(models.QuestionAllowedMotivation(question_id=qid, motivation_id=mid))
             summary.inserted += 1
+
+
+def _record_initial_create_for_questions(db: Session) -> None:
+    """Registra la versione 'create' iniziale per le Question prive di
+    EntityVersion. Da chiamare DOPO _import_qam così che lo snapshot includa
+    correttamente allowed_motivation_codes."""
+    questions = db.query(models.Question).all()
+    if not questions:
+        return
+    versioned_qids = {
+        qid for (qid,) in db.query(models.EntityVersion.entity_id).filter(
+            models.EntityVersion.entity_type == "question"
+        ).distinct().all()
+    }
+    for q in questions:
+        if q.id in versioned_qids:
+            continue
+        record_version(db, q, operation="create", source="migration_import",
+                       user_id=None, note="Initial seed (migration import)")
 
 
 # ============================================================================
@@ -723,6 +757,8 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 db.add(obj)
                 db.flush()
                 existing_langs[lid] = obj
+                record_version(db, obj, operation="create", source="migration_import",
+                               user_id=None, note="Initial seed (migration import)")
                 summary.inserted += 1
                 next_position = max(next_position, position) + 1
         except (IntegrityError, DataError) as e:
@@ -992,6 +1028,11 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
                     answer_id=answer.id, motivation_id=mid,
                 ))
 
+            # Snapshot iniziale dell'Answer comprensivo di examples e
+            # motivation_codes (richiede flush per popolare le relationship).
+            db.flush()
+            record_version(db, answer, operation="create", source="migration_import",
+                           user_id=None, note="Initial seed (migration import)")
             summary.inserted += 1
         except (IntegrityError, DataError) as e:
             db.rollback()
@@ -1085,6 +1126,18 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True) -
         except Exception as e:
             db.rollback()
             report.errors.append(MigrationError(section=fname, reason=str(e)[:200]))
+
+    # Registra la create iniziale per le Question dopo che le qam sono state
+    # importate, così lo snapshot riflette le motivations associate.
+    try:
+        _record_initial_create_for_questions(db)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        report.errors.append(MigrationError(
+            section="(versioning)",
+            reason=f"Could not record initial Question versions: {str(e)[:200]}",
+        ))
 
     # 4. Languages (popola anche taxonomy)
     if "00_languages.xlsx" in names:

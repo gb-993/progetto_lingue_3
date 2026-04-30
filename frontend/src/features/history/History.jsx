@@ -441,13 +441,7 @@ function VersionDiffView({ data, onClose }) {
             </div>
 
             {/* Diff */}
-            {!data.previous_snapshot ? (
-                <div className="alert alert-success" style={{ padding: '0.6rem', marginBottom: '1rem', borderRadius: '6px' }}>
-                    First recorded version of this entity — no diff available.
-                </div>
-            ) : changedFields.length === 0 ? (
-                <p className="muted">No field modified (version recorded with no changes).</p>
-            ) : (
+            {changedFields.length > 0 && (
                 <>
                     <h3 style={{ marginBottom: '0.5rem' }}>Modified fields ({changedFields.length})</h3>
                     <div style={{ marginBottom: '1.5rem', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
@@ -478,38 +472,24 @@ function VersionDiffView({ data, onClose }) {
             )}
 
             {/* Snapshot completo */}
-            <details>
-                <summary style={{ cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, padding: '0.5rem 0' }}>
-                    Show full snapshot ({allFields.length} fields)
-                </summary>
-                <div style={{ marginTop: '0.5rem', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-                    <table className="table" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
-                        <thead>
-                            <tr>
-                                <th>Field</th>
-                                <th>Value</th>
+            <h3 style={{ marginBottom: '0.5rem' }}>Full snapshot ({allFields.length} fields)</h3>
+            <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                <table className="table" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {allFields.map(f => (
+                            <tr key={f}>
+                                <td style={{ fontWeight: 600 }}>{f}</td>
+                                <td style={{ whiteSpace: 'pre-wrap' }}>{fmtValue(data.snapshot[f])}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {allFields.map(f => (
-                                <tr key={f}>
-                                    <td style={{ fontWeight: 600 }}>{f}</td>
-                                    <td style={{ whiteSpace: 'pre-wrap' }}>{fmtValue(data.snapshot[f])}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </details>
-
-            {/* Placeholder rollback */}
-            <div className="alert alert-warning" style={{ marginTop: '1.5rem', padding: '0.85rem', borderStyle: 'dashed', borderRadius: '6px' }}>
-                <div>
-                    <h4 style={{ marginTop: 0, marginBottom: '0.4rem' }}>Rollback (coming soon)</h4>
-                    <p className="small" style={{ margin: 0 }}>
-                        The feature to restore this version will be available shortly. For now, use the "Go to the edit page" link above and copy the values from the <em>Before</em> column manually.
-                    </p>
-                </div>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </>
     );

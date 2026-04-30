@@ -88,6 +88,11 @@ def serialize_entity(entity: Any) -> dict:
             am.motivation.code for am in entity.answer_motivations if am.motivation
         )
 
+    if type(entity).__name__ == "Question":
+        out["allowed_motivation_codes"] = sorted(
+            am.motivation.code for am in entity.allowed_motivations if am.motivation
+        )
+
     return out
 
 
