@@ -332,6 +332,28 @@ export default function QuestionForm({ mode = 'page' }) {
         setShowCreator(true);
     };
 
+    // Suggerisce il prossimo codice MOT### libero. Trova il massimo numero
+    // tra i code che matchano `MOT\d+`, +1, e zero-padda a 3 cifre. Usato
+    // dal footer "+ Create new motivation…" del dropdown e come default
+    // quando l'utente apre il creator senza aver digitato un code custom.
+    const suggestNextMotivationCode = useCallback(() => {
+        const re = /^MOT(\d+)$/i;
+        let max = 0;
+        for (const m of allMotivations) {
+            const match = String(m.code || '').match(re);
+            if (match) {
+                const n = parseInt(match[1], 10);
+                if (Number.isFinite(n) && n > max) max = n;
+            }
+        }
+        return `MOT${String(max + 1).padStart(3, '0')}`;
+    }, [allMotivations]);
+
+    const openCreatorFromFooter = useCallback(() => {
+        setNewMotData({ code: suggestNextMotivationCode(), label: '' });
+        setShowCreator(true);
+    }, [suggestNextMotivationCode]);
+
     // Scarica la cronologia modifiche del parametro genitore: le question
     // condividono i change_logs del proprio parameter, quindi qui usiamo
     // l'endpoint del parametro corrente.
@@ -440,7 +462,38 @@ export default function QuestionForm({ mode = 'page' }) {
                 <RSComponents.MultiValueLabel {...props} />
             </div>
         ),
-    }), [openMotivationEditor]);
+        // Footer sticky in fondo al dropdown: punto di scoperta esplicito
+        // per la creazione, complementare al "Create new: ..." inline che
+        // appare solo quando l'utente sta digitando un code nuovo. Usiamo
+        // onMouseDown+preventDefault per non perdere il focus del select
+        // prima di aprire il modal.
+        MenuList: (props) => (
+            <RSComponents.MenuList {...props}>
+                {props.children}
+                <div
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openCreatorFromFooter();
+                    }}
+                    style={{
+                        position: 'sticky',
+                        bottom: 0,
+                        padding: '0.55rem 0.75rem',
+                        borderTop: '1px solid var(--border)',
+                        background: 'var(--surface-2, #f8fafc)',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        color: 'var(--link, #0056b3)',
+                    }}
+                    title="Apri il modal per creare una nuova motivation con code e descrizione"
+                >
+                    + Create new motivation…
+                </div>
+            </RSComponents.MenuList>
+        ),
+    }), [openMotivationEditor, openCreatorFromFooter]);
 
     const saveNewMotivation = async () => {
         if (!newMotData.code || !newMotData.label) return;
@@ -717,7 +770,7 @@ export default function QuestionForm({ mode = 'page' }) {
                             Allowed Motivations (for NO answers)
                         </label>
                         <p className="small muted" style={{ marginBottom: '0.8rem' }}>
-                            Select existing motivations or type a new code to create one on the fly. Manage the global dictionary in the Motivations menu.
+                            Select existing motivations, type a new code to create one on the fly, or use <em>+ Create new motivation…</em> at the bottom of the dropdown. Manage the global dictionary in the Motivations menu.
                         </p>
                         <CreatableSelect
                             isMulti
@@ -725,12 +778,12 @@ export default function QuestionForm({ mode = 'page' }) {
                             value={selectedOptions}
                             onChange={handleSelectChange}
                             onCreateOption={handleCreateOption}
-                            placeholder="Search or create motivation..."
+                            placeholder="Search existing motivation or type a code to create…"
                             formatCreateLabel={(inputValue) => `Create new: "${inputValue.toUpperCase()}"`}
                             components={motivationSelectComponents}
                         />
                         <p className="small muted" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                            <strong>click on the motivation to edit</strong> 
+                            <strong>click on a chip to edit</strong> · <strong>type a code or use the footer of the dropdown to create</strong>
                         </p>
                     </div>
 

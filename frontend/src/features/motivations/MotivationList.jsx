@@ -30,13 +30,30 @@ export default function MotivationList() {
         fetchMotivations();
     }, []);
 
+    // Suggerisce il prossimo codice MOT### libero. Trova il massimo numero
+    // tra i code che matchano `MOT\d+`, +1, e zero-padda a 3 cifre (mantenendo
+    // più cifre se serve oltre il 999). Se non c'è alcun MOT###, parte da MOT001.
+    const suggestNextMotivationCode = () => {
+        const re = /^MOT(\d+)$/i;
+        let max = 0;
+        for (const m of motivations) {
+            const match = String(m.code || '').match(re);
+            if (match) {
+                const n = parseInt(match[1], 10);
+                if (Number.isFinite(n) && n > max) max = n;
+            }
+        }
+        const next = max + 1;
+        return `MOT${String(next).padStart(3, '0')}`;
+    };
+
     const handleOpenModal = (mot = null) => {
         if (mot) {
             setEditingId(mot.id);
             setFormData({ code: mot.code, label: mot.label });
         } else {
             setEditingId(null);
-            setFormData({ code: '', label: '' });
+            setFormData({ code: suggestNextMotivationCode(), label: '' });
         }
         setShowModal(true);
     };
