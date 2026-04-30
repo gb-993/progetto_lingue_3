@@ -46,7 +46,7 @@ export default function GlossaryList() {
 
             <section className="toolbar" style={{
                 position: 'sticky',
-                top: '5rem',
+                top: 'var(--topbar-height)',
                 zIndex: 10,
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',

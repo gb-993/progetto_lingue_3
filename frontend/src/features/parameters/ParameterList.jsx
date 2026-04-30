@@ -244,7 +244,7 @@ export default function ParameterList() {
                 marginBottom: '1rem',
                 border: '1px solid var(--border)',
                 position: 'sticky',
-                top: '5rem',
+                top: 'var(--topbar-height)',
                 zIndex: 10,
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',

@@ -62,7 +62,8 @@
       "Bash(node --check frontend/src/features/questions/QuestionForm.jsx)",
       "Bash(python -c \"from services.pdf_export import build_parameter_changelog_pdf; from routers.parameters import download_parameter_changelog_pdf; print\\('imports OK'\\)\")",
       "Bash(python -c \"from services.pdf_export import build_parameter_changelog_pdf; print\\('OK', build_parameter_changelog_pdf\\)\")",
-      "Bash(python -c \"import secrets; print\\(secrets.token_hex\\(6\\)\\)\")"
+      "Bash(python -c \"import secrets; print\\(secrets.token_hex\\(6\\)\\)\")",
+      "Read(//c/Users/Gb/Desktop/pcm-hm/frontend/src/features/questions/**)"
     ]
   }
 }
