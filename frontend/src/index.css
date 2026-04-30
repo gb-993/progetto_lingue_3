@@ -240,10 +240,14 @@ a:hover{text-decoration:underline}
 
 /* App shell / layout principale */
 .app-wrapper{
+  --sidebar-width: 280px;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   background: var(--bg);
+}
+.app-wrapper.is-sidebar-collapsed{
+  --sidebar-width: 64px;
 }
 .sidebar{
   position: sticky;
@@ -253,13 +257,43 @@ a:hover{text-decoration:underline}
   padding: var(--sp-6) var(--sp-5);
   border-right: 1px solid var(--border);
   background: var(--surface);
+  transition: padding 0.18s ease;
+}
+.sidebar.is-collapsed{
+  padding: var(--sp-6) var(--sp-2);
 }
 .sidebar-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
   margin-bottom: var(--sp-5);
+}
+.sidebar.is-collapsed .sidebar-header{
+  justify-content: center;
 }
 .sidebar-header .site-title{
   font-size: 1.9rem;
   line-height: 1.1;
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-toggle{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sidebar-toggle:hover{
+  background: var(--surface-2);
 }
 .sidebar-nav .nav-list{
   flex-direction: column;
@@ -278,6 +312,7 @@ a:hover{text-decoration:underline}
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: .65rem;
   width: 100%;
   text-align: left;
   padding: .6rem .85rem;
@@ -286,6 +321,17 @@ a:hover{text-decoration:underline}
   line-height: 1.25;
   min-height: 2.5rem;
   border-radius: 10px;
+}
+.sidebar-nav .nav-list .btn .nav-icon{
+  flex-shrink: 0;
+}
+.sidebar.is-collapsed .nav-list .btn{
+  justify-content: center;
+  padding: .6rem 0;
+  gap: 0;
+}
+.sidebar.is-collapsed .nav-list .nav-label{
+  display: none;
 }
 .sidebar-nav .nav-list .nav-divider-label{
   margin-top: .5rem;
@@ -296,6 +342,11 @@ a:hover{text-decoration:underline}
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
+}
+.sidebar.is-collapsed .nav-list .nav-divider-label{
+  font-size: 0;
+  padding-top: .5rem;
+  margin-top: .5rem;
 }
 .main-layout{
   min-width: 0;

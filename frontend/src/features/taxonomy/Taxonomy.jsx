@@ -16,6 +16,7 @@ export default function Taxonomy() {
 
     const [selectedTopId, setSelectedTopId] = useState(null);    // null = "Unassigned" view
     const [selectedFamilyId, setSelectedFamilyId] = useState(null);
+    const [expandedGroupId, setExpandedGroupId] = useState(null);
 
     const [modal, setModal] = useState(null); // { kind: 'top'|'family'|'group', mode: 'new'|'edit', entity? }
 
@@ -253,30 +254,65 @@ export default function Taxonomy() {
                     emptyText={selectedFamilyId === null
                         ? 'No unassigned groups.'
                         : 'No groups under this subfamily yet.'}
-                    renderItem={(g) => (
-                        <Row
-                            key={g.id}
-                            label={g.name}
-                            badge={`${g.language_count} lang`}
-                            onEdit={() => setModal({ kind: 'group', mode: 'edit', entity: g })}
-                            onDelete={() => handleDelete('group', g.id, g.name)}
-                            extra={
-                                <MoveSelect
-                                    value={g.family_id ?? ''}
-                                    options={[
-                                        { value: '', label: '— Unassigned —' },
-                                        ...allTops.flatMap(t =>
-                                            t.families.map(f => ({ value: f.id, label: `${t.name} · ${f.name}` }))
-                                        ),
-                                        ...orphanFamilies.map(f => ({ value: f.id, label: `(no top) · ${f.name}` })),
-                                    ]}
-                                    onChange={(v) => handleMoveGroup(g.id, v === '' ? null : Number(v))}
-                                />
-                            }
-                            dragKind="group"
-                            dragId={g.id}
-                        />
-                    )}
+                    renderItem={(g) => {
+                        const hasLangs = (g.languages?.length ?? 0) > 0;
+                        const isExpanded = expandedGroupId === g.id;
+                        return (
+                            <Row
+                                key={g.id}
+                                label={
+                                    <>
+                                        {hasLangs && (
+                                            <span style={{ marginRight: '0.3rem', color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                                                {isExpanded ? '▾' : '▸'}
+                                            </span>
+                                        )}
+                                        {g.name}
+                                    </>
+                                }
+                                badge={`${g.language_count} lang`}
+                                onClick={hasLangs ? () => setExpandedGroupId(isExpanded ? null : g.id) : undefined}
+                                onEdit={() => setModal({ kind: 'group', mode: 'edit', entity: g })}
+                                onDelete={() => handleDelete('group', g.id, g.name)}
+                                extra={
+                                    <MoveSelect
+                                        value={g.family_id ?? ''}
+                                        options={[
+                                            { value: '', label: '— Unassigned —' },
+                                            ...allTops.flatMap(t =>
+                                                t.families.map(f => ({ value: f.id, label: `${t.name} · ${f.name}` }))
+                                            ),
+                                            ...orphanFamilies.map(f => ({ value: f.id, label: `(no top) · ${f.name}` })),
+                                        ]}
+                                        onChange={(v) => handleMoveGroup(g.id, v === '' ? null : Number(v))}
+                                    />
+                                }
+                                dragKind="group"
+                                dragId={g.id}
+                                expandedContent={isExpanded && hasLangs ? (
+                                    <ul style={{
+                                        listStyle: 'none', margin: '0.3rem 0 0 0', padding: '0.3rem 0 0 0',
+                                        borderTop: '1px solid var(--border)',
+                                        display: 'flex', flexDirection: 'column', gap: '0.15rem',
+                                    }}>
+                                        {g.languages.map(l => (
+                                            <li key={l.id} style={{
+                                                display: 'flex', justifyContent: 'space-between',
+                                                gap: '0.5rem', fontSize: '0.78rem', padding: '0.1rem 0.2rem',
+                                            }}>
+                                                <span>{l.name_full}</span>
+                                                {l.isocode && (
+                                                    <span className="muted" style={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                                                        {l.isocode}
+                                                    </span>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : null}
+                            />
+                        );
+                    }}
                 />
             </div>
 
@@ -336,7 +372,7 @@ function Column({ title, hint, onAdd, items, renderItem, footer, emptyText }) {
     );
 }
 
-function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dragKind, dragId, onDropPayload, acceptKinds }) {
+function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dragKind, dragId, onDropPayload, acceptKinds, expandedContent }) {
     const [isDragOver, setIsDragOver] = useState(false);
 
     const draggable = !!dragKind && dragId !== undefined;
@@ -423,6 +459,7 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
                     {onDelete && <button className="btn btn--small btn--danger" onClick={onDelete} style={{ fontSize: '0.72rem', color: 'red' }}>Delete</button>}
                 </div>
             )}
+            {expandedContent}
         </div>
     );
 }

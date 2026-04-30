@@ -1,7 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import {
+    LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
+    MessageSquareQuote, Network, Table, Filter, Users, History,
+    DatabaseZap, BookOpen, BookA, PanelLeftClose, PanelLeftOpen,
+} from 'lucide-react';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
+const SIDEBAR_COLLAPSED_KEY = 'pcm-sidebar-collapsed';
 
 function getInitialTheme() {
     if (typeof window === 'undefined') return 'light';
@@ -221,13 +227,21 @@ export default function Layout({ children }) {
     const name = localStorage.getItem('name');
 
     const [theme, setTheme] = useState(getInitialTheme);
+    const [collapsed, setCollapsed] = useState(() =>
+        typeof window !== 'undefined' && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+    );
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem(THEME_STORAGE_KEY, theme);
     }, [theme]);
 
+    useEffect(() => {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+    }, [collapsed]);
+
     const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+    const toggleSidebar = () => setCollapsed((c) => !c);
 
     const handleLogout = () => {
         const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
@@ -243,24 +257,36 @@ export default function Layout({ children }) {
 
     return (
         <>
-            <div className="app-wrapper">
+            <div className={`app-wrapper${collapsed ? ' is-sidebar-collapsed' : ''}`}>
                 {/* SIDEBAR */}
-                <aside className="sidebar" id="main-sidebar">
+                <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`} id="main-sidebar">
                     <div className="sidebar-header">
-                        <h1 className="site-title">The PCM Hub</h1>
+                        {!collapsed && <h1 className="site-title">The PCM Hub</h1>}
+                        <button
+                            type="button"
+                            className="sidebar-toggle"
+                            onClick={toggleSidebar}
+                            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                            aria-pressed={collapsed}
+                        >
+                            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+                        </button>
                     </div>
                     <nav className="sidebar-nav">
                         <ul className="nav-list">
                             <li>
-                                <Link className={`btn ${location.pathname === '/dashboard' ? 'is-current' : ''}`} to="/dashboard">
-                                    Dashboard
+                                <Link className={`btn ${location.pathname === '/dashboard' ? 'is-current' : ''}`} to="/dashboard" title="Dashboard">
+                                    <LayoutDashboard size={18} className="nav-icon" />
+                                    <span className="nav-label">Dashboard</span>
                                 </Link>
                             </li>
 
                             {/* How to cite — visibile a tutti, etichetta diversa per admin */}
                             <li>
-                                <Link className={`btn ${isCurrent('/how-to-cite')}`} to="/how-to-cite">
-                                    {citeLabel}
+                                <Link className={`btn ${isCurrent('/how-to-cite')}`} to="/how-to-cite" title={citeLabel}>
+                                    <Quote size={18} className="nav-icon" />
+                                    <span className="nav-label">{citeLabel}</span>
                                 </Link>
                             </li>
 
@@ -268,26 +294,86 @@ export default function Layout({ children }) {
                             {role !== 'public' && (
                                 <>
                                     <li className="nav-divider-label">Data & Tools</li>
-                                    <li><Link className={`btn ${isCurrent('/languages')}`} to="/languages">Languages</Link></li>
+                                    <li>
+                                        <Link className={`btn ${isCurrent('/languages')}`} to="/languages" title="Languages">
+                                            <Languages size={18} className="nav-icon" />
+                                            <span className="nav-label">Languages</span>
+                                        </Link>
+                                    </li>
 
                                     {/* Strumenti esclusivi Admin */}
                                     {role === 'admin' && (
                                         <>
-                                            <li><Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters">Parameters</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions">Questions</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations">Motivations</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/taxonomy')}`} to="/admin/taxonomy">Taxonomy</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/tablea')}`} to="/tablea">Table A</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/queries')}`} to="/queries">Filters</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/history')}`} to="/admin/history">History & Backups</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" style={{ color: '#b91c1c' }}>Migration Import</Link></li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters" title="Parameters">
+                                                    <SlidersHorizontal size={18} className="nav-icon" />
+                                                    <span className="nav-label">Parameters</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/questions')}`} to="/admin/questions" title="Questions">
+                                                    <HelpCircle size={18} className="nav-icon" />
+                                                    <span className="nav-label">Questions</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/motivations')}`} to="/admin/motivations" title="Motivations">
+                                                    <MessageSquareQuote size={18} className="nav-icon" />
+                                                    <span className="nav-label">Motivations</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/taxonomy')}`} to="/admin/taxonomy" title="Taxonomy">
+                                                    <Network size={18} className="nav-icon" />
+                                                    <span className="nav-label">Taxonomy</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/tablea')}`} to="/tablea" title="Table A">
+                                                    <Table size={18} className="nav-icon" />
+                                                    <span className="nav-label">Table A</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/queries')}`} to="/queries" title="Filters">
+                                                    <Filter size={18} className="nav-icon" />
+                                                    <span className="nav-label">Filters</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts" title="Accounts">
+                                                    <Users size={18} className="nav-icon" />
+                                                    <span className="nav-label">Accounts</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/history')}`} to="/admin/history" title="History & Backups">
+                                                    <History size={18} className="nav-icon" />
+                                                    <span className="nav-label">History & Backups</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: '#b91c1c' }}>
+                                                    <DatabaseZap size={18} className="nav-icon" />
+                                                    <span className="nav-label">Migration Import</span>
+                                                </Link>
+                                            </li>
                                         </>
                                     )}
 
                                     {/* Tool comuni a User e Admin (in fondo, come nel vecchio) */}
-                                    <li><Link className={`btn ${isCurrent('/instructions')}`} to="/instructions">Instructions</Link></li>
-                                    <li><Link className={`btn ${isCurrent('/glossary')}`} to="/glossary">Glossary</Link></li>
+                                    <li>
+                                        <Link className={`btn ${isCurrent('/instructions')}`} to="/instructions" title="Instructions">
+                                            <BookOpen size={18} className="nav-icon" />
+                                            <span className="nav-label">Instructions</span>
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link className={`btn ${isCurrent('/glossary')}`} to="/glossary" title="Glossary">
+                                            <BookA size={18} className="nav-icon" />
+                                            <span className="nav-label">Glossary</span>
+                                        </Link>
+                                    </li>
                                 </>
                             )}
                         </ul>

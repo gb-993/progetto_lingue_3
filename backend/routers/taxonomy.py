@@ -107,6 +107,23 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
     cnt_fam = _lang_count_by(models.Language.family)
     cnt_grp = _lang_count_by(models.Language.grp)
 
+    languages_by_group_name: dict[str, list] = {}
+    lang_rows = db.query(
+        models.Language.id,
+        models.Language.name_full,
+        models.Language.isocode,
+        models.Language.grp,
+    ).filter(
+        models.Language.grp.isnot(None),
+        models.Language.grp != "",
+    ).order_by(models.Language.name_full).all()
+    for lang_id, name_full, isocode, grp in lang_rows:
+        languages_by_group_name.setdefault(grp, []).append({
+            "id": lang_id,
+            "name_full": name_full,
+            "isocode": isocode or "",
+        })
+
     groups_by_family: dict[Optional[int], list] = {}
     for g in groups:
         groups_by_family.setdefault(g.family_id, []).append({
@@ -115,6 +132,7 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
             "position": g.position,
             "family_id": g.family_id,
             "language_count": cnt_grp.get(g.name, 0),
+            "languages": languages_by_group_name.get(g.name, []),
         })
 
     families_by_top: dict[Optional[int], list] = {}
