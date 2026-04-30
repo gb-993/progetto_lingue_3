@@ -167,12 +167,12 @@ function SiteFooter({ role }) {
                         <h4>Resources</h4>
                         <ul className="footer-links">
                             <li>
-                                <a href="/docs/Informativa%20WebAPP_revDPO.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)' }}>
+                                <a href="/docs/Informativa%20WebAPP_revDPO.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
                                     Privacy Policy
                                 </a>
                             </li>
                             <li>
-                                <a href="/docs/Terms_of_use_CG.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)' }}>
+                                <a href="/docs/Terms_of_use_CG.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
                                     Disclaimer
                                 </a>
                             </li>

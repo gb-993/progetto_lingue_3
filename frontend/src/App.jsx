@@ -70,6 +70,16 @@ function AppRoot() {
     );
 }
 
+// Wrappa con Layout (sidebar + topbar) solo per utenti loggati come admin o user.
+// Usato per le rotte pubbliche che però vogliamo "decorare" quando l'utente è autenticato.
+function ConditionalLayout({ children }) {
+    const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
+    if (role === 'admin' || role === 'user') {
+        return <Layout>{children}</Layout>;
+    }
+    return children;
+}
+
 const router = createBrowserRouter([
     {
         path: '/',
@@ -77,7 +87,7 @@ const router = createBrowserRouter([
         children: [
             // Rotte pubbliche
             { index: true, element: <PublicHome /> },
-            { path: 'how-to-cite', element: <HowToCite /> },
+            { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
             { path: 'login', element: <Login /> },
 
             // Rotta protetta generica
