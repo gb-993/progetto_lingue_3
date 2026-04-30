@@ -100,16 +100,18 @@ export default function QuestionList() {
                                             ? <span style={{ color: 'var(--bad, #d9534f)', fontWeight: 700 }}>Stop</span>
                                             : <span className="muted">Standard</span>}
                                     </td>
-                                    <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                                        <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
-                                        <button
-                                            type="button"
-                                            className={`btn ${isActive ? 'btn--bad' : ''}`}
-                                            onClick={() => handleToggleActive(q)}
-                                            title={isActive ? 'Soft-delete (deactivate)' : 'Restore (reactivate)'}
-                                        >
-                                            {isActive ? 'Delete' : 'Restore'}
-                                        </button>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
+                                        <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                            <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
+                                            <button
+                                                type="button"
+                                                className={`btn ${isActive ? 'btn--bad' : ''}`}
+                                                onClick={() => handleToggleActive(q)}
+                                                title={isActive ? 'Soft-delete (deactivate)' : 'Restore (reactivate)'}
+                                            >
+                                                {isActive ? 'Delete' : 'Restore'}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             );

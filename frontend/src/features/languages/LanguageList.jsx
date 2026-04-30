@@ -52,6 +52,7 @@ export default function LanguageList() {
     const [selectedIds, setSelectedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
     const [downloadOpen, setDownloadOpen] = useState(false);
+    const [globalBackup, setGlobalBackup] = useState(false);
     const downloadRef = useRef(null);
     const mapExportRef = useRef(null);
 
@@ -326,6 +327,25 @@ export default function LanguageList() {
         }
     };
 
+    const onGlobalBackup = async () => {
+        const note = window.prompt(
+            'Optional note for the global languages backup (leave empty to skip):',
+            ''
+        );
+        if (note === null) return;
+        if (!window.confirm('Start a global backup of every language? This may take a while.')) return;
+        setGlobalBackup(true);
+        try {
+            await api.post('/api/admin/backups/create-all', { note });
+            alert('Global languages backup completed. You can find it in History → Full backups.');
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.detail || 'Error while creating the languages backup.');
+        } finally {
+            setGlobalBackup(false);
+        }
+    };
+
     // Chiusura dropdown al click fuori
     useEffect(() => {
         if (!downloadOpen) return;
@@ -416,6 +436,7 @@ export default function LanguageList() {
                         {selectedIds.size > 0 && <span> · <strong>{selectedIds.size} selected</strong></span>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button onClick={resetAll} className="btn btn--small">Reset</button>
                         <div ref={downloadRef} style={{ position: 'relative' }}>
                             <button
                                 type="button"
@@ -460,11 +481,21 @@ export default function LanguageList() {
                             )}
                         </div>
                         {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={onGlobalBackup}
+                                disabled={globalBackup}
+                                className="btn btn--small"
+                                title="Snapshot every language (definitions + answers)"
+                            >
+                                {globalBackup ? 'Backing up…' : '+ Full Languages Backup'}
+                            </button>
+                        )}
+                        {isAdmin && (
                             <Link to="/admin/import-excel" className="btn btn--small">
                                 Import from Excel
                             </Link>
                         )}
-                        <button onClick={resetAll} className="btn btn--small">Reset</button>
                         {isAdmin && (
                             <Link to="/languages/add" className="btn btn--primary btn--small">Add Language</Link>
                         )}
@@ -522,22 +553,24 @@ export default function LanguageList() {
                                 <td className="small">
                                     {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : 'No coords'}
                                 </td>
-                                <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                                    <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
-                                    {isAdmin && (
-                                        <>
-                                            <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
-                                            <button
-                                                type="button"
-                                                className="btn"
-                                                onClick={() => onDuplicate(lang)}
-                                                title="Duplicate this language with all its answers, examples and parameters"
-                                            >
-                                                Duplicate
-                                            </button>
-                                            <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
-                                        </>
-                                    )}
+                                <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
+                                    <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                        <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
+                                        {isAdmin && (
+                                            <>
+                                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+                                                <button
+                                                    type="button"
+                                                    className="btn"
+                                                    onClick={() => onDuplicate(lang)}
+                                                    title="Duplicate this language with all its answers, examples and parameters"
+                                                >
+                                                    Duplicate
+                                                </button>
+                                                <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
+                                            </>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

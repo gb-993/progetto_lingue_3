@@ -389,33 +389,35 @@ export default function ParameterList() {
                                             {param.is_active ? 'Active' : 'Disabled'}
                                         </span>
                                     </td>
-                                    <td className="row-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
-                                        <button
-                                            type="button"
-                                            className="btn"
-                                            onClick={async () => {
-                                                try {
-                                                    await downloadBlob(
-                                                        api.get(`/api/admin/parameters/${param.id}/pdf`, { responseType: 'blob' }),
-                                                        `Parameter_${param.id}.pdf`
-                                                    );
-                                                } catch {
-                                                    alert('Error while downloading the PDF.');
-                                                }
-                                            }}
-                                        >
-                                            PDF
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="btn"
-                                            disabled={backingUpId === param.id}
-                                            onClick={() => onBackupParameter(param)}
-                                            title="Snapshot this parameter (definition + questions + allowed motivations)"
-                                        >
-                                            {backingUpId === param.id ? '…' : 'Backup'}
-                                        </button>
-                                        <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
+                                    <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
+                                        <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                            <button
+                                                type="button"
+                                                className="btn"
+                                                onClick={async () => {
+                                                    try {
+                                                        await downloadBlob(
+                                                            api.get(`/api/admin/parameters/${param.id}/pdf`, { responseType: 'blob' }),
+                                                            `Parameter_${param.id}.pdf`
+                                                        );
+                                                    } catch {
+                                                        alert('Error while downloading the PDF.');
+                                                    }
+                                                }}
+                                            >
+                                                PDF
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn"
+                                                disabled={backingUpId === param.id}
+                                                onClick={() => onBackupParameter(param)}
+                                                title="Snapshot this parameter (definition + questions + allowed motivations)"
+                                            >
+                                                {backingUpId === param.id ? '…' : 'Backup'}
+                                            </button>
+                                            <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
+                                        </div>
                                     </td>
                                 </tr>
                             );
