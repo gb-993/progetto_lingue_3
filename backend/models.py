@@ -184,7 +184,7 @@ class Answer(Base):
     question_id = Column(String(40), ForeignKey("questions.id"), nullable=False)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
-    response_text = Column(Enum("yes", "no", name="response_types"), nullable=True)
+    response_text = Column(Enum("yes", "no", "unsure", name="response_types"), nullable=True)
     comments = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -335,6 +335,10 @@ class SubmissionAnswerMotivation(Base):
 
     question_code = Column(String(40), nullable=False)
     motivation_code = Column(String(50), nullable=False)
+    # Snapshot del testo della motivazione al momento del backup: il code da
+    # solo non basta perché la motivazione potrebbe essere modificata o
+    # eliminata dopo il backup, perdendo il significato dello storico.
+    motivation_label = Column(Text, nullable=True)
 
     submission = relationship("Submission", back_populates="answer_motivations")
 

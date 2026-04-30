@@ -33,7 +33,7 @@
 - [ ] Nel foglio "Database model" dell'export aggiungere la colonna "Motivations" per le motivazioni selezionate sul sito dalla checkbox e la colonna Language_Example_Transliteration. Forse da quel foglio possiamo rimuovere le colonne Question, Question_Examples_YES e Question_Intructions_Comments visto che non sono info linguo-specifiche e teniamo quel foglio primariamente come "backup"?
 - [x] Sostituire "Download .xlsx" con "Export parametric data (.xlsx)"
 - [x] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Save (per salvare ogni esempio singolarmente)
-- [--] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Copy (per copiare testo/traslitterazione/glossa/traduzione/ref e poterli incollare nello blocco esempio di un'altra question, eventualmente anche di un altro parametro)
+- [?] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Copy (per copiare testo/traslitterazione/glossa/traduzione/ref e poterli incollare nello blocco esempio di un'altra question, eventualmente anche di un altro parametro)
 - [x] Cella con testo libero per ogni parametro di ogni lingua modificabile e visibile solo da admin
 - [ ] Oltre a YES e NO aggiungere una possibile answer “unsure (still provide examples)” con obbligatori due esempi
 
@@ -56,7 +56,7 @@ L'idea è che la modifica al testo di una question potrebbe:
 - [x] Il bottone "Download PDF" nel riquadro "Brief summary of changes" potrebbe scaricare la cronologia delle modifiche
 - [x] Fare in modo che le finestre di edit delle motivazioni, di schema/type ecc si aprano come pop up e quindi non si perdano le info inserite (funziona in edit parameter ma non in edit question)
 - [x] Mettere una barra di ricerca sotto a "Behavior & Motivations" per cercare tra le motivazioni senza doverle leggere tutte
-- [ ] Numerazione automatica delle motivazioni
+- [x] Numerazione automatica delle motivazioni
 
 ## LISTA QUESTIONS
 - [x] Aggiungere il bottone "Add a new question" sul modello di "Add a new language"
@@ -67,17 +67,17 @@ L'idea è che la modifica al testo di una question potrebbe:
 
 ## TABLE A
 - [x] Allineare i filtri delle lingue con le modifiche fatte agli stessi filtri nella pagina con la lista delle lingue
-- [ ] Visualizzare come rossi/sfondo rosso i parametri che sono rossi in lingue data
+- [?] Visualizzare come rossi/sfondo rosso i parametri che sono rossi in lingue data
 
 ## MANTEL TEST
-- [ ] Nuova pagina che permetta di selezionare lingue con gli stessi filtri che si trovano nella pagina della Table A e un bottone "Perform Mantel test and download results (.zip)" che scarichi le matrici di distanze geografiche e sintattiche (gcd.txt, hamming.txt e jaccard[+].txt) e i risultati dello script mantel.py. Lo script fa già tutte le combinazioni possibili dei file di distanze
+- [?] Nuova pagina che permetta di selezionare lingue con gli stessi filtri che si trovano nella pagina della Table A e un bottone "Perform Mantel test and download results (.zip)" che scarichi le matrici di distanze geografiche e sintattiche (gcd.txt, hamming.txt e jaccard[+].txt) e i risultati dello script mantel.py. Lo script fa già tutte le combinazioni possibili dei file di distanze
 
 ## FILTERS
 
 ## BACKUP
 - [x] Rimuovere il backup di prova del 9 gennaio (dal sito non si riesce perché dice "No backup found with this date.")
-- [ ] Poter scaricare i backup come excel con un bottone "Download full backup (.xlsx)" vicino al bottone "Open folder" e con un bottone "Download data (.xlsx)" vicino al bottone "Data" specifico per ogni lingua
-- [ ] Mettere il testo della motivazione anziché il codice
+- [x] Poter scaricare i backup come excel con un bottone "Download full backup (.xlsx)" vicino al bottone "Open folder" e con un bottone "Download data (.xlsx)" vicino al bottone "Data" specifico per ogni lingua
+- [x] Mettere il testo della motivazione anziché il codice
 
 ## OLD QUESTIONS ARCHIVE
 - [x] Nuova pagina con la lista delle questions obsolete (strutturata tipo la pagina Questions) con pulsante "View data" (o qls di simile) che premendolo apra una pagina con tutte le risposte, esempi ecc di quella singola question per tutte le lingue. Vicino al pulsante "View data" potremmo metterne uno che permetta di scaricare i dati in formato excel

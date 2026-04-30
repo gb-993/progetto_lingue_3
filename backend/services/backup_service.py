@@ -44,7 +44,8 @@ def create_language_submission(db: Session, language: models.Language, user_id: 
             sub_mots.append(models.SubmissionAnswerMotivation(
                 submission_id=sub.id,
                 question_code=a.question_id,
-                motivation_code=am.motivation.code
+                motivation_code=am.motivation.code,
+                motivation_label=am.motivation.label,
             ))
         for ex in a.examples:
             sub_ex.append(models.SubmissionExample(

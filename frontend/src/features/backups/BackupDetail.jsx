@@ -162,7 +162,7 @@ export default function BackupDetail() {
                                                 a.response_text
                                             )}
                                         </td>
-                                        <td><small>{a.motivations.join(', ')}</small></td>
+                                        <td><small>{(a.motivations || []).map(m => m.label || m.code).join(', ')}</small></td>
                                         <td><small>{a.comments}</small></td>
                                     </tr>
                                 ))

@@ -15,13 +15,13 @@ const formatExampleOption = (ex) => {
 export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId }) {
     const [localError, setLocalError] = useState('');
 
-    // Validazione base in tempo reale per gli esempi
+    // Validazione base in tempo reale per gli esempi: anche 'unsure' richiede 2 esempi.
     useEffect(() => {
-        if (value.response_text === 'yes') {
+        if (value.response_text === 'yes' || value.response_text === 'unsure') {
             // FIX: Aggiunto (ex.textarea || '') per evitare il crash su valori null dal database
             const validExamples = value.examples.filter(ex => (ex.textarea || '').trim() !== '');
             if (value.examples.length > 0 && validExamples.length < 2) {
-                setLocalError('Reminder: If you select YES, you should provide at least two valid examples.');
+                setLocalError('Reminder: If you select YES or UNSURE, you should provide at least two valid examples.');
             } else {
                 setLocalError('');
             }
@@ -193,6 +193,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                         <option value="">— select —</option>
                         <option value="yes">YES</option>
                         <option value="no">NO</option>
+                        <option value="unsure">UNSURE</option>
                     </select>
                 </div>
             </div>
@@ -225,8 +226,8 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* BLOCCO YES: Esempi */}
-            {value.response_text === 'yes' && (
+            {/* BLOCCO YES/UNSURE: Esempi (la validazione "≥2 esempi" vale per entrambi) */}
+            {(value.response_text === 'yes' || value.response_text === 'unsure') && (
                 <div className="info-row" style={{ marginTop: '1.5rem' }}>
                     <div className="info-row__label">Examples</div>
                     <div className="info-row__content">

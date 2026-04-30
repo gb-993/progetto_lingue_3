@@ -79,10 +79,16 @@ def get_submission_detail(submission_id: int, db: Session = Depends(get_db), cur
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
 
-    # Raggruppiamo le motivazioni per question_code come faceva Django
+    # Raggruppiamo le motivazioni per question_code come faceva Django.
+    # Esponiamo sia il code che il label snapshot: il frontend preferisce il
+    # label (testo leggibile congelato al momento del backup) e usa il code
+    # come fallback per i record vecchi creati prima dello snapshot.
     mots_by_q = {}
     for m in sub.answer_motivations:
-        mots_by_q.setdefault(m.question_code, []).append(m.motivation_code)
+        mots_by_q.setdefault(m.question_code, []).append({
+            "code": m.motivation_code,
+            "label": m.motivation_label,
+        })
 
     answers_formatted = []
     for a in sub.answers:
