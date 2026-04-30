@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import BackupsTab from './BackupsTab';
+import OldQuestionsTab from './OldQuestionsTab';
 
 // Etichette user-friendly per i tipi di entità
 const ENTITY_LABELS = {
@@ -70,6 +71,7 @@ export default function History() {
                     { id: 'versions', label: 'Change history' },
                     { id: 'answers', label: 'Answer changes' },
                     { id: 'backups', label: 'Full backups (languages & parameters)' },
+                    { id: 'old_questions', label: 'Old questions archive' },
                 ].map(t => {
                     const active = tab === t.id;
                     return (
@@ -103,6 +105,7 @@ export default function History() {
             {tab === 'versions' && <VersionsTab key="versions" excludeEntityType="answer" />}
             {tab === 'answers' && <VersionsTab key="answers" lockEntityType="answer" />}
             {tab === 'backups' && <BackupsTab />}
+            {tab === 'old_questions' && <OldQuestionsTab />}
         </div>
     );
 }

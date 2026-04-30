@@ -47,7 +47,7 @@
 - [x] Poter riordinare i parametri. Dimmi come secondo te è meglio, potrebbe essere comodo da questa pagina poterli trascinare in alto o in basso così che gli altri scorrano di conseguenza. L'ordine stabilio qui dovrebbe poi essere quello in cui compaiono i parametri nelle altre parti del sito. Altrimenti mettiamo, come c'era, l'attributo position in parameter edit
 
 ## PARAMETERS EDIT
-- [ ] Per salvare una question mantenere il bottone che c'è adesso ma chiamarlo "Save the changes and maintain data" e aggiungere un altro bottone "Save the changes and delete the linked data (the old data will still be accessible in Old questins archive)". 
+- [x] Per salvare una question mantenere il bottone che c'è adesso ma chiamarlo "Save the changes and maintain data" e aggiungere un altro bottone "Save the changes and delete the linked data (the old data will still be accessible in Old questins archive)". 
 L'idea è che la modifica al testo di una question potrebbe:
     1. comunque essere coerente con i vecchi esempi raccolti oppure 
     2. far sì che i vecchi dati non vadano più bene con il nuovo testo della question. 
@@ -59,14 +59,14 @@ L'idea è che la modifica al testo di una question potrebbe:
 - [ ] Numerazione automatica delle motivazioni
 
 ## LISTA QUESTIONS
-- [ ] Aggiungere il bottone "Add a new question" sul modello di "Add a new language"
-- [ ] Se modifico una question da questa pagina poi non chiede di specificare quale è stato il cambiamento per salvare. Dopo il save della question dovrebbe reindirizzare alla pagina di edit del parametro e chiedere il summary delle modifiche
-- [ ] Nell'edit della question aggiungere un campo commento in cui elencano i cambiamenti fatti alle questions
+- [x] Aggiungere il bottone "Add a new question" sul modello di "Add a new language"
+- [x] Se modifico una question da questa pagina poi non chiede di specificare quale è stato il cambiamento per salvare. Dopo il save della question dovrebbe reindirizzare alla pagina di edit del parametro e chiedere il summary delle modifiche
+- [x] Nell'edit della question aggiungere un campo commento in cui elencano i cambiamenti fatti alle questions
 
 ## NETWORK
 
 ## TABLE A
-- [ ] Allineare i filtri delle lingue con le modifiche fatte agli stessi filtri nella pagina con la lista delle lingue
+- [x] Allineare i filtri delle lingue con le modifiche fatte agli stessi filtri nella pagina con la lista delle lingue
 - [ ] Visualizzare come rossi/sfondo rosso i parametri che sono rossi in lingue data
 
 ## MANTEL TEST
@@ -75,11 +75,11 @@ L'idea è che la modifica al testo di una question potrebbe:
 ## FILTERS
 
 ## BACKUP
-- [ ] Rimuovere il backup di prova del 9 gennaio (dal sito non si riesce perché dice "No backup found with this date.")
+- [x] Rimuovere il backup di prova del 9 gennaio (dal sito non si riesce perché dice "No backup found with this date.")
 - [ ] Poter scaricare i backup come excel con un bottone "Download full backup (.xlsx)" vicino al bottone "Open folder" e con un bottone "Download data (.xlsx)" vicino al bottone "Data" specifico per ogni lingua
 - [ ] Mettere il testo della motivazione anziché il codice
 
 ## OLD QUESTIONS ARCHIVE
-- [ ] Nuova pagina con la lista delle questions obsolete (strutturata tipo la pagina Questions) con pulsante "View data" (o qls di simile) che premendolo apra una pagina con tutte le risposte, esempi ecc di quella singola question per tutte le lingue. Vicino al pulsante "View data" potremmo metterne uno che permetta di scaricare i dati in formato excel
+- [x] Nuova pagina con la lista delle questions obsolete (strutturata tipo la pagina Questions) con pulsante "View data" (o qls di simile) che premendolo apra una pagina con tutte le risposte, esempi ecc di quella singola question per tutte le lingue. Vicino al pulsante "View data" potremmo metterne uno che permetta di scaricare i dati in formato excel
 
 ## GLOSSARIO

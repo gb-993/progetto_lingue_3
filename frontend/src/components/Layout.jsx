@@ -280,7 +280,7 @@ export default function Layout({ children }) {
                                             <li><Link className={`btn ${isCurrent('/tablea')}`} to="/tablea">Table A</Link></li>
                                             <li><Link className={`btn ${isCurrent('/queries')}`} to="/queries">Filters</Link></li>
                                             <li><Link className={`btn ${isCurrent('/admin/accounts')}`} to="/admin/accounts">Accounts</Link></li>
-                                            <li><Link className={`btn ${isCurrent('/admin/history') || isCurrent('/admin/backups')}`} to="/admin/history">History & Backups</Link></li>
+                                            <li><Link className={`btn ${isCurrent('/admin/history')}`} to="/admin/history">History & Backups</Link></li>
                                             <li><Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" style={{ color: '#b91c1c' }}>Migration Import</Link></li>
                                         </>
                                     )}

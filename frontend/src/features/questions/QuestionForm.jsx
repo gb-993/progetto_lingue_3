@@ -90,6 +90,12 @@ export default function QuestionForm({ mode = 'page' }) {
     const [cloneSource, setCloneSource] = useState(null);
     const [cloning, setCloning] = useState(false);
 
+    // Stato per il flusso "Save and delete linked data": apre un modal di
+    // conferma che mostra quanti dati linguistici verranno spostati nell'archivio.
+    const [wipeConfirmOpen, setWipeConfirmOpen] = useState(false);
+    const [wipeStats, setWipeStats] = useState(null);
+    const [wipeStatsLoading, setWipeStatsLoading] = useState(false);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -422,13 +428,14 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    // Salvataggio. Se `wipeData` è true (solo in edit mode) le risposte/esempi
+    // collegati vengono archiviati lato backend prima di applicare la modifica
+    // al testo della question.
+    const performSave = async ({ wipeData = false } = {}) => {
         setError('');
         setIsLoading(true);
 
         try {
-            // Pulizia spazi bianchi extra prima di salvare
             const payload = {
                 ...formData,
                 instruction: formData.instruction?.trim() || null,
@@ -436,7 +443,8 @@ export default function QuestionForm({ mode = 'page' }) {
                 instruction_no: formData.instruction_no?.trim() || null,
                 example_yes: formData.example_yes?.trim() || null,
                 help_info: formData.help_info?.trim() || null,
-                change_note: changeNote
+                change_note: changeNote,
+                wipe_data: wipeData,
             };
 
             if (isEditMode) {
@@ -451,6 +459,33 @@ export default function QuestionForm({ mode = 'page' }) {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        await performSave({ wipeData: false });
+    };
+
+    // Apre il modal "Save and delete linked data": fetcha le stats
+    // (n. lingue, risposte, esempi) cosi' l'utente vede l'impatto.
+    const handleOpenWipeConfirm = async () => {
+        if (!isEditMode) return;
+        setWipeStats(null);
+        setWipeConfirmOpen(true);
+        setWipeStatsLoading(true);
+        try {
+            const res = await api.get(`/api/admin/questions/${id}/data-stats`);
+            setWipeStats(res.data || { answers: 0, examples: 0, languages: 0 });
+        } catch {
+            setWipeStats({ answers: 0, examples: 0, languages: 0, error: true });
+        } finally {
+            setWipeStatsLoading(false);
+        }
+    };
+
+    const handleConfirmWipe = async () => {
+        setWipeConfirmOpen(false);
+        await performSave({ wipeData: true });
     };
 
     // Logica per isDirty
@@ -763,16 +798,33 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', flexWrap: 'wrap' }}>
                         <button
                             type="submit"
                             className="btn btn--primary"
                             disabled={isLoading || !isDirty || !changeNote.trim()}
                         >
-                            {isLoading ? 'Saving...' : 'Save Question'}
+                            {isLoading ? 'Saving...' : (isEditMode ? 'Save the changes and maintain data' : 'Save Question')}
                         </button>
+                        {isEditMode && (
+                            <button
+                                type="button"
+                                className="btn btn--bad"
+                                onClick={handleOpenWipeConfirm}
+                                disabled={isLoading || !isDirty || !changeNote.trim()}
+                                title="Archive all linked answers and examples, then save the new text"
+                                style={{ borderColor: '#d9534f', color: '#d9534f' }}
+                            >
+                                Save the changes and delete the linked data
+                            </button>
+                        )}
                         <Link to={cancelLink} className="btn">Cancel</Link>
                     </div>
+                    {isEditMode && (
+                        <p className="small muted" style={{ marginTop: '-0.5rem', fontSize: '0.78rem', lineHeight: 1.4 }}>
+                            "Maintain data" keeps the existing answers/examples linked to this question. "Delete the linked data" archives them in <strong>Old Questions Archive</strong> (still downloadable) and resets this question to zero data — use it when the new text is no longer compatible with the old answers.
+                        </p>
+                    )}
                 </form>
             </div>
 
@@ -792,6 +844,67 @@ export default function QuestionForm({ mode = 'page' }) {
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                             <button className="btn" onClick={() => setShowCreator(false)}>Cancel</button>
                             <button className="btn btn--primary" onClick={saveNewMotivation}>Create & Add</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL CONFERMA WIPE: chiede conferma prima di archiviare i dati
+                linguistici collegati alla question. Mostra il conteggio di
+                risposte/esempi/lingue che verranno spostati nell'archivio. */}
+            {wipeConfirmOpen && (
+                <div style={modalOverlayStyle}>
+                    <div className="card" style={{ width: '500px', maxWidth: '92vw' }}>
+                        <h3 style={{ marginTop: 0, color: '#d9534f' }}>Archive linked data?</h3>
+                        <p style={{ fontSize: '0.92rem', lineHeight: 1.45 }}>
+                            You are about to save the new question text and move all the
+                            linked answers, examples and motivations to the
+                            <strong> Old Questions Archive</strong>. The data will not be
+                            deleted: it remains accessible in the archive and can be
+                            downloaded as xlsx. This question will then have zero data
+                            and languages will recompile it from scratch.
+                        </p>
+
+                        <div style={{
+                            background: '#fff3cd',
+                            border: '1px solid #ffe69c',
+                            borderRadius: '6px',
+                            padding: '0.75rem 1rem',
+                            margin: '1rem 0',
+                        }}>
+                            {wipeStatsLoading && <span>Loading impact preview…</span>}
+                            {!wipeStatsLoading && wipeStats && wipeStats.error && (
+                                <span style={{ color: '#664d03' }}>
+                                    Could not load preview. The action will still execute.
+                                </span>
+                            )}
+                            {!wipeStatsLoading && wipeStats && !wipeStats.error && (
+                                <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.88rem', color: '#664d03' }}>
+                                    <li><strong>{wipeStats.languages}</strong> language{wipeStats.languages === 1 ? '' : 's'} affected</li>
+                                    <li><strong>{wipeStats.answers}</strong> answer{wipeStats.answers === 1 ? '' : 's'} will be archived</li>
+                                    <li><strong>{wipeStats.examples}</strong> example{wipeStats.examples === 1 ? '' : 's'} will be archived</li>
+                                </ul>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            <button
+                                type="button"
+                                className="btn"
+                                onClick={() => setWipeConfirmOpen(false)}
+                                disabled={isLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn--bad"
+                                onClick={handleConfirmWipe}
+                                disabled={isLoading || wipeStatsLoading}
+                                style={{ background: '#d9534f', borderColor: '#d9534f', color: 'white' }}
+                            >
+                                {isLoading ? 'Archiving…' : 'Archive and save'}
+                            </button>
                         </div>
                     </div>
                 </div>

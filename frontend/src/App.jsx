@@ -33,11 +33,11 @@ import AccountAssign from './features/accounts/AccountAssign';
 import MotivationList from './features/motivations/MotivationList.jsx';
 import Instructions from './features/instructions/Instructions';
 
-import BackupList from './features/backups/BackupList';
 import BackupFolder from './features/backups/BackupFolder';
 import BackupDetail from './features/backups/BackupDetail';
 import ParameterBackupFolder from './features/backups/ParameterBackupFolder';
 import ParameterBackupDetail from './features/backups/ParameterBackupDetail';
+import ArchivedQuestionDetail from './features/backups/ArchivedQuestionDetail';
 import EditSiteContent from './features/public/EditSiteContent';
 import TableA from './features/tablea/TableA';
 import LogicTree  from "./features/queries/LogicTree.jsx";
@@ -124,11 +124,11 @@ const router = createBrowserRouter([
 
             { path: 'admin/motivations', element: <AdminRoute><Layout><MotivationList /></Layout></AdminRoute> },
 
-            { path: 'admin/backups', element: <AdminRoute><Layout><BackupList /></Layout></AdminRoute> },
             { path: 'admin/backups/parameters/:timestamp', element: <AdminRoute><Layout><ParameterBackupFolder /></Layout></AdminRoute> },
             { path: 'admin/backups/parameters/submissions/:id', element: <AdminRoute><Layout><ParameterBackupDetail /></Layout></AdminRoute> },
             { path: 'admin/backups/:timestamp', element: <AdminRoute><Layout><BackupFolder /></Layout></AdminRoute> },
             { path: 'admin/backups/submissions/:id', element: <AdminRoute><Layout><BackupDetail /></Layout></AdminRoute> },
+            { path: 'admin/archived-questions/:id', element: <AdminRoute><Layout><ArchivedQuestionDetail /></Layout></AdminRoute> },
 
             { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
             { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },

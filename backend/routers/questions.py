@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 import models
 from dependencies import get_db, require_admin
 from services.versioning import record_version
+from services import archive_service
 
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
 
@@ -28,6 +29,11 @@ class QuestionBase(BaseModel):
 
 class QuestionUpdate(QuestionBase):
     change_note: Optional[str] = ""
+    # Se True, prima di applicare le modifiche le Answer/Example/AnswerMotivation
+    # collegate vengono spostate in archived_* (con snapshot della question
+    # *vecchia*) e poi cancellate dai tavoli attivi. La question viva resta
+    # con il nuovo testo e zero dati.
+    wipe_data: bool = False
 
 class QuestionCreate(QuestionBase):
     change_note: Optional[str] = ""
@@ -121,6 +127,18 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
+    # Wipe + snapshot dei dati nelle tabelle archive PRIMA di applicare le
+    # modifiche al testo: lo snapshot deve riflettere la versione vecchia.
+    archived_id = None
+    if item.wipe_data:
+        archived = archive_service.archive_and_wipe(
+            db=db,
+            question=db_item,
+            user_id=current_user.id,
+            archive_note=item.change_note or "",
+        )
+        archived_id = archived.id
+
     db_item.id = item.id
     db_item.parameter_id = item.parameter_id
     db_item.text = item.text
@@ -137,12 +155,17 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
     for mot_id in item.allowed_motivations:
         db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
 
-    # Registra il log di modifica nel parametro genitore
+    # Registra il log di modifica nel parametro genitore (segna anche il wipe).
+    note_parts = []
     if item.change_note and item.change_note.strip():
+        note_parts.append(item.change_note.strip())
+    if item.wipe_data:
+        note_parts.append("[Linked data archived]")
+    if note_parts:
         log = models.ParameterChangeLog(
             parameter_id=item.parameter_id,
             user_id=current_user.id,
-            change_note=f"[Question {id}] {item.change_note.strip()}"
+            change_note=f"[Question {id}] {' '.join(note_parts)}"
         )
         db.add(log)
 
@@ -151,10 +174,28 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
         record_version(db, db_item, operation="update", source="manual",
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
-        return {"detail": "Question updated successfully"}
+        return {
+            "detail": "Question updated successfully",
+            "archived_question_id": archived_id,
+        }
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Could not update the question.")
+
+
+@router.get("/{id}/data-stats")
+def get_question_data_stats(
+    id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Quante Answer/Example/lingue sono collegate alla question.
+
+    Usato dal frontend per mostrare il preview prima del wipe.
+    """
+    if not db.query(models.Question.id).filter(models.Question.id == id).first():
+        raise HTTPException(status_code=404, detail="Question not found")
+    return archive_service.count_linked_data(db, id)
 
 
 @router.patch("/{id}/toggle-active")

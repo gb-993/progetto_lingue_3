@@ -466,3 +466,122 @@ class EntityVersion(Base):
     __table_args__ = (
         Index("ix_entity_versions_lookup", "entity_type", "entity_id", "created_at"),
     )
+
+
+# ==========================================
+# 8. ARCHIVIO DOMANDE OBSOLETE
+# Quando una Question viene modificata in modo non compatibile con i dati
+# raccolti, le Answer/Example/AnswerMotivation collegate vengono spostate
+# qui (insieme a uno snapshot della question stessa al momento del wipe).
+# Le motivations e le lingue sono denormalizzate (code/label/name salvati
+# come stringhe), così l'archivio resta consistente anche se in seguito
+# vengono rinominate o eliminate. Stesso pattern di ParameterSubmission.
+# ==========================================
+class ArchivedQuestion(Base):
+    __tablename__ = "archived_questions"
+    id = Column(Integer, primary_key=True)
+    original_question_id = Column(String(40), nullable=False, index=True)
+    parameter_id = Column(String(10), nullable=False)
+    parameter_name = Column(String(200), nullable=False, default="")
+    text = Column(Text, nullable=False, default="")
+    template_type = Column(String(100), default="")
+    instruction = Column(Text, nullable=True)
+    instruction_yes = Column(Text, nullable=True)
+    instruction_no = Column(Text, nullable=True)
+    example_yes = Column(Text, nullable=True)
+    help_info = Column(Text, nullable=True)
+    is_stop_question = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+
+    archived_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    archived_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    archive_note = Column(Text, default="")
+    answers_count = Column(Integer, nullable=False, default=0)
+    examples_count = Column(Integer, nullable=False, default=0)
+
+    archived_by = relationship("User")
+    allowed_motivations = relationship(
+        "ArchivedQuestionMotivation",
+        back_populates="archived_question",
+        cascade="all, delete-orphan",
+    )
+    answers = relationship(
+        "ArchivedAnswer",
+        back_populates="archived_question",
+        cascade="all, delete-orphan",
+    )
+
+
+class ArchivedQuestionMotivation(Base):
+    __tablename__ = "archived_question_motivations"
+    id = Column(Integer, primary_key=True)
+    archived_question_id = Column(
+        Integer,
+        ForeignKey("archived_questions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    motivation_code = Column(String(50), nullable=False)
+    motivation_label = Column(Text, nullable=False, default="")
+
+    archived_question = relationship("ArchivedQuestion", back_populates="allowed_motivations")
+
+
+class ArchivedAnswer(Base):
+    __tablename__ = "archived_answers"
+    id = Column(Integer, primary_key=True)
+    archived_question_id = Column(
+        Integer,
+        ForeignKey("archived_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    language_id = Column(String(10), nullable=False)
+    language_name_full = Column(String(255), nullable=False, default="")
+    status = Column(String(40), nullable=True)
+    response_text = Column(String(10), nullable=True)
+    comments = Column(Text, nullable=True)
+    original_updated_at = Column(DateTime, nullable=True)
+
+    archived_question = relationship("ArchivedQuestion", back_populates="answers")
+    examples = relationship(
+        "ArchivedExample",
+        back_populates="archived_answer",
+        cascade="all, delete-orphan",
+    )
+    answer_motivations = relationship(
+        "ArchivedAnswerMotivation",
+        back_populates="archived_answer",
+        cascade="all, delete-orphan",
+    )
+
+
+class ArchivedExample(Base):
+    __tablename__ = "archived_examples"
+    id = Column(Integer, primary_key=True)
+    archived_answer_id = Column(
+        Integer,
+        ForeignKey("archived_answers.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    number = Column(String(10), default="")
+    textarea = Column(Text, nullable=True)
+    transliteration = Column(Text, nullable=True)
+    gloss = Column(Text, nullable=True)
+    translation = Column(Text, nullable=True)
+    reference = Column(Text, nullable=True)
+
+    archived_answer = relationship("ArchivedAnswer", back_populates="examples")
+
+
+class ArchivedAnswerMotivation(Base):
+    __tablename__ = "archived_answer_motivations"
+    id = Column(Integer, primary_key=True)
+    archived_answer_id = Column(
+        Integer,
+        ForeignKey("archived_answers.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    motivation_code = Column(String(50), nullable=False)
+    motivation_label = Column(Text, nullable=False, default="")
+
+    archived_answer = relationship("ArchivedAnswer", back_populates="answer_motivations")

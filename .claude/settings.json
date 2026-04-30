@@ -54,7 +54,9 @@
       "Bash(python -c \"import matplotlib\")",
       "Bash(python -c \"import sys; print\\(sys.executable\\)\")",
       "Bash(pip install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(python -c \"import models; import services.archive_service; import routers.archived_questions; import routers.questions; import main; print\\('OK'\\)\")",
+      "Bash(python -m py_compile models.py services/archive_service.py routers/archived_questions.py routers/questions.py main.py alembic/versions/b1d4e7f0a3c5_archived_questions.py)"
     ]
   }
 }
