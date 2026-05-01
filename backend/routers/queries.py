@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 import models
 from dependencies import get_db, require_admin
-from services.logic_parser import build_parser, evaluate_with_parser, pretty_print_expression, trace_evaluation_tree
+from services.logic_parser import build_parser, pretty_print_expression, eval_node, _as_list
 
 router = APIRouter(prefix="/api/queries", tags=["Queries"])
 
@@ -101,41 +101,221 @@ def query_2_distribution(param_id: str, db: Session = Depends(get_db)):
 
     return {"parameter": {"id": param.id, "name": param.name}, "plus": plus, "minus": minus, "zero": zero}
 
-# --- Q3: Neutralization Logic Tree ---
+# --- Q3: Neutralization Blame Analysis ---
+
+def _eval_subtree_safe(node, values: Dict[str, str]) -> bool:
+    try:
+        return bool(eval_node(node, values))
+    except Exception:
+        return False
+
+
+def _blame_walk(node, matters: bool, values: Dict[str, str], responsible: list, other: list) -> None:
+    """
+    Cammina l'AST della cond e classifica le foglie:
+      - matters=True  -> finiscono in `responsible` (le foglie il cui valore conta per il risultato)
+      - matters=False -> finiscono in `other` (rami che non influenzano il risultato attuale)
+    Regole su matters: AND vero => tutti rilevanti; AND falso => solo i figli False rilevanti.
+    OR vero => solo i figli True rilevanti; OR falso => tutti rilevanti. NOT trasparente.
+    """
+    if isinstance(node, tuple):
+        sign, param = node
+        current = values.get(param)
+        leaf_eval = (current == sign)
+        entry = {"sign": sign, "param_id": param, "current": current, "leaf_eval": leaf_eval}
+        (responsible if matters else other).append(entry)
+        return
+
+    node_l = _as_list(node)
+
+    # NOT <expr>: trasparente per `matters`
+    if isinstance(node_l, list) and len(node_l) == 2 and str(node_l[0]).lower() == 'not':
+        _blame_walk(node_l[1], matters, values, responsible, other)
+        return
+
+    # AND/OR chain: [A op B op C ...]
+    if isinstance(node_l, list) and len(node_l) >= 3 and len(node_l) % 2 == 1:
+        op_kind = 'and' if str(node_l[1]).lower() in ('&', 'and') else 'or'
+        children = [node_l[i] for i in range(0, len(node_l), 2)]
+
+        if not matters:
+            for c in children:
+                _blame_walk(c, False, values, responsible, other)
+            return
+
+        child_actuals = [_eval_subtree_safe(c, values) for c in children]
+
+        if op_kind == 'and':
+            if all(child_actuals):
+                for c in children:
+                    _blame_walk(c, True, values, responsible, other)
+            else:
+                for c, ar in zip(children, child_actuals):
+                    _blame_walk(c, not ar, values, responsible, other)
+        else:  # or
+            if any(child_actuals):
+                for c, ar in zip(children, child_actuals):
+                    _blame_walk(c, ar, values, responsible, other)
+            else:
+                for c in children:
+                    _blame_walk(c, True, values, responsible, other)
+
+
+def _attach_param_names(db: Session, leaves: list) -> None:
+    if not leaves:
+        return
+    ids = list({e["param_id"] for e in leaves})
+    rows = db.query(models.ParameterDef.id, models.ParameterDef.name).filter(
+        models.ParameterDef.id.in_(ids)
+    ).all()
+    name_by_id = {pid: pname for pid, pname in rows}
+    for e in leaves:
+        e["param_name"] = name_by_id.get(e["param_id"], "")
+
+
+def _get_param_state(db: Session, lang_id: str, param_id: str) -> dict:
+    lp = db.query(models.LanguageParameter).filter(
+        models.LanguageParameter.language_id == lang_id,
+        models.LanguageParameter.parameter_id == param_id,
+    ).first()
+    if not lp:
+        return {"value_orig": None, "value_eval": None, "warning_orig": False, "warning_eval": False}
+    lpe = lp.eval
+    return {
+        "value_orig": lp.value_orig,
+        "value_eval": lpe.value_eval if lpe else None,
+        "warning_orig": bool(lp.warning_orig),
+        "warning_eval": bool(lpe.warning_eval) if lpe else False,
+    }
+
+
+def _originating_answers(db: Session, lang_id: str, param_id: str) -> list:
+    rows = db.query(models.Answer, models.Question).join(
+        models.Question, models.Answer.question_id == models.Question.id
+    ).filter(
+        models.Answer.language_id == lang_id,
+        models.Question.parameter_id == param_id,
+    ).all()
+    return [
+        {
+            "q_id": q.id,
+            "q_text": q.text,
+            "response": a.response_text,
+            "is_stop_question": bool(q.is_stop_question),
+        }
+        for a, q in rows
+    ]
+
+
+def _parents_with_warning(db: Session, lang_id: str, parent_ids: set) -> list:
+    if not parent_ids:
+        return []
+    rows = db.query(
+        models.LanguageParameter.parameter_id,
+        models.ParameterDef.name,
+        models.LanguageParameterEval.warning_eval,
+    ).join(
+        models.LanguageParameterEval,
+        models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id,
+    ).join(
+        models.ParameterDef,
+        models.ParameterDef.id == models.LanguageParameter.parameter_id,
+    ).filter(
+        models.LanguageParameter.language_id == lang_id,
+        models.LanguageParameter.parameter_id.in_(list(parent_ids)),
+    ).all()
+    return [{"id": pid, "name": pname} for pid, pname, w in rows if w]
+
+
 @router.get("/q3")
 def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(get_db)):
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == param_id).first()
-    if not lang or not param: raise HTTPException(404, "Data not found")
+    if not lang or not param:
+        raise HTTPException(404, "Data not found")
 
     cond = (param.implicational_condition or "").strip()
-    if not cond:
-        return {
-            "no_condition": True,
-            "parameter": {"id": param.id, "name": param.name},
-            "language": {"id": lang.id, "name": lang.name_full}
-        }
+    state = _get_param_state(db, lang_id, param_id)
+    value_eval = state["value_eval"]
+    value_orig = state["value_orig"]
+    warning_eval = state["warning_eval"]
 
-    vals_map = _final_map_for_language(db, lang_id)
+    base = {
+        "parameter": {"id": param.id, "name": param.name},
+        "language": {"id": lang.id, "name": lang.name_full},
+        "current_value": value_eval,
+        "value_orig": value_orig,
+        "condition": cond,
+    }
+
+    # Caso 1: nessuna condizione implicazionale.
+    if not cond:
+        if value_eval in ("+", "-"):
+            status = "active"
+            explanation = {"type": "active_no_condition", "answers": _originating_answers(db, lang_id, param_id)}
+        elif value_eval == "0":
+            status = "set_directly"
+            explanation = {"type": "answered_directly", "answers": _originating_answers(db, lang_id, param_id)}
+        elif value_eval == "?":
+            status = "warning_propagated" if warning_eval else "no_answers"
+            explanation = {"type": "no_condition", "answers": _originating_answers(db, lang_id, param_id)}
+        else:
+            status = "no_answers"
+            explanation = {"type": "no_condition", "answers": _originating_answers(db, lang_id, param_id)}
+        return {**base, "status": status, "explanation": explanation}
+
+    # Caso 2: condizione presente -> parsing.
     parser = build_parser()
+    try:
+        parsed = parser.parseString(cond, parseAll=True)
+        root_ast = _as_list(parsed[0])
+    except Exception as e:
+        return {**base, "status": "parse_error", "explanation": {"type": "parse_error", "message": str(e)}}
+
+    # Mappa valori correnti, normalizzata in uppercase per coerenza con il parser.
+    raw_vals = _final_map_for_language(db, lang_id)
+    values = {k.upper(): v for k, v in raw_vals.items()}
 
     try:
-        parsed_res = parser.parseString(cond, parseAll=True)
-        # Genera l'albero JSON per il frontend invece del testo ASCII
-        tree = trace_evaluation_tree(parsed_res[0], vals_map)
-        return {
-            "parameter": {"id": param.id, "name": param.name},
-            "language": {"id": lang.id, "name": lang.name_full},
-            "condition": cond,
-            "is_neutralized": (tree["result"] is False),
-            "tree": tree
-        }
+        cond_ok = bool(eval_node(root_ast, values))
     except Exception as e:
-        return {
-            "error": str(e),
-            "parameter": {"id": param.id, "name": param.name},
-            "language": {"id": lang.id, "name": lang.name_full}
+        return {**base, "status": "parse_error", "explanation": {"type": "parse_error", "message": str(e)}}
+
+    # Decisione status quando la cond e' parsabile.
+    if cond_ok is False:
+        status = "neutralized"
+    elif value_eval == "?" and warning_eval:
+        status = "warning_propagated"
+    elif value_eval == "0":
+        status = "set_directly"
+    elif value_eval in ("+", "-"):
+        status = "active"
+    else:
+        status = "no_answers"
+
+    if status in ("neutralized", "active"):
+        responsible: list = []
+        other: list = []
+        _blame_walk(root_ast, True, values, responsible, other)
+        _attach_param_names(db, responsible)
+        _attach_param_names(db, other)
+        explanation = {
+            "type": "implication_failed" if status == "neutralized" else "implication_satisfied",
+            "responsible": responsible,
+            "other_tokens": other,
         }
+    elif status == "set_directly":
+        explanation = {
+            "type": "answered_directly",
+            "answers": _originating_answers(db, lang_id, param_id),
+        }
+    elif status == "warning_propagated":
+        refs = set(_extract_tokens(cond))
+        explanation = {"type": "warning_from_parents", "parents": _parents_with_warning(db, lang_id, refs)}
+    else:  # no_answers
+        explanation = {"type": "no_answers", "answers": _originating_answers(db, lang_id, param_id)}
+
+    return {**base, "status": status, "explanation": explanation}
 
 # --- Q4, Q5, Q6: Parameters with value +, -, 0 ---
 @router.get("/q456")

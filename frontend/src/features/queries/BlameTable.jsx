@@ -1,0 +1,398 @@
+import { useState, useCallback, useMemo, Fragment } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../../api';
+
+const MAX_DEPTH = 20;
+
+const STATUS_META = {
+    neutralized:        { label: 'NEUTRALIZED (0)',           bg: '#f8d7da', fg: '#721c24', border: '#dc3545' },
+    active:             { label: 'ACTIVE',                    bg: '#d4edda', fg: '#155724', border: '#28a745' },
+    set_directly:       { label: 'SET DIRECTLY (from answer)',bg: '#fff3cd', fg: '#856404', border: '#ffc107' },
+    warning_propagated: { label: 'WARNING (?)',               bg: '#fff3cd', fg: '#856404', border: '#ffc107' },
+    no_condition:       { label: 'NO CONDITION',              bg: '#e2e3e5', fg: '#383d41', border: '#6c757d' },
+    parse_error:        { label: 'PARSE ERROR',               bg: '#f8d7da', fg: '#721c24', border: '#dc3545' },
+    no_answers:         { label: 'NO ANSWERS',                bg: '#e2e3e5', fg: '#383d41', border: '#6c757d' },
+};
+
+export default function BlameTable({ q3Response, langId, depth = 0, cache: parentCache }) {
+    // Stable Map that survives re-renders; shared with nested instances when passed as prop.
+    const cache = useMemo(() => parentCache ?? new Map(), [parentCache]);
+
+    const [nested, setNested] = useState({});
+    const [loading, setLoading] = useState({});
+    const [error, setError] = useState({});
+    const [showOther, setShowOther] = useState(false);
+
+    const handleExpand = useCallback(async (paramId) => {
+        if (nested[paramId]) {
+            setNested(prev => { const copy = { ...prev }; delete copy[paramId]; return copy; });
+            return;
+        }
+        if (cache.has(paramId)) {
+            setNested(prev => ({ ...prev, [paramId]: cache.get(paramId) }));
+            return;
+        }
+        setLoading(prev => ({ ...prev, [paramId]: true }));
+        setError(prev => ({ ...prev, [paramId]: null }));
+        try {
+            const res = await api.get(`/api/queries/q3?lang_id=${langId}&param_id=${paramId}`);
+            cache.set(paramId, res.data);
+            setNested(prev => ({ ...prev, [paramId]: res.data }));
+        } catch {
+            setError(prev => ({ ...prev, [paramId]: 'Failed to load.' }));
+        } finally {
+            setLoading(prev => ({ ...prev, [paramId]: false }));
+        }
+    }, [nested, langId, cache]);
+
+    if (!q3Response) return null;
+
+    const { parameter, language, current_value, value_orig, condition, status, explanation } = q3Response;
+    const meta = STATUS_META[status] || STATUS_META.no_answers;
+    const canExpand = depth < MAX_DEPTH;
+
+    return (
+        <div className="card" style={{
+            padding: '1.25rem',
+            border: `1px solid ${meta.border}`,
+            marginTop: depth > 0 ? '0.5rem' : 0,
+            background: depth > 0 ? 'var(--surface-2)' : 'var(--surface)'
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <div style={{
+                    padding: '0.4rem 0.75rem', borderRadius: 4, fontWeight: 700,
+                    background: meta.bg, color: meta.fg, fontSize: '0.85rem',
+                }}>
+                    {meta.label}
+                </div>
+                <div style={{ fontWeight: 600 }}>
+                    <Link to={`/languages/${language.id}/debug#${parameter.id}`}>{parameter.id}</Link>
+                    <span className="muted"> — {parameter.name}</span>
+                </div>
+                <div className="muted small">
+                    in <Link to={`/languages/${language.id}/data`}>{language.name}</Link>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                <div>
+                    <span className="muted">Current:</span>{' '}
+                    <strong>{current_value ?? '—'}</strong>
+                    {value_orig != null && value_orig !== current_value && (
+                        <span className="muted small"> (orig: {value_orig})</span>
+                    )}
+                </div>
+                {condition && (
+                    <div>
+                        <span className="muted">Condition:</span>{' '}
+                        <code>{condition}</code>
+                    </div>
+                )}
+            </div>
+
+            {(status === 'neutralized' || status === 'active') && (
+                <BlameLeavesView
+                    explanation={explanation}
+                    canExpand={canExpand}
+                    nested={nested}
+                    loading={loading}
+                    error={error}
+                    onExpand={handleExpand}
+                    showOther={showOther}
+                    setShowOther={setShowOther}
+                    langId={langId}
+                    depth={depth}
+                    cache={cache}
+                />
+            )}
+
+            {status === 'set_directly' && (
+                <AnswersList
+                    answers={explanation?.answers || []}
+                    languageId={language.id}
+                    title="Answers that set this parameter"
+                />
+            )}
+
+            {status === 'no_answers' && (
+                <AnswersList
+                    answers={explanation?.answers || []}
+                    languageId={language.id}
+                    title="No answers recorded — questions for this parameter:"
+                    emptyMessage="No questions recorded for this parameter."
+                />
+            )}
+
+            {status === 'warning_propagated' && (
+                <ParentsList
+                    parents={explanation?.parents || []}
+                    canExpand={canExpand}
+                    nested={nested}
+                    loading={loading}
+                    error={error}
+                    onExpand={handleExpand}
+                    langId={langId}
+                    depth={depth}
+                    cache={cache}
+                />
+            )}
+
+            {status === 'no_condition' && (
+                <div className="alert alert-info" style={{ margin: 0 }}>
+                    This parameter has no implicational condition. Its value depends only on the answers given.
+                    {explanation?.answers?.length > 0 && (
+                        <AnswersList
+                            answers={explanation.answers}
+                            languageId={language.id}
+                            embedded
+                        />
+                    )}
+                </div>
+            )}
+
+            {status === 'parse_error' && (
+                <div className="alert alert-error" style={{ margin: 0 }}>
+                    Cannot parse the implicational condition: <code>{explanation?.message}</code>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExpand, showOther, setShowOther, langId, depth, cache }) {
+    const responsible = explanation?.responsible || [];
+    const other = explanation?.other_tokens || [];
+    const isFailed = explanation?.type === 'implication_failed';
+
+    return (
+        <div>
+            <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>
+                {isFailed
+                    ? 'Parameters responsible for the neutralization'
+                    : 'Parameters that satisfy the condition'}
+            </h4>
+            <div className="card" style={{ padding: 0, marginBottom: '0.75rem' }}>
+                <table className="table" style={{ margin: 0 }}>
+                    <thead className="table-light">
+                        <tr>
+                            <th>Token</th>
+                            <th>Parameter</th>
+                            <th style={{ width: 80, textAlign: 'center' }}>Required</th>
+                            <th style={{ width: 80, textAlign: 'center' }}>Current</th>
+                            <th style={{ width: 60, textAlign: 'center' }}>Leaf</th>
+                            <th style={{ width: 110, textAlign: 'center' }}>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {responsible.length === 0 && (
+                            <tr><td colSpan={6} className="muted text-center">No leaves to blame</td></tr>
+                        )}
+                        {responsible.map((leaf, idx) => (
+                            <LeafRow
+                                key={`r-${idx}-${leaf.param_id}`}
+                                leaf={leaf}
+                                canExpand={canExpand}
+                                isOpen={!!nested[leaf.param_id]}
+                                isLoading={!!loading[leaf.param_id]}
+                                onClick={() => onExpand(leaf.param_id)}
+                                error={error[leaf.param_id]}
+                                nestedResp={nested[leaf.param_id]}
+                                langId={langId}
+                                depth={depth}
+                                cache={cache}
+                            />
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {other.length > 0 && (
+                <div>
+                    <button
+                        type="button"
+                        className="btn"
+                        style={{ background: 'transparent', padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                        onClick={() => setShowOther(s => !s)}
+                    >
+                        {showOther ? '▾' : '▸'} Other tokens in condition ({other.length})
+                    </button>
+                    {showOther && (
+                        <div className="card" style={{ padding: 0, marginTop: '0.5rem' }}>
+                            <table className="table" style={{ margin: 0 }}>
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Token</th>
+                                        <th>Parameter</th>
+                                        <th style={{ width: 80, textAlign: 'center' }}>Required</th>
+                                        <th style={{ width: 80, textAlign: 'center' }}>Current</th>
+                                        <th style={{ width: 60, textAlign: 'center' }}>Leaf</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {other.map((leaf, idx) => (
+                                        <tr key={`o-${idx}-${leaf.param_id}`}>
+                                            <td><code>{leaf.sign}{leaf.param_id}</code></td>
+                                            <td>{leaf.param_name || ''}</td>
+                                            <td style={{ textAlign: 'center', fontWeight: 700 }}>{leaf.sign}</td>
+                                            <td style={{ textAlign: 'center' }}>{leaf.current ?? '—'}</td>
+                                            <td style={{ textAlign: 'center', color: leaf.leaf_eval ? '#28a745' : '#dc3545', fontWeight: 700 }}>
+                                                {leaf.leaf_eval ? '✓' : '✗'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedResp, langId, depth, cache }) {
+    const rowBg = !leaf.leaf_eval ? 'rgba(220,53,69,0.05)' : 'transparent';
+    return (
+        <Fragment>
+            <tr style={{ background: rowBg }}>
+                <td><code>{leaf.sign}{leaf.param_id}</code></td>
+                <td>{leaf.param_name || ''}</td>
+                <td style={{ textAlign: 'center', fontWeight: 700 }}>{leaf.sign}</td>
+                <td style={{ textAlign: 'center' }}>{leaf.current ?? <span className="muted">—</span>}</td>
+                <td style={{ textAlign: 'center', color: leaf.leaf_eval ? '#28a745' : '#dc3545', fontWeight: 700 }}>
+                    {leaf.leaf_eval ? '✓' : '✗'}
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                    {canExpand ? (
+                        <button
+                            type="button"
+                            className="btn btn--primary"
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+                            onClick={onClick}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? '...' : isOpen ? 'Hide' : 'Why?'}
+                        </button>
+                    ) : (
+                        <span className="muted small" title="Max recursion depth reached">—</span>
+                    )}
+                </td>
+            </tr>
+            {isOpen && (
+                <tr>
+                    <td colSpan={6} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
+                        {error ? (
+                            <div className="alert alert-error" style={{ margin: 0 }}>{error}</div>
+                        ) : nestedResp ? (
+                            <BlameTable
+                                q3Response={nestedResp}
+                                langId={langId}
+                                depth={depth + 1}
+                                cache={cache}
+                            />
+                        ) : (
+                            <span className="muted">Loading...</span>
+                        )}
+                    </td>
+                </tr>
+            )}
+        </Fragment>
+    );
+}
+
+function AnswersList({ answers, languageId, title, emptyMessage, embedded }) {
+    if (!answers || answers.length === 0) {
+        if (embedded) return null;
+        return <div className="muted small" style={{ marginTop: embedded ? '0.5rem' : 0 }}>{emptyMessage || 'No answers recorded.'}</div>;
+    }
+    return (
+        <div style={{ marginTop: embedded ? '0.75rem' : 0 }}>
+            {title && <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>{title}</h4>}
+            <div className="card" style={{ padding: 0 }}>
+                <table className="table" style={{ margin: 0 }}>
+                    <thead className="table-light">
+                        <tr>
+                            <th style={{ width: 80, textAlign: 'center' }}>Answer</th>
+                            <th>Question</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {answers.map(a => (
+                            <tr key={a.q_id}>
+                                <td style={{
+                                    textAlign: 'center', fontWeight: 700,
+                                    color: a.response === 'yes' ? '#28a745' : a.response === 'no' ? '#dc3545' : '#6c757d'
+                                }}>
+                                    {(a.response || '—').toUpperCase()}
+                                </td>
+                                <td>
+                                    <Link to={`/languages/${languageId}/data#q-${a.q_id}`}>
+                                        <span className="muted small" style={{ marginRight: '0.4rem' }}>[{a.q_id}]</span>
+                                        {a.q_text}
+                                    </Link>
+                                    {a.is_stop_question && <span className="muted small" style={{ marginLeft: '0.5rem' }}>(stop)</span>}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function ParentsList({ parents, canExpand, nested, loading, error, onExpand, langId, depth, cache }) {
+    if (!parents || parents.length === 0) {
+        return <div className="muted small">No parent parameters with active warnings.</div>;
+    }
+    return (
+        <div>
+            <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>Parent parameters with warnings</h4>
+            <div className="card" style={{ padding: 0 }}>
+                <table className="table" style={{ margin: 0 }}>
+                    <thead className="table-light">
+                        <tr>
+                            <th>Parameter</th>
+                            <th style={{ width: 110, textAlign: 'center' }}>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {parents.map(p => (
+                            <Fragment key={p.id}>
+                                <tr>
+                                    <td><strong>{p.id}</strong> — {p.name}</td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {canExpand ? (
+                                            <button
+                                                type="button"
+                                                className="btn btn--primary"
+                                                style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+                                                onClick={() => onExpand(p.id)}
+                                                disabled={!!loading[p.id]}
+                                            >
+                                                {loading[p.id] ? '...' : nested[p.id] ? 'Hide' : 'Why?'}
+                                            </button>
+                                        ) : (
+                                            <span className="muted small">—</span>
+                                        )}
+                                    </td>
+                                </tr>
+                                {nested[p.id] && (
+                                    <tr>
+                                        <td colSpan={2} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
+                                            {error[p.id] ? (
+                                                <div className="alert alert-error" style={{ margin: 0 }}>{error[p.id]}</div>
+                                            ) : (
+                                                <BlameTable q3Response={nested[p.id]} langId={langId} depth={depth + 1} cache={cache} />
+                                            )}
+                                        </td>
+                                    </tr>
+                                )}
+                            </Fragment>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}

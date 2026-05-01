@@ -40,7 +40,6 @@ import ParameterBackupDetail from './features/backups/ParameterBackupDetail';
 import ArchivedQuestionDetail from './features/backups/ArchivedQuestionDetail';
 import EditSiteContent from './features/public/EditSiteContent';
 import TableA from './features/tablea/TableA';
-import LogicTree  from "./features/queries/LogicTree.jsx";
 import QueriesDashboard from "./features/queries/QueriesDashboard.jsx";
 import ImportExcel from './features/admin/ImportExcel';
 import MigrationImport from './features/admin/MigrationImport';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
-import LogicTree from './LogicTree';
+import BlameTable from './BlameTable';
 
 export default function QueriesDashboard() {
     const [activeTab, setActiveTab] = useState('q1');
@@ -289,31 +289,9 @@ export default function QueriesDashboard() {
                                 </div>
                             )}
 
-                            {/* Q3: Neutralization Logic */}
+                            {/* Q3: Neutralization Blame Analysis */}
                             {activeTab === 'q3' && (
-                                <div>
-                                    <h3 style={{ marginBottom: '1.5rem' }}>
-                                        Analysis for: <strong><Link to={`/languages/${results.language.id}/debug#${results.parameter.id}`}>{results.parameter.id}</Link></strong> in <em><Link to={`/languages/${results.language.id}/data`}>{results.language.name}</Link></em>
-                                    </h3>
-
-                                    {results.no_condition ? (
-                                        <div className="alert alert-info">This parameter has no implicational conditions.</div>
-                                    ) : (
-                                        <div className="card" style={{ padding: '1.5rem' }}>
-                                            <div style={{
-                                                padding: '1rem', marginBottom: '1.5rem', borderRadius: '4px', fontWeight: 'bold',
-                                                background: results.is_neutralized ? '#f8d7da' : '#d4edda',
-                                                color: results.is_neutralized ? '#721c24' : '#155724'
-                                            }}>
-                                                Result: {results.is_neutralized ? 'NEUTRALIZED (0)' : 'ACTIVE (+/-)'}
-                                            </div>
-                                            <LogicTree tree={results.tree} />
-                                            <div className="muted small mt-3" style={{ marginTop: '1rem' }}>
-                                                Condition: <code>{results.condition}</code>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                <BlameTable q3Response={results} langId={langId} depth={0} />
                             )}
 
                             {/* Q4, Q5, Q6: Parameters with value +, -, 0 */}
