@@ -124,7 +124,7 @@ function BackToTop() {
 // =============================================================================
 // Footer
 // =============================================================================
-function SiteFooter({ role }) {
+export function SiteFooter({ role }) {
     const year = new Date().getFullYear();
     const roleLabel =
         role === 'admin' ? 'Admin Access'

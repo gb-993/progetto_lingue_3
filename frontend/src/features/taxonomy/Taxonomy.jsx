@@ -144,7 +144,7 @@ export default function Taxonomy() {
                 </p>
             </header>
 
-            <div style={{
+            <div className="taxonomy-columns" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
                 gap: '1rem',

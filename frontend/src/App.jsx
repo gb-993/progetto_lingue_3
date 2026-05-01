@@ -6,7 +6,7 @@ import {
     useLocation,
 } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Layout from './components/Layout';
+import Layout, { SiteFooter } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 
 import PublicHome from './features/public/PublicHome';
@@ -76,7 +76,12 @@ function ConditionalLayout({ children }) {
     if (role === 'admin' || role === 'user') {
         return <Layout>{children}</Layout>;
     }
-    return children;
+    return (
+        <>
+            {children}
+            <SiteFooter role="public" />
+        </>
+    );
 }
 
 const router = createBrowserRouter([
@@ -85,7 +90,7 @@ const router = createBrowserRouter([
         element: <AppRoot />,
         children: [
             // Rotte pubbliche
-            { index: true, element: <PublicHome /> },
+            { index: true, element: <ConditionalLayout><PublicHome /></ConditionalLayout> },
             { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
             { path: 'login', element: <Login /> },
 
