@@ -1,17 +1,52 @@
+import logging
 from typing import Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 import models
+from database import SessionLocal
 from dependencies import get_db, require_admin
 from services.versioning import record_version
 from services import archive_service
+from services.param_consolidate import recompute_and_persist_language_parameter
+from services.dag_eval import run_dag_for_language
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
+
+
+def _recompute_parameter_for_all_languages_in_background(parameter_id: str) -> None:
+    """Ricalcola value_orig + DAG di un parametro per tutte le lingue.
+
+    Usato dopo il toggle di `Question.is_active` (o dopo una PUT che cambia
+    is_active): la disattivazione/riattivazione di una question modifica il
+    consolidate del parametro, e il nuovo value_orig puo' a sua volta cascare
+    nel DAG verso parametri figli.
+
+    Apre una propria sessione DB perche' gira come BackgroundTask, fuori dal
+    ciclo request/response. Errori loggati ma mai propagati.
+    """
+    db = SessionLocal()
+    try:
+        language_ids = [r[0] for r in db.query(models.Language.id).all()]
+        for lang_id in language_ids:
+            recompute_and_persist_language_parameter(lang_id, parameter_id, db)
+            run_dag_for_language(lang_id, db)
+            db.flush()
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.error(
+            "background recompute failed for parameter %s: %s",
+            parameter_id, e, exc_info=True,
+        )
+    finally:
+        db.close()
 
 # --- SCHEMA PYDANTIC ---
 class QuestionBase(BaseModel):
@@ -118,7 +153,7 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
 
 
 @router.put("/{id}")
-def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def update_admin_question(id: str, item: QuestionUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -126,6 +161,11 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == item.parameter_id).first()
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
+
+    # Snapshot dei valori "che influenzano il consolidate" prima dell'update,
+    # per decidere se schedulare un ricalcolo a fine endpoint.
+    old_is_active = bool(db_item.is_active)
+    old_parameter_id = db_item.parameter_id
 
     # Wipe + snapshot dei dati nelle tabelle archive PRIMA di applicare le
     # modifiche al testo: lo snapshot deve riflettere la versione vecchia.
@@ -174,6 +214,20 @@ def update_admin_question(id: str, item: QuestionUpdate, db: Session = Depends(g
         record_version(db, db_item, operation="update", source="manual",
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
+
+        # Se il PUT ha modificato qualcosa che impatta il consolidate (is_active
+        # cambiato, parametro spostato, oppure wipe dei dati collegati),
+        # schedula in background il ricalcolo dei parametri impattati per tutte
+        # le lingue. Wipe svuota le Answer e quindi cambia il valore consolidato.
+        impacted_param_ids: set[str] = set()
+        if old_is_active != bool(item.is_active) or item.wipe_data:
+            impacted_param_ids.add(item.parameter_id)
+        if old_parameter_id != item.parameter_id:
+            impacted_param_ids.add(old_parameter_id)
+            impacted_param_ids.add(item.parameter_id)
+        for pid in impacted_param_ids:
+            background_tasks.add_task(_recompute_parameter_for_all_languages_in_background, pid)
+
         return {
             "detail": "Question updated successfully",
             "archived_question_id": archived_id,
@@ -199,18 +253,19 @@ def get_question_data_stats(
 
 
 @router.patch("/{id}/toggle-active")
-def toggle_question_active(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Disattiva o riattiva una domanda senza eliminarla dal DB"""
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Question not found")
 
     db_item.is_active = not db_item.is_active
+    parameter_id = db_item.parameter_id
 
     # Logga automaticamente l'azione sul parametro
     azione = "Reactivated" if db_item.is_active else "Deactivated"
     log = models.ParameterChangeLog(
-        parameter_id=db_item.parameter_id,
+        parameter_id=parameter_id,
         user_id=current_user.id,
         change_note=f"[Question {id}] {azione}"
     )
@@ -220,6 +275,11 @@ def toggle_question_active(id: str, db: Session = Depends(get_db), current_user:
     record_version(db, db_item, operation="update", source="manual",
                    user_id=current_user.id, note=azione)
     db.commit()
+
+    # Cambiare is_active fa cambiare il consolidate del parametro padre, e di
+    # conseguenza il DAG: schedula il ricalcolo per tutte le lingue.
+    background_tasks.add_task(_recompute_parameter_for_all_languages_in_background, parameter_id)
+
     return {"detail": "Question status updated", "is_active": db_item.is_active}
 
 

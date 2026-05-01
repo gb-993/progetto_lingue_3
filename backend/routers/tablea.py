@@ -82,7 +82,10 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
     # 2. Filtro Item (Parametri o Domande)
     matrix = []
     if filters.view == "questions":
-        q_query = db.query(models.Question).join(models.ParameterDef).filter(models.ParameterDef.is_active == True)
+        q_query = db.query(models.Question).join(models.ParameterDef).filter(
+            models.ParameterDef.is_active == True,
+            models.Question.is_active == True,
+        )
         if filters.f_q_template: q_query = q_query.filter(models.Question.template_type == filters.f_q_template)
         if filters.f_q_stop == "yes": q_query = q_query.filter(models.Question.is_stop_question == True)
         elif filters.f_q_stop == "no": q_query = q_query.filter(models.Question.is_stop_question == False)

@@ -2,12 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
 
+const SHOW_INACTIVE_KEY = 'language-debug.show-inactive-questions';
+
 export default function LanguageDebug() {
     const { id } = useParams();
     const [debugData, setDebugData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isRunningDag, setIsRunningDag] = useState(false);
     const [error, setError] = useState('');
+    const [showInactive, setShowInactive] = useState(() => {
+        try { return localStorage.getItem(SHOW_INACTIVE_KEY) === '1'; } catch { return false; }
+    });
+
+    const toggleShowInactive = (val) => {
+        setShowInactive(val);
+        try { localStorage.setItem(SHOW_INACTIVE_KEY, val ? '1' : '0'); } catch {}
+    };
 
     const fetchDebugData = async () => {
         try {
@@ -55,7 +65,7 @@ export default function LanguageDebug() {
                     Parameters Debug — {debugData.language.name_full} ({debugData.language.id})
                 </h1>
 
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <Link to={`/languages/${id}/data`} className="btn">Back to language data</Link>
                     <button
                         onClick={handleRunDag}
@@ -64,6 +74,14 @@ export default function LanguageDebug() {
                     >
                         {isRunningDag ? 'Processing...' : 'Apply implicational condition(s)'}
                     </button>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 'auto' }}>
+                        <input
+                            type="checkbox"
+                            checked={showInactive}
+                            onChange={(e) => toggleShowInactive(e.target.checked)}
+                        />
+                        Show inactive questions
+                    </label>
                 </div>
 
                 <div style={{ marginTop: '0.85rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -101,7 +119,9 @@ export default function LanguageDebug() {
                     </tr>
                     </thead>
                     <tbody>
-                    {debugData.rows.map(r => (
+                    {debugData.rows.map(r => {
+                        const visibleQs = showInactive ? r.questions : r.questions.filter(q => q.is_active);
+                        return (
                         <tr key={r.param_id} id={`p-${r.param_id}`}>
                             <td>{r.position}</td>
                             <td>
@@ -109,8 +129,16 @@ export default function LanguageDebug() {
                                     {r.param_id}
                                 </Link>
                             </td>
-                            <td>{r.questions.map(q => <div key={q}><code>{q}</code></div>)}</td>
-                            <td>{r.answers.map((a, idx) => <div key={idx}>{a || <span className="muted">—</span>}</div>)}</td>
+                            <td>{visibleQs.map(q => (
+                                <div key={q.id} style={{ opacity: q.is_active ? 1 : 0.5 }} title={q.is_active ? undefined : 'Inactive question'}>
+                                    <code>{q.id}</code>
+                                </div>
+                            ))}</td>
+                            <td>{visibleQs.map(q => (
+                                <div key={q.id} style={{ opacity: q.is_active ? 1 : 0.5 }}>
+                                    {q.answer || <span className="muted">—</span>}
+                                </div>
+                            ))}</td>
                             <td
                                 style={{
                                     textAlign: 'center',
@@ -138,7 +166,8 @@ export default function LanguageDebug() {
                                 {r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
                             </td>
                         </tr>
-                    ))}
+                        );
+                    })}
                     </tbody>
                 </table>
             </div>

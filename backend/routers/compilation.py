@@ -611,17 +611,21 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
             cond_values[pid] = lp.value_orig or ""
 
     # 4. Costruisci le righe per la UI
+    # Le question vengono restituite tutte (anche le inactive) con flag is_active:
+    # è il frontend a decidere se mostrarle (checkbox "Show inactive", default off).
+    # I valori init/final arrivano da LanguageParameter, già coerenti col fix di
+    # consolidate (le inactive non concorrono al value_orig).
     rows = []
     for p in parameters:
-        q_ids = []
-        q_ans = []
-        for q in p.questions:
-            q_ids.append(q.id)
+        q_list = []
+        for q in sorted(p.questions, key=lambda x: (x.is_stop_question, x.id)):
             a = ans_by_qid.get(q.id)
-            if a and a.response_text in ("yes", "no"):
-                q_ans.append(a.response_text.upper())
-            else:
-                q_ans.append("")
+            ans_label = a.response_text.upper() if (a and a.response_text in ("yes", "no")) else ""
+            q_list.append({
+                "id": q.id,
+                "answer": ans_label,
+                "is_active": bool(q.is_active),
+            })
 
         # Calcolo in tempo reale della condizione
         cond_true = None
@@ -635,8 +639,7 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
             "position": p.position,
             "param_id": p.id,
             "name": p.name,
-            "questions": q_ids,
-            "answers": q_ans,
+            "questions": q_list,
             "initial": init_by_pid.get(p.id, ""),
             "final": final_by_pid.get(p.id, ""),
             "warn_init": warni_by_pid.get(p.id, False),

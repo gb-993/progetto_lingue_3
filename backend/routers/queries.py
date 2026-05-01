@@ -175,9 +175,10 @@ def query_89_answers(lang_id: str, response_text: str, db: Session = Depends(get
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not lang: raise HTTPException(404, "Language not found")
 
-    answers = db.query(models.Answer).filter(
+    answers = db.query(models.Answer).join(models.Question).filter(
         models.Answer.language_id == lang_id,
-        models.Answer.response_text == response_text.lower()
+        models.Answer.response_text == response_text.lower(),
+        models.Question.is_active == True,
     ).all()
 
     res = []

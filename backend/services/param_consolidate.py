@@ -48,9 +48,11 @@ def consolidate_parameter_for_language(lang_id: str, param_id: str, db: Session)
     Calcola il valore ORIGINALE del parametro (+ / - / None) e il warning (solo conflitto).
     Logica originale rigorosamente ripristinata.
     """
-    # Rimosso il filtro is_active=True che non era presente nel codice Django originale
+    # Solo domande attive: una question disattivata non deve influenzare value_orig.
+    # Le Answer collegate restano in DB e tornano a contare se la question viene riattivata.
     questions = db.query(models.Question).filter(
-        models.Question.parameter_id == param_id
+        models.Question.parameter_id == param_id,
+        models.Question.is_active == True,
     ).all()
 
     norm_qs = [q for q in questions if not q.is_stop_question]
@@ -64,6 +66,7 @@ def consolidate_parameter_for_language(lang_id: str, param_id: str, db: Session)
     answers = db.query(models.Answer).join(models.Question).filter(
         models.Answer.language_id == lang_id,
         models.Question.parameter_id == param_id,
+        models.Question.is_active == True,
         models.Answer.status.in_(ALLOWED_STATUSES)
     ).all()
 

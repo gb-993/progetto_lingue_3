@@ -183,10 +183,14 @@ def build_language_workbook(
         .all()
     )
 
-    # Domande per parametro (ordinate per id)
+    # Domande per parametro (ordinate per id). Solo attive: gli sheet di
+    # esempi/risposte non devono mostrare question disattivate.
+    # (Lo sheet "Questions" di metadati più sotto fa una query a parte e
+    # continua a includere anche le inactive, perché documenta lo schema.)
     questions_by_param: dict[str, list[models.Question]] = {}
     all_questions = (
         db.query(models.Question)
+        .filter(models.Question.is_active == True)
         .order_by(models.Question.parameter_id, models.Question.id)
         .all()
     )
