@@ -25,6 +25,51 @@ const Q_DRAFT_FIELDS = [
     'example_yes', 'help_info', 'is_stop_question',
 ];
 
+// react-select non legge i CSS variable del tema: in dark mode il menu resta
+// bianco con testo chiaro (illeggibile). Qui mappiamo le sue parti sui token
+// del tema così segue automaticamente light/dark.
+const reactSelectStyles = {
+    control: (base, state) => ({
+        ...base,
+        background: 'var(--surface)',
+        borderColor: state.isFocused ? 'var(--brand, var(--link))' : 'var(--border)',
+        boxShadow: state.isFocused ? '0 0 0 1px var(--brand, var(--link))' : 'none',
+        ':hover': { borderColor: 'var(--border)' },
+    }),
+    menu: (base) => ({
+        ...base,
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+    }),
+    menuList: (base) => ({ ...base, background: 'var(--surface)' }),
+    option: (base, state) => ({
+        ...base,
+        background: state.isSelected
+            ? 'var(--surface-2)'
+            : state.isFocused ? 'var(--surface-alt, var(--surface-2))' : 'var(--surface)',
+        color: 'var(--text)',
+        cursor: 'pointer',
+    }),
+    singleValue: (base) => ({ ...base, color: 'var(--text)' }),
+    multiValue: (base) => ({
+        ...base,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+    }),
+    multiValueLabel: (base) => ({ ...base, color: 'var(--text)' }),
+    multiValueRemove: (base) => ({
+        ...base,
+        color: 'var(--text-muted)',
+        ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' },
+    }),
+    input: (base) => ({ ...base, color: 'var(--text)' }),
+    placeholder: (base) => ({ ...base, color: 'var(--text-muted)' }),
+    groupHeading: (base) => ({ ...base, color: 'var(--text-muted)' }),
+    dropdownIndicator: (base) => ({ ...base, color: 'var(--text-muted)' }),
+    indicatorSeparator: (base) => ({ ...base, background: 'var(--border)' }),
+    noOptionsMessage: (base) => ({ ...base, color: 'var(--text-muted)' }),
+};
+
 export default function QuestionForm({ mode = 'page' }) {
     // Il QuestionForm vive in due modalità:
     //  - "page"   → rotta autonoma /admin/questions/:id/edit (param: id)
@@ -655,6 +700,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         placeholder="Pick a question to clone with all its answers, examples and motivations..."
                                         noOptionsMessage={() => "No question available"}
                                         isDisabled={cloning}
+                                        styles={reactSelectStyles}
                                     />
                                 </div>
                                 <button
@@ -685,6 +731,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         onChange={handleImportQuestion}
                                         placeholder="Pick a question to copy text, instructions, motivations into the form below..."
                                         noOptionsMessage={() => "No question available"}
+                                        styles={reactSelectStyles}
                                     />
                                 </div>
                                 {importedFrom && (
@@ -722,7 +769,7 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Destination Parameter</label>
-                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem', backgroundColor: isEditMode ? '#e2e8f0' : 'white' }}>
+                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem', backgroundColor: isEditMode ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
                                 <option value="">Select parameter...</option>
                                 {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}
                             </select>
@@ -781,6 +828,7 @@ export default function QuestionForm({ mode = 'page' }) {
                             placeholder="Search existing motivation or type a code to create…"
                             formatCreateLabel={(inputValue) => `Create new: "${inputValue.toUpperCase()}"`}
                             components={motivationSelectComponents}
+                            styles={reactSelectStyles}
                         />
                         <p className="small muted" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
                             <strong>click on a chip to edit</strong> · <strong>type a code or use the footer of the dropdown to create</strong>
@@ -846,7 +894,11 @@ export default function QuestionForm({ mode = 'page' }) {
                                         padding: '0.5rem',
                                         borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
                                         borderRadius: '4px',
+                                        // Quando dirty il container esterno è giallo chiaro hard-coded:
+                                        // forziamo testo scuro così resta leggibile anche in dark mode
+                                        // (altrimenti --text del tema scuro è bianco su bianco).
                                         backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
+                                        color: !isDirty ? 'var(--text)' : '#15181c',
                                         cursor: !isDirty ? 'not-allowed' : 'text',
                                         opacity: !isDirty ? 0.7 : 1
                                     }}

@@ -67,7 +67,9 @@
       "Read(//c/Users/Gb/Downloads//**)",
       "Read(//c/Users/Gb/Downloads/**)",
       "Bash(python -c \"import openpyxl; print\\('OK', openpyxl.__version__\\)\")",
-      "Bash(python)"
+      "Bash(python)",
+      "Bash(awk 'NR>=525 && NR<=535 {print NR\": \"$0}' \"c:/Users/Gb/Desktop/pcm-hub/frontend/src/features/parameters/ParameterForm.jsx\")",
+      "Bash(awk 'NR==525 {for\\(i=1;i<=length\\($0\\);i++\\){c=substr\\($0,i,1\\);if\\(c==\" \"||c==\"\\\\t\"\\){printf \"[%d:%s]\",i,\\(c==\"\\\\t\"?\"TAB\":\"SP\"\\)}else{print \"first non-ws at \"i\": \"substr\\($0,i\\);exit}}}' \"c:/Users/Gb/Desktop/pcm-hub/frontend/src/features/parameters/ParameterForm.jsx\")"
     ]
   }
 }

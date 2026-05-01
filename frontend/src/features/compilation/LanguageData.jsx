@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
 import ParameterBlock from './ParameterBlock';
 
@@ -36,6 +36,19 @@ export default function LanguageData() {
     // Tracciamento delle modifiche non salvate alla admin-note del parametro corrente.
     // Sollevato dal ParameterBlock per intercettare cambi parametro / chiusura pagina.
     const [adminNoteDirty, setAdminNoteDirty] = useState(false);
+    const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+    const statusMenuRef = useRef(null);
+
+    useEffect(() => {
+        if (!statusMenuOpen) return;
+        const onDocClick = (e) => {
+            if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
+                setStatusMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [statusMenuOpen]);
 
     useEffect(() => {
         if (!adminNoteDirty) return;
@@ -220,50 +233,86 @@ export default function LanguageData() {
                         </button>
                     )}
 
-                    {/* --- ADMIN: pannello con tutte le force-transitions --- */}
+                    {/* --- ADMIN: dropdown status + apply implication --- */}
                     {isAdmin && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end', minWidth: '200px' }}>
-                            <span className="small muted" style={{ alignSelf: 'flex-end' }}>Admin: change status</span>
-                            {status !== 'approved' && (
-                                <button
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
+                            <span className="small muted">Admin actions</span>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                <Link
+                                    to={`/languages/${language.id}/debug`}
                                     className="btn"
-                                    style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d', width: '100%' }}
-                                    disabled={actionInProgress}
-                                    onClick={handleForceApprove}
                                 >
-                                    {actionInProgress ? '...' : 'Approve'}
-                                </button>
-                            )}
-                            {status !== 'rejected' && (
-                                <button
-                                    className="btn"
-                                    style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c', width: '100%' }}
-                                    disabled={actionInProgress}
-                                    onClick={handleForceReject}
-                                >
-                                    Reject
-                                </button>
-                            )}
-                            {status !== 'pending' && (
-                                <button
-                                    className="btn"
-                                    style={{ width: '100%' }}
-                                    disabled={actionInProgress}
-                                    onClick={handleForcePending}
-                                >
-                                    Mark as Pending
-                                </button>
-                            )}
-                            {status !== 'waiting_for_approval' && (
-                                <button
-                                    className="btn"
-                                    style={{ width: '100%' }}
-                                    disabled={actionInProgress}
-                                    onClick={handleForceWaiting}
-                                >
-                                    Mark as Waiting
-                                </button>
-                            )}
+                                    Apply Implication
+                                </Link>
+                                <div ref={statusMenuRef} style={{ position: 'relative' }}>
+                                    <button
+                                        type="button"
+                                        className="btn"
+                                        disabled={actionInProgress}
+                                        onClick={() => setStatusMenuOpen(o => !o)}
+                                    >
+                                        {actionInProgress ? '...' : 'Change Status ▾'}
+                                    </button>
+                                    {statusMenuOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            right: 0,
+                                            top: 'calc(100% + 4px)',
+                                            background: 'var(--surface, #fff)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            zIndex: 100,
+                                            minWidth: '200px',
+                                            padding: '0.4rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '0.3rem',
+                                        }}>
+                                            {status !== 'approved' && (
+                                                <button
+                                                    className="btn"
+                                                    style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d', width: '100%' }}
+                                                    disabled={actionInProgress}
+                                                    onClick={() => { setStatusMenuOpen(false); handleForceApprove(); }}
+                                                >
+                                                    Approve
+                                                </button>
+                                            )}
+                                            {status !== 'rejected' && (
+                                                <button
+                                                    className="btn"
+                                                    style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c', width: '100%' }}
+                                                    disabled={actionInProgress}
+                                                    onClick={() => { setStatusMenuOpen(false); handleForceReject(); }}
+                                                >
+                                                    Reject
+                                                </button>
+                                            )}
+                                            {status !== 'pending' && (
+                                                <button
+                                                    className="btn"
+                                                    style={{ width: '100%' }}
+                                                    disabled={actionInProgress}
+                                                    onClick={() => { setStatusMenuOpen(false); handleForcePending(); }}
+                                                >
+                                                    Mark as Pending
+                                                </button>
+                                            )}
+                                            {status !== 'waiting_for_approval' && (
+                                                <button
+                                                    className="btn"
+                                                    style={{ width: '100%' }}
+                                                    disabled={actionInProgress}
+                                                    onClick={() => { setStatusMenuOpen(false); handleForceWaiting(); }}
+                                                >
+                                                    Mark as Waiting
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

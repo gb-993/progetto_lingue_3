@@ -527,7 +527,11 @@ export default function ParameterForm() {
                                                 padding: '0.5rem',
                                                 borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
                                                 borderRadius: '4px',
+                                                // Quando dirty il container esterno è giallo chiaro hard-coded:
+                                                // forziamo testo scuro così resta leggibile anche in dark mode
+                                                // (altrimenti --text del tema scuro è bianco su bianco).
                                                 backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
+                                                color: !isDirty ? 'var(--text)' : '#15181c',
                                                 cursor: !isDirty ? 'not-allowed' : 'text',
                                                 opacity: !isDirty ? 0.7 : 1
                                             }}
