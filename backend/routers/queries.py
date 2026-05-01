@@ -110,27 +110,35 @@ def _eval_subtree_safe(node, values: Dict[str, str]) -> bool:
         return False
 
 
-def _blame_walk(node, matters: bool, values: Dict[str, str], responsible: list, other: list) -> None:
+def _blame_walk(node, matters: bool, negated: bool, values: Dict[str, str], responsible: list, other: list) -> None:
     """
     Cammina l'AST della cond e classifica le foglie:
       - matters=True  -> finiscono in `responsible` (le foglie il cui valore conta per il risultato)
       - matters=False -> finiscono in `other` (rami che non influenzano il risultato attuale)
     Regole su matters: AND vero => tutti rilevanti; AND falso => solo i figli False rilevanti.
-    OR vero => solo i figli True rilevanti; OR falso => tutti rilevanti. NOT trasparente.
+    OR vero => solo i figli True rilevanti; OR falso => tutti rilevanti. NOT trasparente per matters.
+    `negated` traccia il numero di NOT a monte (mod 2): True se la foglia e' sotto un numero
+    dispari di NOT, False altrimenti. Serve al frontend per mostrare correttamente il "Required".
     """
     if isinstance(node, tuple):
         sign, param = node
         current = values.get(param)
         leaf_eval = (current == sign)
-        entry = {"sign": sign, "param_id": param, "current": current, "leaf_eval": leaf_eval}
+        entry = {
+            "sign": sign,
+            "param_id": param,
+            "current": current,
+            "leaf_eval": leaf_eval,
+            "negated": negated,
+        }
         (responsible if matters else other).append(entry)
         return
 
     node_l = _as_list(node)
 
-    # NOT <expr>: trasparente per `matters`
+    # NOT <expr>: trasparente per `matters`, flippa `negated`
     if isinstance(node_l, list) and len(node_l) == 2 and str(node_l[0]).lower() == 'not':
-        _blame_walk(node_l[1], matters, values, responsible, other)
+        _blame_walk(node_l[1], matters, not negated, values, responsible, other)
         return
 
     # AND/OR chain: [A op B op C ...]
@@ -140,7 +148,7 @@ def _blame_walk(node, matters: bool, values: Dict[str, str], responsible: list, 
 
         if not matters:
             for c in children:
-                _blame_walk(c, False, values, responsible, other)
+                _blame_walk(c, False, negated, values, responsible, other)
             return
 
         child_actuals = [_eval_subtree_safe(c, values) for c in children]
@@ -148,17 +156,17 @@ def _blame_walk(node, matters: bool, values: Dict[str, str], responsible: list, 
         if op_kind == 'and':
             if all(child_actuals):
                 for c in children:
-                    _blame_walk(c, True, values, responsible, other)
+                    _blame_walk(c, True, negated, values, responsible, other)
             else:
                 for c, ar in zip(children, child_actuals):
-                    _blame_walk(c, not ar, values, responsible, other)
+                    _blame_walk(c, not ar, negated, values, responsible, other)
         else:  # or
             if any(child_actuals):
                 for c, ar in zip(children, child_actuals):
-                    _blame_walk(c, ar, values, responsible, other)
+                    _blame_walk(c, ar, negated, values, responsible, other)
             else:
                 for c in children:
-                    _blame_walk(c, True, values, responsible, other)
+                    _blame_walk(c, True, negated, values, responsible, other)
 
 
 def _attach_param_names(db: Session, leaves: list) -> None:
@@ -296,7 +304,7 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
     if status in ("neutralized", "active"):
         responsible: list = []
         other: list = []
-        _blame_walk(root_ast, True, values, responsible, other)
+        _blame_walk(root_ast, True, False, values, responsible, other)
         _attach_param_names(db, responsible)
         _attach_param_names(db, other)
         explanation = {

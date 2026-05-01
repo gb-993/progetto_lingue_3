@@ -179,13 +179,12 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                             <th>Parameter</th>
                             <th style={{ width: 80, textAlign: 'center' }}>Required</th>
                             <th style={{ width: 80, textAlign: 'center' }}>Current</th>
-                            <th style={{ width: 60, textAlign: 'center' }}>Leaf</th>
                             <th style={{ width: 110, textAlign: 'center' }}>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {responsible.length === 0 && (
-                            <tr><td colSpan={6} className="muted text-center">No leaves to blame</td></tr>
+                            <tr><td colSpan={5} className="muted text-center">No parameters to show</td></tr>
                         )}
                         {responsible.map((leaf, idx) => (
                             <LeafRow
@@ -225,21 +224,22 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                                         <th>Parameter</th>
                                         <th style={{ width: 80, textAlign: 'center' }}>Required</th>
                                         <th style={{ width: 80, textAlign: 'center' }}>Current</th>
-                                        <th style={{ width: 60, textAlign: 'center' }}>Leaf</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {other.map((leaf, idx) => (
-                                        <tr key={`o-${idx}-${leaf.param_id}`}>
-                                            <td><code>{leaf.sign}{leaf.param_id}</code></td>
-                                            <td>{leaf.param_name || ''}</td>
-                                            <td style={{ textAlign: 'center', fontWeight: 700 }}>{leaf.sign}</td>
-                                            <td style={{ textAlign: 'center' }}>{leaf.current ?? '—'}</td>
-                                            <td style={{ textAlign: 'center', color: leaf.leaf_eval ? '#28a745' : '#dc3545', fontWeight: 700 }}>
-                                                {leaf.leaf_eval ? '✓' : '✗'}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {other.map((leaf, idx) => {
+                                        const effectivePass = leaf.leaf_eval !== leaf.negated;
+                                        return (
+                                            <tr key={`o-${idx}-${leaf.param_id}`} style={{ background: !effectivePass ? 'rgba(220,53,69,0.05)' : 'transparent' }}>
+                                                <td><code>{leaf.negated ? 'not ' : ''}{leaf.sign}{leaf.param_id}</code></td>
+                                                <td>{leaf.param_name || ''}</td>
+                                                <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                                                    {leaf.negated ? <span style={{ fontWeight: 400 }}>not </span> : null}{leaf.sign}
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>{leaf.current ?? '—'}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -251,17 +251,19 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
 }
 
 function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedResp, langId, depth, cache }) {
-    const rowBg = !leaf.leaf_eval ? 'rgba(220,53,69,0.05)' : 'transparent';
+    // Effective satisfaction takes the NOT context into account: a leaf "passes" when its
+    // boolean eval matches its required polarity (i.e., XOR with negated).
+    const effectivePass = leaf.leaf_eval !== leaf.negated;
+    const rowBg = !effectivePass ? 'rgba(220,53,69,0.05)' : 'transparent';
     return (
         <Fragment>
             <tr style={{ background: rowBg }}>
-                <td><code>{leaf.sign}{leaf.param_id}</code></td>
+                <td><code>{leaf.negated ? 'not ' : ''}{leaf.sign}{leaf.param_id}</code></td>
                 <td>{leaf.param_name || ''}</td>
-                <td style={{ textAlign: 'center', fontWeight: 700 }}>{leaf.sign}</td>
-                <td style={{ textAlign: 'center' }}>{leaf.current ?? <span className="muted">—</span>}</td>
-                <td style={{ textAlign: 'center', color: leaf.leaf_eval ? '#28a745' : '#dc3545', fontWeight: 700 }}>
-                    {leaf.leaf_eval ? '✓' : '✗'}
+                <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                    {leaf.negated ? <span style={{ fontWeight: 400 }}>not </span> : null}{leaf.sign}
                 </td>
+                <td style={{ textAlign: 'center' }}>{leaf.current ?? <span className="muted">—</span>}</td>
                 <td style={{ textAlign: 'center' }}>
                     {canExpand ? (
                         <button
@@ -271,7 +273,7 @@ function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedRes
                             onClick={onClick}
                             disabled={isLoading}
                         >
-                            {isLoading ? '...' : isOpen ? 'Hide' : 'Why?'}
+                            {isLoading ? '...' : isOpen ? 'Hide' : 'Explore'}
                         </button>
                     ) : (
                         <span className="muted small" title="Max recursion depth reached">—</span>
@@ -280,7 +282,7 @@ function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedRes
             </tr>
             {isOpen && (
                 <tr>
-                    <td colSpan={6} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
+                    <td colSpan={5} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
                         {error ? (
                             <div className="alert alert-error" style={{ margin: 0 }}>{error}</div>
                         ) : nestedResp ? (
