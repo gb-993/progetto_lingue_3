@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
 import ParameterBlock from './ParameterBlock';
+import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 
 // Mappa etichette/descrizioni per lo status della lingua.
 // I colori sono gestiti via CSS (.status-banner.is-<status>) per supportare dark mode.
@@ -33,9 +34,15 @@ export default function LanguageData() {
     const [actionInProgress, setActionInProgress] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectNote, setRejectNote] = useState('');
-    // Tracciamento delle modifiche non salvate alla admin-note del parametro corrente.
-    // Sollevato dal ParameterBlock per intercettare cambi parametro / chiusura pagina.
+    // Tracciamento delle modifiche non salvate del parametro corrente, sollevate
+    // entrambe dal ParameterBlock:
+    //  - adminNoteDirty: solo per admin, copre il textarea della admin note
+    //  - blockDirty: copre risposte, comments, motivazioni ed esempi di tutte
+    //    le questions del parametro (i dati di compilazione del linguista)
+    // Insieme attivano il guard di navigazione e il confirm al cambio parametro.
     const [adminNoteDirty, setAdminNoteDirty] = useState(false);
+    const [blockDirty, setBlockDirty] = useState(false);
+    const anyDirty = adminNoteDirty || blockDirty;
     const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const statusMenuRef = useRef(null);
 
@@ -50,20 +57,22 @@ export default function LanguageData() {
         return () => document.removeEventListener('mousedown', onDocClick);
     }, [statusMenuOpen]);
 
-    useEffect(() => {
-        if (!adminNoteDirty) return;
-        const handler = (e) => {
-            e.preventDefault();
-            e.returnValue = '';
-        };
-        window.addEventListener('beforeunload', handler);
-        return () => window.removeEventListener('beforeunload', handler);
-    }, [adminNoteDirty]);
+    // Guard unificato: copre chiusura tab/refresh (beforeunload) e navigazione
+    // interna React Router (Link, breadcrumb, back-button). Sostituisce il
+    // beforeunload custom che proteggeva solo la admin-note: ora copre anche
+    // risposte/esempi/motivazioni del blocco corrente.
+    useUnsavedChangesGuard(
+        anyDirty,
+        'You have unsaved changes for this parameter. If you leave now they will be lost. Continue?'
+    );
 
-    const confirmDiscardAdminNote = () => {
-        if (!adminNoteDirty) return true;
+    // Chiamato prima di cambiare parametro nel wizard. Il cambio parametro
+    // rimonta ParameterBlock e scarta lo stato locale, quindi qui chiediamo
+    // conferma esplicita.
+    const confirmDiscardCurrentBlock = () => {
+        if (!anyDirty) return true;
         return window.confirm(
-            'You have an unsaved admin note for this parameter. Discard the changes and continue?'
+            'You have unsaved changes for this parameter. Switching parameter will discard them. Continue?'
         );
     };
 
@@ -374,8 +383,9 @@ export default function LanguageData() {
                             key={p.id}
                             onClick={() => {
                                 if (idx === activeIndex) return;
-                                if (!confirmDiscardAdminNote()) return;
+                                if (!confirmDiscardCurrentBlock()) return;
                                 setAdminNoteDirty(false);
+                                setBlockDirty(false);
                                 setActiveIndex(idx);
                             }}
                             className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}`}
@@ -396,6 +406,7 @@ export default function LanguageData() {
                     isReadOnly={isReadOnly}
                     isAdmin={isAdmin}
                     onAdminNoteDirtyChange={setAdminNoteDirty}
+                    onBlockDirtyChange={setBlockDirty}
                     onSaved={async () => {
                         // Aspetta il refetch PRIMA di cambiare parametro: altrimenti
                         // setLoading(true) di fetchCompilationData smonta il wizard
@@ -405,6 +416,7 @@ export default function LanguageData() {
                         await fetchCompilationData();
                         if (activeIndex < parameters.length - 1) {
                             setAdminNoteDirty(false);
+                            setBlockDirty(false);
                             setActiveIndex(activeIndex + 1);
                         }
                     }}

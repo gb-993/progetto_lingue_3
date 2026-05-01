@@ -1,10 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../api';
 import QuestionRow from './QuestionRow';
 
+// Costruisce lo stato iniziale di `localAnswers` partendo dalle questions del
+// parametro. Estratto come funzione standalone così è riutilizzabile sia per
+// l'inizializzazione di `localAnswers` sia per lo snapshot di confronto dirty.
+const buildInitialAnswers = (parameter) => {
+    const initial = {};
+    parameter.questions.forEach(q => {
+        const ans = q.answer || {};
+        initial[q.id] = {
+            question_id: q.id,
+            response_text: ans.response_text || '',
+            comments: ans.comments || '',
+            motivation_ids: ans.motivation_ids || [],
+            examples: ans.examples ? ans.examples.map(ex => ({ ...ex, tempId: ex.id || Math.random() })) : []
+        };
+    });
+    return initial;
+};
+
+// Serializza in modo deterministico per il confronto dirty:
+//  - esclude `tempId` dagli examples (è random non semantico, usato solo come React key)
+//  - ordina le chiavi degli oggetti così l'ordine di inserimento non cambia il risultato
+const stableStringify = (value) => JSON.stringify(value, (key, val) => {
+    if (key === 'tempId') return undefined;
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+        const sorted = {};
+        Object.keys(val).sort().forEach(k => { sorted[k] = val[k]; });
+        return sorted;
+    }
+    return val;
+});
+
 export default function ParameterBlock({
     parameter, langId, onSaved, isReadOnly,
-    isAdmin = false, onAdminNoteDirtyChange,
+    isAdmin = false, onAdminNoteDirtyChange, onBlockDirtyChange,
 }) {
     const [isSaving, setIsSaving] = useState(false);
 
@@ -23,20 +54,25 @@ export default function ParameterBlock({
     }, [adminNoteDirty, onAdminNoteDirtyChange]);
 
     // Stato locale: mappa { [questionId]: { response_text, comments, motivation_ids, examples } }
-    const [localAnswers, setLocalAnswers] = useState(() => {
-        const initial = {};
-        parameter.questions.forEach(q => {
-            const ans = q.answer || {};
-            initial[q.id] = {
-                question_id: q.id,
-                response_text: ans.response_text || '',
-                comments: ans.comments || '',
-                motivation_ids: ans.motivation_ids || [],
-                examples: ans.examples ? ans.examples.map(ex => ({ ...ex, tempId: ex.id || Math.random() })) : []
-            };
-        });
-        return initial;
-    });
+    const [localAnswers, setLocalAnswers] = useState(() => buildInitialAnswers(parameter));
+
+    // Snapshot serializzato dei dati al caricamento del blocco. Usato per
+    // derivare `blockDirty` confrontandolo con lo stato corrente. Viene
+    // aggiornato dopo ogni save riuscito così la seconda modifica nello stesso
+    // blocco riparte da una baseline coerente con quanto è in DB.
+    const [initialAnswersStr, setInitialAnswersStr] = useState(() =>
+        stableStringify(buildInitialAnswers(parameter))
+    );
+    const blockDirty = useMemo(
+        () => stableStringify(localAnswers) !== initialAnswersStr,
+        [localAnswers, initialAnswersStr]
+    );
+
+    // Solleva il dirty al parent così LanguageData può attivare il guard di
+    // navigazione (beforeunload + useBlocker) quando il blocco è dirty.
+    useEffect(() => {
+        onBlockDirtyChange && onBlockDirtyChange(blockDirty);
+    }, [blockDirty, onBlockDirtyChange]);
 
     // Fingerprint del blocco al caricamento — usato per optimistic concurrency.
     // Aggiornato dopo ogni save riuscito così salvataggi consecutivi non triggerano falsi conflitti.
@@ -69,6 +105,12 @@ export default function ParameterBlock({
             if (isAdmin) {
                 setSavedAdminNote(adminNote);
             }
+            // Aggiorna lo snapshot di confronto dirty: il save è andato a buon
+            // fine, lo stato corrente è ora la nuova baseline. Senza questo,
+            // se il componente non viene rimontato (es. siamo all'ultimo
+            // parametro o l'utente ri-modifica subito), `blockDirty` resterebbe
+            // erroneamente true.
+            setInitialAnswersStr(stableStringify(localAnswers));
             onSaved();
         } catch (err) {
             // 409 = blocco modificato da un'altra sessione (es. admin in parallelo)
