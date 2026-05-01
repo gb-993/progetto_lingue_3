@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
-import BlameTable from './BlameTable';
+import BlameTable, { AnswersList } from './BlameTable';
 
 export default function QueriesDashboard() {
     const [activeTab, setActiveTab] = useState('q1');
@@ -45,13 +45,22 @@ export default function QueriesDashboard() {
         fetchOptions();
     }, []);
 
-    // Resetta i risultati e il form quando si cambia tab
+    // Cambio tab: langId e paramId persistono (il linguista tipicamente lavora su un
+    // singolo (lingua, parametro) per sessione). langIdB e' specifico di Q7, lo resettiamo.
+    // Se tutti i campi richiesti dal nuovo tab sono gia' compilati, lanciamo automaticamente
+    // la ricerca, cosi' lo switch tab equivale a un nuovo "Search" senza altri click.
     const handleTabChange = (tabId) => {
         setActiveTab(tabId);
         setResults(null);
-        setParamId('');
-        setLangId('');
         setLangIdB('');
+
+        const needsParam = ['q1', 'q2', 'q3'].includes(tabId);
+        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9'].includes(tabId);
+        const needsLangB = tabId === 'q7';
+        if (needsLangB) return;                  // langIdB appena resettato
+        if (needsLang && !langId) return;
+        if (needsParam && !paramId) return;
+        executeQuery(null, tabId);
     };
 
     // Switch to Q3 with prefilled language + parameter and run the query immediately.
@@ -72,21 +81,22 @@ export default function QueriesDashboard() {
         }
     };
 
-    const executeQuery = async (e) => {
+    const executeQuery = async (e, tabOverride) => {
         if (e) e.preventDefault();
         setLoading(true);
         setResults(null);
+        const tab = tabOverride ?? activeTab;
         try {
             let res;
-            if (activeTab === 'q1') res = await api.get(`/api/queries/q1?param_id=${paramId}`);
-            else if (activeTab === 'q2') res = await api.get(`/api/queries/q2?param_id=${paramId}`);
-            else if (activeTab === 'q3') res = await api.get(`/api/queries/q3?lang_id=${langId}&param_id=${paramId}`);
-            else if (activeTab === 'q4') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=%2B`);
-            else if (activeTab === 'q5') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=-`);
-            else if (activeTab === 'q6') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=0`);
-            else if (activeTab === 'q7') res = await api.get(`/api/queries/q7?lang_a=${langId}&lang_b=${langIdB}`);
-            else if (activeTab === 'q8') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=yes`);
-            else if (activeTab === 'q9') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=no`);
+            if (tab === 'q1') res = await api.get(`/api/queries/q1?param_id=${paramId}`);
+            else if (tab === 'q2') res = await api.get(`/api/queries/q2?param_id=${paramId}`);
+            else if (tab === 'q3') res = await api.get(`/api/queries/q3?lang_id=${langId}&param_id=${paramId}`);
+            else if (tab === 'q4') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=%2B`);
+            else if (tab === 'q5') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=-`);
+            else if (tab === 'q6') res = await api.get(`/api/queries/q456?lang_id=${langId}&value=0`);
+            else if (tab === 'q7') res = await api.get(`/api/queries/q7?lang_a=${langId}&lang_b=${langIdB}`);
+            else if (tab === 'q8') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=yes`);
+            else if (tab === 'q9') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=no`);
 
             setResults(res.data);
         } catch (err) {
@@ -316,45 +326,13 @@ export default function QueriesDashboard() {
                             {['q4', 'q5', 'q6'].includes(activeTab) && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}><Link to={`/languages/${results.language.id}/data`}>{results.language.id} — {results.language.name}</Link></h3>
-                                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                                        <table className="table table-hover" style={{ margin: 0 }}>
-                                            <thead className="table-light">
-                                            <tr>
-                                                <th>Parameter</th>
-                                                {activeTab === 'q6' && <th>Implicational Condition(s)</th>}
-                                                <th style={{ textAlign: 'center' }}>Value</th>
-                                                {activeTab === 'q6' && <th style={{ width: 130, textAlign: 'center' }}>Action</th>}
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            {results.params.map(p => (
-                                                <tr key={p.id} className={activeTab === 'q6' ? 'q6-row' : undefined}>
-                                                    <td><Link to={`/languages/${results.language.id}/debug#p-${p.id}`}><strong>{p.id}</strong> — {p.name}</Link></td>
-                                                    {activeTab === 'q6' && <td><code>{p.condition}</code></td>}
-                                                    <td style={{
-                                                        textAlign: 'center', fontWeight: 'bold',
-                                                        color: activeTab === 'q4' ? '#28a745' : activeTab === 'q5' ? '#dc3545' : '#6c757d'
-                                                    }}>
-                                                        {activeTab === 'q4' ? '+' : activeTab === 'q5' ? '-' : '0'}
-                                                    </td>
-                                                    {activeTab === 'q6' && (
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn--primary q6-action-btn"
-                                                                style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
-                                                                onClick={() => goToQ3(results.language.id, p.id)}
-                                                            >
-                                                                Why is 0?
-                                                            </button>
-                                                        </td>
-                                                    )}
-                                                </tr>
-                                            ))}
-                                            {results.params.length === 0 && <tr><td colSpan={activeTab === 'q6' ? 4 : 2} className="muted text-center">No parameters found</td></tr>}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <ParamValueRowsTable
+                                        key={`${activeTab}-${results.language.id}`}
+                                        params={results.params}
+                                        language={results.language}
+                                        activeTab={activeTab}
+                                        onJumpToQ3={goToQ3}
+                                    />
                                 </div>
                             )}
 
@@ -433,11 +411,122 @@ export default function QueriesDashboard() {
                 .q6-row .q6-action-btn { opacity: 0; transition: opacity 0.15s; }
                 .q6-row:hover .q6-action-btn,
                 .q6-action-btn:focus-visible { opacity: 1; }
+                .pv-toggle { background: transparent; border: none; cursor: pointer; padding: 0 0.4rem; color: var(--text-muted, #888); font-size: 0.85rem; }
+                .pv-toggle:hover { color: var(--text, inherit); }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
+        </div>
+    );
+}
+
+// Tabella per Q4/Q5/Q6: ogni riga e' espandibile per mostrare le risposte
+// che hanno determinato il valore corrente del parametro per la lingua selezionata.
+function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
+    const [expanded, setExpanded] = useState({});
+    const [answers, setAnswers] = useState({});
+    const [rowLoading, setRowLoading] = useState({});
+    const [rowError, setRowError] = useState({});
+
+    const toggleRow = async (paramId) => {
+        if (expanded[paramId]) {
+            setExpanded(prev => { const c = { ...prev }; delete c[paramId]; return c; });
+            return;
+        }
+        if (answers[paramId] !== undefined) {
+            setExpanded(prev => ({ ...prev, [paramId]: true }));
+            return;
+        }
+        setRowLoading(prev => ({ ...prev, [paramId]: true }));
+        setRowError(prev => ({ ...prev, [paramId]: null }));
+        try {
+            const res = await api.get(`/api/queries/q3?lang_id=${language.id}&param_id=${paramId}`);
+            const fetched = res.data?.explanation?.answers || [];
+            setAnswers(prev => ({ ...prev, [paramId]: fetched }));
+            setExpanded(prev => ({ ...prev, [paramId]: true }));
+        } catch {
+            setRowError(prev => ({ ...prev, [paramId]: 'Failed to load answers.' }));
+        } finally {
+            setRowLoading(prev => ({ ...prev, [paramId]: false }));
+        }
+    };
+
+    const valueColor = activeTab === 'q4' ? '#28a745' : activeTab === 'q5' ? '#dc3545' : '#6c757d';
+    const valueLabel = activeTab === 'q4' ? '+' : activeTab === 'q5' ? '-' : '0';
+    const colCount = activeTab === 'q6' ? 5 : 3;
+
+    return (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table className="table table-hover" style={{ margin: 0 }}>
+                <thead className="table-light">
+                    <tr>
+                        <th style={{ width: 36 }}></th>
+                        <th>Parameter</th>
+                        {activeTab === 'q6' && <th>Implicational Condition(s)</th>}
+                        <th style={{ textAlign: 'center' }}>Value</th>
+                        {activeTab === 'q6' && <th style={{ width: 130, textAlign: 'center' }}>Action</th>}
+                    </tr>
+                </thead>
+                <tbody>
+                    {params.map(p => {
+                        const isOpen = !!expanded[p.id];
+                        const isLoading = !!rowLoading[p.id];
+                        const err = rowError[p.id];
+                        const rowAnswers = answers[p.id];
+                        return (
+                            <Fragment key={p.id}>
+                                <tr className={activeTab === 'q6' ? 'q6-row' : undefined}>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <button
+                                            type="button"
+                                            className="pv-toggle"
+                                            onClick={() => toggleRow(p.id)}
+                                            disabled={isLoading}
+                                            title={isOpen ? 'Collapse' : 'Show answers'}
+                                            aria-expanded={isOpen}
+                                        >
+                                            {isLoading ? '…' : (isOpen ? '▾' : '▸')}
+                                        </button>
+                                    </td>
+                                    <td><Link to={`/languages/${language.id}/debug#p-${p.id}`}><strong>{p.id}</strong> — {p.name}</Link></td>
+                                    {activeTab === 'q6' && <td><code>{p.condition}</code></td>}
+                                    <td style={{ textAlign: 'center', fontWeight: 'bold', color: valueColor }}>{valueLabel}</td>
+                                    {activeTab === 'q6' && (
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn--primary q6-action-btn"
+                                                style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+                                                onClick={() => onJumpToQ3(language.id, p.id)}
+                                            >
+                                                Why is 0?
+                                            </button>
+                                        </td>
+                                    )}
+                                </tr>
+                                {isOpen && (
+                                    <tr>
+                                        <td colSpan={colCount} style={{ padding: '0.5rem 1rem 1rem 2.25rem', background: 'var(--surface-2)' }}>
+                                            {err ? (
+                                                <div className="alert alert-error" style={{ margin: 0 }}>{err}</div>
+                                            ) : rowAnswers && rowAnswers.length > 0 ? (
+                                                <AnswersList answers={rowAnswers} languageId={language.id} />
+                                            ) : (
+                                                <div className="muted small">No answers recorded for this parameter.</div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )}
+                            </Fragment>
+                        );
+                    })}
+                    {params.length === 0 && (
+                        <tr><td colSpan={colCount} className="muted text-center">No parameters found</td></tr>
+                    )}
+                </tbody>
+            </table>
         </div>
     );
 }

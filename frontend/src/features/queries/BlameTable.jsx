@@ -369,7 +369,7 @@ function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedRes
     );
 }
 
-function AnswersList({ answers, languageId, title, emptyMessage, embedded }) {
+export function AnswersList({ answers, languageId, title, emptyMessage, embedded }) {
     if (!answers || answers.length === 0) {
         if (embedded) return null;
         return <div className="muted small" style={{ marginTop: embedded ? '0.5rem' : 0 }}>{emptyMessage || 'No answers recorded.'}</div>;
