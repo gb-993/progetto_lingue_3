@@ -54,6 +54,24 @@ export default function QueriesDashboard() {
         setLangIdB('');
     };
 
+    // Switch to Q3 with prefilled language + parameter and run the query immediately.
+    const goToQ3 = async (langIdToUse, paramIdToUse) => {
+        setActiveTab('q3');
+        setLangId(langIdToUse);
+        setParamId(paramIdToUse);
+        setLangIdB('');
+        setLoading(true);
+        setResults(null);
+        try {
+            const res = await api.get(`/api/queries/q3?lang_id=${langIdToUse}&param_id=${paramIdToUse}`);
+            setResults(res.data);
+        } catch {
+            setResults({ error: "Error while executing the query." });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const executeQuery = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
@@ -305,6 +323,7 @@ export default function QueriesDashboard() {
                                                 <th>Parameter</th>
                                                 {activeTab === 'q6' && <th>Implicational Condition(s)</th>}
                                                 <th style={{ textAlign: 'center' }}>Value</th>
+                                                {activeTab === 'q6' && <th style={{ width: 130, textAlign: 'center' }}>Action</th>}
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -318,9 +337,21 @@ export default function QueriesDashboard() {
                                                     }}>
                                                         {activeTab === 'q4' ? '+' : activeTab === 'q5' ? '-' : '0'}
                                                     </td>
+                                                    {activeTab === 'q6' && (
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn--primary"
+                                                                style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
+                                                                onClick={() => goToQ3(results.language.id, p.id)}
+                                                            >
+                                                                Why is 0?
+                                                            </button>
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             ))}
-                                            {results.params.length === 0 && <tr><td colSpan={activeTab === 'q6' ? 3 : 2} className="muted text-center">No parameters found</td></tr>}
+                                            {results.params.length === 0 && <tr><td colSpan={activeTab === 'q6' ? 4 : 2} className="muted text-center">No parameters found</td></tr>}
                                             </tbody>
                                         </table>
                                     </div>
@@ -399,6 +430,9 @@ export default function QueriesDashboard() {
             </div>
 
             <style>{`
+                .q6-row .q6-action-btn { opacity: 0; transition: opacity 0.15s; }
+                .q6-row:hover .q6-action-btn,
+                .q6-action-btn:focus-visible { opacity: 1; }
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }

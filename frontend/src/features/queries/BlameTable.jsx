@@ -4,6 +4,43 @@ import api from '../../api';
 
 const MAX_DEPTH = 20;
 
+// Cella di espansione: freccia L (verticale + orizzontale + arrowhead) a sinistra,
+// contenuto annidato a destra. La freccia parte dal bordo superiore della cella, cosi'
+// visivamente si aggancia alla riga padre.
+function ExpandedCell({ children }) {
+    const arrowColor = 'var(--text-muted, #888)';
+    return (
+        <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 28 }}>
+            <div style={{ width: 26, flexShrink: 0, position: 'relative' }}>
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 11,
+                    width: 14,
+                    height: 22,
+                    borderLeft: `1.5px solid ${arrowColor}`,
+                    borderBottom: `1.5px solid ${arrowColor}`,
+                    borderBottomLeftRadius: 6,
+                }}>
+                    <span style={{
+                        position: 'absolute',
+                        right: -3,
+                        bottom: -5,
+                        width: 0,
+                        height: 0,
+                        borderTop: '4px solid transparent',
+                        borderBottom: '4px solid transparent',
+                        borderLeft: `6px solid ${arrowColor}`,
+                    }} />
+                </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0, paddingTop: 4, paddingBottom: 6, paddingRight: 6 }}>
+                {children}
+            </div>
+        </div>
+    );
+}
+
 const STATUS_META = {
     neutralized:        { label: 'NEUTRALIZED (0)',           bg: '#f8d7da', fg: '#721c24', border: '#dc3545' },
     active:             { label: 'ACTIVE',                    bg: '#d4edda', fg: '#155724', border: '#28a745' },
@@ -22,6 +59,7 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
     const [loading, setLoading] = useState({});
     const [error, setError] = useState({});
     const [showOther, setShowOther] = useState(false);
+    const [showAnswers, setShowAnswers] = useState(false);
 
     const handleExpand = useCallback(async (paramId) => {
         if (nested[paramId]) {
@@ -50,22 +88,27 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
     const { parameter, language, current_value, value_orig, condition, status, explanation } = q3Response;
     const meta = STATUS_META[status] || STATUS_META.no_answers;
     const canExpand = depth < MAX_DEPTH;
+    const compact = depth > 0;
 
     return (
         <div className="card" style={{
-            padding: '1.25rem',
+            padding: compact ? '0.55rem 0.7rem' : '1.25rem',
             border: `1px solid ${meta.border}`,
-            marginTop: depth > 0 ? '0.5rem' : 0,
-            background: depth > 0 ? 'var(--surface-2)' : 'var(--surface)'
+            marginTop: 0,
+            background: compact ? 'var(--surface-2)' : 'var(--surface)'
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                <div style={{
-                    padding: '0.4rem 0.75rem', borderRadius: 4, fontWeight: 700,
-                    background: meta.bg, color: meta.fg, fontSize: '0.85rem',
-                }}>
-                    {meta.label}
-                </div>
-                <div style={{ fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: compact ? '0.5rem' : '0.75rem', flexWrap: 'wrap', marginBottom: compact ? '0.35rem' : '0.75rem' }}>
+                {status !== 'active' && (
+                    <div style={{
+                        padding: compact ? '0.2rem 0.5rem' : '0.4rem 0.75rem',
+                        borderRadius: 4, fontWeight: 700,
+                        background: meta.bg, color: meta.fg,
+                        fontSize: compact ? '0.72rem' : '0.85rem',
+                    }}>
+                        {meta.label}
+                    </div>
+                )}
+                <div style={{ fontWeight: 600, fontSize: compact ? '0.85rem' : 'inherit' }}>
                     <Link to={`/languages/${language.id}/debug#${parameter.id}`}>{parameter.id}</Link>
                     <span className="muted"> — {parameter.name}</span>
                 </div>
@@ -74,7 +117,7 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.9rem' }}>
+            <div style={{ display: 'flex', gap: compact ? '1rem' : '1.5rem', flexWrap: 'wrap', marginBottom: compact ? '0.45rem' : '1rem', fontSize: compact ? '0.82rem' : '0.9rem' }}>
                 <div>
                     <span className="muted">Current:</span>{' '}
                     <strong>{current_value ?? '—'}</strong>
@@ -91,19 +134,41 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
             </div>
 
             {(status === 'neutralized' || status === 'active') && (
-                <BlameLeavesView
-                    explanation={explanation}
-                    canExpand={canExpand}
-                    nested={nested}
-                    loading={loading}
-                    error={error}
-                    onExpand={handleExpand}
-                    showOther={showOther}
-                    setShowOther={setShowOther}
-                    langId={langId}
-                    depth={depth}
-                    cache={cache}
-                />
+                <>
+                    <BlameLeavesView
+                        explanation={explanation}
+                        canExpand={canExpand}
+                        nested={nested}
+                        loading={loading}
+                        error={error}
+                        onExpand={handleExpand}
+                        showOther={showOther}
+                        setShowOther={setShowOther}
+                        langId={langId}
+                        depth={depth}
+                        cache={cache}
+                    />
+                    {explanation?.answers?.length > 0 && (
+                        <div style={{ marginTop: compact ? '0.5rem' : '1rem' }}>
+                            <button
+                                type="button"
+                                className="btn"
+                                style={{ background: 'transparent', padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                                onClick={() => setShowAnswers(s => !s)}
+                            >
+                                {showAnswers ? '▾' : '▸'} Answers given for this parameter ({explanation.answers.length})
+                            </button>
+                            {showAnswers && (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <AnswersList
+                                        answers={explanation.answers}
+                                        languageId={language.id}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
 
             {status === 'set_directly' && (
@@ -282,19 +347,21 @@ function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedRes
             </tr>
             {isOpen && (
                 <tr>
-                    <td colSpan={5} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
-                        {error ? (
-                            <div className="alert alert-error" style={{ margin: 0 }}>{error}</div>
-                        ) : nestedResp ? (
-                            <BlameTable
-                                q3Response={nestedResp}
-                                langId={langId}
-                                depth={depth + 1}
-                                cache={cache}
-                            />
-                        ) : (
-                            <span className="muted">Loading...</span>
-                        )}
+                    <td colSpan={5} style={{ padding: 0 }}>
+                        <ExpandedCell>
+                            {error ? (
+                                <div className="alert alert-error" style={{ margin: 0 }}>{error}</div>
+                            ) : nestedResp ? (
+                                <BlameTable
+                                    q3Response={nestedResp}
+                                    langId={langId}
+                                    depth={depth + 1}
+                                    cache={cache}
+                                />
+                            ) : (
+                                <span className="muted">Loading...</span>
+                            )}
+                        </ExpandedCell>
                     </td>
                 </tr>
             )}
@@ -381,12 +448,14 @@ function ParentsList({ parents, canExpand, nested, loading, error, onExpand, lan
                                 </tr>
                                 {nested[p.id] && (
                                     <tr>
-                                        <td colSpan={2} style={{ padding: '0.5rem 1rem 1rem 1.5rem' }}>
-                                            {error[p.id] ? (
-                                                <div className="alert alert-error" style={{ margin: 0 }}>{error[p.id]}</div>
-                                            ) : (
-                                                <BlameTable q3Response={nested[p.id]} langId={langId} depth={depth + 1} cache={cache} />
-                                            )}
+                                        <td colSpan={2} style={{ padding: 0 }}>
+                                            <ExpandedCell>
+                                                {error[p.id] ? (
+                                                    <div className="alert alert-error" style={{ margin: 0 }}>{error[p.id]}</div>
+                                                ) : (
+                                                    <BlameTable q3Response={nested[p.id]} langId={langId} depth={depth + 1} cache={cache} />
+                                                )}
+                                            </ExpandedCell>
                                         </td>
                                     </tr>
                                 )}

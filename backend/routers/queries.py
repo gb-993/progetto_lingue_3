@@ -311,6 +311,7 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
             "type": "implication_failed" if status == "neutralized" else "implication_satisfied",
             "responsible": responsible,
             "other_tokens": other,
+            "answers": _originating_answers(db, lang_id, param_id),
         }
     elif status == "set_directly":
         explanation = {

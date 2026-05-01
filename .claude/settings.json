@@ -73,7 +73,8 @@
       "Bash(python -c \"from routers import queries; print\\('OK', queries.router.prefix\\)\")",
       "Bash(python -m py_compile routers/queries.py)",
       "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx src/features/queries/QueriesDashboard.jsx src/App.jsx)",
-      "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx)"
+      "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx)",
+      "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx)"
     ]
   }
 }
