@@ -78,6 +78,17 @@ export default function ParameterBlock({
     // Aggiornato dopo ogni save riuscito così salvataggi consecutivi non triggerano falsi conflitti.
     const [blockLastModified, setBlockLastModified] = useState(parameter.last_modified || null);
 
+    // Quando il backend rifiuta il save perché una question YES/UNSURE non ha
+    // ≥2 esempi, evidenziamo la card incriminata: il QuestionRow corrispondente
+    // riceve `highlightedQuestionId` come prop, scrolla in vista la propria
+    // card e le applica un bordo rosso che svanisce dopo ~3s.
+    const [highlightedQuestionId, setHighlightedQuestionId] = useState(null);
+    useEffect(() => {
+        if (!highlightedQuestionId) return;
+        const t = setTimeout(() => setHighlightedQuestionId(null), 3000);
+        return () => clearTimeout(t);
+    }, [highlightedQuestionId]);
+
     const updateAnswer = (qId, newData) => {
         setLocalAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], ...newData } }));
     };
@@ -128,6 +139,14 @@ export default function ParameterBlock({
                 return;
             }
             const detail = err.response?.data?.detail;
+            // Errore strutturato di esempi mancanti: oltre all'alert classico
+            // (coerente col resto del progetto) evidenziamo visivamente la
+            // question incriminata con scroll + bordo rosso temporaneo.
+            if (err.response?.status === 400 && detail && typeof detail === 'object' && detail.code === 'missing_examples') {
+                alert(detail.message);
+                setHighlightedQuestionId(detail.question_id);
+                return;
+            }
             alert(typeof detail === 'string' ? detail : "Error while saving the block.");
         } finally {
             setIsSaving(false);
@@ -223,25 +242,68 @@ export default function ParameterBlock({
                         onChange={(newData) => updateAnswer(q.id, newData)}
                         isReadOnly={isReadOnly}
                         currentLangId={langId}
+                        isHighlighted={highlightedQuestionId === q.id}
                     />
                 ))}
             </div>
 
-            <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div
+                className="card parameter-finalize-sticky"
+                style={{
+                    marginTop: '2rem',
+                    marginLeft: 'auto',
+                    width: 'fit-content',
+                    maxWidth: '100%',
+                    padding: '0.85rem 1rem',
+                    border: '1px solid var(--border)',
+                    position: 'sticky',
+                    bottom: '0.75rem',
+                    zIndex: 10,
+                    background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.6rem',
+                    opacity: isReadOnly ? 0.6 : 1,
+                }}
+            >
                 {isReadOnly && (
                     <div className="form-locked-banner">
                         Form locked by the current language status. Changes cannot be saved.
                     </div>
                 )}
-                <div className="parameter-finalize-row" style={{ opacity: isReadOnly ? 0.6 : 1 }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                }}>
                     <span>Everything ready and verified?</span>
-                    <button className="btn btn--ok" onClick={() => handleFinalSave(false)} disabled={isSaving || isReadOnly}>
-                        {isSaving ? 'Saving...' : `Confident -> Next ${parameter.id}`}
+                    <button
+                        className="btn btn--ok"
+                        onClick={() => handleFinalSave(false)}
+                        disabled={isSaving || isReadOnly}
+                        style={{ minWidth: '180px', background: '#16a34a', borderColor: '#15803d', color: '#fff' }}
+                    >
+                        {isSaving ? 'Saving...' : 'Confident -> Next'}
                     </button>
                 </div>
-                <div className="parameter-finalize-row" style={{ opacity: isReadOnly ? 0.6 : 1 }}>
-                    <span>Any doubts? Flag for later.</span>
-                    <button className="btn btn--bad" onClick={() => handleFinalSave(true)} disabled={isSaving || isReadOnly}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                }}>
+                    <span>Any doubts? Save for later.</span>
+                    <button
+                        className="btn btn--bad"
+                        onClick={() => handleFinalSave(true)}
+                        disabled={isSaving || isReadOnly}
+                        style={{ minWidth: '180px' }}
+                    >
                         {isSaving ? 'Saving...' : 'Unsure -> Next'}
                     </button>
                 </div>

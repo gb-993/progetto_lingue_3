@@ -349,7 +349,13 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         if normalized_response in ("yes", "unsure"):
             valid_ex_count = sum(1 for ex in ans_payload.examples if ex.textarea.strip())
             if valid_ex_count < 2:
-                raise HTTPException(status_code=400, detail=f"You must provide at least 2 valid examples for question {ans_payload.question_id} when answering YES or UNSURE.")
+                # detail strutturato: il frontend usa `question_id` per scrollare
+                # alla card della question incriminata e applicarle un bordo rosso.
+                raise HTTPException(status_code=400, detail={
+                    "code": "missing_examples",
+                    "question_id": ans_payload.question_id,
+                    "message": f"Question {ans_payload.question_id} needs at least 2 valid examples when answering YES or UNSURE.",
+                })
 
         answer = db.query(models.Answer).filter(
             models.Answer.language_id == language.id,

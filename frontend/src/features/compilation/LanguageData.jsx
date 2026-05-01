@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
 import ParameterBlock from './ParameterBlock';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
+import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
 
 // Mappa etichette/descrizioni per lo status della lingua.
 // I colori sono gestiti via CSS (.status-banner.is-<status>) per supportare dark mode.
@@ -105,6 +106,16 @@ export default function LanguageData() {
     };
 
     useEffect(() => { fetchCompilationData(); }, [id]);
+
+    // Pulisce il clipboard degli esempi quando si entra in una lingua diversa
+    // da quella di origine. Evita di trascinare un esempio orfano (con campi
+    // di un'altra lingua) attraverso le sessioni di compilazione.
+    useEffect(() => {
+        const c = readExampleClipboard();
+        if (c && c.langId !== id) {
+            clearExampleClipboard();
+        }
+    }, [id]);
 
     const callWorkflow = async (action, body) => {
         try {

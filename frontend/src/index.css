@@ -1943,6 +1943,18 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-size: 0.9rem;
 }
 
+/* Highlight temporaneo della card di una question quando il backend rifiuta
+   il save per "missing_examples": la transizione di 3s riporta border e shadow
+   ai valori normali, dando l'impressione di un bordo rosso che svanisce. */
+.question-row {
+  transition: border-color 3s ease-out, box-shadow 3s ease-out;
+}
+.question-row.is-highlighted {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, #dc2626 25%, transparent) !important;
+  transition: border-color 0.15s ease-in, box-shadow 0.15s ease-in;
+}
+
 /* QuestionRow: istruzioni condizionali YES/NO */
 .instructions-yn {
   border-radius: 6px;

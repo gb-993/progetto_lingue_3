@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AsyncSelect from 'react-select/async';
 import api from '../../api';
+import useExampleClipboard from '../../utils/exampleClipboard';
 
 const reactSelectStyles = {
     control: (base, state) => ({
@@ -34,6 +35,22 @@ const reactSelectStyles = {
     clearIndicator: (base) => ({ ...base, color: 'var(--text-muted)' }),
 };
 
+// Stile per i "campi" read-only del banner clipboard: imitano l'aspetto dei
+// textarea degli esempi reali (stesso padding, sfondo, bordo) ma senza essere
+// editabili — sono solo un'anteprima.
+const clipboardFieldStyle = {
+    width: '100%',
+    minHeight: '3.4rem',
+    padding: '0.4rem 0.5rem',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '4px',
+    fontSize: '0.9rem',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    color: 'var(--text)',
+};
+
 const formatExampleOption = (ex) => {
     const txt = (ex.textarea || '').trim();
     const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
@@ -44,8 +61,27 @@ const formatExampleOption = (ex) => {
     };
 };
 
-export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId }) {
+export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId, isHighlighted }) {
     const [localError, setLocalError] = useState('');
+
+    // Card della question: serve il ref per scrollare in vista quando il
+    // backend segnala "missing_examples" su questa specifica question.
+    const cardRef = useRef(null);
+    useEffect(() => {
+        if (!isHighlighted) return;
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [isHighlighted]);
+
+    // Clipboard interno per copia/incolla esempi tra question (anche di parametri
+    // diversi) della stessa lingua. Persistente in localStorage e cross-tab.
+    const { copied, copy: copyToClipboard, clear: clearClipboard } = useExampleClipboard();
+    // Flash "Copied!" temporaneo sul bottone Copy dell'esempio cliccato.
+    const [recentlyCopiedTempId, setRecentlyCopiedTempId] = useState(null);
+    useEffect(() => {
+        if (recentlyCopiedTempId == null) return;
+        const t = setTimeout(() => setRecentlyCopiedTempId(null), 1500);
+        return () => clearTimeout(t);
+    }, [recentlyCopiedTempId]);
 
     // Validazione base in tempo reale per gli esempi: anche 'unsure' richiede 2 esempi.
     useEffect(() => {
@@ -91,6 +127,31 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             examples: value.examples.map(ex =>
                 ex.tempId === tempId ? { ...ex, [field]: val } : ex
             )
+        });
+    };
+
+    const handleCopyExample = (ex) => {
+        copyToClipboard(ex, currentLangId, question.id);
+        setRecentlyCopiedTempId(ex.tempId);
+    };
+
+    // Incolla l'esempio copiato come nuovo esempio in questa question. Non
+    // svuota il clipboard: il linguista può fare paste in più question di fila.
+    const handlePasteFromClipboard = () => {
+        if (!copied) return;
+        onChange({
+            examples: [
+                ...value.examples,
+                {
+                    tempId: Date.now(),
+                    id: null,
+                    textarea: copied.textarea || '',
+                    transliteration: copied.transliteration || '',
+                    gloss: copied.gloss || '',
+                    translation: copied.translation || '',
+                    reference: copied.reference || ''
+                }
+            ]
         });
     };
 
@@ -153,7 +214,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
     // --- RENDER ---
 
     return (
-        <div className="card" style={{ padding: '1.5rem', background: 'var(--surface, #fff)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', marginBottom: '1rem' }}>
+        <div
+            ref={cardRef}
+            className={`card question-row${isHighlighted ? ' is-highlighted' : ''}`}
+            style={{ padding: '1.5rem', background: 'var(--surface, #fff)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', marginBottom: '1rem' }}
+        >
 
             {/* Header Domanda */}
             <div className="q-head" style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '1rem', borderLeft: '3px solid var(--brand)', paddingLeft: '0.85rem', marginBottom: '1.5rem' }}>
@@ -269,7 +334,17 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
 
                         {value.examples.map((ex, index) => (
                             <div key={ex.tempId} className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>
-                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem' }}>
+                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopyExample(ex)}
+                                        disabled={isReadOnly}
+                                        className="btn btn--small"
+                                        style={{ borderColor: 'transparent', color: recentlyCopiedTempId === ex.tempId ? '#16a34a' : 'inherit' }}
+                                        title="Copy this example to the clipboard (paste it into any question of this language)"
+                                    >
+                                        {recentlyCopiedTempId === ex.tempId ? '✓ Copied!' : 'Copy'}
+                                    </button>
                                     <button type="button" onClick={() => handleRemoveExample(ex.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
                                 </div>
                                 <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
@@ -298,6 +373,68 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                 </div>
                             </div>
                         ))}
+
+                        {copied && copied.langId === currentLangId && (
+                            <div
+                                className="card"
+                                style={{
+                                    marginBottom: '1rem',
+                                    padding: '1rem',
+                                    background: 'color-mix(in oklab, #dc2626 7%, var(--surface-2))',
+                                    border: '1px dashed #dc2626',
+                                    boxShadow: '0 0 0 3px color-mix(in oklab, #dc2626 10%, transparent)',
+                                    position: 'relative',
+                                }}
+                            >
+                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={handlePasteFromClipboard}
+                                        disabled={isReadOnly}
+                                        className="btn btn--small"
+                                        style={{ borderColor: 'transparent', color: '#16a34a', fontWeight: 600 }}
+                                        title="Paste the copied example as a new example here (clipboard remains, you can paste into more questions)"
+                                    >
+                                        Paste here
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={clearClipboard}
+                                        className="btn btn--small"
+                                        style={{ color: '#dc2626', borderColor: 'transparent' }}
+                                        title="Clear the clipboard"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
+                                <h4 style={{ marginTop: 0, marginBottom: '0.85rem', fontSize: '0.9rem', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Example in clipboard{copied.sourceQuestionId ? ` · from ${copied.sourceQuestionId}` : ''}
+                                </h4>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label className="small">Example text</label>
+                                        <div style={clipboardFieldStyle}>{copied.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                    </div>
+                                    <div>
+                                        <label className="small">Transliteration</label>
+                                        <div style={clipboardFieldStyle}>{copied.transliteration || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                    </div>
+                                    <div>
+                                        <label className="small">Gloss</label>
+                                        <div style={clipboardFieldStyle}>{copied.gloss || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                    </div>
+                                    <div>
+                                        <label className="small">English Translation</label>
+                                        <div style={clipboardFieldStyle}>{copied.translation || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label className="small">Reference</label>
+                                        <div style={{ ...clipboardFieldStyle, minHeight: 'auto' }}>{copied.reference || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                             <button type="button" onClick={handleAddExample} disabled={isReadOnly} className="btn">
