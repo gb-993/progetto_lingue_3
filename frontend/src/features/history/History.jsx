@@ -387,6 +387,8 @@ function VersionDiffView({ data, onClose }) {
     const op = OPERATION_LABELS[data.operation] || { label: data.operation, color: '#64748b' };
     const src = SOURCE_LABELS[data.source] || { label: data.source };
 
+    const [snapshotOpen, setSnapshotOpen] = useState(false);
+
     const changedFields = Object.keys(data.diff || {}).sort();
     const allFields = useMemo(() => {
         const keys = new Set([
@@ -471,26 +473,44 @@ function VersionDiffView({ data, onClose }) {
                 </>
             )}
 
-            {/* Snapshot completo */}
-            <h3 style={{ marginBottom: '0.5rem' }}>Full snapshot ({allFields.length} fields)</h3>
-            <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-                <table className="table" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
-                    <thead>
-                        <tr>
-                            <th>Field</th>
-                            <th>Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {allFields.map(f => (
-                            <tr key={f}>
-                                <td style={{ fontWeight: 600 }}>{f}</td>
-                                <td style={{ whiteSpace: 'pre-wrap' }}>{fmtValue(data.snapshot[f])}</td>
+            {/* Snapshot completo (collassato di default; il diff sopra è sempre visibile) */}
+            <button
+                type="button"
+                onClick={() => setSnapshotOpen(o => !o)}
+                aria-expanded={snapshotOpen}
+                style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
+                    background: 'transparent', border: 'none', padding: '0.25rem 0',
+                    cursor: 'pointer', color: 'var(--text)', textAlign: 'left',
+                    marginBottom: '0.5rem',
+                }}
+            >
+                <span style={{
+                    display: 'inline-block', transform: snapshotOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.15s ease', fontSize: '0.85rem',
+                }}>▶</span>
+                <h3 style={{ margin: 0 }}>Full snapshot ({allFields.length} fields)</h3>
+            </button>
+            {snapshotOpen && (
+                <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <table className="table" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Value</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            {allFields.map(f => (
+                                <tr key={f}>
+                                    <td style={{ fontWeight: 600 }}>{f}</td>
+                                    <td style={{ whiteSpace: 'pre-wrap' }}>{fmtValue(data.snapshot[f])}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </>
     );
 }
