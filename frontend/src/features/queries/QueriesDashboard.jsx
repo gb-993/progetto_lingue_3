@@ -1,13 +1,39 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
+import {
+    GitBranch, Globe, HelpCircle, GitCompare, ThumbsUp, ThumbsDown,
+    PanelLeftClose, PanelLeftOpen,
+} from 'lucide-react';
 import api from '../../api';
 import BlameTable, { AnswersList } from './BlameTable';
+
+const QUERIES_MENU_COLLAPSED_KEY = 'pcm-queries-menu-collapsed';
+
+const QUERY_TABS = [
+    { id: 'q1', label: 'Show implicational condition(s) (per parameter)',          Icon: GitBranch },
+    { id: 'q2', label: 'Show parameter values for all languages (per parameter)',  Icon: Globe },
+    { id: 'q3', label: 'Show why a parameter is neutralized (per language)',       Icon: HelpCircle },
+    { id: 'q4', label: 'Parameters with value + (per language)',                   symbol: '+' },
+    { id: 'q5', label: 'Parameters with value - (per language)',                   symbol: '−' },
+    { id: 'q6', label: 'Parameters with value 0 (per language)',                   symbol: '0' },
+    { id: 'q7', label: 'Comparable parameters (per pair of languages)',            Icon: GitCompare },
+    { id: 'q8', label: 'Question with answer YES (per language)',                  Icon: ThumbsUp },
+    { id: 'q9', label: 'Question with answer NO (per language)',                   Icon: ThumbsDown },
+];
 
 export default function QueriesDashboard() {
     const [activeTab, setActiveTab] = useState('q1');
     const [options, setOptions] = useState({ langs: [], params: [] });
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
+    const [menuCollapsed, setMenuCollapsed] = useState(() =>
+        typeof window !== 'undefined' && localStorage.getItem(QUERIES_MENU_COLLAPSED_KEY) === '1'
+    );
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(QUERIES_MENU_COLLAPSED_KEY, menuCollapsed ? '1' : '0');
+    }, [menuCollapsed]);
 
     // Stati per i form
     const [paramId, setParamId] = useState('');
@@ -164,39 +190,81 @@ export default function QueriesDashboard() {
                 <h1>Filters & Queries</h1>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem', alignItems: 'start' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: `${menuCollapsed ? '56px' : '350px'} 1fr`,
+                gap: '2rem',
+                alignItems: 'start',
+                transition: 'grid-template-columns 0.2s',
+            }}>
 
                 {/* SIDEBAR NAVIGATION */}
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{ padding: '1rem', background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', fontWeight: 'bold' }}>
-                        Queries Configuration
+                    <div style={{
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: menuCollapsed ? 'center' : 'space-between',
+                        padding: menuCollapsed ? '0.6rem 0' : '0.75rem 1rem',
+                        background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
+                        fontWeight: 'bold', minHeight: 44,
+                    }}>
+                        {!menuCollapsed && <span>Queries Configuration</span>}
+                        <button
+                            type="button"
+                            className="sidebar-toggle"
+                            onClick={() => setMenuCollapsed(c => !c)}
+                            aria-label={menuCollapsed ? 'Expand queries menu' : 'Collapse queries menu'}
+                            title={menuCollapsed ? 'Expand queries menu' : 'Collapse queries menu'}
+                            aria-pressed={menuCollapsed}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                width: 28, height: 28, padding: 0,
+                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                color: 'var(--text-muted, #666)', borderRadius: 4,
+                            }}
+                        >
+                            {menuCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+                        </button>
                     </div>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
-                        {[
-                            { id: 'q1', label: 'Show implicational condition(s) (per parameter)' },
-                            { id: 'q2', label: 'Show parameter values for all languages (per parameter)' },
-                            { id: 'q3', label: 'Show why a parameter is neutralized (per language)' },
-                            { id: 'q4', label: 'Parameters with value + (per language)' },
-                            { id: 'q5', label: 'Parameters with value - (per language)' },
-                            { id: 'q6', label: 'Parameters with value 0 (per language)' },
-                            { id: 'q7', label: 'Comparable parameters (per pair of languages)' },
-                            { id: 'q8', label: 'Question with answer YES (per language)' },
-                            { id: 'q9', label: 'Question with answer NO (per language)' },
-                        ].map(t => (
-                            <button
-                                key={t.id}
-                                style={{
-                                    padding: '1rem', textAlign: 'left', border: 'none', borderBottom: '1px solid #eee',
-                                    background: activeTab === t.id ? '#e9ecef' : 'transparent',
-                                    fontWeight: activeTab === t.id ? 'bold' : 'normal',
-                                    color: activeTab === t.id ? 'var(--brand)' : 'inherit',
-                                    cursor: 'pointer', transition: 'background 0.2s'
-                                }}
-                                onClick={() => handleTabChange(t.id)}
-                            >
-                                {t.label}
-                            </button>
-                        ))}
+                        {QUERY_TABS.map(t => {
+                            const active = activeTab === t.id;
+                            const Icon = t.Icon;
+                            return (
+                                <button
+                                    key={t.id}
+                                    title={menuCollapsed ? t.label : undefined}
+                                    aria-label={menuCollapsed ? t.label : undefined}
+                                    style={{
+                                        display: 'flex', alignItems: 'center',
+                                        justifyContent: menuCollapsed ? 'center' : 'flex-start',
+                                        gap: menuCollapsed ? 0 : '0.6rem',
+                                        padding: menuCollapsed ? '0 0' : '0.85rem 1rem',
+                                        minHeight: 64,
+                                        textAlign: 'left', border: 'none',
+                                        borderBottom: '1px solid var(--border)',
+                                        background: active ? 'var(--surface-2)' : 'transparent',
+                                        fontWeight: active ? 'bold' : 'normal',
+                                        color: active ? 'var(--brand)' : 'inherit',
+                                        cursor: 'pointer', transition: 'background 0.2s',
+                                        fontSize: '0.9rem',
+                                    }}
+                                    onClick={() => handleTabChange(t.id)}
+                                >
+                                    {Icon ? (
+                                        <Icon size={18} style={{ flexShrink: 0 }} />
+                                    ) : (
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            width: 18, height: 18, flexShrink: 0,
+                                            fontSize: '1.05rem', fontWeight: 700, lineHeight: 1,
+                                        }}>
+                                            {t.symbol}
+                                        </span>
+                                    )}
+                                    {!menuCollapsed && <span>{t.label}</span>}
+                                </button>
+                            );
+                        })}
                     </nav>
                 </div>
 
