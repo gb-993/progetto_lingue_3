@@ -1,4 +1,3 @@
-import logging
 from typing import Optional, List
 from datetime import datetime
 
@@ -8,45 +7,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 import models
-from database import SessionLocal
 from dependencies import get_db, require_admin
 from services.versioning import record_version
 from services import archive_service
-from services.param_consolidate import recompute_and_persist_language_parameter
-from services.dag_eval import run_dag_for_language
-
-logger = logging.getLogger(__name__)
+from services.recompute import recompute_parameter_for_all_languages
 
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
-
-
-def _recompute_parameter_for_all_languages_in_background(parameter_id: str) -> None:
-    """Ricalcola value_orig + DAG di un parametro per tutte le lingue.
-
-    Usato dopo il toggle di `Question.is_active` (o dopo una PUT che cambia
-    is_active): la disattivazione/riattivazione di una question modifica il
-    consolidate del parametro, e il nuovo value_orig puo' a sua volta cascare
-    nel DAG verso parametri figli.
-
-    Apre una propria sessione DB perche' gira come BackgroundTask, fuori dal
-    ciclo request/response. Errori loggati ma mai propagati.
-    """
-    db = SessionLocal()
-    try:
-        language_ids = [r[0] for r in db.query(models.Language.id).all()]
-        for lang_id in language_ids:
-            recompute_and_persist_language_parameter(lang_id, parameter_id, db)
-            run_dag_for_language(lang_id, db)
-            db.flush()
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.error(
-            "background recompute failed for parameter %s: %s",
-            parameter_id, e, exc_info=True,
-        )
-    finally:
-        db.close()
 
 # --- SCHEMA PYDANTIC ---
 class QuestionBase(BaseModel):
@@ -226,7 +192,7 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
             impacted_param_ids.add(old_parameter_id)
             impacted_param_ids.add(item.parameter_id)
         for pid in impacted_param_ids:
-            background_tasks.add_task(_recompute_parameter_for_all_languages_in_background, pid)
+            background_tasks.add_task(recompute_parameter_for_all_languages, pid)
 
         return {
             "detail": "Question updated successfully",
@@ -278,7 +244,7 @@ def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Sessi
 
     # Cambiare is_active fa cambiare il consolidate del parametro padre, e di
     # conseguenza il DAG: schedula il ricalcolo per tutte le lingue.
-    background_tasks.add_task(_recompute_parameter_for_all_languages_in_background, parameter_id)
+    background_tasks.add_task(recompute_parameter_for_all_languages, parameter_id)
 
     return {"detail": "Question status updated", "is_active": db_item.is_active}
 

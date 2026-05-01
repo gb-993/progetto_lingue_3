@@ -146,7 +146,10 @@ def query_456_values(lang_id: str, value: str, db: Session = Depends(get_db)):
     fmap = _final_map_for_language(db, lang_id)
     wanted_ids = [pid for pid, v in fmap.items() if v == value]
 
-    params = db.query(models.ParameterDef).filter(models.ParameterDef.id.in_(wanted_ids)).order_by(models.ParameterDef.position).all()
+    params = db.query(models.ParameterDef).filter(
+        models.ParameterDef.id.in_(wanted_ids),
+        models.ParameterDef.is_active == True,
+    ).order_by(models.ParameterDef.position).all()
 
     return {
         "language": {"id": lang.id, "name": lang.name_full},

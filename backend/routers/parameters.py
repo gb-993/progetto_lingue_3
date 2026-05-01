@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 import io
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import func, case
@@ -11,6 +11,7 @@ import auth
 import models
 from dependencies import get_db, require_admin
 from services.logic_parser import validate_expression, ParseException
+from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
 from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
 
@@ -376,7 +377,7 @@ def download_parameter_changelog_pdf(id: str, db: Session = Depends(get_db), cur
 
 
 @router.post("/{id}/reactivate")
-def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def reactivate_parameter(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
@@ -386,6 +387,14 @@ def reactivate_parameter(id: str, db: Session = Depends(get_db), current_user: m
     record_version(db, db_item, operation="update", source="manual",
                    user_id=current_user.id, note="Reactivated")
     db.commit()
+
+    # Durante la disattivazione il parametro era escluso dal DAG, quindi i suoi
+    # value_orig/value_eval e quelli dei figli che lo citano sono potenzialmente
+    # stale. Ricalcoliamo in background per tutte le lingue: il param_consolidate
+    # e poi il DAG (che internamente parte dall'intero grafo dei parametri attivi
+    # per la lingua) riallineano tutto.
+    background_tasks.add_task(recompute_parameter_for_all_languages, id)
+
     return {"detail": "Parameter successfully reactivated."}
 
 
