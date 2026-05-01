@@ -1,0 +1,8 @@
+Per il deploy futuro sulla VM piccola
+
+- Build sul tuo PC con `npm run build`, poi copia solo `dist/` (~1.4 MB
+  totale) sulla VM e servila con nginx/caddy. La VM non vede mai
+  `node_modules`.
+
+- `dist/` attuale contiene chunk separati: l'utente medio scarica ~314 KB
+  gzip, l'admin che apre l'editor ne scarica ~750 KB totali.

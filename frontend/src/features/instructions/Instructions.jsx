@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import api from '../../api';
+
+// TinyMCE is heavy (~500 KB gzip). Load it only when an admin opens the
+// editor, not on every page render.
+const InstructionsEditor = lazy(() => import('./InstructionsEditor'));
 
 const CONTENT_KEY = 'instr_body';
 
@@ -12,7 +14,7 @@ export default function Instructions() {
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
-    const [editorMode, setEditorMode] = useState('visual'); // 'visual' | 'source'
+    const editorRef = useRef(null);
 
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
@@ -35,7 +37,6 @@ export default function Instructions() {
     const startEditing = () => {
         setDraft(content);
         setError('');
-        setEditorMode('visual');
         setIsEditing(true);
     };
 
@@ -48,14 +49,16 @@ export default function Instructions() {
     const loadDefaultTemplate = () => {
         if (!window.confirm('Replace the current draft with the default template? Unsaved changes will be lost.')) return;
         setDraft(DEFAULT_CONTENT);
+        if (editorRef.current) editorRef.current.setContent(DEFAULT_CONTENT);
     };
 
     const handleSave = async () => {
         setSaving(true);
         setError('');
         try {
-            await api.put(`/api/content/${CONTENT_KEY}`, { content: draft });
-            setContent(draft);
+            const html = editorRef.current ? editorRef.current.getContent() : draft;
+            await api.put(`/api/content/${CONTENT_KEY}`, { content: html });
+            setContent(html);
             setIsEditing(false);
         } catch (err) {
             console.error(err);
@@ -100,61 +103,24 @@ export default function Instructions() {
                             className="editor-bar"
                             style={{
                                 display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: '.5rem',
+                                justifyContent: 'flex-end',
                                 marginBottom: '.6rem',
-                                flexWrap: 'wrap',
                             }}
                         >
-                            <div className="editor-bar__modes" role="tablist" aria-label="Editor mode">
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={editorMode === 'visual'}
-                                    className={`btn ${editorMode === 'visual' ? 'btn--primary' : ''}`}
-                                    onClick={() => setEditorMode('visual')}
-                                >
-                                    Visual
-                                </button>
-                                <button
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={editorMode === 'source'}
-                                    className={`btn ${editorMode === 'source' ? 'btn--primary' : ''}`}
-                                    onClick={() => setEditorMode('source')}
-                                    style={{ marginLeft: '.4rem' }}
-                                >
-                                    Source HTML
-                                </button>
-                            </div>
                             <button type="button" className="btn" onClick={loadDefaultTemplate}>
                                 Load default template
                             </button>
                         </div>
 
-                        {editorMode === 'visual' ? (
-                            <ReactQuill
-                                theme="snow"
-                                value={draft}
-                                onChange={setDraft}
-                                modules={QUILL_MODULES}
-                                formats={QUILL_FORMATS}
+                        <Suspense fallback={<p className="muted">Loading editor…</p>}>
+                            <InstructionsEditor
+                                initialValue={draft}
+                                onReady={(editor) => { editorRef.current = editor; }}
                             />
-                        ) : (
-                            <textarea
-                                className="instructions-source"
-                                value={draft}
-                                onChange={(e) => setDraft(e.target.value)}
-                                spellCheck={false}
-                                aria-label="HTML source"
-                            />
-                        )}
+                        </Suspense>
 
                         <p className="muted" style={{ marginTop: '.6rem', fontSize: '.85rem' }}>
-                            {editorMode === 'visual'
-                                ? 'Tip: switch to Source HTML to edit tables and complex markup.'
-                                : 'Editing raw HTML. Allowed tags include <table>, <thead>, <tbody>, <tr>, <th>, <td>, headings, lists, links, etc.'}
+                            Use the toolbar to format text and insert tables. Click the “&lt;/&gt;” icon to edit raw HTML if needed.
                         </p>
 
                         <div
@@ -188,28 +154,6 @@ export default function Instructions() {
         </div>
     );
 }
-
-const QUILL_MODULES = {
-    toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        ['blockquote', 'code-block'],
-        ['link'],
-        [{ align: [] }],
-        ['clean'],
-    ],
-};
-
-const QUILL_FORMATS = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet', 'indent',
-    'blockquote', 'code-block',
-    'link',
-    'align',
-];
 
 const DEFAULT_CONTENT = `
 <h2>General instructions for entering data</h2>

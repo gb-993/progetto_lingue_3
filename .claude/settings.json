@@ -75,7 +75,8 @@
       "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx src/features/queries/QueriesDashboard.jsx src/App.jsx)",
       "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx)",
       "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx)",
-      "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx src/features/queries/BlameTable.jsx)"
+      "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx src/features/queries/BlameTable.jsx)",
+      "Bash(npm uninstall *)"
     ]
   }
 }
