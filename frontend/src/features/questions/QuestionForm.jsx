@@ -119,6 +119,9 @@ export default function QuestionForm({ mode = 'page' }) {
     // referenziata: l'utente vede un warning prima di salvare.
     const [editingMotivationId, setEditingMotivationId] = useState(null);
     const [editMotData, setEditMotData] = useState({ code: '', label: '' });
+    // Snapshot dei valori all'apertura della modal: serve a derivare `motDirty`
+    // e attivare guard/confirm solo quando l'utente ha davvero modificato qualcosa.
+    const [initialMotData, setInitialMotData] = useState({ code: '', label: '' });
     const [motSaving, setMotSaving] = useState(false);
     const [motDeleting, setMotDeleting] = useState(false);
 
@@ -422,14 +425,25 @@ export default function QuestionForm({ mode = 'page' }) {
     const openMotivationEditor = useCallback((motivationId) => {
         const m = allMotivations.find(x => x.id === motivationId);
         if (!m) return;
+        const snapshot = { code: m.code || '', label: m.label || '' };
         setEditingMotivationId(motivationId);
-        setEditMotData({ code: m.code || '', label: m.label || '' });
+        setEditMotData(snapshot);
+        setInitialMotData(snapshot);
     }, [allMotivations]);
+
+    // Dirty solo se la modal è aperta e i valori divergono dallo snapshot iniziale.
+    // Il check su `editingMotivationId` evita falsi positivi a modal chiusa.
+    const motDirty = !!editingMotivationId && (
+        editMotData.code !== initialMotData.code ||
+        editMotData.label !== initialMotData.label
+    );
 
     const closeMotivationEditor = () => {
         if (motSaving || motDeleting) return; // non chiudere durante un'azione
+        if (motDirty && !window.confirm('Hai modifiche non salvate alla motivation. Annullarle?')) return;
         setEditingMotivationId(null);
         setEditMotData({ code: '', label: '' });
+        setInitialMotData({ code: '', label: '' });
     };
 
     const saveEditedMotivation = async () => {
@@ -451,6 +465,7 @@ export default function QuestionForm({ mode = 'page' }) {
             ));
             setEditingMotivationId(null);
             setEditMotData({ code: '', label: '' });
+            setInitialMotData({ code: '', label: '' });
         } catch (err) {
             alert(err.response?.data?.detail || 'Errore nel salvataggio della motivation.');
         } finally {
@@ -477,6 +492,7 @@ export default function QuestionForm({ mode = 'page' }) {
             }));
             setEditingMotivationId(null);
             setEditMotData({ code: '', label: '' });
+            setInitialMotData({ code: '', label: '' });
         } catch (err) {
             alert(err.response?.data?.detail || 'Eliminazione bloccata: la motivation è in uso.');
         } finally {
@@ -652,10 +668,18 @@ export default function QuestionForm({ mode = 'page' }) {
     );
     const isDirtyForGuard = isEditMode ? !!isDirty : isCreatingDirty;
 
-    // Doppia rete: beforeunload (chiusura tab/refresh) + useBlocker (Link,
-    // breadcrumb, back-button). Disattivata durante save o clone in corso
-    // così il navigate volontario post-azione non viene bloccato da se stesso.
-    useUnsavedChangesGuard(isDirtyForGuard && !isLoading && !cloning);
+    // Guard unificato per question + modal motivation. Una sola chiamata perché
+    // `useBlocker` di react-router è un singleton: due chiamate nello stesso
+    // componente fanno sì che la seconda sovrascriva la prima, disattivando
+    // la guardia sulla navigazione interna (la X del drawer, click outside,
+    // ESC, breadcrumb, ecc.). Il `beforeunload` invece sopravvive perché sono
+    // `useEffect` indipendenti su `window`.
+    const questionDirtyForGuard = isDirtyForGuard && !isLoading && !cloning;
+    const guardActive = questionDirtyForGuard || motDirty;
+    const guardMessage = motDirty
+        ? 'Hai modifiche non salvate alla motivation. Se esci ora andranno perse. Continuare?'
+        : 'Hai modifiche non salvate. Se esci ora la bozza resterà nel browser ma non sarà inviata al server. Continuare?';
+    useUnsavedChangesGuard(guardActive, guardMessage);
 
     const cancelLink = formData.parameter_id
         ? `/admin/parameters/${formData.parameter_id}/edit`
