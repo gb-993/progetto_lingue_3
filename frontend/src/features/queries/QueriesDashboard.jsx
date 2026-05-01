@@ -328,7 +328,7 @@ export default function QueriesDashboard() {
                                             </thead>
                                             <tbody>
                                             {results.params.map(p => (
-                                                <tr key={p.id}>
+                                                <tr key={p.id} className={activeTab === 'q6' ? 'q6-row' : undefined}>
                                                     <td><Link to={`/languages/${results.language.id}/debug#p-${p.id}`}><strong>{p.id}</strong> — {p.name}</Link></td>
                                                     {activeTab === 'q6' && <td><code>{p.condition}</code></td>}
                                                     <td style={{
@@ -341,7 +341,7 @@ export default function QueriesDashboard() {
                                                         <td style={{ textAlign: 'center' }}>
                                                             <button
                                                                 type="button"
-                                                                className="btn btn--primary"
+                                                                className="btn btn--primary q6-action-btn"
                                                                 style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
                                                                 onClick={() => goToQ3(results.language.id, p.id)}
                                                             >
