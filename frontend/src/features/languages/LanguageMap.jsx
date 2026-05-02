@@ -46,10 +46,18 @@ function buildTopHueMap(allTopFamilies) {
     return map;
 }
 
-// Distribuisce la lightness all'interno di ciascun "gruppo padre" (top-family),
-// usando la hue presa da topHueMap. Così subfamily/group ereditano il colore
-// della propria top anche quando la selezione abbraccia top diverse.
-function spreadByLightnessGrouped(items, itemToTop, topHueMap) {
+// Distribuisce hue + lightness all'interno di ciascun "gruppo padre" (top-family).
+// La hue oscilla in un intorno (±25°) della hue della top così le subfamily/group
+// restano riconoscibili come "stessa famiglia"; per evitare che con tante voci
+// (es. 76 subfamily Indo-European) elementi adiacenti risultino quasi identici,
+// usiamo una sequenza low-discrepancy basata sulla golden ratio: elementi vicini
+// nella lista alfabetica ricevono hue e lightness molto distanti tra loro.
+function spreadColorsGrouped(items, itemToTop, topHueMap) {
+    const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
+    const HUE_RANGE = 50;   // ±25° intorno alla hue della top family
+    const LIGHT_MIN = 38;
+    const LIGHT_RANGE = 30; // 38% - 68%
+
     const byTop = {};
     items.forEach(item => {
         const top = itemToTop[item] || '';
@@ -61,11 +69,17 @@ function spreadByLightnessGrouped(items, itemToTop, topHueMap) {
         const sorted = [...list].sort((a, b) =>
             (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
         );
-        const hue = topHueMap[top] ?? 210;
+        const baseHue = topHueMap[top] ?? 210;
         sorted.forEach((item, i) => {
-            const t = sorted.length === 1 ? 0.5 : i / (sorted.length - 1);
-            const lightness = 32 + t * 38; // 32% -> 70%
-            colorMap[item] = `hsl(${hue}, 65%, ${lightness}%)`;
+            if (sorted.length === 1) {
+                colorMap[item] = `hsl(${baseHue}, 65%, 50%)`;
+                return;
+            }
+            const huePos = (i * PHI) % 1;          // [0,1) low-discrepancy
+            const lightPos = (i * PHI * PHI) % 1;  // fase decorrelata
+            const hue = (baseHue + (huePos - 0.5) * HUE_RANGE + 360) % 360;
+            const lightness = LIGHT_MIN + lightPos * LIGHT_RANGE;
+            colorMap[item] = `hsl(${hue.toFixed(1)}, 65%, ${lightness.toFixed(1)}%)`;
         });
     });
     return colorMap;
@@ -73,11 +87,17 @@ function spreadByLightnessGrouped(items, itemToTop, topHueMap) {
 
 function computeColorPlan({ languages, filters, allTopFamilies }) {
     const topHueMap = buildTopHueMap(allTopFamilies);
-    // La modalità è guidata dal filtro più "fine" attivo: group > family > top_family.
-    // Selezioni multiple sulla sola top_family non cambiano modalità (resta top-family).
+    // La modalità "scende" automaticamente di un livello rispetto al filtro più
+    // "fine" selezionato: avere già scelto una top family rende inutile colorare
+    // per top family (sarebbero tutti dello stesso colore), quindi mostriamo le
+    // subfamily distinte; analogamente selezionare una subfamily attiva la
+    // colorazione per group. Selezionare direttamente group resta esplicito.
+    const hasTop = (filters.top_family?.length || 0) > 0;
     const hasFamily = (filters.family?.length || 0) > 0;
     const hasGroup = (filters.grp?.length || 0) > 0;
-    const mode = hasGroup ? 'group' : hasFamily ? 'family' : 'top_family';
+    const mode = (hasGroup || hasFamily) ? 'group'
+        : hasTop ? 'family'
+        : 'top_family';
 
     if (mode === 'top_family') {
         const tops = [...new Set(languages.map(l => l.top_level_family).filter(Boolean))]
@@ -104,7 +124,7 @@ function computeColorPlan({ languages, filters, allTopFamilies }) {
                 familyToTop[l.family] = l.top_level_family;
             }
         });
-        const colorMap = spreadByLightnessGrouped(families, familyToTop, topHueMap);
+        const colorMap = spreadColorsGrouped(families, familyToTop, topHueMap);
         const sortedKeys = Object.keys(colorMap).sort((a, b) =>
             (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
         );
@@ -125,7 +145,7 @@ function computeColorPlan({ languages, filters, allTopFamilies }) {
             groupToTop[l.grp] = l.top_level_family;
         }
     });
-    const colorMap = spreadByLightnessGrouped(groups, groupToTop, topHueMap);
+    const colorMap = spreadColorsGrouped(groups, groupToTop, topHueMap);
     const sortedKeys = Object.keys(colorMap).sort((a, b) =>
         (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' })
     );
