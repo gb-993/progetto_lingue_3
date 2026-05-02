@@ -176,22 +176,27 @@ export default function MotivationList() {
             {/* MODALE CREAZIONE/MODIFICA */}
             {showModal && (
                 <div style={modalOverlayStyle}>
-                    <div className="card" style={{ width: '440px' }}>
-                        <h3>{editingId ? 'Edit Motivation' : 'New Motivation'}</h3>
-                        {editingId && (
-                            <div className="alert alert-warning" style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
-                                <strong>Heads up.</strong> Editing this motivation propagates everywhere it's used:
-                                the new <em>label</em> appears in the compilation form, in all answers already given
-                                across all languages, in the linked questions and in the Excel exports
-                                (the answers table stores only the motivation id, the label is read live).
-                                Changing the <em>code</em> additionally breaks the match with frozen submission
-                                snapshots in the history.
-                            </div>
-                        )}
+                    <div className="card" style={{ width: '460px' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>
+                            {editingId ? 'Edit Motivation' : 'New Motivation'}
+                        </h3>
                         <form onSubmit={handleSave}>
                             <div style={{ marginBottom: '1rem' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Code</label>
-                                <input type="text" value={formData.code} onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})} required style={{ width: '100%', padding: '0.5rem' }} />
+                                <input
+                                    type="text"
+                                    value={formData.code}
+                                    onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
+                                    required
+                                    readOnly={!!editingId}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        background: editingId ? 'var(--surface-2)' : undefined,
+                                        color: editingId ? 'var(--text-muted)' : undefined,
+                                        cursor: editingId ? 'not-allowed' : undefined,
+                                    }}
+                                />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Description</label>

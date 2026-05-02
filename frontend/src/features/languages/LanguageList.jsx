@@ -558,16 +558,17 @@ export default function LanguageList() {
                                         <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
                                         {isAdmin && (
                                             <>
-                                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
                                                 <button
                                                     type="button"
                                                     className="btn"
                                                     onClick={() => onDuplicate(lang)}
                                                     title="Duplicate this language with all its answers, examples and parameters"
-                                                >
+>
                                                     Duplicate
                                                 </button>
                                                 <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
+                                                                                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+
                                             </>
                                         )}
                                     </div>

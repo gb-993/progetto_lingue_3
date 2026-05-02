@@ -422,14 +422,14 @@ export default function TableA() {
                                 <th style={{ position: 'sticky', left: '45px', background: 'var(--surface-2)', zIndex: 11, minWidth: '80px', borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'ID' : 'Q.ID'}
                                 </th>
-                                <th style={{ minWidth: view === 'params' ? '200px' : '400px', whiteSpace: 'normal', position: 'sticky', left: '125px', background: 'var(--surface-2)', zIndex: 11, borderRight: '1px solid var(--border)' }}>
+                                <th style={{ minWidth: view === 'params' ? '200px' : '400px', whiteSpace: 'normal', borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'Parameter Name' : 'Question Text'}
                                 </th>
                                 {view === 'params' && (
                                     <th style={{ minWidth: '250px' }}>Implicational conditions</th>
                                 )}
                                 {matrixData.languages.map(lang => (
-                                    <th key={lang.id} style={{ textAlign: 'center', writingMode: 'vertical-rl', transform: 'rotate(180deg)', padding: '1rem 0.5rem' }}>{lang.id}</th>
+                                    <th key={lang.id} style={{ textAlign: 'center', padding: '0.5rem' }}>{lang.id}</th>
                                 ))}
                             </tr>
                             </thead>
@@ -446,7 +446,7 @@ export default function TableA() {
                                     <td style={{ position: 'sticky', left: '45px', background: 'var(--surface)', zIndex: 5, fontWeight: 'bold', borderRight: '1px solid var(--border)' }}>
                                         {row.item.id}
                                     </td>
-                                    <td style={{ whiteSpace: 'normal', position: 'sticky', left: '125px', background: 'var(--surface)', zIndex: 5, borderRight: '1px solid var(--border)' }}>
+                                    <td style={{ whiteSpace: 'normal', borderRight: '1px solid var(--border)' }}>
                                         {row.item.name}
                                     </td>
                                     {view === 'params' && (
@@ -487,8 +487,7 @@ export default function TableA() {
                     <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(440px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
                         <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Mantel test</h3>
                         <p className="muted small" style={{ marginTop: 0 }}>
-                            Choose at least two distance matrices. Pearson, Spearman and Kendall's τ
-                            are computed for each pair (999 permutations, two-sided, seed 42).
+                            Choose two distance matrices.
                         </p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '1rem 0' }}>
