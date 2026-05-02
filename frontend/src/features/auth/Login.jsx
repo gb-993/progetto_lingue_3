@@ -1,19 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
+import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
             // Chiamata centralizzata
             const resp = await api.post('/auth/login', { email, password });
-            localStorage.setItem('token', resp.data.access_token);
+            // login() del context salva il token e popola lo stato `user`
+            // chiamando /api/me — necessario perché AdminRoute legge dal
+            // context. localStorage.role/name restano per Layout.jsx, che
+            // ancora li usa per decidere quali voci della sidebar mostrare.
+            await login(resp.data.access_token);
             localStorage.setItem('role', resp.data.role);
             localStorage.setItem('name', resp.data.name);
             navigate('/dashboard');

@@ -25,9 +25,16 @@ export const AuthProvider = ({ children }) => {
         return () => { active = false; };
     }, []);
 
-    const login = (token, userData) => {
+    // Chiamata da Login.jsx subito dopo l'auth: salva il token e popola lo
+    // stato `user` recuperando il profilo da /api/me. Senza questo, dopo il
+    // login `user` resta null finché non si fa un refresh, e AdminRoute
+    // (che ora legge dal context invece che da localStorage) rimanda
+    // qualsiasi voce admin della sidebar a /dashboard.
+    const login = async (token) => {
         localStorage.setItem('token', token);
-        setUser(userData);
+        const res = await api.get('/api/me');
+        setUser(res.data);
+        return res.data;
     };
 
     const logout = () => {
