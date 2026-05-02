@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Dict, Any
 import models
 from dependencies import get_db, require_admin
@@ -360,6 +360,90 @@ def query_7_comparable(lang_a: str, lang_b: str, db: Session = Depends(get_db)):
             rows.append({"id": p.id, "name": p.name, "val_a": va, "val_b": vb})
 
     return {"rows": rows}
+
+# --- Q10 helpers / endpoints ---
+@router.get("/options/questions-for-language")
+def options_questions_for_language(lang_id: str, db: Session = Depends(get_db)):
+    """Lista degli ID delle question già risposte dalla lingua indicata.
+
+    Serve a Q10 lato frontend per restringere il dropdown delle question
+    quando l'utente vuole vedere solo quelle effettivamente compilate per
+    una specifica lingua. Risposta vuota o null comprese: include qualsiasi
+    riga Answer esistente.
+    """
+    rows = (
+        db.query(models.Answer.question_id)
+        .filter(models.Answer.language_id == lang_id)
+        .distinct()
+        .all()
+    )
+    return [r[0] for r in rows]
+
+
+# --- Q10: Answers and examples per question (cross-language) ---
+@router.get("/by-question")
+def query_by_question(q_id: str, db: Session = Depends(get_db)):
+    """Per una singola question, ritorna una riga per ogni lingua con la
+    risposta (yes/no/unsure/None) e tutti gli esempi associati.
+
+    Lingue senza Answer per questa question vengono comunque incluse, con
+    response=None ed examples=[]: comodo per vedere chi non ha ancora risposto.
+    """
+    question = (
+        db.query(models.Question)
+        .options(joinedload(models.Question.parameter))
+        .filter(models.Question.id == q_id)
+        .first()
+    )
+    if not question:
+        raise HTTPException(404, "Question not found")
+
+    langs = db.query(models.Language).order_by(models.Language.name_full).all()
+
+    # joinedload su examples evita N+1 (una sola query con join).
+    answers = (
+        db.query(models.Answer)
+        .options(joinedload(models.Answer.examples))
+        .filter(models.Answer.question_id == q_id)
+        .all()
+    )
+    answer_by_lang = {a.language_id: a for a in answers}
+
+    rows = []
+    for lang in langs:
+        a = answer_by_lang.get(lang.id)
+        examples = []
+        if a:
+            # Ordina per `number` (lessicografico): "1", "2", "10" -> "1", "10", "2"
+            # è accettabile, gli esempi sono sempre 2-5 in pratica.
+            for ex in sorted(a.examples, key=lambda x: (x.number or "")):
+                examples.append({
+                    "id": ex.id,
+                    "number": ex.number,
+                    "textarea": ex.textarea,
+                    "transliteration": ex.transliteration,
+                    "gloss": ex.gloss,
+                    "translation": ex.translation,
+                    "reference": ex.reference,
+                })
+        rows.append({
+            "language": {"id": lang.id, "name": lang.name_full},
+            "response": a.response_text if a else None,
+            "comments": (a.comments if a else None) or "",
+            "examples": examples,
+        })
+
+    return {
+        "question": {
+            "id": question.id,
+            "text": question.text,
+            "parameter_id": question.parameter_id,
+            "parameter_name": question.parameter.name if question.parameter else None,
+            "is_active": bool(question.is_active),
+        },
+        "rows": rows,
+    }
+
 
 # --- Q8, Q9: Questions with answer YES/NO ---
 @router.get("/q89")

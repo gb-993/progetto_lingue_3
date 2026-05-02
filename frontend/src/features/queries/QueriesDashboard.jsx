@@ -1,9 +1,10 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import {
     GitBranch, Globe, HelpCircle, GitCompare, ThumbsUp, ThumbsDown,
-    PanelLeftClose, PanelLeftOpen,
+    MessageSquare, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
+import Select from 'react-select';
 import api from '../../api';
 import BlameTable, { AnswersList } from './BlameTable';
 
@@ -19,11 +20,12 @@ const QUERY_TABS = [
     { id: 'q7', label: 'Comparable parameters (per pair of languages)',            Icon: GitCompare },
     { id: 'q8', label: 'Question with answer YES (per language)',                  Icon: ThumbsUp },
     { id: 'q9', label: 'Question with answer NO (per language)',                   Icon: ThumbsDown },
+    { id: 'q10', label: 'Show answers and examples (per question)',                Icon: MessageSquare },
 ];
 
 export default function QueriesDashboard() {
     const [activeTab, setActiveTab] = useState('q1');
-    const [options, setOptions] = useState({ langs: [], params: [] });
+    const [options, setOptions] = useState({ langs: [], params: [], questions: [] });
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
     const [menuCollapsed, setMenuCollapsed] = useState(() =>
@@ -39,15 +41,25 @@ export default function QueriesDashboard() {
     const [paramId, setParamId] = useState('');
     const [langId, setLangId] = useState('');
     const [langIdB, setLangIdB] = useState('');
+    const [questionId, setQuestionId] = useState('');
+
+    // Filtri Q10: restringono SOLO il dropdown delle question, non il risultato.
+    // Lasciandoli vuoti, il dropdown mostra tutte le ~N centinaia di question.
+    const [q10FilterLang, setQ10FilterLang] = useState('');
+    const [q10FilterParam, setQ10FilterParam] = useState('');
+    // Set di question_id risposte dalla lingua filtrata. null = filtro non
+    // applicato, Set vuoto = filtro applicato ma la lingua non ha risposte.
+    const [q10AnsweredQids, setQ10AnsweredQids] = useState(null);
 
     // Caricamento opzioni iniziali per le tendine
     // Caricamento opzioni iniziali per le tendine
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [langsRes, paramsRes] = await Promise.all([
+                const [langsRes, paramsRes, questionsRes] = await Promise.all([
                     api.get('/api/tablea/options'),
-                    api.get('/api/admin/parameters')
+                    api.get('/api/admin/parameters'),
+                    api.get('/api/admin/questions'),
                 ]);
 
                 // Difesa assoluta contro formati dati inattesi (previene lo schermo bianco)
@@ -58,18 +70,49 @@ export default function QueriesDashboard() {
                 } else if (paramsRes.data && Array.isArray(paramsRes.data.items)) {
                     safeParams = paramsRes.data.items;
                 }
+                const safeQuestions = Array.isArray(questionsRes.data) ? questionsRes.data : [];
 
                 setOptions({
                     langs: safeLangs,
-                    params: safeParams
+                    params: safeParams,
+                    questions: safeQuestions,
                 });
             } catch (err) {
                 console.error("Errore nel caricamento delle opzioni", err);
-                setOptions({ langs: [], params: [] }); // Fallback di sicurezza
+                setOptions({ langs: [], params: [], questions: [] });
             }
         };
         fetchOptions();
     }, []);
+
+    // Quando l'utente seleziona una lingua nel filtro Q10, scarichiamo gli
+    // id delle question risposte da quella lingua. Se la deseleziona, reset.
+    useEffect(() => {
+        if (!q10FilterLang) {
+            setQ10AnsweredQids(null);
+            return;
+        }
+        let active = true;
+        api.get(`/api/queries/options/questions-for-language?lang_id=${encodeURIComponent(q10FilterLang)}`)
+            .then(res => { if (active) setQ10AnsweredQids(new Set(res.data || [])); })
+            .catch(() => { if (active) setQ10AnsweredQids(new Set()); });
+        return () => { active = false; };
+    }, [q10FilterLang]);
+
+    // Lista question filtrata in base ai due filtri Q10. Se la question
+    // attualmente selezionata sparisce dalla lista filtrata, la deselezioniamo.
+    const q10FilteredQuestions = useMemo(() => {
+        let qs = options.questions;
+        if (q10FilterParam) qs = qs.filter(q => q.parameter_id === q10FilterParam);
+        if (q10FilterLang && q10AnsweredQids) qs = qs.filter(q => q10AnsweredQids.has(q.id));
+        return qs;
+    }, [options.questions, q10FilterParam, q10FilterLang, q10AnsweredQids]);
+
+    useEffect(() => {
+        if (questionId && !q10FilteredQuestions.some(q => q.id === questionId)) {
+            setQuestionId('');
+        }
+    }, [q10FilteredQuestions, questionId]);
 
     // Cambio tab: langId e paramId persistono (il linguista tipicamente lavora su un
     // singolo (lingua, parametro) per sessione). langIdB e' specifico di Q7, lo resettiamo.
@@ -83,9 +126,11 @@ export default function QueriesDashboard() {
         const needsParam = ['q1', 'q2', 'q3'].includes(tabId);
         const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9'].includes(tabId);
         const needsLangB = tabId === 'q7';
+        const needsQuestion = tabId === 'q10';
         if (needsLangB) return;                  // langIdB appena resettato
         if (needsLang && !langId) return;
         if (needsParam && !paramId) return;
+        if (needsQuestion && !questionId) return;
         executeQuery(null, tabId);
     };
 
@@ -109,9 +154,12 @@ export default function QueriesDashboard() {
 
     const executeQuery = async (e, tabOverride) => {
         if (e) e.preventDefault();
+        const tab = tabOverride ?? activeTab;
+        // Guardia per Q10: react-select non supporta `required` come il native
+        // select, validiamo qui per non sparare 404 al backend.
+        if (tab === 'q10' && !questionId) return;
         setLoading(true);
         setResults(null);
-        const tab = tabOverride ?? activeTab;
         try {
             let res;
             if (tab === 'q1') res = await api.get(`/api/queries/q1?param_id=${paramId}`);
@@ -123,6 +171,7 @@ export default function QueriesDashboard() {
             else if (tab === 'q7') res = await api.get(`/api/queries/q7?lang_a=${langId}&lang_b=${langIdB}`);
             else if (tab === 'q8') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=yes`);
             else if (tab === 'q9') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=no`);
+            else if (tab === 'q10') res = await api.get(`/api/queries/by-question?q_id=${encodeURIComponent(questionId)}`);
 
             setResults(res.data);
         } catch (err) {
@@ -137,6 +186,7 @@ export default function QueriesDashboard() {
         const needsParam = ['q1', 'q2', 'q3'].includes(activeTab);
         const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9'].includes(activeTab);
         const needsLangB = ['q7'].includes(activeTab);
+        const needsQuestion = activeTab === 'q10';
 
         return (
             <form onSubmit={executeQuery} className="card" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border)' }}>
@@ -173,6 +223,21 @@ export default function QueriesDashboard() {
                                 {options.params.map(p => <option key={p.id} value={p.id}>{p.id} — {p.name}</option>)}
                             </select>
                         </div>
+                    )}
+                    {needsQuestion && (
+                        <Q10QuestionPicker
+                            allLangs={options.langs}
+                            allParams={options.params}
+                            filteredQuestions={q10FilteredQuestions}
+                            totalQuestions={options.questions.length}
+                            filterLang={q10FilterLang}
+                            setFilterLang={setQ10FilterLang}
+                            filterParam={q10FilterParam}
+                            setFilterParam={setQ10FilterParam}
+                            questionId={questionId}
+                            setQuestionId={setQuestionId}
+                            langFilterReady={!q10FilterLang || q10AnsweredQids !== null}
+                        />
                     )}
                     <div>
                         <button type="submit" className="btn btn--primary" style={{ width: '100%' }} disabled={loading}>
@@ -434,6 +499,11 @@ export default function QueriesDashboard() {
                                 </div>
                             )}
 
+                            {/* Q10: Answers and examples per question (cross-language) */}
+                            {activeTab === 'q10' && (
+                                <ByQuestionTable result={results} />
+                            )}
+
                             {/* Q8, Q9: Questions with YES / NO */}
                             {['q8', 'q9'].includes(activeTab) && (
                                 <div>
@@ -595,6 +665,186 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
                     )}
                 </tbody>
             </table>
+        </div>
+    );
+}
+
+
+// Q10: picker della question con due filtri opzionali (language + parameter)
+// e dropdown searchable (react-select). Spans full row del form.
+function Q10QuestionPicker({
+    allLangs, allParams, filteredQuestions, totalQuestions,
+    filterLang, setFilterLang, filterParam, setFilterParam,
+    questionId, setQuestionId, langFilterReady,
+}) {
+    const labelStyle = {
+        display: 'block', fontSize: '0.75rem', fontWeight: 700,
+        marginBottom: '0.3rem', color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+    };
+    const questionOptions = useMemo(
+        () => filteredQuestions.map(q => {
+            const text = q.text || '';
+            const truncated = text.length > 110 ? text.slice(0, 110) + '…' : text;
+            return { value: q.id, label: `${q.id} — ${truncated}` };
+        }),
+        [filteredQuestions],
+    );
+    const selectedOption = questionOptions.find(o => o.value === questionId) || null;
+    const filtered = !!(filterLang || filterParam);
+
+    return (
+        <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '0.75rem', alignItems: 'end',
+            }}>
+                <div>
+                    <label style={labelStyle}>Filter by language (optional)</label>
+                    <select
+                        className="form-control"
+                        value={filterLang}
+                        onChange={e => setFilterLang(e.target.value)}
+                    >
+                        <option value="">All languages</option>
+                        {allLangs.map(l => (
+                            <option key={l.id} value={l.id}>{l.name} ({l.id})</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label style={labelStyle}>Filter by parameter (optional)</label>
+                    <select
+                        className="form-control"
+                        value={filterParam}
+                        onChange={e => setFilterParam(e.target.value)}
+                    >
+                        <option value="">All parameters</option>
+                        {allParams.map(p => (
+                            <option key={p.id} value={p.id}>{p.id} — {p.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                    <label style={labelStyle}>
+                        Question
+                        <span className="muted" style={{ marginLeft: '0.5rem', textTransform: 'none', fontWeight: 400 }}>
+                            ({filteredQuestions.length}{filtered ? ` of ${totalQuestions}` : ''})
+                        </span>
+                    </label>
+                    <Select
+                        value={selectedOption}
+                        onChange={opt => setQuestionId(opt?.value || '')}
+                        options={questionOptions}
+                        isClearable
+                        isSearchable
+                        placeholder={langFilterReady ? 'Type to search by ID or text…' : 'Loading…'}
+                        noOptionsMessage={() =>
+                            filterLang && !langFilterReady
+                                ? 'Loading…'
+                                : 'No questions match the filters'
+                        }
+                        styles={{ control: (base) => ({ ...base, minHeight: 38 }) }}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// Q10: tabella cross-language di una singola question.
+// Per default nasconde le lingue senza risposta (toggle in alto a destra).
+function ByQuestionTable({ result }) {
+    const [onlyAnswered, setOnlyAnswered] = useState(true);
+    const rows = result.rows || [];
+    const visibleRows = onlyAnswered ? rows.filter(r => r.response) : rows;
+    const answeredCount = rows.filter(r => r.response).length;
+    const responseColor = (r) => r === 'yes' ? '#15803d' : r === 'no' ? '#b91c1c' : r === 'unsure' ? '#a16207' : 'var(--text-muted, #888)';
+
+    return (
+        <div>
+            <div style={{ marginBottom: '1rem' }}>
+                <h3 style={{ margin: '0 0 0.25rem 0' }}>
+                    Question: <code>{result.question.id}</code>
+                </h3>
+                <div className="small muted" style={{ marginBottom: '0.5rem' }}>
+                    Parameter: <strong>{result.question.parameter_id}</strong>
+                    {result.question.parameter_name ? ` — ${result.question.parameter_name}` : ''}
+                    {!result.question.is_active && <span style={{ marginLeft: '0.75rem', color: '#b91c1c' }}>(inactive)</span>}
+                </div>
+                <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 6, marginBottom: '0.75rem' }}>
+                    {result.question.text}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div className="small muted">
+                        <strong>{answeredCount}</strong> / {rows.length} languages answered
+                    </div>
+                    <label className="small" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={onlyAnswered}
+                            onChange={e => setOnlyAnswered(e.target.checked)}
+                        />
+                        Show only languages with an answer
+                    </label>
+                </div>
+            </div>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <table className="table" style={{ margin: 0 }}>
+                    <thead className="table-light">
+                        <tr>
+                            <th style={{ width: '220px' }}>Language</th>
+                            <th style={{ width: '90px', textAlign: 'center' }}>Answer</th>
+                            <th>Examples</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {visibleRows.map(r => (
+                            <tr key={r.language.id}>
+                                <td style={{ verticalAlign: 'top' }}>
+                                    <Link to={`/languages/${r.language.id}/data#p-${result.question.parameter_id}`}>
+                                        <strong>{r.language.id}</strong> — {r.language.name}
+                                    </Link>
+                                </td>
+                                <td style={{
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    color: responseColor(r.response),
+                                    verticalAlign: 'top',
+                                    textTransform: 'uppercase',
+                                }}>
+                                    {r.response || '—'}
+                                </td>
+                                <td>
+                                    {r.examples.length === 0 ? (
+                                        <span className="muted small">—</span>
+                                    ) : (
+                                        <ol style={{ margin: 0, paddingLeft: '1.4rem' }}>
+                                            {r.examples.map(ex => (
+                                                <li key={ex.id} style={{ marginBottom: '0.5rem' }}>
+                                                    {ex.textarea && <div>{ex.textarea}</div>}
+                                                    {ex.transliteration && <div className="small muted" style={{ fontStyle: 'italic' }}>{ex.transliteration}</div>}
+                                                    {ex.gloss && <div className="small muted">{ex.gloss}</div>}
+                                                    {ex.translation && <div className="small">‘{ex.translation}’</div>}
+                                                    {ex.reference && <div className="small muted">[{ex.reference}]</div>}
+                                                </li>
+                                            ))}
+                                        </ol>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                        {visibleRows.length === 0 && (
+                            <tr><td colSpan="3" className="muted text-center">
+                                {onlyAnswered ? 'No languages have answered yet.' : 'No languages found.'}
+                            </td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
