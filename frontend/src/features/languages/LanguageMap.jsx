@@ -54,7 +54,7 @@ function buildTopHueMap(allTopFamilies) {
 // nella lista alfabetica ricevono hue e lightness molto distanti tra loro.
 function spreadColorsGrouped(items, itemToTop, topHueMap) {
     const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
-    const HUE_RANGE = 50;   // ±25° intorno alla hue della top family
+    const HUE_RANGE = 80;   // ±40° intorno alla hue della top family
     const LIGHT_MIN = 38;
     const LIGHT_RANGE = 30; // 38% - 68%
 
