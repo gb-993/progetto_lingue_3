@@ -1,8 +1,286 @@
-Per il deploy futuro sulla VM piccola
+DEPLOY NOTES — PCM-Hub
+======================
 
-- Build sul tuo PC con `npm run build`, poi copia solo `dist/` (~1.4 MB
-  totale) sulla VM e servila con nginx/caddy. La VM non vede mai
-  `node_modules`.
+Cosa fare PRIMA e DURANTE il deploy in produzione, e cosa lasciato indietro
+da fare appena possibile. Tieni questo file aggiornato man mano.
 
-- `dist/` attuale contiene chunk separati: l'utente medio scarica ~314 KB
-  gzip, l'admin che apre l'editor ne scarica ~750 KB totali.
+
+==========================================================================
+1) COSA TI SERVE SULLA VM
+==========================================================================
+
+- Docker + Docker Compose installati.
+- Portainer (lo userai per gestire lo stack).
+- Un dominio o IP pubblico (es. hub.parametricomparison.unimore.it).
+- Un reverse proxy con HTTPS davanti (nginx o Caddy o Traefik) che
+  inoltra il traffico:
+    • porta 443 -> frontend (dist/ servito come file statici)
+    • porta 443/api/... -> backend (porta 8000 interna al docker)
+
+Se la VM è quella piccola, il frontend NON gira nel container Vite (troppo
+pesante). Build sul tuo PC con `npm run build` e copia solo `dist/`
+(~1.4 MB totali) sulla VM, da servire con nginx/Caddy. La VM non vede mai
+`node_modules`. Per l'utente medio sono ~314 KB gzip; admin ~750 KB.
+
+
+==========================================================================
+2) GENERARE LE CREDENZIALI DI PRODUZIONE
+==========================================================================
+
+DEVI usare valori NUOVI in produzione, diversi da quelli del .env locale.
+Le ragioni:
+  - La SECRET_KEY del .env di dev è già passata sopra GitHub/chat → da
+    considerare compromessa.
+  - Le credenziali del DB di dev sono debolissime (pcm_user/pcm_password).
+
+A) Generare una SECRET_KEY nuova (lunga, random):
+
+    python -c "import secrets; print(secrets.token_urlsafe(48))"
+
+   Copia il risultato. Niente spazi, niente apici intorno.
+
+B) Inventare una password DB forte:
+   minimo 20 caratteri random, niente parole comuni.
+   Es. anche qui:
+       python -c "import secrets; print(secrets.token_urlsafe(24))"
+
+C) Decidere il nome utente DB e nome database (puoi tenerli, ma
+   conviene cambiarli per non avere lo stesso schema di dev):
+       POSTGRES_USER=pcm_prod
+       POSTGRES_DB=pcm_hub_prod
+
+
+==========================================================================
+3) CONFIGURARE PORTAINER (le variabili d'ambiente)
+==========================================================================
+
+In Portainer, quando crei lo stack, NON committare il file .env.
+Imposta queste variabili nello stack, una per una:
+
+    ENV=prod
+    SECRET_KEY=<la chiave generata al punto 2.A>
+    ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+    POSTGRES_USER=<nuovo utente>
+    POSTGRES_PASSWORD=<password generata al punto 2.B>
+    POSTGRES_DB=<nome db>
+    POSTGRES_HOST=db
+    POSTGRES_PORT=5432
+
+    DATABASE_URL=postgresql://<user>:<password>@db/<dbname>
+
+    CORS_ORIGINS=https://hub.parametricomparison.unimore.it
+    (se usi più domini: separali con virgola, NIENTE spazi)
+
+NOTE IMPORTANTI:
+  - ENV=prod abilita il fail-fast: se manca SECRET_KEY l'app NON parte.
+    Questo è voluto, evita di andare in prod con la chiave di dev.
+  - DATABASE_URL deve essere coerente con i 4 valori sopra. Se ne cambi
+    uno cambia anche l'altro.
+  - CORS_ORIGINS deve avere ESATTAMENTE il dominio da cui parte il
+    browser. Niente wildcard "*" (rifiutato dal browser quando hai
+    allow_credentials).
+
+
+==========================================================================
+4) docker-compose IN PRODUZIONE — DIFFERENZE DA QUELLO LOCALE
+==========================================================================
+
+Il docker-compose.yml attuale va bene per dev. In prod:
+
+  - NON esporre la 5432 sull'host. Togli del tutto il blocco "ports"
+    dal servizio "db" (il backend la raggiunge via rete docker interna).
+  - NON esporre la 8000 del backend al pubblico: deve rispondere solo
+    al reverse proxy. Se nginx/Caddy gira sulla stessa VM in docker,
+    metti backend e proxy nella stessa rete e non pubblicare 8000.
+  - NON usare il bind-mount `./backend:/app` in prod: lavora con
+    l'immagine buildata dal Dockerfile (no live-reload).
+  - Togli `--reload` dal comando uvicorn:
+        command: uvicorn main:app --host 0.0.0.0 --port 8000
+
+Conviene avere un docker-compose.prod.yml separato (o profili) per
+mantenere il dev pulito. Quando ne hai bisogno te lo preparo.
+
+
+==========================================================================
+5) PRIMA INIZIALIZZAZIONE DEL DATABASE
+==========================================================================
+
+La prima volta che avvii lo stack:
+
+  a) Lo schema viene creato dalle migrazioni Alembic. Esegui DENTRO il
+     container backend:
+
+         alembic upgrade head
+
+     In Portainer: Containers → pcm_backend → Console → bash → comando.
+     Oppure, da terminale sulla VM:
+
+         docker compose exec backend alembic upgrade head
+
+  b) Crea il primo utente admin:
+     - Se hai un bundle dal vecchio sito, usa la pagina "Restore Database"
+       (passa solo dopo aver fatto login da qualche parte — vedi sotto).
+     - Altrimenti, da console DB:
+           docker compose exec db psql -U <utente> -d <db>
+       e crea manualmente un utente con la password hashata (bcrypt).
+       Se ti serve, ti scrivo lo snippet Python.
+
+  c) Per importare i dati storici, usa l'endpoint di migration import
+     (admin only). Operazione "wipe" disponibile.
+
+
+==========================================================================
+6) DEPLOY DEL FRONTEND
+==========================================================================
+
+Sul tuo PC (NON sulla VM):
+
+    cd frontend
+    npm install      # solo la prima volta
+    npm run build
+
+Si crea `frontend/dist/`. Trasferisci SOLO quella cartella sulla VM
+(es. via scp o git+pull se la repo include dist/, ma in genere dist/
+NON va committato — meglio copiarla manualmente o con uno script CI).
+
+Configura il reverse proxy per servire i file statici di dist/ e
+fare proxy_pass delle chiamate /api/... e /auth/... e /docs (se
+abilitato) verso il backend.
+
+IMPORTANTE: l'URL del backend si configura via variabile Vite
+VITE_API_URL. In dev (default) punta a localhost:8000. In prod
+DEVI impostarla prima del build:
+
+    cd frontend
+    # opzione A: variabile inline
+    VITE_API_URL=https://hub.parametricomparison.unimore.it npm run build
+
+    # opzione B: file frontend/.env.production (gitignored)
+    echo "VITE_API_URL=https://hub.parametricomparison.unimore.it" > .env.production
+    npm run build
+
+Se sbagli (o dimentichi) il sito buildato continuerà a chiamare
+localhost:8000 e tutto si rompe in browser. Verifica aprendo dist/
+e cercando "localhost:8000" — non deve esserci.
+
+
+==========================================================================
+7) BACKUP DEL DATABASE
+==========================================================================
+
+I dati Postgres vivono nel volume docker `postgres_data`. Backup base:
+
+    docker compose exec db pg_dump -U <user> -F c <db> > backup.dump
+
+Schedula questo comando con cron sulla VM, almeno giornaliero, e
+salva i dump fuori dalla VM (es. su Drive/SCP a un altro server).
+
+Per ripristinare:
+
+    docker compose exec -T db pg_restore -U <user> -d <db> -c < backup.dump
+
+
+==========================================================================
+8) COSE NON ANCORA SISTEMATE — DA FARE APPENA POSSIBILE
+==========================================================================
+
+Sono nell'audit di sicurezza ma non bloccano il deploy. Segnale: meglio
+farle entro le prime settimane di vita pubblica del sito.
+
+PRIORITÀ ALTA
+-------------
+[ ] Disabilitare /docs e /openapi.json in prod.
+    In backend/main.py, quando ENV=prod:
+        app = FastAPI(title="...", docs_url=None, redoc_url=None,
+                      openapi_url=None)
+    Altrimenti chiunque vede tutta la mappa degli endpoint.
+
+[ ] Rate-limit sul login.
+    Pacchetto: slowapi. Esempio: 5 tentativi al minuto per IP.
+    Senza, qualcuno può provare migliaia di password l'ora.
+
+[ ] Validazione upload Excel/ZIP.
+    Limite dimensione (es. 200 MB), check path-traversal sui file
+    dentro lo zip prima di estrarli (vedi routers/import_excel.py
+    e routers/migration.py).
+
+PRIORITÀ MEDIA
+--------------
+[ ] Token in cookie HttpOnly invece di localStorage.
+    Oggi se un attaccante riesce a iniettare uno script (XSS), legge
+    il token. Con HttpOnly il token non è accessibile da JS.
+    Richiede modifiche frontend + backend (set-cookie con SameSite=Strict).
+
+[ ] Password policy.
+    In routers/users.py, quando si crea/cambia password:
+    minimo 12 caratteri, almeno una maiuscola, una minuscola, un numero.
+
+[ ] Refresh token + blacklist.
+    Oggi un token rubato è valido per 30 minuti senza revoca possibile.
+    Implementare /auth/refresh e una tabella di token revocati.
+
+[ ] Reset password via email.
+    BLOCCATO: serve API key SMTP dei servizi informatici.
+    Quando arriverà: aggiungere endpoint /auth/password-reset/request
+    e /auth/password-reset/confirm con token via email.
+
+PRIORITÀ BASSA (housekeeping)
+-----------------------------
+[ ] Pulire __pycache__ dal git tracking:
+        git rm --cached -r backend/__pycache__/
+        git commit -m "untrack __pycache__"
+
+[ ] Lazy-loading delle rotte admin (React.lazy + Suspense in App.jsx).
+    Riduce il bundle che gli utenti normali devono scaricare.
+
+[ ] Migrare le colonne DateTime a TIMESTAMPTZ se mai si introduce una
+    UI timezone-aware. Oggi tutto è naive UTC e basta.
+
+
+==========================================================================
+9) DOPO IL DEPLOY — SMOKE TEST
+==========================================================================
+
+Apri il sito da una macchina che NON sta sulla VM. Testa:
+
+  [ ] La pagina pubblica home carica.
+  [ ] Login con un utente test funziona.
+  [ ] Creazione/modifica di un parametro funziona (admin).
+  [ ] Compilazione di un blocco parametro per una lingua funziona.
+  [ ] Il save mostra l'errore 409 se due tab modificano lo stesso blocco
+      e il primo salva (test della concorrenza).
+  [ ] Logout pulisce la sessione.
+  [ ] Da console del browser, chiama /docs: deve dare 404 (se hai fatto
+      la cosa al punto 8).
+
+Se qualcosa rompe, i log si guardano da Portainer:
+  Containers → pcm_backend → Logs (e idem per db).
+
+
+==========================================================================
+10) ROTAZIONE DELLA SECRET_KEY (in caso di sospetto)
+==========================================================================
+
+Se per qualunque motivo pensi che la SECRET_KEY di prod sia stata vista
+da qualcuno (collega che ha lasciato il team, screenshot per errore...):
+
+  1. Genera una chiave nuova (sezione 2.A).
+  2. Aggiorna SECRET_KEY in Portainer.
+  3. Ricrea il container backend.
+  4. Effetto: TUTTI i token attivi vengono invalidati. Tutti gli utenti
+     dovranno rifare login. Va detto in anticipo.
+
+La chiave compromessa nel git history vecchio (commit pre-c7df8a1) è
+inutile dal momento in cui hai una chiave nuova in produzione. Non c'è
+bisogno di riscrivere la history.
+
+
+==========================================================================
+APPUNTI VARI
+==========================================================================
+
+- Il file .env LOCALE non va mai committato. Il .gitignore lo blocca.
+- Il file .env.example serve come template per chi clona il repo.
+- In dev la porta DB è esposta su 127.0.0.1:5433 (non 5432) per evitare
+  conflitti con un eventuale Postgres nativo di Windows.

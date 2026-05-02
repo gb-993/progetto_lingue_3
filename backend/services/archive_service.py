@@ -19,6 +19,7 @@ from datetime import datetime
 import io
 
 from openpyxl import Workbook
+from time_utils import utc_now
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -100,7 +101,7 @@ def archive_and_wipe(
         help_info=question.help_info,
         is_stop_question=bool(question.is_stop_question),
         is_active=bool(question.is_active),
-        archived_at=datetime.utcnow(),
+        archived_at=utc_now(),
         archived_by_id=user_id,
         archive_note=(archive_note or "").strip(),
     )

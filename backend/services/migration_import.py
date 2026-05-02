@@ -51,6 +51,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Dict, Set, Any, Tuple, Iterable
 from datetime import datetime
+from time_utils import utc_now
 import io
 import os
 import zipfile
@@ -254,7 +255,7 @@ def _ensure_default_admin(db: Session) -> str:
         user.role = "admin"
         user.is_active = True
         user.terms_accepted = True
-        user.terms_accepted_at = user.terms_accepted_at or datetime.utcnow()
+        user.terms_accepted_at = user.terms_accepted_at or utc_now()
     else:
         user = models.User(
             email=email,
@@ -263,9 +264,9 @@ def _ensure_default_admin(db: Session) -> str:
             surname="PCM",
             role="admin",
             terms_accepted=True,
-            terms_accepted_at=datetime.utcnow(),
+            terms_accepted_at=utc_now(),
             is_active=True,
-            date_joined=datetime.utcnow(),
+            date_joined=utc_now(),
         )
         db.add(user)
     db.flush()

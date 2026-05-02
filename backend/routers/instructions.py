@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 import models
 from dependencies import get_db, require_admin, get_current_user
 from datetime import datetime
+from time_utils import utc_now
 
 router = APIRouter(prefix="/api/content", tags=["Content"])
 
@@ -35,7 +36,7 @@ def update_site_content(
 
     item.content = data.content
     item.updated_by_id = current_user.id
-    item.updated_at = datetime.utcnow()
+    item.updated_at = utc_now()
 
     db.commit()
     return {"detail": "Content updated successfully."}

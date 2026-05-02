@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
+from time_utils import utc_now
 import models
 
 # Massimo numero di snapshot mantenuti per ogni parametro
@@ -18,7 +19,7 @@ def create_parameter_submission(
     Salva: ParameterDef + tutte le Question + motivations ammesse per ciascuna
     Question. Niente dati delle lingue (quelli vivono nei Submission).
     """
-    now = fixed_time or datetime.utcnow()
+    now = fixed_time or utc_now()
 
     sub = models.ParameterSubmission(
         parameter_id=parameter.id,
@@ -111,7 +112,7 @@ def create_all_parameters_backup(
     timestamp (microsecondi azzerati) per formare la stessa "cartella".
     """
     parameters = db.query(models.ParameterDef).all()
-    fixed_time = datetime.utcnow().replace(microsecond=0)
+    fixed_time = utc_now().replace(microsecond=0)
     total_pruned = 0
 
     try:
@@ -136,7 +137,7 @@ def create_single_parameter_backup(
     db: Session, parameter: models.ParameterDef, user_id: int, note: str = ""
 ):
     """Backup di un singolo parametro: cartella dedicata col proprio timestamp."""
-    fixed_time = datetime.utcnow().replace(microsecond=0)
+    fixed_time = utc_now().replace(microsecond=0)
     try:
         sub, pruned = create_parameter_submission(db, parameter, user_id, note, fixed_time)
         db.commit()

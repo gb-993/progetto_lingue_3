@@ -1,5 +1,6 @@
 from typing import Optional, List
 from datetime import datetime
+from time_utils import utc_now
 import io
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -317,7 +318,7 @@ def export_parameters_info_pdf(
     pdf_bytes = build_all_parameters_pdf(parameters)
     buf = io.BytesIO(pdf_bytes)
     buf.seek(0)
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = utc_now().strftime("%Y%m%d_%H%M%S")
     filename = f"PCM_parameters_info_{ts}.pdf"
     return StreamingResponse(
         buf,

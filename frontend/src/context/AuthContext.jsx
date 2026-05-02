@@ -8,26 +8,22 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Al caricamento, controlla se c'è un token e recupera il profilo
+        // Al caricamento, controlla se c'è un token e recupera il profilo.
+        // Flag `active` per evitare setState dopo unmount o doppio-mount in
+        // StrictMode (React 18): la response del primo render non deve
+        // sovrascrivere lo stato del secondo.
+        let active = true;
         const token = localStorage.getItem('token');
-        if (token) {
-            fetchMe();
-        } else {
+        if (!token) {
             setLoading(false);
+            return;
         }
+        api.get('/api/me')
+            .then(res => { if (active) setUser(res.data); })
+            .catch(() => { if (active) logout(); })
+            .finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
     }, []);
-
-    const fetchMe = async () => {
-        try {
-            // Chiama l'endpoint /api/me che abbiamo nel backend
-            const res = await api.get('/api/me');
-            setUser(res.data);
-        } catch (err) {
-            logout();
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const login = (token, userData) => {
         localStorage.setItem('token', token);

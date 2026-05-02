@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+// URL del backend. In dev (senza variabile impostata) usa localhost:8000.
+// In prod, prima di `npm run build` imposta VITE_API_URL al dominio reale,
+// p.es. esportandola in shell o mettendola in frontend/.env.production:
+//   VITE_API_URL=https://hub.parametricomparison.unimore.it
+// Vite la inietta a build-time tramite import.meta.env.
 const api = axios.create({
-    baseURL: 'http://localhost:8000', // Assicurati che coincida col tuo server FastAPI
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
 });
 
 // Intercettore per aggiungere il Token a ogni richiesta

@@ -6,6 +6,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Lock il timezone del DB a UTC: i timestamp naive scritti dall'app
+      # vengono interpretati e restituiti coerentemente.
+      TZ: UTC
+      PGTZ: UTC
     ports:
       # Solo localhost (il DB non deve essere esposto sulla rete LAN).
       # Host 5433 -> container 5432: evita conflitto con PostgreSQL nativo di Windows.
@@ -24,6 +28,10 @@ services:
     # arrivano dal file .env al root del progetto.
     env_file:
       - .env
+    environment:
+      # Timezone del container in UTC (utc_now() resta UTC anche se il TZ
+      # del sistema host fosse diverso).
+      TZ: UTC
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --reload

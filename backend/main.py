@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # e poi `alembic upgrade head` fallisce con DuplicateTable).
 # Per applicare nuove migrazioni: docker compose exec backend alembic upgrade head
 
+from config import CORS_ORIGINS
 from routers import (auth,
                      glossary,
                      languages,
@@ -31,10 +32,14 @@ from routers import (auth,
 
 app = FastAPI(title="PCM-Hub API")
 
-# Abilita le chiamate dal frontend React
+# CORS: whitelist letta da .env (CORS_ORIGINS, comma-separated).
+# In dev: default localhost Vite (gestito in config.py).
+# In prod: deve essere impostato nel .env / variabili Portainer col dominio reale.
+# allow_credentials=True è incompatibile con "*", quindi NON usare wildcard.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "X-Skipped-Languages"],

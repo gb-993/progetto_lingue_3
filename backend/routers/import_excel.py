@@ -8,6 +8,7 @@ Endpoint:
 from __future__ import annotations
 from typing import List
 from datetime import datetime
+from time_utils import utc_now
 import io
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -114,7 +115,7 @@ def post_error_report_xlsx(
         ws_s = wb.create_sheet("Summary")
         ws_s.append(["Target language", payload.target_language_name, payload.target_language_id])
         ws_s.append(["Total errors", len(payload.errors)])
-        ws_s.append(["Generated at", datetime.utcnow().isoformat()])
+        ws_s.append(["Generated at", utc_now().isoformat()])
         for cell in ws_s["A"]:
             cell.font = Font(bold=True)
         ws_s.column_dimensions["A"].width = 22
@@ -122,7 +123,7 @@ def post_error_report_xlsx(
 
     buf = io.BytesIO()
     wb.save(buf); buf.seek(0)
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    ts = utc_now().strftime("%Y%m%d_%H%M%S")
     return StreamingResponse(
         buf, media_type=XLSX_MIME,
         headers={"Content-Disposition": f'attachment; filename="PCM_import_errors_{ts}.xlsx"'},

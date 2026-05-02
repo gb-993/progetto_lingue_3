@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint, Index, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
-from datetime import datetime
+from datetime import datetime  # noqa: F401  (mantenuto per eventuali type hints)
+from time_utils import utc_now
 
 class Base(DeclarativeBase):
     pass
@@ -20,7 +21,7 @@ class User(Base):
     terms_accepted = Column(Boolean, default=False)
     terms_accepted_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
-    date_joined = Column(DateTime, default=datetime.utcnow)
+    date_joined = Column(DateTime, default=utc_now)
 
     assigned_languages = relationship("Language", back_populates="assigned_user")
 
@@ -149,8 +150,11 @@ class LanguageParameterStatus(Base):
     """
     __tablename__ = "language_parameter_statuses"
     id = Column(Integer, primary_key=True)
+    # `language_id` è leftmost della UniqueConstraint sotto: già indicizzato.
+    # `parameter_id` invece serve un indice esplicito per query "tutti i record
+    # di questo parametro" (es. consolidate, dashboard cross-language).
     language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
 
@@ -180,13 +184,16 @@ class Question(Base):
 class Answer(Base):
     __tablename__ = "answers"
     id = Column(Integer, primary_key=True)
+    # `language_id` leftmost della UniqueConstraint -> già indicizzato.
+    # `question_id` ha bisogno di un indice esplicito per query "tutte le
+    # risposte a questa domanda" (export, history, consolidate cross-language).
     language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
-    question_id = Column(String(40), ForeignKey("questions.id"), nullable=False)
+    question_id = Column(String(40), ForeignKey("questions.id"), nullable=False, index=True)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
     response_text = Column(Enum("yes", "no", "unsure", name="response_types"), nullable=True)
     comments = Column(Text, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     language = relationship("Language", back_populates="answers")
     question = relationship("Question", back_populates="answers")
@@ -245,7 +252,7 @@ class ParameterChangeLog(Base):
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     change_note = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     parameter = relationship("ParameterDef", back_populates="change_logs")
     user = relationship("User")
 
@@ -277,7 +284,7 @@ class SiteContent(Base):
     key = Column(String(50), primary_key=True)  # Es: "instr_body"
     content = Column(Text, nullable=False)      # Il codice HTML generato dall'editor
     page = Column(String(100))                 # Riferimento alla pagina (es: "Instructions")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     updated_by = relationship("User")
@@ -291,7 +298,7 @@ class Submission(Base):
     id = Column(Integer, primary_key=True, index=True)
     language_id = Column(String(10), ForeignKey("languages.id", ondelete="CASCADE"), nullable=False)
     submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    submitted_at = Column(DateTime, default=datetime.utcnow, index=True)
+    submitted_at = Column(DateTime, default=utc_now, index=True)
     note = Column(Text, default="")
 
     # Relazioni
@@ -352,7 +359,7 @@ class SubmissionParam(Base):
     warning_orig = Column(Boolean, default=False)
     value_eval = Column(String(10), nullable=True)
     warning_eval = Column(Boolean, default=False)
-    evaluated_at = Column(DateTime, default=datetime.utcnow)
+    evaluated_at = Column(DateTime, default=utc_now)
 
     submission = relationship("Submission", back_populates="params")
 
@@ -371,7 +378,7 @@ class ParameterSubmission(Base):
     parameter_id = Column(String(10), nullable=False, index=True)
     parameter_name = Column(String(200), nullable=False, default="")
     submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    submitted_at = Column(DateTime, default=datetime.utcnow, index=True)
+    submitted_at = Column(DateTime, default=utc_now, index=True)
     note = Column(Text, default="")
 
     # Snapshot dei campi del ParameterDef
@@ -463,7 +470,7 @@ class EntityVersion(Base):
     source = Column(String(40), default="manual", nullable=False)
     note = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
 
     user = relationship("User")
 
@@ -497,7 +504,7 @@ class ArchivedQuestion(Base):
     is_stop_question = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
-    archived_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    archived_at = Column(DateTime, default=utc_now, nullable=False, index=True)
     archived_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     archive_note = Column(Text, default="")
     answers_count = Column(Integer, nullable=False, default=0)

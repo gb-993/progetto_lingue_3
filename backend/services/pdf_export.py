@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 from typing import Any, Iterable
 
+from time_utils import utc_now
+
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
@@ -238,7 +240,7 @@ def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
     pdf.cell(0, 12, "Parameters Overview", ln=True)
     pdf.set_font(FONT_FAMILY, size=11)
     pdf.set_text_color(97, 101, 107)
-    pdf.cell(0, 7, f"Generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
+    pdf.cell(0, 7, f"Generated on {utc_now().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
     pdf.cell(0, 7, f"Total parameters: {len(parameters)}", ln=True)
     pdf.ln(4)
 
@@ -433,7 +435,7 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
 
     pdf.set_font(FONT_FAMILY, size=10)
     pdf.set_text_color(97, 101, 107)
-    pdf.cell(0, 6, f"Generated on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
+    pdf.cell(0, 6, f"Generated on {utc_now().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
     pdf.cell(0, 6, f"Total entries: {len(entries)}", ln=True)
     pdf.ln(4)
 

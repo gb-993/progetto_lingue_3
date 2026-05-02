@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
+from time_utils import utc_now
 import models
 
 # Massimo numero di salvataggi storici mantenuti per ogni lingua
@@ -10,7 +11,7 @@ def create_language_submission(db: Session, language: models.Language, user_id: 
     Crea uno snapshot 'full' per una singola lingua.
     Equivalente al vecchio services.py di Django.
     """
-    now = fixed_time or datetime.utcnow()
+    now = fixed_time or utc_now()
 
     # 1. Creazione record principale Submission
     sub = models.Submission(
@@ -109,7 +110,7 @@ def create_all_languages_backup(db: Session, user_id: int, note: str = "Global b
 
     # Trucco fondamentale: azzeriamo i microsecondi per far sì che
     # tutto il backup appartenga alla stessa identica data (la nostra "cartella")
-    fixed_time = datetime.utcnow().replace(microsecond=0)
+    fixed_time = utc_now().replace(microsecond=0)
 
     total_pruned = 0
 

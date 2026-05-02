@@ -10,6 +10,7 @@ Endpoint:
 from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
+from time_utils import utc_now
 import io
 import math
 import zipfile
@@ -48,7 +49,7 @@ def _xlsx_response(wb, filename: str) -> StreamingResponse:
 
 
 def _ts() -> str:
-    return datetime.utcnow().strftime("%Y%m%d")
+    return utc_now().strftime("%Y%m%d")
 
 
 # ============================================================================

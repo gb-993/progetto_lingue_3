@@ -1,9 +1,10 @@
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 from jose import jwt
 
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from time_utils import utc_now
 
 __all__ = [
     "SECRET_KEY",
@@ -30,7 +31,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     # Se non viene passato `expires_delta` usiamo ACCESS_TOKEN_EXPIRE_MINUTES
     # (prima il default era 15 min, incoerente con la costante).
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
+    expire = utc_now() + (
         expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire})

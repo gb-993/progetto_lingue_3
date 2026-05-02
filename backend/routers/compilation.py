@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Dict
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from time_utils import utc_now
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, or_, case
@@ -300,7 +301,11 @@ def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Op
 # --- ENDPOINT: SALVATAGGIO MASSIVO PARAMETRO ---
 @router.post("/{lang_id}/parameters/{param_id}/save_block")
 def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSavePayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    # Lock pessimistico sulla Language: serializza due save_block concorrenti sulla
+    # stessa lingua. L'optimistic check sotto resta come barriera primaria
+    # (e dà 409 con UX chiara), questo lock chiude la finestra di TOCTOU
+    # tra il check e l'UPDATE delle Answer. Coerente con dag_eval / param_consolidate.
+    language = db.query(models.Language).with_for_update().filter(func.lower(models.Language.id) == lang_id.lower()).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     _ensure_can_modify(language, current_user)
 
@@ -447,7 +452,7 @@ def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: m
         raise HTTPException(status_code=409, detail=f"Cannot submit: current status '{language.status}'.")
 
     language.status = "waiting_for_approval"
-    language.submitted_at = datetime.utcnow()
+    language.submitted_at = utc_now()
     language.rejection_note = None  # ripuliamo eventuale nota di rifiuto precedente
     db.commit()
     return {"detail": "Language submitted for approval.", "status": language.status}
@@ -464,7 +469,7 @@ def approve_language(lang_id: str, db: Session = Depends(get_db), current_user: 
         raise HTTPException(status_code=409, detail=f"Cannot approve: current status '{language.status}'.")
 
     language.status = "approved"
-    language.reviewed_at = datetime.utcnow()
+    language.reviewed_at = utc_now()
     language.rejection_note = None
     db.commit()
     return {"detail": "Language approved.", "status": language.status}
@@ -481,7 +486,7 @@ def reject_language(lang_id: str, payload: RejectPayload, db: Session = Depends(
         raise HTTPException(status_code=409, detail=f"Cannot reject: current status '{language.status}'.")
 
     language.status = "rejected"
-    language.reviewed_at = datetime.utcnow()
+    language.reviewed_at = utc_now()
     language.rejection_note = (payload.note or "").strip() or None
     db.commit()
     return {"detail": "Language rejected.", "status": language.status, "rejection_note": language.rejection_note}
@@ -522,7 +527,7 @@ def admin_force_approve_language(
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "approved"
-    language.reviewed_at = datetime.utcnow()
+    language.reviewed_at = utc_now()
     language.rejection_note = None
     db.commit()
     background_tasks.add_task(_run_dag_in_background, language.id)
@@ -541,7 +546,7 @@ def admin_force_reject_language(
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "rejected"
-    language.reviewed_at = datetime.utcnow()
+    language.reviewed_at = utc_now()
     language.rejection_note = (payload.note or "").strip() or None
     db.commit()
     return {"detail": "Language forced to rejected.", "status": language.status, "rejection_note": language.rejection_note}
@@ -574,7 +579,7 @@ def admin_force_waiting_language(
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "waiting_for_approval"
-    language.submitted_at = datetime.utcnow()
+    language.submitted_at = utc_now()
     language.rejection_note = None
     db.commit()
     return {"detail": "Language forced to waiting_for_approval.", "status": language.status}

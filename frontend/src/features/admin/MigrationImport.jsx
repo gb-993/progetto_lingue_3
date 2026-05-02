@@ -117,10 +117,22 @@ export default function MigrationImport() {
         }
     };
 
-    // Polling dello stato del job
+    // Polling dello stato del job.
+    // Bug precedente: il guard `if (jobState?.finished)` dentro l'intervallo
+    // leggeva una closure stale, quindi le richieste continuavano anche dopo
+    // che il job era finito. Ora fermiamo l'interval esplicitamente appena la
+    // response dice finished:true.
     useEffect(() => {
         if (!jobId) return;
         let cancelled = false;
+        let intervalId;
+
+        const stopPolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
 
         const poll = async () => {
             try {
@@ -128,6 +140,7 @@ export default function MigrationImport() {
                 if (cancelled) return;
                 setJobState(res.data);
                 if (res.data.finished) {
+                    stopPolling();
                     if (res.data.error) {
                         setError(res.data.error);
                     } else {
@@ -137,22 +150,19 @@ export default function MigrationImport() {
                 }
             } catch (err) {
                 if (cancelled) return;
+                stopPolling();
                 setError(err.response?.data?.detail || 'Error polling job status.');
                 setBusy(false);
             }
         };
 
         poll();
-        const intervalId = setInterval(() => {
-            if (jobState?.finished) return;
-            poll();
-        }, 1500);
+        intervalId = setInterval(poll, 1500);
 
         return () => {
             cancelled = true;
-            clearInterval(intervalId);
+            stopPolling();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [jobId]);
 
     // Timer "elapsed" lato client

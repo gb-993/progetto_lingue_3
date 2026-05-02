@@ -16,6 +16,7 @@ import io
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from time_utils import utc_now
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
@@ -191,7 +192,7 @@ def export_archived_question_xlsx(
     wb = archive_service.build_archived_question_workbook(db, arch)
     data = archive_service.workbook_to_bytes(wb)
 
-    ts = (arch.archived_at or datetime.utcnow()).strftime("%Y%m%d")
+    ts = (arch.archived_at or utc_now()).strftime("%Y%m%d")
     fname = f"PCM_archived_{arch.original_question_id}_{ts}.xlsx"
     return StreamingResponse(
         io.BytesIO(data),
