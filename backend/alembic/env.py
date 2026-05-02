@@ -23,6 +23,11 @@ if config.config_file_name is not None:
 from models import Base
 target_metadata = Base.metadata
 
+# Sovrascriviamo l'URL del DB letto da alembic.ini con quello di config.py,
+# così le credenziali arrivano da .env / variabili d'ambiente.
+from config import DATABASE_URL
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")

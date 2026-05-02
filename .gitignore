@@ -1,0 +1,33 @@
+# ---- Segreti / configurazione locale (NON committare) ----
+.env
+.env.*
+!.env.example
+
+# ---- Python / FastAPI ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenv
+venv/
+.venv/
+env/
+.env_venv/
+
+# ---- Node ----
+node_modules/
+
+# ---- IDE / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/

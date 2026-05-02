@@ -76,7 +76,14 @@
       "Bash(node_modules/.bin/eslint src/features/queries/BlameTable.jsx)",
       "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx)",
       "Bash(node_modules/.bin/eslint src/features/queries/QueriesDashboard.jsx src/features/queries/BlameTable.jsx)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(dir src *)",
+      "Bash(python -c \"import secrets; print\\(secrets.token_urlsafe\\(48\\)\\)\")",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_urlsafe\\(48\\)\\)\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5432 -ErrorAction SilentlyContinue | Select-Object LocalAddress, LocalPort, State, OwningProcess | Format-Table -AutoSize; Get-Process -Id \\(Get-NetTCPConnection -LocalPort 5432 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique\\) -ErrorAction SilentlyContinue | Select-Object Id, ProcessName | Format-Table -AutoSize)",
+      "Bash(curl -s -o NUL -w \"HTTP %%{http_code}\\\\n\" http://localhost:8000/docs)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/docs\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"docs: HTTP \" + $r.StatusCode\\) } catch { Write-Output \\(\"docs FAIL: \" + $_.Exception.Message\\) }; try { $body = '{\"email\":\"test@test.local\",\"password\":\"wrong\"}'; $r = Invoke-WebRequest -Uri \"http://localhost:8000/auth/login\" -Method POST -ContentType \"application/json\" -Body $body -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"login: HTTP \" + $r.StatusCode + \" \" + $r.Content\\) } catch { $sc = $null; if \\($_.Exception.Response\\) { $sc = [int]$_.Exception.Response.StatusCode } Write-Output \\(\"login: HTTP \" + $sc + \" \\(atteso 400 = backend vivo, JWT path OK\\)\"\\) })",
+      "Bash(git check-ignore *)"
     ]
   }
 }
