@@ -60,6 +60,11 @@ export default function ParameterForm() {
     const [changeNote, setChangeNote] = useState('');
     const [changeLogs, setChangeLogs] = useState([]);
     const [draftReady, setDraftReady] = useState(false);
+    // Flag interno: se attivo, al submit la nota viene prefissata con
+    // "Test edit. " in modo che i filtri (`startsWith("Test edit")` su UI,
+    // dashboard, PDF) la escludano. Il prefisso non è visibile in textarea
+    // così l'admin non può modificarlo per sbaglio invalidando il filtro.
+    const [isTestEdit, setIsTestEdit] = useState(false);
 
     // Persistenza locale della bozza: chiave per-id (o "new" in creazione)
     const { clearDraft, lastSavedAt } = useFormDraft({
@@ -181,7 +186,8 @@ export default function ParameterForm() {
         }
         setIsSaving(true);
         try {
-            const payload = { ...formData, position: parseInt(formData.position, 10), change_note: changeNote };
+            const finalNote = isTestEdit ? `Test edit. ${changeNote}` : changeNote;
+            const payload = { ...formData, position: parseInt(formData.position, 10), change_note: finalNote };
             isEditMode ? await api.put(`/api/admin/parameters/${id}`, payload) : await api.post('/api/admin/parameters', payload);
             clearDraft();
             navigate('/admin/parameters');
@@ -536,26 +542,42 @@ export default function ParameterForm() {
                                                 opacity: !isDirty ? 0.7 : 1
                                             }}
                                         />
-                                        <button
-                                            type="button"
-                                            className="btn btn--small"
+                                        <label
                                             style={{
-                                                marginTop: '0.5rem',
+                                                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                                marginTop: '0.5rem', fontSize: '0.82rem',
                                                 opacity: !isDirty ? 0.5 : 1,
-                                                cursor: !isDirty ? 'not-allowed' : 'pointer'
+                                                cursor: !isDirty ? 'not-allowed' : 'pointer',
+                                                // Container è giallo hard-coded quando dirty: forziamo testo
+                                                // scuro per leggibilità anche in dark mode (altrimenti
+                                                // var(--text) sarebbe bianco su giallo).
+                                                color: !isDirty ? 'var(--text)' : (isTestEdit ? '#664d03' : '#15181c'),
                                             }}
-                                            disabled={!isDirty} // Disabilitato se non ci sono modifiche
-                                            onClick={() => setChangeNote("Test edit")}
+                                            title="If checked, this entry will be excluded from change history (dashboard, panel, PDF)"
                                         >
-                                            Test edit
-                                        </button>
+                                            <input
+                                                type="checkbox"
+                                                checked={isTestEdit}
+                                                disabled={!isDirty}
+                                                onChange={e => setIsTestEdit(e.target.checked)}
+                                            />
+                                            <span>🧪 Mark as test edit</span>
+                                        </label>
+                                        {isTestEdit && isDirty && (
+                                            <div style={{
+                                                marginTop: '0.4rem', fontSize: '0.72rem',
+                                                color: '#664d03', fontStyle: 'italic',
+                                            }}>
+                                                This entry will be hidden from change history.
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div style={{ background: 'var(--surface)', color: 'var(--text)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', maxHeight: '130px', overflowY: 'auto' }}>
                                         <h5 style={{ marginTop: 0, marginBottom: '0.5rem' }}>Latest Recorded Changes</h5>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {changeLogs
-                                                .filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED"))
+                                                .filter(log => !log.change_note.startsWith("Test edit") && !log.change_note.startsWith("DEACTIVATED"))
                                                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                                                 .map(log => (
                                                     <div key={log.id} style={{ fontSize: '0.8rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.25rem' }}>
@@ -563,7 +585,7 @@ export default function ParameterForm() {
                                                     </div>
                                                 ))
                                             }
-                                            {changeLogs.filter(log => log.change_note !== "Test edit" && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
+                                            {changeLogs.filter(log => !log.change_note.startsWith("Test edit") && !log.change_note.startsWith("DEACTIVATED")).length === 0 && (
                                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No recent changes recorded.</span>
                                             )}
                                         </div>

@@ -409,7 +409,7 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
     """
     entries = [
         log for log in change_logs
-        if (log.change_note or "") != "Test edit"
+        if not (log.change_note or "").startswith("Test edit")
         and not (log.change_note or "").startswith("DEACTIVATED")
     ]
     entries.sort(

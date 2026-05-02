@@ -162,8 +162,8 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         joinedload(models.ParameterChangeLog.user),
         joinedload(models.ParameterChangeLog.parameter),
     ).filter(
-        models.ParameterChangeLog.change_note != "Modifica di test",
-        not_(models.ParameterChangeLog.change_note.startswith("Nuova domanda di test")),
+        not_(models.ParameterChangeLog.change_note.startswith("Test edit")),
+        not_(models.ParameterChangeLog.change_note.startswith("Test new question")),
         not_(models.ParameterChangeLog.change_note.startswith("DEACTIVATED")),
     ).order_by(models.ParameterChangeLog.created_at.desc()).limit(50).all()
 
