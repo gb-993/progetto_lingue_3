@@ -82,3 +82,9 @@ DATABASE_URL = _build_database_url()
 # non ha specificato nulla; in prod la lista DEVE essere esplicita.
 _default_cors = "" if IS_PROD else "http://localhost:5173,http://127.0.0.1:5173"
 CORS_ORIGINS = env_list("CORS_ORIGINS", _default_cors)
+
+# Solo in dev: permettiamo qualsiasi porta su localhost/127.0.0.1.
+# Vite ripiega su 5174/5175/... quando 5173 è già occupato (es. da un'altra
+# istanza o dal container docker), e dover ricordarsi di aggiungerle a mano
+# è una rottura. In prod questo regex resta None: vale solo la whitelist.
+CORS_ORIGIN_REGEX = None if IS_PROD else r"http://(localhost|127\.0\.0\.1)(:\d+)?"

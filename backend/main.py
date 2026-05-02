@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # e poi `alembic upgrade head` fallisce con DuplicateTable).
 # Per applicare nuove migrazioni: docker compose exec backend alembic upgrade head
 
-from config import CORS_ORIGINS
+from config import CORS_ORIGINS, CORS_ORIGIN_REGEX
 from routers import (auth,
                      glossary,
                      languages,
@@ -39,6 +39,7 @@ app = FastAPI(title="PCM-Hub API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

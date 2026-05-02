@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Select from 'react-select';
 import api from '../../api';
+import reactSelectStyles from '../../utils/reactSelectStyles';
 import BlameTable, { AnswersList } from './BlameTable';
 
 const QUERIES_MENU_COLLAPSED_KEY = 'pcm-queries-menu-collapsed';
@@ -745,7 +746,13 @@ function Q10QuestionPicker({
                                 ? 'Loading…'
                                 : 'No questions match the filters'
                         }
-                        styles={{ control: (base) => ({ ...base, minHeight: 38 }) }}
+                        styles={{
+                            ...reactSelectStyles,
+                            control: (base, state) => ({
+                                ...reactSelectStyles.control(base, state),
+                                minHeight: 38,
+                            }),
+                        }}
                     />
                 </div>
             </div>

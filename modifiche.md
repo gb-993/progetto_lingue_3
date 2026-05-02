@@ -74,7 +74,7 @@ L'idea è che la modifica al testo di una question potrebbe:
 - [x] Nuova pagina che permetta di selezionare lingue con gli stessi filtri che si trovano nella pagina della Table A e un bottone "Perform Mantel test and download results (.zip)" che scarichi le matrici di distanze geografiche e sintattiche (gcd.txt, hamming.txt e jaccard[+].txt) e i risultati dello script mantel.py. Lo script fa già tutte le combinazioni possibili dei file di distanze
 
 ## FILTERS
-- [ ] Aggiungere un filtro per cui selezionando una question si vedono per ogni lingua in una colonna la risposta a quella question e in un'altra colonna gli esempi relativi alla question
+- [x] Aggiungere un filtro per cui selezionando una question si vedono per ogni lingua in una colonna la risposta a quella question e in un'altra colonna gli esempi relativi alla question
 
 ## BACKUP
 - [x] Rimuovere il backup di prova del 9 gennaio (dal sito non si riesce perché dice "No backup found with this date.")
