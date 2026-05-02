@@ -33,8 +33,8 @@
 ## LINGUE DATA
 - [x] Nel foglio "Database model" dell'export aggiungere la colonna "Motivations" per le motivazioni selezionate sul sito dalla checkbox e la colonna Language_Example_Transliteration. Forse da quel foglio possiamo rimuovere le colonne Question, Question_Examples_YES e Question_Intructions_Comments visto che non sono info linguo-specifiche e teniamo quel foglio primariamente come "backup"?
 - [x] Sostituire "Download .xlsx" con "Export parametric data (.xlsx)"
-- [ ] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Save (per salvare ogni esempio singolarmente)
-- [ ] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Copy (per copiare testo/traslitterazione/glossa/traduzione/ref e poterli incollare nello blocco esempio di un'altra question, eventualmente anche di un altro parametro)
+- [/] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Save (per salvare ogni esempio singolarmente)
+- [x] Per ogni esempio vicino al pulsante Delete mettere anche il pulsante Copy (per copiare testo/traslitterazione/glossa/traduzione/ref e poterli incollare nello blocco esempio di un'altra question, eventualmente anche di un altro parametro)
 - [x] Cella con testo libero per ogni parametro di ogni lingua modificabile e visibile solo da admin
 - [x] Oltre a YES e NO aggiungere una possibile answer “unsure (still provide examples)” con obbligatori due esempi
 
