@@ -124,7 +124,7 @@ export default function PublicHome() {
             <header className="page-hero" style={{ textAlign: 'center', marginBottom: '2rem' }}>
                 <h1 className="page-title">Welcome to the PCM Hub</h1>
                 <p className="page-lead" style={{ maxWidth: '800px', margin: '0 auto 1.5rem' }}>
-                    The <a href="http://www.parametricomparison.unimore.it" target="_blank" rel="noreferrer"><strong>Parametric Comparison Method</strong></a> (PCM) compares languages using universal syntactic parameters to measure similarity and reconstruct phylogenetic relationships.
+                    The <a href="http://www.parametricomparison.unimore.it" target="_blank" rel="noreferrer"><strong>Parametric Comparison Method</strong></a> (PCM, Longobardi and Guardiano 2009) compares languages using universal syntactic parameters to measure their degree ofsimilarity, reconstruct phylogenetic relationships, and infer patterns of divergence and convergence at a cross-family level.
                 </p>
                 <div className="page-actions">
                     <Link to="/login" className="btn btn--primary">Login</Link>
@@ -194,7 +194,7 @@ export default function PublicHome() {
                     <div className="p-6" style={{ padding: '1.5rem', flexGrow: 1 }}>
                         <h3>How to cite</h3>
                         <p className="page-muted-block">
-                            If you use data, methodology or any resource from the PCM Hub, please cite your source appropriately following our guidelines.
+                            If you use data, methodology or any further material/resource from the PCM Hub in your research, please cite your source appropriately, following the Citation Guidelines below.
                         </p>
                     </div>
                     <div className="page-card-footer" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #eee' }}>
@@ -208,7 +208,7 @@ export default function PublicHome() {
                     <div className="p-6" style={{ padding: '1.5rem' }}>
                         <h3>Collaborations</h3>
                         <p className="page-muted-block">
-                            Interested in contributing to data collection or proposing a scientific collaboration?
+                            Are you interested in contributing to data collection or proposing a scientific collaboration?
                         </p>
                         <p style={{ marginTop: '1rem', fontWeight: 'bold' }}>
                             Contact us at: <br />
