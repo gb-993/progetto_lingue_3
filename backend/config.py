@@ -54,6 +54,25 @@ ALGORITHM = env("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = env_int("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 
 
+# ---------------------- Bootstrap admin ----------------------
+# Credenziali del primo admin creato in automatico all'avvio quando la
+# tabella `users` è vuota (vedi services/admin_bootstrap.py). Dopo che
+# almeno un utente esiste il bootstrap diventa no-op: cambi password e
+# nuovi utenti non vengono mai sovrascritti.
+#
+# In prod entrambe le variabili sono obbligatorie: senza, l'app si
+# rifiuta di partire (stessa filosofia di SECRET_KEY) per evitare di
+# esporre online un'istanza con un admin a credenziali di default.
+ADMIN_EMAIL = env("ADMIN_EMAIL")
+ADMIN_PASSWORD = env("ADMIN_PASSWORD")
+if IS_PROD and (not ADMIN_EMAIL or not ADMIN_PASSWORD):
+    raise RuntimeError(
+        "ADMIN_EMAIL e ADMIN_PASSWORD sono obbligatorie in produzione. "
+        "Impostale come variabili d'ambiente prima del primo deploy: "
+        "verranno usate per creare il primo admin quando il DB è vuoto."
+    )
+
+
 # ---------------------- Database ----------------------
 def _build_database_url() -> str:
     explicit = env("DATABASE_URL")

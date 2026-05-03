@@ -11,7 +11,7 @@ quel `code`. Per i casi ambigui (code presente piu' volte) lasciamo NULL: il
 codice restera' l'unica informazione disponibile per quei vecchi record.
 
 Revision ID: c4f8a17b9d20
-Revises: b1d4e7f0a3c5
+Revises: f5a8c2d4b7e0
 Create Date: 2026-04-30 12:00:00.000000
 
 """
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 
 
 revision: str = 'c4f8a17b9d20'
-down_revision: Union[str, Sequence[str], None] = 'b1d4e7f0a3c5'
+down_revision: Union[str, Sequence[str], None] = 'f5a8c2d4b7e0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

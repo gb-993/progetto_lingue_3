@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Per applicare nuove migrazioni: docker compose exec backend alembic upgrade head
 
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX
+from services.admin_bootstrap import bootstrap_first_admin
 from routers import (auth,
                      glossary,
                      languages,
@@ -30,7 +33,16 @@ from routers import (auth,
                      migration,
                      archived_questions)
 
-app = FastAPI(title="PCM-Hub API")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Crea il primo admin se la tabella users e' vuota. Idempotente: dal
+    # secondo avvio in poi e' un no-op. Le credenziali in prod arrivano
+    # da ADMIN_EMAIL/ADMIN_PASSWORD (config.py impone fail-fast se mancano).
+    bootstrap_first_admin()
+    yield
+
+
+app = FastAPI(title="PCM-Hub API", lifespan=lifespan)
 
 # CORS: whitelist letta da .env (CORS_ORIGINS, comma-separated).
 # In dev: default localhost Vite (gestito in config.py).
