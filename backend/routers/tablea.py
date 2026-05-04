@@ -23,6 +23,7 @@ from adjustText import adjust_text
 
 import models
 from dependencies import get_db, require_admin
+from services.citation import apply_excel_citation
 
 router = APIRouter(prefix="/api/tablea", tags=["Table A"])
 
@@ -181,6 +182,7 @@ def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_d
         ws.append(["Label", "Parameter", "Implicational Condition(s)"] + [l.id for l in langs])
         for r in rows: ws.append([r["id"], r["name"], r["extra"]] + r["cells"])
 
+    apply_excel_citation(wb)
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)

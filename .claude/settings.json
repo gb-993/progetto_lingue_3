@@ -86,7 +86,17 @@
       "Bash(git check-ignore *)",
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/docs\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"backend /docs: HTTP \" + $r.StatusCode\\) } catch { Write-Output \\(\"backend FAIL: \" + $_.Exception.Message\\) }; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173/\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"frontend /: HTTP \" + $r.StatusCode\\) } catch { Write-Output \\(\"frontend FAIL: \" + $_.Exception.Message\\) })",
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/queries/by-question?q_id=NONESISTE\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"HTTP \" + $r.StatusCode + \" \" + $r.Content\\) } catch { $sc = $null; if \\($_.Exception.Response\\) { $sc = [int]$_.Exception.Response.StatusCode } Write-Output \\(\"HTTP \" + $sc + \" \\(atteso 404\\)\"\\) })",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/queries/options/questions-for-language?lang_id=NONESISTE\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"HTTP \" + $r.StatusCode + \" body=\" + $r.Content\\) } catch { $sc = $null; if \\($_.Exception.Response\\) { $sc = [int]$_.Exception.Response.StatusCode } Write-Output \\(\"HTTP \" + $sc\\) })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:8000/api/queries/options/questions-for-language?lang_id=NONESISTE\" -UseBasicParsing -TimeoutSec 5; Write-Output \\(\"HTTP \" + $r.StatusCode + \" body=\" + $r.Content\\) } catch { $sc = $null; if \\($_.Exception.Response\\) { $sc = [int]$_.Exception.Response.StatusCode } Write-Output \\(\"HTTP \" + $sc\\) })",
+      "Bash(python -m pytest tests/test_excel_export.py tests/test_excel_import.py -x --tb=short)",
+      "PowerShell(Get-ChildItem backend -Filter \"venv\",\"\\\\.venv\" -Force -ErrorAction SilentlyContinue; Get-ChildItem -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -in @\\(\"venv\",\".venv\",\"env\",\".env\"\\) } | Select-Object FullName; Get-ChildItem backend -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -in @\\(\"venv\",\".venv\",\"env\"\\) } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem C:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub -Force | Where-Object { $_.PSIsContainer } | Select-Object Name; Get-ChildItem C:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub\\\\backend -Force | Where-Object { $_.PSIsContainer } | Select-Object Name)",
+      "Bash(python -c \"from openpyxl import Workbook; from services.citation import apply_excel_citation, build_citation_text, render_pdf_citation_footer; wb = Workbook\\(\\); wb.active.append\\(['x']\\); apply_excel_citation\\(wb\\); print\\('citation text:', repr\\(build_citation_text\\(\\)\\)\\); print\\('view:', wb.active.sheet_view.view\\); print\\('footer:', wb.active.oddFooter.center.text\\); print\\('bottom margin:', wb.active.page_margins.bottom\\); print\\('OK'\\)\")",
+      "Bash(where python *)",
+      "Bash(where pip *)",
+      "Bash(pip list *)",
+      "Bash(\"C:\\\\Users\\\\Gb\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\python.exe\" -m pip list)",
+      "Bash(C:/Users/Gb/AppData/Local/Programs/Python/Python313/python.exe -c ' *)",
+      "Bash(\"C:/Users/Gb/AppData/Local/Programs/Python/Python313/python.exe\" -m pip list)"
     ]
   }
 }

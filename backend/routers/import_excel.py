@@ -21,6 +21,7 @@ from openpyxl.styles import Font
 import models
 from dependencies import get_db, require_admin
 from services.excel_import import import_excel
+from services.citation import apply_excel_citation
 
 
 router = APIRouter(prefix="/api/admin/import", tags=["Import"])
@@ -121,6 +122,7 @@ def post_error_report_xlsx(
         ws_s.column_dimensions["A"].width = 22
         ws_s.column_dimensions["B"].width = 50
 
+    apply_excel_citation(wb)
     buf = io.BytesIO()
     wb.save(buf); buf.seek(0)
     ts = utc_now().strftime("%Y%m%d_%H%M%S")

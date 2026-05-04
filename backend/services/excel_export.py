@@ -22,6 +22,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from sqlalchemy.orm import Session
 
 import models
+from services.citation import apply_excel_citation
 
 
 # ============================================================================
@@ -242,6 +243,7 @@ def build_language_workbook(
     _style_table(ws_examples, "Examples", len(EXAMPLES_HEADERS), [14, 14, 10, 36, 22, 22, 26, 24])
 
     if not is_admin:
+        apply_excel_citation(wb)
         return wb
 
     # === Sheet Database_model (admin, primo sheet visivo) ===
@@ -367,6 +369,7 @@ def build_language_workbook(
     # === Sheet schema (Motivations, Parameters, Questions, QuestionAllowedMotivations) ===
     _append_schema_sheets(db, wb)
 
+    apply_excel_citation(wb)
     return wb
 
 
@@ -451,6 +454,7 @@ def build_language_list_workbook(
     if ws.max_row >= 2:
         ws.freeze_panes = "A2"
 
+    apply_excel_citation(wb)
     return wb
 
 
@@ -539,4 +543,5 @@ def build_schema_workbook(db: Session) -> Workbook:
     default = wb.active
     wb.remove(default)
     _append_schema_sheets(db, wb)
+    apply_excel_citation(wb)
     return wb

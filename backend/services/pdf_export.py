@@ -10,6 +10,8 @@ from time_utils import utc_now
 from fpdf import FPDF
 from fpdf.fonts import FontFace
 
+from services.citation import PDF_FOOTER_MARGIN_MM, render_pdf_citation_footer
+
 
 def _font_dir() -> str:
     """Locate the DejaVu TTF directory bundled with matplotlib.
@@ -25,60 +27,38 @@ def _font_dir() -> str:
 FONT_FAMILY = "DejaVu"
 
 
-class _ParamReport(FPDF):
+class _CitationFooterReport(FPDF):
+    """Base class: footer con citazione PCM_Hub + numero pagina.
+
+    Le sottoclassi devono solo definire ``header()`` e impostare
+    ``HEADER_TITLE``. Il footer e' centralizzato in services/citation.
+    """
+    HEADER_TITLE: str = ""
+
     def header(self) -> None:
         self.set_font(FONT_FAMILY, style="B", size=9)
         self.set_text_color(97, 101, 107)
-        self.cell(0, 10, "Parameter Detail Report", ln=True, align="R")
+        self.cell(0, 10, self.HEADER_TITLE, ln=True, align="R")
         self.set_draw_color(218, 221, 226)
         self.line(10, 18, 200, 18)
         self.ln(5)
 
     def footer(self) -> None:
-        self.set_y(-15)
-        self.set_font(FONT_FAMILY, style="I", size=8)
-        self.set_text_color(97, 101, 107)
-        self.set_draw_color(218, 221, 226)
-        self.line(10, self.get_y(), 200, self.get_y())
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+        render_pdf_citation_footer(self, FONT_FAMILY)
 
 
-class _ParamListReport(FPDF):
+class _ParamReport(_CitationFooterReport):
+    HEADER_TITLE = "Parameter Detail Report"
+
+
+class _ParamListReport(_CitationFooterReport):
     """Report con info generali di una collezione di parametri."""
-    def header(self) -> None:
-        self.set_font(FONT_FAMILY, style="B", size=9)
-        self.set_text_color(97, 101, 107)
-        self.cell(0, 10, "Parameters Info Report", ln=True, align="R")
-        self.set_draw_color(218, 221, 226)
-        self.line(10, 18, 200, 18)
-        self.ln(5)
-
-    def footer(self) -> None:
-        self.set_y(-15)
-        self.set_font(FONT_FAMILY, style="I", size=8)
-        self.set_text_color(97, 101, 107)
-        self.set_draw_color(218, 221, 226)
-        self.line(10, self.get_y(), 200, self.get_y())
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+    HEADER_TITLE = "Parameters Info Report"
 
 
-class _ParamChangelogReport(FPDF):
+class _ParamChangelogReport(_CitationFooterReport):
     """Report cronologia modifiche di un singolo parametro."""
-    def header(self) -> None:
-        self.set_font(FONT_FAMILY, style="B", size=9)
-        self.set_text_color(97, 101, 107)
-        self.cell(0, 10, "Parameter Change History", ln=True, align="R")
-        self.set_draw_color(218, 221, 226)
-        self.line(10, 18, 200, 18)
-        self.ln(5)
-
-    def footer(self) -> None:
-        self.set_y(-15)
-        self.set_font(FONT_FAMILY, style="I", size=8)
-        self.set_text_color(97, 101, 107)
-        self.set_draw_color(218, 221, 226)
-        self.line(10, self.get_y(), 200, self.get_y())
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+    HEADER_TITLE = "Parameter Change History"
 
 
 def _register_fonts(pdf: FPDF) -> None:
@@ -103,7 +83,7 @@ def build_parameter_pdf(parameter, questions) -> bytes:
     pdf = _ParamReport()
     _register_fonts(pdf)
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)
 
     def section_title(title: str) -> None:
         pdf.ln(5)
@@ -229,7 +209,7 @@ def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
 
     pdf = _ParamListReport()
     _register_fonts(pdf)
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)
     pdf.add_page()
 
     page_width = pdf.w - pdf.l_margin - pdf.r_margin
@@ -420,7 +400,7 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
     pdf = _ParamChangelogReport()
     _register_fonts(pdf)
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)
 
     pdf.set_font(FONT_FAMILY, style="B", size=18)
     pdf.set_text_color(27, 29, 32)

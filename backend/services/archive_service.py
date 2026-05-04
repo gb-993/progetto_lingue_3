@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 import models
+from services.citation import apply_excel_citation
 
 
 # ============================================================================
@@ -295,6 +296,7 @@ def build_archived_question_workbook(
         ws, "ArchivedDatabaseModel", len(ARCHIVED_DB_HEADERS),
         [22, 12, 12, 22, 14, 36, 26, 26, 12, 22, 26, 30, 24, 22, 26, 24],
     )
+    apply_excel_citation(wb)
     return wb
 
 
