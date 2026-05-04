@@ -39,6 +39,22 @@ YEAR = "2026"
 WORK_TITLE = "The PCM_Hub"
 VERSION = "version 1"
 
+# ----------------------------------------------------------------------------
+# Document core properties (visibili in File -> Informazioni e Esplora risorse).
+# I campi "Societa'" (Company) e "Responsabile" (Manager) sono in app.xml,
+# che openpyxl non espone: se servissero, occorrerebbe post-processing del
+# file .xlsx come zip. Per ora si tengono solo le core properties.
+# ----------------------------------------------------------------------------
+DOC_TITLE = "PCM_Hub - Data Export"
+DOC_CREATOR = "PCM_Hub"
+DOC_SUBJECT = "Linguistic parameter data"
+DOC_KEYWORDS = (
+    "PCM_Hub, linguistics, parameters, comparative syntax, "
+    "parametric comparison method"
+)
+DOC_CATEGORY = "Linguistic dataset"
+DOC_LANGUAGE = "en"
+
 
 def _format_date(dt: datetime) -> str:
     return dt.strftime("%d/%m/%Y")
@@ -68,17 +84,24 @@ def build_citation_text(when: Optional[datetime] = None) -> str:
 
 def apply_excel_citation(wb: Workbook, when: Optional[datetime] = None) -> None:
     """
-    Applica la citazione come footer di stampa su ogni sheet del workbook.
+    Applica la citazione come footer di stampa su ogni sheet e popola le
+    proprieta' core del documento (visibili in File -> Informazioni).
 
     Effetti collaterali per sheet:
       - ``oddFooter.center.text``: la dicitura (font 8) su 2 righe.
       - ``page_margins.bottom``: aumentato a 1.0" per dare spazio al footer
         in stampa / anteprima / esportazione PDF.
 
+    Effetti sul workbook:
+      - ``wb.properties``: title/creator/lastModifiedBy/description/subject/
+        keywords/category/version/language popolati dalle costanti DOC_*.
+        ``description`` contiene la citazione completa (cosi' i linguisti la
+        trovano anche nel campo "Commenti" delle proprieta').
+
     Il file resta in vista Normale: i dati sono leggibili senza ricalcolo
     delle larghezze. Per vedere il footer a schermo l'utente deve passare
-    in "Layout di pagina" (Visualizza → Layout di pagina) o aprire l'anteprima
-    di stampa.
+    in "Layout di pagina" (Visualizza -> Layout di pagina) o aprire
+    l'anteprima di stampa.
 
     Sicuro da chiamare su workbook gia' popolati; non altera dati o tabelle.
     """
@@ -93,6 +116,18 @@ def apply_excel_citation(wb: Workbook, when: Optional[datetime] = None) -> None:
         # Margine inferiore generoso: il footer su 2 righe a 8pt richiede ~1".
         ws.page_margins.bottom = 1.0
         ws.page_margins.footer = 0.3
+
+    # Core document properties
+    p = wb.properties
+    p.title = DOC_TITLE
+    p.creator = DOC_CREATOR
+    p.lastModifiedBy = DOC_CREATOR
+    p.description = text
+    p.subject = DOC_SUBJECT
+    p.keywords = DOC_KEYWORDS
+    p.category = DOC_CATEGORY
+    p.version = VERSION.split()[-1]  # "1" da "version 1"
+    p.language = DOC_LANGUAGE
 
 
 # ----------------------------------------------------------------------------
