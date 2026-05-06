@@ -33,8 +33,8 @@ export default function HowToCite() {
 
     if (loading) return <div className="container"><p>Loading citation guidelines...</p></div>;
 
-    const paramsText = contents.params_cite || "Longobardi, Giuseppe & Cristina Guardiano. 2009. Evidence for syntax as a signal of historical relatedness. Lingua 119. 1679-1706.";
-    const dataText = contents.data_cite || "Guardiano, Cristina, et al. (eds.). 2026. The PCM_Hub (version 1).";
+    const paramsText = contents.params_cite || "Crisma, Paola, Giulia Fabbris, Giuseppe Longobardi, and Cristina Guardiano. 2025. What are your values? Journal of Historical Syntax, Volume 9, Article 3: 1-26, DOI: 10.18148/hs/2025.v9i2-10.182 (Electronic appendix also available at www.parametricomparison.unimore.it)";
+    const dataText = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds). 2026. The PCM_Hub (version 1, Accessed on XX/XX/20XX)";
 
     return (
         <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
@@ -49,7 +49,7 @@ export default function HowToCite() {
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Admins and Users</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Parameters & Manifestations</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                        Unless otherwise specified, if you quote a parameter description, please refer to:
+                        Unless otherwise specified in the description of each parameter, if you quote a parameter description or any parameter manifestation, please refer to:
                     </p>
 
                     <div style={{
@@ -84,9 +84,9 @@ export default function HowToCite() {
                 {/* CARD 2: DATA & MAP */}
                 <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Public and Admins</small>
-                    <h3 style={{ margin: '0.5rem 0' }}>Data, Map & Scripts</h3>
+                    <h3 style={{ margin: '0.5rem 0' }}>Updated language list & map, analyses, graphs and scripts</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                        To cite any content of the PCM Hub (except for parameters):
+                        To cite any content of the PCM Hub (except for parameters and manifestations):
                     </p>
 
                     <div style={{

@@ -415,7 +415,7 @@ export default function LanguageList() {
                         <select name="historical" value={filters.historical} onChange={handleFilter} style={inputStyle}>
                             <option value="all">Both</option>
                             <option value="yes">Only Historical</option>
-                            <option value="no">Only Non-Hist</option>
+                            <option value="no">Only Non-Historical</option>
                         </select>
                     </FilterField>
                     <FilterField label="Status">
@@ -475,7 +475,7 @@ export default function LanguageList() {
                                         Map (.png)
                                     </DropdownItem>
                                     <DropdownItem onClick={onExportGcd} disabled={exporting}>
-                                        Geo distances (.txt)
+                                        Geographic distances (.txt)
                                     </DropdownItem>
                                 </div>
                             )}

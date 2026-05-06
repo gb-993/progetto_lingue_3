@@ -112,7 +112,7 @@ export default function LanguageDebug() {
                         <th>Answers</th>
                         <th>Initial value</th>
                         <th>Warn (init)</th>
-                        <th>Condition(s)</th>
+                        <th>Implicational condition(s)</th>
                         <th>Check</th>
                         <th>Final value</th>
                         <th>Warn (final)</th>

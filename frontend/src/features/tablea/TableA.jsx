@@ -281,7 +281,7 @@ export default function TableA() {
                                 <select className="form-control" name="f_lang_hist" value={filters.f_lang_hist} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                     <option value="all">Both</option>
                                     <option value="yes">Only Historical</option>
-                                    <option value="no">Only Non-Hist</option>
+                                    <option value="no">Only Non-Historical</option>
                                 </select>
                             </div>
                             <div>

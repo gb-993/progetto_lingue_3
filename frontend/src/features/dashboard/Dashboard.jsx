@@ -78,7 +78,7 @@ function AdminDashboard() {
 function PendingApprovalsCard({ count, items }) {
     return (
         <div className={`card counter-card${count > 0 ? ' border-bad' : ''}`}>
-            <h3 className="admin-label">Waiting for Approvals</h3>
+            <h3 className="admin-label">Waiting for Approval</h3>
             <div className="admin-big-number">{count}</div>
             {items.length > 0 ? (
                 <div style={{ marginTop: '0.3rem', maxHeight: '120px', overflowY: 'auto', paddingRight: '0.25rem' }}>

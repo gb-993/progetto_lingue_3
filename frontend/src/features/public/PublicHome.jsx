@@ -124,7 +124,7 @@ export default function PublicHome() {
             <header className="page-hero" style={{ textAlign: 'center', marginBottom: '2rem' }}>
                 <h1 className="page-title">Welcome to the PCM Hub</h1>
                 <p className="page-lead" style={{ maxWidth: '800px', margin: '0 auto 1.5rem' }}>
-                    The <a href="http://www.parametricomparison.unimore.it" target="_blank" rel="noreferrer"><strong>Parametric Comparison Method</strong></a> (PCM, Longobardi and Guardiano 2009) compares languages using universal syntactic parameters to measure their degree ofsimilarity, reconstruct phylogenetic relationships, and infer patterns of divergence and convergence at a cross-family level.
+                    The <a href="http://www.parametricomparison.unimore.it" target="_blank" rel="noreferrer"><strong>Parametric Comparison Method</strong></a> (PCM, Longobardi and Guardiano 2009) compares languages using universal syntactic parameters to measure their degree of similarity, reconstruct phylogenetic relationships, and infer patterns of divergence and convergence at a cross-family level.
                 </p>
                 <div className="page-actions">
                     <Link to="/login" className="btn btn--primary">Login</Link>

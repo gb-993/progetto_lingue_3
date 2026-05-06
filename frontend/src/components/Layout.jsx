@@ -206,7 +206,7 @@ export function SiteFooter({ role }) {
 
                 <div className="footer-bottom">
                     <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                        © {year} – The PCM Hub Database. All rights reserved.
+                        © {year} – The PCM Hub. All rights reserved.
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <span className="role-badge">{roleLabel}</span>

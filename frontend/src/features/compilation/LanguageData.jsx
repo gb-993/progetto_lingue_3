@@ -262,7 +262,7 @@ export default function LanguageData() {
                                     to={`/languages/${language.id}/debug`}
                                     className="btn"
                                 >
-                                    Apply Implication
+                                    Apply implicational condition(s)
                                 </Link>
                                 <div ref={statusMenuRef} style={{ position: 'relative' }}>
                                     <button

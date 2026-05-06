@@ -445,7 +445,7 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{fontWeight: 'bold'}}>Implicational Condition</label>
+                            <label style={{fontWeight: 'bold'}}>Implicational Condition(s)</label>
                             <input
                                 type="text"
                                 name="implicational_condition"
@@ -458,7 +458,7 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{marginBottom: '1rem'}}>
-                            <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition</label>
+                            <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition(s)</label>
                             <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} placeholder="Textual explanation (optional)" />
                         </div>
 
