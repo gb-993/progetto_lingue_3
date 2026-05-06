@@ -22,6 +22,7 @@ import GlossaryForm from './features/glossary/GlossaryForm';
 
 import ParameterList from './features/parameters/ParameterList';
 import ParameterForm from './features/parameters/ParameterForm';
+import ParameterGraph from './features/parameters/ParameterGraph';
 import QuestionList from './features/questions/QuestionList';
 import QuestionForm from './features/questions/QuestionForm';
 import LanguageData from './features/compilation/LanguageData';
@@ -115,6 +116,7 @@ const router = createBrowserRouter([
             { path: 'admin/glossary/:id/edit', element: <AdminRoute><Layout><GlossaryForm /></Layout></AdminRoute> },
 
             { path: 'admin/parameters', element: <AdminRoute><Layout><ParameterList /></Layout></AdminRoute> },
+            { path: 'admin/parameters/graph', element: <AdminRoute><Layout><ParameterGraph /></Layout></AdminRoute> },
             { path: 'admin/parameters/add', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
             // Edit di un parametro: la rotta ha figli nested per la edit/aggiunta
             // di una question, che vengono renderizzate come drawer sopra il

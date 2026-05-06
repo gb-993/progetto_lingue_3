@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
-    DatabaseZap, BookOpen, BookA, PanelLeftClose, PanelLeftOpen,
+    DatabaseZap, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
 } from 'lucide-react';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
@@ -27,6 +27,7 @@ const PATH_LABELS = {
     'how-to-cite': 'How to cite',
     'me': 'My Account',
     'parameters': 'Parameters',
+    'graph': 'Graph',
     'questions': 'Questions',
     'motivations': 'Motivations',
     'taxonomy': 'Taxonomy',
@@ -305,9 +306,19 @@ export default function Layout({ children }) {
                                     {role === 'admin' && (
                                         <>
                                             <li>
-                                                <Link className={`btn ${isCurrent('/admin/parameters')}`} to="/admin/parameters" title="Parameters">
+                                                <Link
+                                                    className={`btn ${location.pathname.startsWith('/admin/parameters') && !location.pathname.startsWith('/admin/parameters/graph') ? 'is-current' : ''}`}
+                                                    to="/admin/parameters"
+                                                    title="Parameters"
+                                                >
                                                     <SlidersHorizontal size={18} className="nav-icon" />
                                                     <span className="nav-label">Parameters</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/parameters/graph')}`} to="/admin/parameters/graph" title="Parameters Graph">
+                                                    <Workflow size={18} className="nav-icon" />
+                                                    <span className="nav-label">Parameters Graph</span>
                                                 </Link>
                                             </li>
                                             <li>

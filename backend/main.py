@@ -16,6 +16,7 @@ from routers import (auth,
                      languages,
                      parameters,
                      parameters_backup,
+                     parameters_graph,
                      questions,
                      users,
                      motivations,
@@ -61,6 +62,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(glossary.router)
 app.include_router(glossary.public_router)
+app.include_router(parameters_graph.router)
 app.include_router(parameters.router)
 app.include_router(languages.router)
 app.include_router(questions.router)
