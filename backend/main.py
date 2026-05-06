@@ -76,6 +76,14 @@ app.add_middleware(
     expose_headers=["Content-Disposition", "X-Skipped-Languages"],
 )
 
+# Health check banale: serve a docker (healthcheck nel compose) e a un
+# eventuale monitoring esterno per verificare che il processo sia vivo.
+# NON pinga il DB: se vuoi un check piu' "deep" creiamo /healthz/deep.
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    return {"status": "ok"}
+
+
 app.include_router(auth.router)
 app.include_router(glossary.router)
 app.include_router(glossary.public_router)

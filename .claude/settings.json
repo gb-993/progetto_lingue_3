@@ -96,7 +96,11 @@
       "Bash(pip list *)",
       "Bash(\"C:\\\\Users\\\\Gb\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\python.exe\" -m pip list)",
       "Bash(C:/Users/Gb/AppData/Local/Programs/Python/Python313/python.exe -c ' *)",
-      "Bash(\"C:/Users/Gb/AppData/Local/Programs/Python/Python313/python.exe\" -m pip list)"
+      "Bash(\"C:/Users/Gb/AppData/Local/Programs/Python/Python313/python.exe\" -m pip list)",
+      "Bash(xargs git rm --cached --quiet)",
+      "Bash(git reset *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

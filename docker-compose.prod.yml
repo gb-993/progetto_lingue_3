@@ -55,6 +55,15 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    # Health check: pinga /healthz ogni 30s. start_period: tempo di
+    # boot di uvicorn + lifespan (bootstrap admin, ecc.) prima che
+    # docker inizi a contare i fallimenti.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     logging:
       driver: "json-file"
       options:

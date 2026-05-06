@@ -158,6 +158,12 @@ La prima volta che avvii lo stack:
 6) DEPLOY DEL FRONTEND
 ==========================================================================
 
+SCORCIATOIA: usa script/pc-build-frontend.ps1 dal root del progetto.
+Fa tutto in automatico: imposta VITE_API_URL, builda, verifica che il
+bundle non contenga "localhost:8000", crea frontend-dist.tgz, e
+stampa i comandi scp+ssh pronti da incollare. Il resto di questa
+sezione spiega cosa fa lo script (per debug se qualcosa va storto).
+
 Sul tuo PC (NON sulla VM):
 
     cd frontend
@@ -191,17 +197,43 @@ build senza VITE_API_URL impostato, ribuilda.
 7) BACKUP DEL DATABASE
 ==========================================================================
 
-I dati Postgres vivono nel volume docker `postgres_data`. Backup base:
+Due script complementari (vedi cartella script/):
 
-    docker compose -f docker-compose.prod.yml exec db pg_dump -U <user> -F c <db> > backup.dump
+  script/vm-backup-db.sh      → gira sulla VM, fa pg_dump nightly,
+                                 tiene SOLO gli ultimi 3 dump locali
+                                 (configurabile via KEEP=N).
+  script/pc-pull-backups.ps1  → gira sul tuo PC, scarica i dump via scp.
 
-Schedula questo comando con cron sulla VM, almeno giornaliero, e
-salva i dump fuori dalla VM (es. su Drive/SCP a un altro server).
-Con 8 GB di disco TIENI MAX 7 dump locali e il resto fuori.
+Setup sulla VM (una volta sola):
 
-Per ripristinare:
+  chmod +x /opt/pcm-hub/script/vm-backup-db.sh
+  mkdir -p /opt/pcm-hub/backups
+  crontab -e
+  # aggiungi (sostituisci <user>/<db> con i valori del tuo .env di prod):
+  POSTGRES_USER=<user>
+  POSTGRES_DB=<db>
+  0 3 * * * /opt/pcm-hub/script/vm-backup-db.sh >> /opt/pcm-hub/backups/cron.log 2>&1
+
+Setup sul PC (una volta sola):
+
+  - Genera una SSH key se non l'hai: ssh-keygen -t ed25519
+  - Copia la chiave pubblica sulla VM: ssh-copy-id user@vm
+    (oppure incolla a mano il contenuto di .ssh/id_ed25519.pub
+     in /home/user/.ssh/authorized_keys sulla VM).
+  - Verifica: ssh user@vm  → deve aprirsi senza chiedere password.
+
+Pull manuale dei backup (quando vuoi):
+
+  .\script\pc-pull-backups.ps1
+  # con default. Default LocalDir: $HOME\pcm-hub-backups\
+
+Restore di un dump:
 
     docker compose -f docker-compose.prod.yml exec -T db pg_restore -U <user> -d <db> -c < backup.dump
+
+NOTA limite: con KEEP=3 e 1 dump al giorno hai 3 giorni di rolling
+window. Lo script PC va lanciato almeno una volta a settimana
+(o messo in Windows Task Scheduler) per non perdere snapshot vecchi.
 
 
 ==========================================================================
@@ -299,25 +331,25 @@ PASSO 9 — importare il bundle di migrazione
 PASSO 10 — smoke test (vedi sezione 9).
 
 PASSO 11 — schedulare il backup (cron)
-  Sulla VM, crea /opt/pcm-hub/backup.sh:
+  Lo script gia' pronto e' in repo: script/vm-backup-db.sh.
+  Vedi sezione 7 per il setup completo (chmod, crontab, SSH key sul PC
+  per il pull con script/pc-pull-backups.ps1). Riassunto:
 
-      #!/bin/sh
-      set -e
-      cd /opt/pcm-hub
-      DATE=$(date +%Y%m%d-%H%M)
-      docker compose -f docker-compose.prod.yml exec -T db \
-        pg_dump -U pcm_prod -F c pcm_hub_prod > /opt/pcm-hub/backups/db-$DATE.dump
-      # Tieni solo gli ultimi 7
-      ls -1t /opt/pcm-hub/backups/db-*.dump | tail -n +8 | xargs -r rm
+      sudo chmod +x /opt/pcm-hub/script/vm-backup-db.sh
+      mkdir -p /opt/pcm-hub/backups
+      crontab -e
+      # aggiungi:
+      POSTGRES_USER=pcm_prod
+      POSTGRES_DB=pcm_hub_prod
+      0 3 * * * /opt/pcm-hub/script/vm-backup-db.sh >> /opt/pcm-hub/backups/cron.log 2>&1
 
-  chmod +x backup.sh
-  mkdir -p /opt/pcm-hub/backups
+  Lo script tiene SOLO gli ultimi 3 dump (KEEP=3 di default). Con i tuoi
+  8 GB e' la scelta giusta; quando arriveranno i 20 GB puoi alzare KEEP
+  a 7 modificando la riga del cron: KEEP=7 ... vm-backup-db.sh.
 
-  Crontab (crontab -e):
-      0 3 * * * /opt/pcm-hub/backup.sh >> /opt/pcm-hub/backups/cron.log 2>&1
-
-  Importante: copia periodicamente i dump fuori dalla VM (Drive,
-  altro server, ecc.). Con 8 GB ne tieni pochi locali.
+  IMPORTANTE: 3 dump = 3 giorni di rolling. Lancia
+  script/pc-pull-backups.ps1 dal PC almeno una volta a settimana (o
+  schedula da Windows Task Scheduler) per non perdere snapshot vecchi.
 
 
 ==========================================================================
