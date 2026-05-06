@@ -2,12 +2,14 @@
 ##
 ##   - DB non esposto sull'host (solo rete docker interna)
 ##   - backend non esposto sull'host (solo rete docker interna)
-##   - nessun bind-mount del codice: si usa l'immagine buildata
-##   - uvicorn senza --reload, con --proxy-headers per il reverse proxy
+##   - frontend buildato da un container "usa e getta" allo start dello stack
+##     (frontend_build) e servito da Caddy via volume nominato.
+##   - backup nightly fatto da un sidecar (no cron host, no SSH richiesto).
 ##   - Caddy davanti: HTTPS automatico via Let's Encrypt e SPA statica
 ##   - cleaner giornaliero per liberare spazio su VM piccola (8 GB)
 ##   - logging json-file con rotation a 10MB x 3 file
 ##
+## Tutto vive in volumi nominati Docker. Niente bind-mount su /opt/pcm-hub.
 ## Le variabili d'ambiente NON vengono lette da .env: vanno impostate
 ## come "Stack environment variables" in Portainer (vedi DEPLOY_NOTES.txt).
 
@@ -69,23 +71,108 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Container "usa e getta" che builda la SPA al deploy dello stack
+  # e copia frontend/dist nel volume nominato `frontend_dist`. Esce a 0.
+  # Caddy aspetta che questo finisca con successo prima di partire.
+  # Ogni "Pull and redeploy" su Portainer rifa' il git clone e ribuilda
+  # automaticamente la dist.
+  frontend_build:
+    image: node:20-alpine
+    container_name: pcm_frontend_build
+    working_dir: /build
+    volumes:
+      - ./frontend:/src:ro
+      - frontend_dist:/out
+    # Copia i sorgenti in /build (writable), installa, builda, e
+    # sposta dist/ nel volume condiviso. -E preserva i flag npm.
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        cp -r /src/. /build/
+        npm ci --no-audit --no-fund
+        npm run build
+        rm -rf /out/*
+        cp -r dist/. /out/
+        echo "[frontend_build] dist copiata in /out, esco."
+    restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   caddy:
     image: caddy:2-alpine
     container_name: pcm_caddy
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      frontend_build:
+        condition: service_completed_successfully
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # Path della SPA buildata. Default e' ./frontend/dist (dev / web
-      # editor), in Portainer Repository mode imposta FRONTEND_DIST_PATH
-      # a una cartella stabile sulla VM (es. /opt/pcm-hub/dist) perche'
-      # dist/ e' gitignored e non arriva nel clone di Portainer.
-      - ${FRONTEND_DIST_PATH:-./frontend/dist}:/srv/dist:ro
+      - frontend_dist:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Sidecar di backup. Una volta al giorno fa pg_dump del DB di prod
+  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=3 dump
+  # (3 giorni di rolling window). Recupero: console Portainer del
+  # container pcm_backup -> `cat /backups/<file>.dump | base64`.
+  backup:
+    image: postgres:16-alpine
+    container_name: pcm_backup
+    depends_on:
+      - db
+    environment:
+      PGHOST: ${POSTGRES_HOST}
+      PGPORT: ${POSTGRES_PORT}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      KEEP: "3"
+      TZ: UTC
+    volumes:
+      - pcm_backups:/backups
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        echo "[backup] avviato. KEEP=$$KEEP, dest=/backups"
+        # Aspetta che il DB sia su prima del primo dump.
+        until pg_isready -q; do
+          echo "[backup] DB non pronto, attendo 5s..."
+          sleep 5
+        done
+        while true; do
+          ts=$$(date -u +%Y%m%d-%H%M%S)
+          out="/backups/pcm-$$ts.dump"
+          tmp="$$out.partial"
+          echo "[backup] $$(date -Iseconds) inizio dump -> $$out"
+          if pg_dump -F c -f "$$tmp"; then
+            mv "$$tmp" "$$out"
+            echo "[backup] $$(date -Iseconds) dump ok ($$(stat -c%s "$$out") bytes)"
+          else
+            rm -f "$$tmp"
+            echo "[backup] $$(date -Iseconds) DUMP FALLITO"
+          fi
+          # Ritenzione: tieni gli ultimi KEEP file *.dump, cancella il resto.
+          ls -1t /backups/*.dump 2>/dev/null | tail -n +$$((KEEP+1)) | xargs -r rm -f
+          echo "[backup] $$(date -Iseconds) prossimo dump tra 24h"
+          sleep 86400
+        done
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -99,8 +186,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # Pulizia giornaliera. NON tocca i volumes (postgres_data, caddy_data,
-    # caddy_config restano intatti). Libera immagini orfane lasciate dai
-    # rebuild e cache di build (importante con 8 GB di disco).
+    # caddy_config, frontend_dist, pcm_backups restano intatti). Libera
+    # immagini orfane lasciate dai rebuild e cache di build (importante
+    # con 8 GB di disco).
     command:
       - sh
       - -c
@@ -125,3 +213,5 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  frontend_dist:
+  pcm_backups:

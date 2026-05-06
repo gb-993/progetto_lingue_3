@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-// URL del backend. In dev (senza variabile impostata) usa localhost:8000.
-// In prod, prima di `npm run build` imposta VITE_API_URL al dominio reale,
-// p.es. esportandola in shell o mettendola in frontend/.env.production:
-//   VITE_API_URL=https://hub.parametricomparison.unimore.it
-// Vite la inietta a build-time tramite import.meta.env.
+// URL del backend.
+// - In prod: il frontend e il backend stanno dietro lo stesso Caddy
+//   (stesso dominio), quindi baseURL vuoto = path relativi. Le chiamate
+//   /api/* e /auth/* le inoltra Caddy al backend.
+// - In dev (vite su :5173, backend su :8000): VITE_API_URL=http://localhost:8000
+//   nel .env locale del frontend, oppure il fallback qui sotto.
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+    baseURL: import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : ''),
 });
 
 // Intercettore per aggiungere il Token a ogni richiesta

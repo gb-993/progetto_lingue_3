@@ -4,7 +4,8 @@
 #   - tirare giu un certificato Let's Encrypt al primo avvio e rinnovarlo
 #     automaticamente ogni 60 giorni (richiede porte 80 e 443 aperte da
 #     internet e DNS del dominio puntato all'IP della VM);
-#   - servire la SPA da /srv/dist (montato bind-mount da ./frontend/dist);
+#   - servire la SPA da /srv/dist (volume nominato `frontend_dist`,
+#     popolato dal service `frontend_build` allo start dello stack);
 #   - fare reverse-proxy verso il backend FastAPI per /api/* e /auth/*;
 #   - gzip/zstd e header proxy standard.
 #
@@ -33,12 +34,15 @@ hub.parametricomparison.unimore.it {
 		max_size 250MB
 	}
 
-	# Backend FastAPI per le route API e auth.
+	# Backend FastAPI per le route API, auth e health check.
 	# X-Forwarded-* sono aggiunti automaticamente da reverse_proxy.
 	handle /api/* {
 		reverse_proxy backend:8000
 	}
 	handle /auth/* {
+		reverse_proxy backend:8000
+	}
+	handle /healthz {
 		reverse_proxy backend:8000
 	}
 

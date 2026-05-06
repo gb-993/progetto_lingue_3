@@ -1,12 +1,8 @@
 DEPLOY NOTES — PCM-Hub
 ======================
 
-Cosa fare PRIMA e DURANTE il deploy in produzione, e cosa lasciato indietro
-da fare appena possibile. Tieni questo file aggiornato man mano.
-
-
 ==========================================================================
-0) FILE DI PRODUZIONE — DOVE TROVI COSA
+0) FILE DI PRODUZIONE
 ==========================================================================
 
 Repository:
@@ -15,29 +11,31 @@ Repository:
   caddy/Caddyfile             → config reverse proxy + HTTPS automatico
   .env                        → SOLO sul tuo PC, gitignored, dev locale
   .env.example                → template (committato, niente segreti dentro)
-  frontend/.env.example       → template per VITE_API_URL del frontend
-  frontend/dist/              → buildato sul PC, copiato sulla VM (gitignored)
 
 Sulla VM:
-  Niente .env per la prod. Le variabili stanno in Portainer (Stack →
-  Environment variables). Nemmeno `frontend/.env.production` deve mai
-  arrivare sulla VM: il frontend si builda sul PC e si carica gia' fatto.
+  Niente .env, niente cartelle host, niente SSH. Tutto vive dentro
+  Portainer e dentro volumi nominati Docker:
+    - postgres_data    DB
+    - caddy_data       certificati Let's Encrypt
+    - caddy_config     stato Caddy
+    - frontend_dist    SPA buildata (popolata dal service frontend_build)
+    - pcm_backups      dump pg_dump (popolata dal service backup)
+
+Le variabili d'ambiente stanno in Portainer (Stack → Environment variables).
 
 
 ==========================================================================
-1) COSA TI SERVE SULLA VM
+1) COSA SERVE SULLA VM
 ==========================================================================
 
 - Docker + Docker Compose installati.
-- Portainer (lo userai per gestire lo stack).
+- Portainer.
 - Il dominio hub.parametricomparison.unimore.it puntato all'IP della VM.
 - Porte 80 e 443 raggiungibili da internet (per HTTPS automatico Caddy
-  via Let's Encrypt). Verificalo: da fuori, telnet IP_VM 80 deve aprirsi.
-- Una cartella stabile su disco fuori da quelle gestite da Portainer:
-  /opt/pcm-hub. Conterra' frontend/dist, backups/ e lo script di backup.
-  Setup una volta sola:
-      sudo mkdir -p /opt/pcm-hub/dist /opt/pcm-hub/backups
-      sudo chown -R $USER:$USER /opt/pcm-hub
+  via Let's Encrypt).
+
+Niente cartelle host da preparare a mano. Niente SSH richiesto. Tutto
+quello che ti serve passa da Portainer (UI web + console dei container).
 
 Reverse proxy: già configurato in caddy/Caddyfile. Caddy gira nello
 stack stesso e gestisce sia HTTP→HTTPS sia il certificato Let's Encrypt
@@ -45,10 +43,11 @@ in automatico, senza intervento esterno. Quando arriverà il certificato
 dei servizi informatici, vedi i commenti dentro caddy/Caddyfile per la
 sostituzione (basta scommentare un blocco tls).
 
-Frontend: la VM è piccola, il frontend NON gira nel container Vite. Build
-sul tuo PC con `npm run build` e copia solo `dist/` (~1.4 MB totali) sulla
-VM, dove Caddy la serve come file statici. La VM non vede mai `node_modules`.
-Per l'utente medio sono ~314 KB gzip; admin ~750 KB.
+Frontend: la SPA viene buildata da un container "usa e getta" allo start
+dello stack (service `frontend_build`, vedi sezione 4 e 6). La VM non
+deve avere Node installato: ci pensa l'immagine node:20-alpine. La build
+gira solo al primo start o a ogni "Pull and redeploy" e poi muore. Il
+bundle finisce in un volume Docker `frontend_dist` che Caddy serve.
 
 
 ==========================================================================
@@ -112,8 +111,6 @@ Imposta queste variabili nello stack, una per una:
     CORS_ORIGINS=https://hub.parametricomparison.unimore.it
     (se usi più domini: separali con virgola, NIENTE spazi)
 
-    FRONTEND_DIST_PATH=/opt/pcm-hub/dist
-
 NOTE IMPORTANTI:
   - ENV=prod abilita il fail-fast: se manca SECRET_KEY (o ADMIN_EMAIL,
     o ADMIN_PASSWORD) l'app NON parte. Questo e' voluto, evita di andare
@@ -122,22 +119,34 @@ NOTE IMPORTANTI:
     avvio (tabella users vuota) per creare il primo admin. Dopo il
     primo login cambia la password dal pannello, ma lascia comunque
     le variabili in Portainer perche' a fine import bundle vengono
-    riapplicate (vedi sezione 7-bis passo 9).
+    riapplicate (vedi sezione 7-bis passo 8).
   - DATABASE_URL deve essere coerente con i 4 valori sopra. Se ne cambi
     uno cambia anche l'altro.
   - CORS_ORIGINS deve avere ESATTAMENTE il dominio da cui parte il
     browser. Niente wildcard "*" (rifiutato dal browser quando hai
     allow_credentials).
-  - FRONTEND_DIST_PATH e' la cartella sulla VM dove copierai dist/
-    dal PC. Lasciala fuori dal path gestito da Portainer cosi' i
-    redeploy non la cancellano. Default consigliato: /opt/pcm-hub/dist.
+  - NON c'e' piu' FRONTEND_DIST_PATH: la SPA vive in un volume Docker
+    nominato (`frontend_dist`) popolato dal container di build.
 
 
 ==========================================================================
 4) docker-compose DI PRODUZIONE — GIA' PRONTO
 ==========================================================================
 
-File: docker-compose.prod.yml (al root del progetto).
+File: docker-compose.prod.yml (al root del progetto). Cinque servizi:
+
+  db              postgres:16-alpine, non esposto sull'host.
+  backend         FastAPI buildato dal Dockerfile, expose interno 8000.
+  frontend_build  node:20-alpine, "usa e getta": npm ci + npm run build,
+                  copia dist/ nel volume `frontend_dist`, esce a 0.
+                  Ribuilda a ogni start dello stack.
+  caddy           reverse proxy + HTTPS, monta `frontend_dist` su
+                  /srv/dist. Aspetta che frontend_build sia uscito
+                  con successo prima di partire.
+  backup          postgres:16-alpine in modalita' loop infinito: ogni
+                  24h fa pg_dump nel volume `pcm_backups`. Tiene gli
+                  ultimi KEEP=3 dump.
+  cleaner         docker:25-cli, prune giornaliero (NON tocca i volumi).
 
 Differenze rispetto al docker-compose.yml di dev:
   - DB non esposto sull'host: solo rete docker interna.
@@ -148,7 +157,6 @@ Differenze rispetto al docker-compose.yml di dev:
     per leggere correttamente l'IP del client da Caddy (serve al rate-limit).
   - Caddy in front, gestisce 80 e 443 e fa HTTPS automatico Let's Encrypt.
   - Logging json-file con rotation 10MB x 3 file su tutti i servizi.
-  - Cleaner giornaliero (docker prune) per non riempire gli 8 GB della VM.
 
 Le variabili d'ambiente NON sono lette da .env: vanno impostate in
 Portainer come "Stack environment variables" (vedi sezione 3).
@@ -160,13 +168,9 @@ Portainer come "Stack environment variables" (vedi sezione 3).
 
 La prima volta che avvii lo stack:
 
-  a) Lo schema viene creato dalle migrazioni Alembic. Esegui DENTRO il
-     container backend:
-
-         docker exec -it pcm_backend alembic upgrade head
-
-     Oppure da Portainer: Containers → pcm_backend → Console → /bin/bash
-     → "alembic upgrade head".
+  a) Lo schema viene creato dalle migrazioni Alembic. Esegui da
+     Portainer: Containers → pcm_backend → Console → /bin/bash →
+     "alembic upgrade head".
 
   b) Il primo admin viene creato AUTOMATICAMENTE da
      services/admin_bootstrap.py la prima volta che il backend parte
@@ -180,243 +184,120 @@ La prima volta che avvii lo stack:
      bundle ZIP con wipe=true. L'endpoint /api/admin/migration richiede
      gia' admin, quindi il flusso e': bootstrap (b) → login → import.
      A fine import la password admin viene riscritta a ADMIN_PASSWORD
-     (vedi 7-bis passo 9): cambia la password DOPO l'import, non prima.
+     (vedi 7-bis passo 8): cambia la password DOPO l'import, non prima.
 
 
 ==========================================================================
 6) DEPLOY DEL FRONTEND
 ==========================================================================
 
-SCORCIATOIA: usa script/pc-build-frontend.ps1 dal root del progetto.
-Fa tutto in automatico: imposta VITE_API_URL, builda, verifica che il
-bundle non contenga "localhost:8000", crea frontend-dist.tgz, e
-stampa i comandi scp+ssh pronti da incollare. Il resto di questa
-sezione spiega cosa fa lo script (per debug se qualcosa va storto).
+ZERO comandi manuali. La build avviene dentro lo stack, su Portainer.
 
-Sul tuo PC (NON sulla VM):
+Come funziona:
+  1. Portainer fa git clone del repo (o "Pull and redeploy").
+  2. Lo stack parte. Il service `frontend_build` (container node:20-alpine)
+     monta `./frontend` read-only, copia i sorgenti in /build, lancia
+     `npm ci && npm run build`, copia `dist/` nel volume nominato
+     `frontend_dist`, ed esce a 0.
+  3. Caddy parte solo quando frontend_build e' uscito con successo
+     (depends_on: service_completed_successfully). Monta `frontend_dist`
+     su /srv/dist read-only e serve la SPA.
+  4. Per fare un nuovo deploy del frontend: pushi su GitHub, poi su
+     Portainer → Stacks → pcm-hub → "Pull and redeploy". Il container
+     di build rifa' tutto in automatico.
 
-    cd frontend
+Il frontend NON usa piu' VITE_API_URL: parla con il backend via path
+relativi (`/api/*`, `/auth/*`) che Caddy proxa al container backend.
+Stesso dominio = niente CORS, niente env da settare in build.
 
-    # PowerShell (Windows):
-    $env:VITE_API_URL="https://hub.parametricomparison.unimore.it"
-    npm run build
+Costo: la prima build dura ~30-60s (npm ci scarica i pacchetti). I
+redeploy successivi sono leggermente piu' veloci grazie alla cache
+delle immagini Docker, ma se cambia frontend/package-lock.json
+ricomincia da capo. Memoria di picco ~400 MB durante la build:
+sui tuoi 8 GB e' tranquillo.
 
-    # bash/zsh (Linux/Mac):
-    VITE_API_URL=https://hub.parametricomparison.unimore.it npm run build
-
-    # alternativa cross-platform: file frontend/.env.production (gitignored)
-    # contenuto: VITE_API_URL=https://hub.parametricomparison.unimore.it
-    npm run build
-
-Si crea `frontend/dist/`. Caricalo in /opt/pcm-hub/dist sulla VM, dove
-Caddy lo bind-mounta come /srv/dist (vedi FRONTEND_DIST_PATH in sezione 3):
-
-    # PowerShell sul PC (tar e' incluso da Windows 10):
-    tar czf frontend-dist.tgz -C frontend dist
-    scp frontend-dist.tgz user@vm:/opt/pcm-hub/
-
-    # sulla VM (il tarball ha "dist/" come root, quindi xzf lo ricrea):
-    cd /opt/pcm-hub
-    rm -rf dist
-    tar xzf frontend-dist.tgz
-    docker restart pcm_caddy
-
-VERIFICA: prima del trasferimento apri `frontend/dist/assets/*.js` con
-grep e cerca "localhost:8000" — NON deve esserci. Se c'e', hai fatto
-build senza VITE_API_URL impostato, ribuilda. Lo script
-script/pc-build-frontend.ps1 fa questa verifica in automatico.
+Verifica post-deploy: apri la console di pcm_caddy in Portainer e
+guarda i log; deve aver fatto "served /index.html" alle prime
+richieste. Se la SPA non carica:
+  - Containers → pcm_frontend_build → Logs: deve aver finito con
+    "[frontend_build] dist copiata in /out, esco." e exit code 0.
+  - Containers → pcm_caddy → Console → ls /srv/dist/ : deve mostrare
+    index.html, assets/, ecc.
 
 
 ==========================================================================
 7) BACKUP DEL DATABASE
 ==========================================================================
 
-Due script complementari (vedi cartella script/):
+Niente cron host, niente script da copiare via scp. Il backup e' fatto
+dal service `backup` definito in docker-compose.prod.yml. Si avvia con
+lo stack e fa:
 
-  script/vm-backup-db.sh      → gira sulla VM, fa pg_dump nightly,
-                                 tiene SOLO gli ultimi 3 dump locali
-                                 (configurabile via KEEP=N).
-  script/pc-pull-backups.ps1  → gira sul tuo PC, scarica i dump via scp.
+  - pg_dump del DB di prod ogni 24h verso /backups (volume `pcm_backups`).
+  - Tiene gli ultimi 3 dump (KEEP=3, configurabile cambiando l'env del
+    container in Portainer).
+  - Nomi file: pcm-YYYYMMDD-HHMMSS.dump (ora UTC).
 
-Setup sulla VM (una volta sola):
+Verificare i backup:
 
-  Lo script va copiato in /opt/pcm-hub/ (NON dentro il path gestito da
-  Portainer, che cambia tra un redeploy e l'altro). Dal tuo PC:
+  Portainer → Containers → pcm_backup → Console → /bin/sh →
+      ls -la /backups/
 
-      scp script/vm-backup-db.sh user@vm:/opt/pcm-hub/
+Recuperare un dump sul tuo PC (senza SSH):
 
-  Sulla VM:
+  Portainer → Containers → pcm_backup → Console → /bin/sh →
+      base64 /backups/pcm-YYYYMMDD-HHMMSS.dump
 
-      chmod +x /opt/pcm-hub/vm-backup-db.sh
-      mkdir -p /opt/pcm-hub/backups
-      crontab -e
-      # aggiungi (sostituisci <user>/<db> con i valori dell'env di prod):
-      POSTGRES_USER=<user>
-      POSTGRES_DB=<db>
-      0 3 * * * /opt/pcm-hub/vm-backup-db.sh >> /opt/pcm-hub/backups/cron.log 2>&1
+  Copia tutto l'output dal terminale Portainer. Sul PC (PowerShell):
 
-  Lo script usa `docker exec pcm_db pg_dump` (target by name): non
-  dipende dal path del compose, funziona con Portainer Repository mode.
+      $b64 = @'
+      <incolla qui l'output base64>
+      '@
+      [IO.File]::WriteAllBytes("$HOME\Desktop\pcm.dump",
+          [Convert]::FromBase64String(($b64 -replace '\s','')))
 
-Setup sul PC (una volta sola, per il pull dei backup via scp):
+  Per dump grossi (>10 MB) la console di Portainer puo' diventare lenta.
+  In quel caso usa il bundle ZIP scaricabile dalla UI admin
+  ("Backup / Migration" → Download bundle): e' la stessa cosa con
+  l'aggiunta degli asset (immagini, ecc.) e la scarichi via HTTPS.
 
-  - Genera una SSH key se non l'hai (PowerShell):
-        ssh-keygen -t ed25519
-  - Copia la chiave pubblica sulla VM. Su Windows ssh-copy-id NON esiste,
-    usa questo:
-        type $HOME\.ssh\id_ed25519.pub | ssh user@vm "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-  - Verifica: ssh user@vm  → deve aprirsi senza chiedere password.
+Restore di un dump (sulla VM, da Portainer):
 
-Pull manuale dei backup (quando vuoi):
+  Console di pcm_backup:
+      pg_restore -h db -U <user> -d <db> -c < /backups/<file>.dump
 
-  .\script\pc-pull-backups.ps1
-  # con default. Default LocalDir: $HOME\pcm-hub-backups\
-
-Restore di un dump:
-
-    docker compose -f docker-compose.prod.yml exec -T db pg_restore -U <user> -d <db> -c < backup.dump
+  (Le credenziali sono gia' nelle env del container.)
 
 NOTA limite: con KEEP=3 e 1 dump al giorno hai 3 giorni di rolling
-window. Lo script PC va lanciato almeno una volta a settimana
-(o messo in Windows Task Scheduler) per non perdere snapshot vecchi.
+window. Se vuoi piu' giorni, in Portainer cambia la env KEEP del
+container pcm_backup (es. KEEP=7) e ricrea il container.
+
+ALTERNATIVA RACCOMANDATA: il bundle ZIP via UI admin e' anche un
+buon backup off-site. Salvalo sul tuo PC ogni tanto.
 
 
 ==========================================================================
 7-bis) PROCEDURA STEP-BY-STEP DEL GO-LIVE
 ==========================================================================
 
-Ordine di esecuzione il giorno del deploy. Da fare con calma.
+Vedi DEPLOY_PROCEDURA.txt per la checklist clic-per-clic.
+Ordine logico:
 
-PASSO 1 — sul vecchio sito (PRIMA di toccare nulla)
-  - Logghi come admin sul sito vecchio.
-  - Vai su Backup / Migration → "Download migration bundle".
-  - Salvi il file zip (es. pcm-bundle.zip) in un posto sicuro.
-  - Verifichi che sia leggibile (apri con un unzipper).
-  - Salvi anche un dump del DB del vecchio sito come safety net:
-        docker exec <vecchio_db> pg_dump -U <vecchio_user> -F c <vecchio_db> > old.dump
+  PASSO 1  scarica bundle ZIP dal sito vecchio (admin → Backup/Migration)
+  PASSO 2  genera SECRET_KEY, POSTGRES_PASSWORD, ADMIN_PASSWORD sul PC
+  PASSO 3  spegni vecchio stack su Portainer
+  PASSO 4  crea nuovo stack su Portainer (Repository mode), incolla
+           le 13 env, "Deploy the stack". Aspetta che frontend_build
+           esca a 0 e che caddy/backend siano "running".
+  PASSO 5  applica migrazioni Alembic (console pcm_backend)
+  PASSO 6  primo login + verifica HTTPS
+  PASSO 7  importa pcm-bundle.zip via UI admin (wipe=true)
+  PASSO 8  cambia la password admin dal pannello
+  PASSO 9  smoke test (vedi sezione 9)
 
-PASSO 2 — generare le credenziali di prod (sul tuo PC)
-  Eseguili uno alla volta, copia ogni output in un password manager.
-
-      python -c "import secrets; print(secrets.token_urlsafe(48))"
-      # → questa diventa SECRET_KEY
-
-      python -c "import secrets; print(secrets.token_urlsafe(24))"
-      # → questa diventa POSTGRES_PASSWORD
-
-      python -c "import secrets; print(secrets.token_urlsafe(20))"
-      # → questa diventa ADMIN_PASSWORD (la userai per il primo login)
-
-  Decidi/scrivi:
-      ENV=prod
-      ACCESS_TOKEN_EXPIRE_MINUTES=30
-      POSTGRES_USER=pcm_prod
-      POSTGRES_DB=pcm_hub_prod
-      POSTGRES_HOST=db
-      POSTGRES_PORT=5432
-      DATABASE_URL=postgresql://pcm_prod:<POSTGRES_PASSWORD>@db/pcm_hub_prod
-      ADMIN_EMAIL=<la-tua-email>
-      CORS_ORIGINS=https://hub.parametricomparison.unimore.it
-      FRONTEND_DIST_PATH=/opt/pcm-hub/dist
-
-PASSO 3 — buildare il frontend (sul tuo PC)
-  Vedi sezione 6 (o lancia .\script\pc-build-frontend.ps1 dalla root).
-  Risultato: frontend/dist/ + frontend-dist.tgz.
-
-PASSO 4 — spegnere il vecchio stack sulla VM
-  Da Portainer: Stacks → vecchio stack → Stop, poi Remove.
-  Questo libera disco. NON cancellare il volume del DB se vuoi tenere il
-  vecchio dump come safety net; altrimenti puoi cancellarlo, hai gia'
-  pcm-bundle.zip e old.dump dal passo 1.
-
-PASSO 5 — preparare /opt/pcm-hub sulla VM
-  Questa cartella e' separata da quella che gestisce Portainer.
-  Contiene: dist/ (servita da Caddy via bind mount), backups/ (cron),
-  vm-backup-db.sh.
-
-      sudo mkdir -p /opt/pcm-hub/dist /opt/pcm-hub/backups
-      sudo chown -R $USER:$USER /opt/pcm-hub
-
-  Dal tuo PC, copia dist e lo script di backup:
-
-      scp frontend-dist.tgz user@vm:/opt/pcm-hub/
-      scp script/vm-backup-db.sh user@vm:/opt/pcm-hub/
-
-  Sulla VM, scompatta dist e rendi eseguibile lo script:
-
-      cd /opt/pcm-hub
-      rm -rf dist && tar xzf frontend-dist.tgz
-      chmod +x vm-backup-db.sh
-
-PASSO 6 — creare lo stack su Portainer (Repository mode)
-  Stacks → Add stack → Name: pcm-hub
-  Build method: "Repository"
-    Repository URL: <URL del tuo repo GitHub>
-    Reference: refs/heads/main
-    Compose path: docker-compose.prod.yml
-    Authentication: se la repo e' privata aggiungi un Personal Access
-                    Token GitHub con scope repo (read).
-
-  Environment variables: incolla TUTTI i valori del passo 2, una
-  variabile per riga (Portainer le passa come ${...} al compose e
-  ai container). NON committare nessuna di queste in git.
-
-  Click "Deploy the stack". Portainer fa il git clone, builda backend
-  e tira su Caddy. Qualche minuto la prima volta.
-
-  NOTA: Portainer clona la repo in un suo path interno (tipicamente
-  /data/compose/<id>/). Tu non lo tocchi mai: aggiorni il codice
-  pushando su GitHub, poi da Portainer: Stack → "Pull and redeploy".
-  Per questo /opt/pcm-hub/ e' separato: dist e backups vivono li' e
-  sopravvivono a qualsiasi redeploy.
-
-PASSO 7 — applicare le migrazioni Alembic
-  Aspetta che il container backend sia "healthy" (in Portainer:
-  Containers → pcm_backend → status verde). Poi sulla VM:
-
-      docker exec -it pcm_backend alembic upgrade head
-
-  Oppure da Portainer: Containers → pcm_backend → Console → /bin/bash →
-      alembic upgrade head
-
-  (`docker exec` per nome di container e' il modo piu' robusto: non
-  dipende dal compose path, che con Portainer Repository non e' tuo.)
-
-PASSO 8 — verificare HTTPS e primo login
-  - Apri https://hub.parametricomparison.unimore.it nel browser.
-  - Caddy dovrebbe avere gia' tirato il certificato Let's Encrypt
-    (nel log: "obtain successful").
-  - Logghi con ADMIN_EMAIL / ADMIN_PASSWORD (dal passo 2).
-  - CAMBIA SUBITO la password admin dal pannello.
-
-PASSO 9 — importare il bundle di migrazione
-  Vai sulla pagina admin "Database Restore / Migration" del sito nuovo.
-  Carica pcm-bundle.zip (passo 1) con wipe=true. Aspetta il completamento
-  (vedi /api/admin/migration/status/{job_id} oppure la UI).
-
-  ATTENZIONE: a fine import, la password admin viene resettata a quella
-  in ADMIN_PASSWORD (vedi services/migration_import.py:_ensure_default_admin).
-  Quindi: se la avevi gia' cambiata al passo 8, dovrai rifarlo dopo l'import.
-
-PASSO 10 — smoke test (vedi sezione 9).
-
-PASSO 11 — schedulare il backup (cron)
-  Lo script vm-backup-db.sh e' gia' in /opt/pcm-hub/ e chmod +x dal
-  passo 5. Aggiungi il job al crontab (sostituisci user/db con i tuoi):
-
-      crontab -e
-      # aggiungi:
-      POSTGRES_USER=pcm_prod
-      POSTGRES_DB=pcm_hub_prod
-      0 3 * * * /opt/pcm-hub/vm-backup-db.sh >> /opt/pcm-hub/backups/cron.log 2>&1
-
-  Lo script tiene SOLO gli ultimi 3 dump (KEEP=3 di default). Con i tuoi
-  8 GB e' la scelta giusta; quando arriveranno i 20 GB puoi alzare KEEP
-  a 7 modificando la riga del cron: KEEP=7 ... vm-backup-db.sh.
-
-  IMPORTANTE: 3 dump = 3 giorni di rolling. Lancia
-  script/pc-pull-backups.ps1 dal PC almeno una volta a settimana (o
-  schedula da Windows Task Scheduler) per non perdere snapshot vecchi.
+Niente piu' "scp dist" (sezione 6 lo fa il container di build).
+Niente piu' "crontab" (sezione 7 lo fa il sidecar backup).
+Niente piu' "/opt/pcm-hub" (tutto in volumi nominati Docker).
 
 
 ==========================================================================
@@ -505,10 +386,13 @@ Apri il sito da una macchina che NON sta sulla VM. Testa:
   [ ] Il save mostra l'errore 409 se due tab modificano lo stesso blocco
       e il primo salva (test della concorrenza).
   [ ] Logout pulisce la sessione.
-  [ ] docker ps mostra pcm_backend come "(healthy)" dopo ~30 secondi.
+  [ ] In Portainer: pcm_backend "(healthy)", pcm_caddy "running",
+      pcm_db "(healthy)", pcm_backup "running",
+      pcm_frontend_build "exited (0)".
 
 Se qualcosa rompe, i log si guardano da Portainer:
-  Containers → pcm_backend → Logs (e idem per db, caddy).
+  Containers → pcm_backend → Logs (e idem per db, caddy, backup,
+  frontend_build).
   Per i certificati Let's Encrypt: log di pcm_caddy. La riga utile e'
   "obtain successful". Se vedi "no IP for ..." o "challenge failed",
   controlla DNS e firewall (porte 80/443 da internet).
@@ -540,3 +424,7 @@ APPUNTI VARI
 - Il file .env.example serve come template per chi clona il repo.
 - In dev la porta DB è esposta su 127.0.0.1:5433 (non 5432) per evitare
   conflitti con un eventuale Postgres nativo di Windows.
+- In dev il frontend (vite su :5173) parla con il backend (:8000) usando
+  VITE_API_URL=http://localhost:8000 (vedi frontend/api.js, fallback
+  automatico in modalita' DEV). In prod il browser usa path relativi e
+  Caddy proxa le API.
