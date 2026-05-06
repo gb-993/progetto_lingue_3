@@ -6,21 +6,44 @@ da fare appena possibile. Tieni questo file aggiornato man mano.
 
 
 ==========================================================================
+0) FILE DI PRODUZIONE — DOVE TROVI COSA
+==========================================================================
+
+Repository:
+  docker-compose.yml          → stack di DEV (sul tuo PC)
+  docker-compose.prod.yml     → stack di PROD (sulla VM, via Portainer)
+  caddy/Caddyfile             → config reverse proxy + HTTPS automatico
+  .env                        → SOLO sul tuo PC, gitignored, dev locale
+  .env.example                → template (committato, niente segreti dentro)
+  frontend/.env.example       → template per VITE_API_URL del frontend
+  frontend/dist/              → buildato sul PC, copiato sulla VM (gitignored)
+
+Sulla VM:
+  Niente .env per la prod. Le variabili stanno in Portainer (Stack →
+  Environment variables). Nemmeno `frontend/.env.production` deve mai
+  arrivare sulla VM: il frontend si builda sul PC e si carica gia' fatto.
+
+
+==========================================================================
 1) COSA TI SERVE SULLA VM
 ==========================================================================
 
 - Docker + Docker Compose installati.
 - Portainer (lo userai per gestire lo stack).
-- Un dominio o IP pubblico (es. hub.parametricomparison.unimore.it).
-- Un reverse proxy con HTTPS davanti (nginx o Caddy o Traefik) che
-  inoltra il traffico:
-    • porta 443 -> frontend (dist/ servito come file statici)
-    • porta 443/api/... -> backend (porta 8000 interna al docker)
+- Il dominio hub.parametricomparison.unimore.it puntato all'IP della VM.
+- Porte 80 e 443 raggiungibili da internet (per HTTPS automatico Caddy
+  via Let's Encrypt). Verificalo: da fuori, telnet IP_VM 80 deve aprirsi.
 
-Se la VM è quella piccola, il frontend NON gira nel container Vite (troppo
-pesante). Build sul tuo PC con `npm run build` e copia solo `dist/`
-(~1.4 MB totali) sulla VM, da servire con nginx/Caddy. La VM non vede mai
-`node_modules`. Per l'utente medio sono ~314 KB gzip; admin ~750 KB.
+Reverse proxy: già configurato in caddy/Caddyfile. Caddy gira nello
+stack stesso e gestisce sia HTTP→HTTPS sia il certificato Let's Encrypt
+in automatico, senza intervento esterno. Quando arriverà il certificato
+dei servizi informatici, vedi i commenti dentro caddy/Caddyfile per la
+sostituzione (basta scommentare un blocco tls).
+
+Frontend: la VM è piccola, il frontend NON gira nel container Vite. Build
+sul tuo PC con `npm run build` e copia solo `dist/` (~1.4 MB totali) sulla
+VM, dove Caddy la serve come file statici. La VM non vede mai `node_modules`.
+Per l'utente medio sono ~314 KB gzip; admin ~750 KB.
 
 
 ==========================================================================
@@ -83,23 +106,24 @@ NOTE IMPORTANTI:
 
 
 ==========================================================================
-4) docker-compose IN PRODUZIONE — DIFFERENZE DA QUELLO LOCALE
+4) docker-compose DI PRODUZIONE — GIA' PRONTO
 ==========================================================================
 
-Il docker-compose.yml attuale va bene per dev. In prod:
+File: docker-compose.prod.yml (al root del progetto).
 
-  - NON esporre la 5432 sull'host. Togli del tutto il blocco "ports"
-    dal servizio "db" (il backend la raggiunge via rete docker interna).
-  - NON esporre la 8000 del backend al pubblico: deve rispondere solo
-    al reverse proxy. Se nginx/Caddy gira sulla stessa VM in docker,
-    metti backend e proxy nella stessa rete e non pubblicare 8000.
-  - NON usare il bind-mount `./backend:/app` in prod: lavora con
-    l'immagine buildata dal Dockerfile (no live-reload).
-  - Togli `--reload` dal comando uvicorn:
-        command: uvicorn main:app --host 0.0.0.0 --port 8000
+Differenze rispetto al docker-compose.yml di dev:
+  - DB non esposto sull'host: solo rete docker interna.
+  - Backend non esposto sull'host: usa `expose: "8000"`, raggiungibile
+    SOLO da Caddy via rete docker.
+  - Nessun bind-mount del codice: gira l'immagine buildata dal Dockerfile.
+  - uvicorn senza `--reload`, con `--proxy-headers --forwarded-allow-ips=*`
+    per leggere correttamente l'IP del client da Caddy (serve al rate-limit).
+  - Caddy in front, gestisce 80 e 443 e fa HTTPS automatico Let's Encrypt.
+  - Logging json-file con rotation 10MB x 3 file su tutti i servizi.
+  - Cleaner giornaliero (docker prune) per non riempire gli 8 GB della VM.
 
-Conviene avere un docker-compose.prod.yml separato (o profili) per
-mantenere il dev pulito. Quando ne hai bisogno te lo preparo.
+Le variabili d'ambiente NON sono lette da .env: vanno impostate in
+Portainer come "Stack environment variables" (vedi sezione 3).
 
 
 ==========================================================================
@@ -137,22 +161,7 @@ La prima volta che avvii lo stack:
 Sul tuo PC (NON sulla VM):
 
     cd frontend
-    npm install      # solo la prima volta
-    npm run build
 
-Si crea `frontend/dist/`. Trasferisci SOLO quella cartella sulla VM
-(es. via scp o git+pull se la repo include dist/, ma in genere dist/
-NON va committato — meglio copiarla manualmente o con uno script CI).
-
-Configura il reverse proxy per servire i file statici di dist/ e
-fare proxy_pass delle chiamate /api/... e /auth/... e /docs (se
-abilitato) verso il backend.
-
-IMPORTANTE: l'URL del backend si configura via variabile Vite
-VITE_API_URL. In dev (default) punta a localhost:8000. In prod
-DEVI impostarla prima del build:
-
-    cd frontend
     # opzione A: variabile inline
     VITE_API_URL=https://hub.parametricomparison.unimore.it npm run build
 
@@ -160,9 +169,22 @@ DEVI impostarla prima del build:
     echo "VITE_API_URL=https://hub.parametricomparison.unimore.it" > .env.production
     npm run build
 
-Se sbagli (o dimentichi) il sito buildato continuerà a chiamare
-localhost:8000 e tutto si rompe in browser. Verifica aprendo dist/
-e cercando "localhost:8000" — non deve esserci.
+Si crea `frontend/dist/`. Carico la cartella sulla VM dentro la cartella
+del progetto (dove sta il docker-compose.prod.yml), in modo che il bind
+mount del servizio caddy (`./frontend/dist:/srv/dist:ro`) la veda:
+
+    # esempio: con scp e un tarball per andare veloci
+    tar czf dist.tgz -C frontend dist
+    scp dist.tgz user@vm:/path/del/progetto/
+    # sulla VM:
+    cd /path/del/progetto
+    rm -rf frontend/dist
+    tar xzf dist.tgz -C frontend
+    docker compose -f docker-compose.prod.yml restart caddy
+
+VERIFICA: prima del trasferimento apri `frontend/dist/assets/*.js` con
+grep e cerca "localhost:8000" — NON deve esserci. Se c'e', hai fatto
+build senza VITE_API_URL impostato, ribuilda.
 
 
 ==========================================================================
@@ -171,14 +193,131 @@ e cercando "localhost:8000" — non deve esserci.
 
 I dati Postgres vivono nel volume docker `postgres_data`. Backup base:
 
-    docker compose exec db pg_dump -U <user> -F c <db> > backup.dump
+    docker compose -f docker-compose.prod.yml exec db pg_dump -U <user> -F c <db> > backup.dump
 
 Schedula questo comando con cron sulla VM, almeno giornaliero, e
 salva i dump fuori dalla VM (es. su Drive/SCP a un altro server).
+Con 8 GB di disco TIENI MAX 7 dump locali e il resto fuori.
 
 Per ripristinare:
 
-    docker compose exec -T db pg_restore -U <user> -d <db> -c < backup.dump
+    docker compose -f docker-compose.prod.yml exec -T db pg_restore -U <user> -d <db> -c < backup.dump
+
+
+==========================================================================
+7-bis) PROCEDURA STEP-BY-STEP DEL GO-LIVE
+==========================================================================
+
+Ordine di esecuzione il giorno del deploy. Da fare con calma.
+
+PASSO 1 — sul vecchio sito (PRIMA di toccare nulla)
+  - Logghi come admin sul sito vecchio.
+  - Vai su Backup / Migration → "Download migration bundle".
+  - Salvi il file zip (es. pcm-bundle.zip) in un posto sicuro.
+  - Verifichi che sia leggibile (apri con un unzipper).
+  - Salvi anche un dump del DB del vecchio sito come safety net:
+        docker exec <vecchio_db> pg_dump -U <vecchio_user> -F c <vecchio_db> > old.dump
+
+PASSO 2 — generare le credenziali di prod (sul tuo PC)
+  Eseguili uno alla volta, copia ogni output in un password manager.
+
+      python -c "import secrets; print(secrets.token_urlsafe(48))"
+      # → questa diventa SECRET_KEY
+
+      python -c "import secrets; print(secrets.token_urlsafe(24))"
+      # → questa diventa POSTGRES_PASSWORD
+
+      python -c "import secrets; print(secrets.token_urlsafe(20))"
+      # → questa diventa ADMIN_PASSWORD (la userai per il primo login)
+
+  Decidi/scrivi:
+      ENV=prod
+      ACCESS_TOKEN_EXPIRE_MINUTES=30
+      POSTGRES_USER=pcm_prod
+      POSTGRES_DB=pcm_hub_prod
+      POSTGRES_HOST=db
+      POSTGRES_PORT=5432
+      DATABASE_URL=postgresql://pcm_prod:<POSTGRES_PASSWORD>@db/pcm_hub_prod
+      ADMIN_EMAIL=<la-tua-email>
+      CORS_ORIGINS=https://hub.parametricomparison.unimore.it
+
+PASSO 3 — buildare il frontend (sul tuo PC)
+  Vedi sezione 6. Risultato: frontend/dist/.
+
+PASSO 4 — spegnere il vecchio stack sulla VM
+  Da Portainer: Stacks → vecchio stack → Stop, poi Remove.
+  Questo libera disco. NON cancellare il volume del DB se vuoi tenere il
+  vecchio dump come safety net; altrimenti puoi cancellarlo, hai gia'
+  pcm-bundle.zip e old.dump dal passo 1.
+
+PASSO 5 — preparare la cartella del nuovo stack sulla VM
+  Decidi un path stabile, es. /opt/pcm-hub. Sulla VM:
+
+      sudo mkdir -p /opt/pcm-hub
+      sudo chown $USER:$USER /opt/pcm-hub
+      cd /opt/pcm-hub
+      git clone <url-repo> .
+
+  Carica frontend/dist (vedi sezione 6 per il comando scp+tar).
+
+PASSO 6 — creare lo stack su Portainer
+  Stacks → Add stack → Name: pcm-hub
+  Build method: "Repository" (se vuoi che Portainer ne segua i pull)
+  oppure "Web editor" puntando al docker-compose.prod.yml.
+
+  Compose path: docker-compose.prod.yml
+
+  Environment variables: incolla TUTTI i valori del passo 2, una variabile
+  per riga. NON committare nessuna di queste in git.
+
+  Click "Deploy the stack". Aspetta che faccia il pull/build (qualche minuto).
+
+PASSO 7 — applicare le migrazioni Alembic
+  Aspetta che il container backend sia "healthy". Poi:
+
+      docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+  Oppure da Portainer: Containers → pcm_backend → Console → /bin/bash →
+      alembic upgrade head
+
+PASSO 8 — verificare HTTPS e primo login
+  - Apri https://hub.parametricomparison.unimore.it nel browser.
+  - Caddy dovrebbe avere gia' tirato il certificato Let's Encrypt
+    (nel log: "obtain successful").
+  - Logghi con ADMIN_EMAIL / ADMIN_PASSWORD (dal passo 2).
+  - CAMBIA SUBITO la password admin dal pannello.
+
+PASSO 9 — importare il bundle di migrazione
+  Vai sulla pagina admin "Database Restore / Migration" del sito nuovo.
+  Carica pcm-bundle.zip (passo 1) con wipe=true. Aspetta il completamento
+  (vedi /api/admin/migration/status/{job_id} oppure la UI).
+
+  ATTENZIONE: a fine import, la password admin viene resettata a quella
+  in ADMIN_PASSWORD (vedi services/migration_import.py:_ensure_default_admin).
+  Quindi: se la avevi gia' cambiata al passo 8, dovrai rifarlo dopo l'import.
+
+PASSO 10 — smoke test (vedi sezione 9).
+
+PASSO 11 — schedulare il backup (cron)
+  Sulla VM, crea /opt/pcm-hub/backup.sh:
+
+      #!/bin/sh
+      set -e
+      cd /opt/pcm-hub
+      DATE=$(date +%Y%m%d-%H%M)
+      docker compose -f docker-compose.prod.yml exec -T db \
+        pg_dump -U pcm_prod -F c pcm_hub_prod > /opt/pcm-hub/backups/db-$DATE.dump
+      # Tieni solo gli ultimi 7
+      ls -1t /opt/pcm-hub/backups/db-*.dump | tail -n +8 | xargs -r rm
+
+  chmod +x backup.sh
+  mkdir -p /opt/pcm-hub/backups
+
+  Crontab (crontab -e):
+      0 3 * * * /opt/pcm-hub/backup.sh >> /opt/pcm-hub/backups/cron.log 2>&1
+
+  Importante: copia periodicamente i dump fuori dalla VM (Drive,
+  altro server, ecc.). Con 8 GB ne tieni pochi locali.
 
 
 ==========================================================================
@@ -190,20 +329,23 @@ farle entro le prime settimane di vita pubblica del sito.
 
 PRIORITÀ ALTA
 -------------
-[ ] Disabilitare /docs e /openapi.json in prod.
-    In backend/main.py, quando ENV=prod:
-        app = FastAPI(title="...", docs_url=None, redoc_url=None,
-                      openapi_url=None)
-    Altrimenti chiunque vede tutta la mappa degli endpoint.
+[X] Disabilitare /docs e /openapi.json in prod.
+    Fatto in backend/main.py: quando ENV=prod, docs_url, redoc_url e
+    openapi_url valgono None. In dev restano accessibili.
 
-[ ] Rate-limit sul login.
-    Pacchetto: slowapi. Esempio: 5 tentativi al minuto per IP.
-    Senza, qualcuno può provare migliaia di password l'ora.
+[X] Rate-limit sul login.
+    Fatto con slowapi: 5 tentativi/minuto per IP, sia in dev sia in prod.
+    Vedi backend/rate_limit.py + decoratore in routers/auth.py.
+    Quota superata -> 429 Too Many Requests.
 
-[ ] Validazione upload Excel/ZIP.
-    Limite dimensione (es. 200 MB), check path-traversal sui file
-    dentro lo zip prima di estrarli (vedi routers/import_excel.py
-    e routers/migration.py).
+[X] Validazione upload Excel/ZIP.
+    - import_excel: cap a 50 MB sul file (gia' presente). openpyxl
+      carica in memoria, nessuna estrazione su disco -> path traversal
+      non si applica.
+    - migration: oltre al cap 200 MB sul compresso, _validate_zip_bundle
+      (routers/migration.py) controlla path-traversal sui nomi (..,
+      assoluti, drive Windows) e cap 100 MB per singolo file e 500 MB
+      complessivi una volta decompresso (anti zip-bomb).
 
 PRIORITÀ MEDIA
 --------------
@@ -212,9 +354,16 @@ PRIORITÀ MEDIA
     il token. Con HttpOnly il token non è accessibile da JS.
     Richiede modifiche frontend + backend (set-cookie con SameSite=Strict).
 
-[ ] Password policy.
-    In routers/users.py, quando si crea/cambia password:
-    minimo 12 caratteri, almeno una maiuscola, una minuscola, un numero.
+[X] Password policy.
+    Minimo 8 caratteri (no complessita' obbligatoria, troppo invasiva
+    per il pubblico target). Si applica a:
+      - creazione nuovo account (POST /api/admin/accounts)
+      - cambio password volontario (PUT /api/me/password)
+    NON tocca le password esistenti: chi ha gia' un account con
+    password piu' corta puo' continuare a loggare finche' non
+    decide di cambiarla.
+    UI: aggiunto minLength=8 + label "min 8 characters" su MyAccount
+    e AccountCreate.
 
 [ ] Refresh token + blacklist.
     Oggi un token rubato è valido per 30 minuti senza revoca possibile.
@@ -227,9 +376,10 @@ PRIORITÀ MEDIA
 
 PRIORITÀ BASSA (housekeeping)
 -----------------------------
-[ ] Pulire __pycache__ dal git tracking:
-        git rm --cached -r backend/__pycache__/
-        git commit -m "untrack __pycache__"
+[X] Pulire __pycache__ dal git tracking.
+    Fatto: 107 file .pyc rimossi dall'index. Il .gitignore li ignora,
+    quindi non torneranno. (commit ancora da fare insieme alle modifiche
+    di sicurezza pre-deploy.)
 
 [ ] Lazy-loading delle rotte admin (React.lazy + Suspense in App.jsx).
     Riduce il bundle che gli utenti normali devono scaricare.

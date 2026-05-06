@@ -42,8 +42,8 @@ export default function AccountCreate() {
                         <input type="email" name="email" value={formData.email} onChange={handleChange} required />
                     </div>
                     <div className="form-group">
-                        <label>Temporary Password: "password"</label>
-                        <input type="password" name="password" value={formData.password} onChange={handleChange} required />
+                        <label>Temporary Password (min 8 characters)</label>
+                        <input type="password" name="password" value={formData.password} onChange={handleChange} required minLength={8} />
                     </div>
                     <div className="form-group">
                         <label>Role</label>

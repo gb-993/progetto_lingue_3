@@ -86,12 +86,12 @@ export default function MyAccount() {
                         <input type="password" name="old_password" value={passwords.old_password} onChange={handlePasswordChange} required />
                     </div>
                     <div className="form-group">
-                        <label>New Password</label>
-                        <input type="password" name="new_password1" value={passwords.new_password1} onChange={handlePasswordChange} required />
+                        <label>New Password (min 8 characters)</label>
+                        <input type="password" name="new_password1" value={passwords.new_password1} onChange={handlePasswordChange} required minLength={8} />
                     </div>
                     <div className="form-group">
                         <label>Confirm New Password</label>
-                        <input type="password" name="new_password2" value={passwords.new_password2} onChange={handlePasswordChange} required />
+                        <input type="password" name="new_password2" value={passwords.new_password2} onChange={handlePasswordChange} required minLength={8} />
                     </div>
                     <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: '1rem'}}>
                         <button type="submit" className="btn btn--primary">Update Password</button>

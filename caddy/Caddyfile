@@ -1,0 +1,69 @@
+# Caddyfile — reverse proxy + HTTPS automatico per PCM-Hub.
+#
+# Caddy si occupa di:
+#   - tirare giu un certificato Let's Encrypt al primo avvio e rinnovarlo
+#     automaticamente ogni 60 giorni (richiede porte 80 e 443 aperte da
+#     internet e DNS del dominio puntato all'IP della VM);
+#   - servire la SPA da /srv/dist (montato bind-mount da ./frontend/dist);
+#   - fare reverse-proxy verso il backend FastAPI per /api/* e /auth/*;
+#   - gzip/zstd e header proxy standard.
+#
+# Quando arrivera' il certificato dei servizi informatici, sostituire il
+# blocco "tls" con il path ai file .crt/.key (vedi commenti sotto).
+
+{
+	# Email per notifiche di scadenza certificato Let's Encrypt.
+	# Sostituiscila con un'email che leggi davvero.
+	email gbmatteazzi93@gmail.com
+}
+
+hub.parametricomparison.unimore.it {
+	# HTTPS automatico Let's Encrypt (default Caddy: nessuna config esplicita).
+	# Quando avrai il certificato dei servizi informatici, COMMENTA il blocco
+	# automatico (cancellare la sezione "email" sopra non serve, e' innocua)
+	# e DECOMMENTA il blocco tls qui sotto:
+	#
+	# tls /etc/caddy/certs/server.crt /etc/caddy/certs/server.key
+
+	encode gzip zstd
+
+	# Limite dimensione body: il bundle di migrazione e' max 200 MB lato app,
+	# qui blocchiamo prima a 250 MB per non sprecare banda.
+	request_body {
+		max_size 250MB
+	}
+
+	# Backend FastAPI per le route API e auth.
+	# X-Forwarded-* sono aggiunti automaticamente da reverse_proxy.
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+	handle /auth/* {
+		reverse_proxy backend:8000
+	}
+
+	# Tutto il resto: SPA React. try_files con fallback a index.html
+	# permette il deep-linking (/parameters/SPK, ecc.) senza 404.
+	handle {
+		root * /srv/dist
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Header di sicurezza basilari.
+	header {
+		# Niente sniffing del Content-Type
+		X-Content-Type-Options nosniff
+		# Anti-clickjacking
+		X-Frame-Options DENY
+		# Referrer policy moderata
+		Referrer-Policy strict-origin-when-cross-origin
+		# Rimuovi header che rivela lo stack
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

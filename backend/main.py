@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Le tabelle sono gestite esclusivamente da alembic.
 # NON usare metadata.create_all qui: confligge con le migrazioni
@@ -9,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 # e poi `alembic upgrade head` fallisce con DuplicateTable).
 # Per applicare nuove migrazioni: docker compose exec backend alembic upgrade head
 
-from config import CORS_ORIGINS, CORS_ORIGIN_REGEX
+from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, IS_PROD
+from rate_limit import limiter
 from services.admin_bootstrap import bootstrap_first_admin
 from routers import (auth,
                      glossary,
@@ -43,7 +46,21 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="PCM-Hub API", lifespan=lifespan)
+# In prod nascondiamo /docs, /redoc e /openapi.json: senza, chiunque
+# vede tutta la mappa degli endpoint e dei payload. In dev restano
+# accessibili come al solito per l'autocompletion / il debug.
+app = FastAPI(
+    title="PCM-Hub API",
+    lifespan=lifespan,
+    docs_url=None if IS_PROD else "/docs",
+    redoc_url=None if IS_PROD else "/redoc",
+    openapi_url=None if IS_PROD else "/openapi.json",
+)
+
+# Rate-limit: registra il limiter sull'app e l'handler che restituisce
+# 429 quando una route decorata supera la sua quota (vedi auth.py).
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS: whitelist letta da .env (CORS_ORIGINS, comma-separated).
 # In dev: default localhost Vite (gestito in config.py).

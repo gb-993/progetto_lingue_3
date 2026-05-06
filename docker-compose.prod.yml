@@ -1,0 +1,115 @@
+## docker-compose.prod.yml — stack di PRODUZIONE.
+##
+## Differenze chiave rispetto a docker-compose.yml (dev):
+##   - DB non esposto sull'host (solo rete docker interna)
+##   - backend non esposto sull'host (solo rete docker interna)
+##   - nessun bind-mount del codice: si usa l'immagine buildata
+##   - uvicorn senza --reload, con --proxy-headers per il reverse proxy
+##   - Caddy davanti: HTTPS automatico via Let's Encrypt e SPA statica
+##   - cleaner giornaliero per liberare spazio su VM piccola (8 GB)
+##   - logging json-file con rotation a 10MB x 3 file
+##
+## Le variabili d'ambiente NON vengono lette da .env: vanno impostate
+## come "Stack environment variables" in Portainer (vedi DEPLOY_NOTES.txt).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pcm_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: pcm_backend
+    environment:
+      ENV: ${ENV}
+      SECRET_KEY: ${SECRET_KEY}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      DATABASE_URL: ${DATABASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      TZ: UTC
+    expose:
+      - "8000"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    depends_on:
+      - db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: pcm_caddy
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv/dist:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cleaner:
+    image: docker:25-cli
+    container_name: pcm_cleaner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Pulizia giornaliera. NON tocca i volumes (postgres_data, caddy_data,
+    # caddy_config restano intatti). Libera immagini orfane lasciate dai
+    # rebuild e cache di build (importante con 8 GB di disco).
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          echo "[cleaner] $(date -Iseconds) starting cleanup"
+          docker container prune -f
+          docker image prune -af
+          docker builder prune -af
+          docker network prune -f
+          echo "[cleaner] $(date -Iseconds) cleanup done"
+          sleep 86400
+        done
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

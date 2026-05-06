@@ -19,3 +19,4 @@ adjustText
 pyparsing
 fpdf2
 plotly
+slowapi

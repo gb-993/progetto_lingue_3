@@ -7,6 +7,21 @@ from dependencies import get_db, require_admin, get_current_user
 
 router = APIRouter(tags=["Users"])
 
+
+# Politica password: minimo MIN_PASSWORD_LENGTH caratteri.
+# Si applica solo quando una password viene scelta o cambiata: gli account
+# esistenti con password piu' corte continuano a funzionare finche' non
+# decidono di cambiarla (no reset forzato al go-live).
+MIN_PASSWORD_LENGTH = 8
+
+
+def _validate_password(password: str) -> None:
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password too short (minimum {MIN_PASSWORD_LENGTH} characters).",
+        )
+
 # --- SCHEMI PYDANTIC ---
 class ProfileUpdate(BaseModel):
     name: str
@@ -67,6 +82,8 @@ def create_account(data: AccountCreate, db: Session = Depends(get_db), current_u
     """Crea un nuovo utente (Admin o User)"""
     if db.query(models.User).filter(models.User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
+
+    _validate_password(data.password)
 
     new_user = models.User(
         email=data.email.lower(),
@@ -153,6 +170,8 @@ def update_my_password(data: PasswordUpdate, db: Session = Depends(get_db), curr
         raise HTTPException(status_code=400, detail="The new passwords do not match.")
     if not auth.verify_password(data.old_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="The current password is wrong.")
+
+    _validate_password(data.new_password1)
 
     current_user.hashed_password = auth.get_password_hash(data.new_password1)
     db.commit()
