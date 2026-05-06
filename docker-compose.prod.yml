@@ -1,6 +1,5 @@
 ## docker-compose.prod.yml — stack di PRODUZIONE.
 ##
-## Differenze chiave rispetto a docker-compose.yml (dev):
 ##   - DB non esposto sull'host (solo rete docker interna)
 ##   - backend non esposto sull'host (solo rete docker interna)
 ##   - nessun bind-mount del codice: si usa l'immagine buildata
@@ -80,7 +79,11 @@ services:
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./frontend/dist:/srv/dist:ro
+      # Path della SPA buildata. Default e' ./frontend/dist (dev / web
+      # editor), in Portainer Repository mode imposta FRONTEND_DIST_PATH
+      # a una cartella stabile sulla VM (es. /opt/pcm-hub/dist) perche'
+      # dist/ e' gitignored e non arriva nel clone di Portainer.
+      - ${FRONTEND_DIST_PATH:-./frontend/dist}:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
