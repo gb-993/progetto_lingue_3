@@ -36,6 +36,9 @@ export default function TableA() {
     const [mantelOpen, setMantelOpen] = useState(false);
     const [mantelOpts, setMantelOpts] = useState({ gcd: true, hamming: true, jaccard: true });
     const [mantelRunning, setMantelRunning] = useState(false);
+    const [clusterMapOpen, setClusterMapOpen] = useState(false);
+    const [clusterMapOpts, setClusterMapOpts] = useState({ distance: 'hamming', threshold_coeff: 0.56 });
+    const [clusterMapRunning, setClusterMapRunning] = useState(false);
 
     // Caricamento opzioni iniziali
     useEffect(() => {
@@ -127,6 +130,15 @@ export default function TableA() {
             const payload = { view, ...filters, f_lang_specific: selectedLangs, selected_ids: selectedRows };
             const response = await api.post(`/api/tablea/export/${endpoint}`, payload, { responseType: 'blob' });
 
+            const skippedHeader = response.headers['x-skipped-languages'];
+            if (skippedHeader) {
+                const ids = skippedHeader.split(',').filter(Boolean);
+                alert(
+                    `Warning: ${ids.length} language(s) without coordinates have been excluded:\n\n`
+                    + ids.join(', ')
+                );
+            }
+
             // Crea un link temporaneo per forzare il download del file nel browser
             const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
             const link = document.createElement('a');
@@ -191,6 +203,59 @@ export default function TableA() {
             alert(msg);
         } finally {
             setMantelRunning(false);
+        }
+    };
+
+    const runClusterMap = async () => {
+        if (!['hamming', 'jaccard'].includes(clusterMapOpts.distance)) {
+            alert("Pick a distance (Hamming or Jaccard[+]).");
+            return;
+        }
+        const coeff = Number(clusterMapOpts.threshold_coeff);
+        if (!(coeff > 0 && coeff <= 1)) {
+            alert("Threshold coefficient must be in (0, 1].");
+            return;
+        }
+        setClusterMapRunning(true);
+        try {
+            const payload = {
+                view, ...filters,
+                f_lang_specific: selectedLangs,
+                selected_ids: selectedRows,
+                distance: clusterMapOpts.distance,
+                threshold_coeff: coeff,
+            };
+            const res = await api.post('/api/tablea/export/cluster_map', payload, { responseType: 'blob' });
+
+            const skippedHeader = res.headers['x-skipped-languages'];
+            if (skippedHeader) {
+                const ids = skippedHeader.split(',').filter(Boolean);
+                alert(
+                    `Warning: ${ids.length} language(s) without coordinates have been excluded from the map:\n\n`
+                    + ids.join(', ')
+                );
+            }
+
+            const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }));
+            const a = document.createElement('a');
+            a.href = url; a.download = 'cluster_map.html';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+
+            setClusterMapOpen(false);
+        } catch (err) {
+            let msg = "Error while building the cluster map.";
+            const blob = err?.response?.data;
+            if (blob instanceof Blob) {
+                try {
+                    const text = await blob.text();
+                    const json = JSON.parse(text);
+                    if (json?.detail) msg = json.detail;
+                } catch { /* non-JSON */ }
+            }
+            alert(msg);
+        } finally {
+            setClusterMapRunning(false);
         }
     };
 
@@ -381,8 +446,14 @@ export default function TableA() {
                                         <DropItem onClick={() => { setDownloadOpen(false); handleDownload('distances', 'distances_txt.zip', 'application/zip'); }}>
                                             Distances (.txt zip)
                                         </DropItem>
+                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('geo_distances', 'geo_distances_km.zip', 'application/zip'); }}>
+                                            Geographic distances km (.txt zip)
+                                        </DropItem>
                                         <DropItem onClick={() => { setDownloadOpen(false); handleDownload('dendrograms', 'dendrograms.zip', 'application/zip'); }}>
                                             Dendrograms (.png zip)
+                                        </DropItem>
+                                        <DropItem onClick={() => { setDownloadOpen(false); setClusterMapOpen(true); }}>
+                                            Cluster map (.html)
                                         </DropItem>
                                         <DropItem onClick={() => { setDownloadOpen(false); handleDownload('pca', `pca_scatterplot_${view}.png`, 'image/png'); }}>
                                             PCA Scatterplot (.png)
@@ -514,6 +585,72 @@ export default function TableA() {
                             </button>
                             <button type="button" className="btn btn--primary" disabled={mantelRunning} onClick={runMantel}>
                                 {mantelRunning ? 'Running…' : 'Perform Mantel test and download (.zip)'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== MODALE CLUSTER MAP ===== */}
+            {clusterMapOpen && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    onClick={(e) => { if (e.target === e.currentTarget && !clusterMapRunning) setClusterMapOpen(false); }}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+                    }}
+                >
+                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(460px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Cluster map</h3>
+                        <p className="muted small" style={{ marginTop: 0 }}>
+                            Builds an interactive HTML map: UPGMA clusters (linkage = average) on the geographic coordinates of the selected languages.
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '1rem 0' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>Distance</label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.92rem' }}>
+                                <input type="radio" name="cmap_dist" value="hamming"
+                                    checked={clusterMapOpts.distance === 'hamming'}
+                                    onChange={() => setClusterMapOpts(o => ({ ...o, distance: 'hamming' }))} />
+                                <span>Hamming (default)</span>
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.92rem' }}>
+                                <input type="radio" name="cmap_dist" value="jaccard"
+                                    checked={clusterMapOpts.distance === 'jaccard'}
+                                    onChange={() => setClusterMapOpts(o => ({ ...o, distance: 'jaccard' }))} />
+                                <span>Jaccard[+]</span>
+                            </label>
+                        </div>
+
+                        <div style={{ margin: '1rem 0' }}>
+                            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                                Cluster threshold (× max linkage distance)
+                            </label>
+                            <input
+                                type="number"
+                                min="0.05" max="1" step="0.01"
+                                value={clusterMapOpts.threshold_coeff}
+                                onChange={(e) => setClusterMapOpts(o => ({ ...o, threshold_coeff: e.target.value }))}
+                                className="form-control"
+                                style={{ width: '8rem', padding: '0.35rem 0.5rem' }}
+                            />
+                            <div className="small muted" style={{ marginTop: '0.3rem' }}>
+                                Default 0.56 (same as the original 01_plot_clusters.py script). Lower = more, smaller clusters.
+                            </div>
+                        </div>
+
+                        <div className="small muted" style={{ marginBottom: '0.75rem' }}>
+                            Note: languages without coordinates will be excluded from the map.
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                            <button type="button" className="btn" disabled={clusterMapRunning} onClick={() => setClusterMapOpen(false)}>
+                                Cancel
+                            </button>
+                            <button type="button" className="btn btn--primary" disabled={clusterMapRunning} onClick={runClusterMap}>
+                                {clusterMapRunning ? 'Building…' : 'Build cluster map and download (.html)'}
                             </button>
                         </div>
                     </div>

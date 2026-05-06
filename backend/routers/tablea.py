@@ -14,9 +14,10 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg') # Necessario per il rendering server-side
 import matplotlib.pyplot as plt
-from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import squareform
 from scipy.stats import pearsonr, spearmanr, kendalltau
+from collections import Counter
 import plotly.express as px
 from openpyxl import Workbook
 from adjustText import adjust_text
@@ -47,6 +48,11 @@ class MantelRequest(TableAFilterRequest):
     include_gcd: bool = True
     include_hamming: bool = True
     include_jaccard: bool = True
+
+
+class ClusterMapRequest(TableAFilterRequest):
+    distance: str = "hamming"          # "hamming" | "jaccard"
+    threshold_coeff: float = 0.56      # cluster cut at coeff * max(linkage_distance), come 01_plot_clusters.py
 
 # --- FUNZIONI CORE (PORTING MATEMATICO ESATTO) ---
 
@@ -231,6 +237,58 @@ def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": "attachment; filename=distances_txt.zip"})
 
+@router.post("/export/geo_distances")
+def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+    """Matrici di distanza geografica in km (porting di 11_latitude_longitude_to_distance_matrix.py).
+
+    Output zip con due TSV:
+      - gcd_km.txt        : Great Circle Distance, modello sferico (R = 6371.0088 km)
+      - crow_flies_km.txt : Geodesic su ellissoide WGS-84 via Vincenty inverso
+    Lingue senza coordinate vengono escluse e segnalate.
+    """
+    if filters.view != "params":
+        raise HTTPException(400, "Geo distances only available for Parameters View")
+
+    langs, _rows = _get_filtered_data(db, filters)
+
+    keep = [(l, l.latitude, l.longitude) for l in langs
+            if l.latitude is not None and l.longitude is not None]
+    skipped = [l.id for l in langs if l.latitude is None or l.longitude is None]
+    if len(keep) < 2:
+        raise HTTPException(400, "Need at least 2 languages with coordinates.")
+
+    ids = [l.id for l, _, _ in keep]
+    coords = [(float(lat), float(lon)) for _, lat, lon in keep]
+    n = len(keep)
+
+    gcd_mat = np.zeros((n, n))
+    fly_mat = np.zeros((n, n))
+    for i in range(n):
+        lat1, lon1 = coords[i]
+        for j in range(i + 1, n):
+            lat2, lon2 = coords[j]
+            d_gcd = round(_gcd_km(lat1, lon1, lat2, lon2), 3)
+            d_fly = round(_vincenty_km(lat1, lon1, lat2, lon2), 3)
+            gcd_mat[i, j] = gcd_mat[j, i] = d_gcd
+            fly_mat[i, j] = fly_mat[j, i] = d_fly
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("gcd_km.txt", _matrix_to_tsv(ids, gcd_mat))
+        zf.writestr("crow_flies_km.txt", _matrix_to_tsv(ids, fly_mat))
+        if skipped:
+            zf.writestr(
+                "warnings.txt",
+                "The following languages were excluded because they have no coordinates:\n"
+                + "\n".join(skipped) + "\n"
+            )
+
+    buf.seek(0)
+    headers = {"Content-Disposition": "attachment; filename=geo_distances_km.zip"}
+    if skipped:
+        headers["X-Skipped-Languages"] = ",".join(skipped)
+    return StreamingResponse(buf, media_type="application/zip", headers=headers)
+
 @router.post("/export/dendrograms")
 def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db)):
     """Genera i Dendrogrammi con metodo 'average'."""
@@ -262,6 +320,89 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": "attachment; filename=dendrograms.zip"})
+
+@router.post("/export/cluster_map")
+def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db)):
+    """Mappa interattiva HTML dei cluster UPGMA (porting di 02_carta_italia.py).
+
+    Pipeline (replicata da 01_plot_clusters.py + 02_carta_italia.py):
+      1. matrice di distanza (hamming default, oppure jaccard[+]) sui parametri filtrati
+      2. linkage UPGMA (average)
+      3. cluster ottenuti tagliando il dendrogramma a threshold_coeff * max(linkage_distance)
+      4. plot scatter_geo (plotly) con un colore per cluster; singletoni → "No Cluster"
+    Lingue senza coordinate vengono escluse e segnalate via header X-Skipped-Languages.
+    """
+    if filters.view != "params":
+        raise HTTPException(400, "Cluster map only available for Parameters View")
+    if filters.distance not in ("hamming", "jaccard"):
+        raise HTTPException(400, "distance must be 'hamming' or 'jaccard'")
+    if not (0.0 < filters.threshold_coeff <= 1.0):
+        raise HTTPException(400, "threshold_coeff must be in (0, 1]")
+
+    langs, rows = _get_filtered_data(db, filters)
+    if not langs or not rows:
+        raise HTTPException(400, "No data available with the current filters.")
+
+    keep_idx = [i for i, l in enumerate(langs)
+                if l.latitude is not None and l.longitude is not None]
+    skipped = [langs[i].id for i in range(len(langs)) if i not in keep_idx]
+    if len(keep_idx) < 3:
+        raise HTTPException(400, "Need at least 3 languages with coordinates to build the cluster map.")
+
+    langs = [langs[i] for i in keep_idx]
+    for r in rows:
+        r["cells"] = [r["cells"][i] for i in keep_idx]
+
+    n = len(langs)
+    lang_vectors = [[r["cells"][i] for r in rows] for i in range(n)]
+    dist_func = _hamming_core if filters.distance == "hamming" else _jaccard_core
+    dist_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = dist_func(lang_vectors[i], lang_vectors[j])
+            dist_matrix[i, j] = dist_matrix[j, i] = d
+
+    Z = linkage(squareform(dist_matrix), method='average')
+    max_d = float(Z[:, 2].max()) if Z.size else 0.0
+    threshold = filters.threshold_coeff * max_d
+    cluster_ids = fcluster(Z, t=threshold, criterion='distance') if max_d > 0 else np.ones(n, dtype=int)
+
+    counts = Counter(cluster_ids.tolist())
+    df_plot = pd.DataFrame({
+        "id": [l.id for l in langs],
+        "name": [getattr(l, "name_full", None) or l.id for l in langs],
+        "lat": [float(l.latitude) for l in langs],
+        "lon": [float(l.longitude) for l in langs],
+        "raw_cluster": cluster_ids,
+    })
+    df_plot["cluster"] = df_plot["raw_cluster"].apply(
+        lambda c: f"Cluster {int(c)}" if counts[int(c)] > 1 else "No Cluster"
+    )
+    df_plot = df_plot.sort_values(["cluster", "id"]).reset_index(drop=True)
+
+    title = (
+        f"UPGMA cluster map — distance: {filters.distance}, linkage: average, "
+        f"cut: {filters.threshold_coeff:.2f} × max ({threshold:.3f})"
+    )
+    fig = px.scatter_geo(
+        df_plot, lat="lat", lon="lon", color="cluster",
+        hover_name="name",
+        hover_data={"id": True, "cluster": True, "lat": ":.4f", "lon": ":.4f", "raw_cluster": False},
+        title=title,
+    )
+    fig.update_traces(marker=dict(size=10, line=dict(width=0.5, color="black")))
+    fig.update_geos(showcountries=True, showsubunits=True,
+                    fitbounds="locations", resolution=50,
+                    showland=True, landcolor="#f5f5f0",
+                    showocean=True, oceancolor="#e6f2f7")
+    fig.update_layout(margin=dict(r=10, t=60, l=10, b=10), height=720,
+                      legend=dict(title="Cluster"))
+
+    html = fig.to_html(include_plotlyjs="cdn")
+    headers = {"Content-Disposition": "attachment; filename=cluster_map.html"}
+    if skipped:
+        headers["X-Skipped-Languages"] = ",".join(skipped)
+    return Response(content=html, media_type="text/html", headers=headers)
 
 @router.post("/export/pca")
 def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db)):
@@ -320,6 +461,69 @@ def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> f
     x2, y2 = math.radians(lat2), math.radians(lon2)
     cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
     return 60.0 * math.degrees(math.acos(round(cos_val, 5)))
+
+
+def _gcd_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in km (modello sferico, R = 6371.0088 km).
+
+    Stesso raggio usato da geopy.distance.great_circle (script 11).
+    """
+    R_km = 6371.0088
+    x1, y1 = math.radians(lat1), math.radians(lon1)
+    x2, y2 = math.radians(lat2), math.radians(lon2)
+    cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
+    return R_km * math.acos(max(-1.0, min(1.0, cos_val)))
+
+
+def _vincenty_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Geodesic distance (km) su ellissoide WGS-84 via Vincenty inverso.
+
+    Stessa metrica di geopy.distance.geodesic (script 11). Per coppie
+    quasi antipodali la formula può non convergere: in tal caso ritorna
+    il GCD sferico come fallback (caso non realistico per lingue terrestri).
+    """
+    if lat1 == lat2 and lon1 == lon2:
+        return 0.0
+    a = 6378137.0
+    f = 1 / 298.257223563
+    b = (1 - f) * a
+    L = math.radians(lon2 - lon1)
+    U1 = math.atan((1 - f) * math.tan(math.radians(lat1)))
+    U2 = math.atan((1 - f) * math.tan(math.radians(lat2)))
+    sinU1, cosU1 = math.sin(U1), math.cos(U1)
+    sinU2, cosU2 = math.sin(U2), math.cos(U2)
+    lam = L
+    for _ in range(200):
+        sinLam, cosLam = math.sin(lam), math.cos(lam)
+        sinSigma = math.sqrt((cosU2 * sinLam) ** 2 +
+                             (cosU1 * sinU2 - sinU1 * cosU2 * cosLam) ** 2)
+        if sinSigma == 0:
+            return 0.0
+        cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLam
+        sigma = math.atan2(sinSigma, cosSigma)
+        sinAlpha = cosU1 * cosU2 * sinLam / sinSigma
+        cosSqAlpha = 1 - sinAlpha ** 2
+        cos2SigmaM = 0.0 if cosSqAlpha == 0 else cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha
+        C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha))
+        lamP = lam
+        lam = L + (1 - C) * f * sinAlpha * (
+            sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM ** 2))
+        )
+        if abs(lam - lamP) < 1e-12:
+            break
+    else:
+        return _gcd_km(lat1, lon1, lat2, lon2)
+    uSq = cosSqAlpha * (a ** 2 - b ** 2) / (b ** 2)
+    A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)))
+    B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)))
+    deltaSigma = B * sinSigma * (
+        cos2SigmaM + B / 4 * (
+            cosSigma * (-1 + 2 * cos2SigmaM ** 2)
+            - B / 6 * cos2SigmaM * (-3 + 4 * sinSigma ** 2) * (-3 + 4 * cos2SigmaM ** 2)
+        )
+    )
+    s = b * A * (sigma - deltaSigma)
+    return s / 1000.0
 
 
 def _matrix_to_tsv(ids: List[str], mat: np.ndarray) -> str:
