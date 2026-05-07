@@ -1,10 +1,11 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
     DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
 const SIDEBAR_COLLAPSED_KEY = 'pcm-sidebar-collapsed';
@@ -223,10 +224,9 @@ export function SiteFooter({ role }) {
 // Layout
 // =============================================================================
 export default function Layout({ children }) {
-    const navigate = useNavigate();
     const location = useLocation();
+    const { logout: contextLogout } = useAuth();
     const role = localStorage.getItem('role');
-    const name = localStorage.getItem('name');
 
     const [theme, setTheme] = useState(getInitialTheme);
     const [collapsed, setCollapsed] = useState(() =>
@@ -249,7 +249,12 @@ export default function Layout({ children }) {
         const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         localStorage.clear();
         if (savedTheme) localStorage.setItem(THEME_STORAGE_KEY, savedTheme);
-        navigate('/');
+        // Delega al context: oltre a `removeItem('token')` (già coperto da
+        // localStorage.clear() sopra) azzera lo stato `user` del provider e
+        // ridireziona. Senza questa chiamata il context restava sporco e
+        // AdminRoute (che legge dal context) poteva lasciar passare
+        // un utente "logoutato" finché non veniva fatto un refresh.
+        contextLogout('/');
     };
 
     // Helper per evidenziare il link attivo

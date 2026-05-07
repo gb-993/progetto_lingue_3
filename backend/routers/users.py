@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,6 +22,26 @@ def _validate_password(password: str) -> None:
         raise HTTPException(
             status_code=400,
             detail=f"Password too short (minimum {MIN_PASSWORD_LENGTH} characters).",
+        )
+
+
+# Validazione email server-side. Pattern minimo: qualcosa@qualcosa.qualcosa
+# senza spazi e senza @ multiple. Non vuole sostituire un check completo
+# RFC 5322 (servirebbe la lib email-validator), copre invece il 99% dei
+# typo reali — in particolare il "dimenticato il TLD" (es. "user@unimore"
+# invece di "user@unimore.it") che il <input type="email"> del browser
+# lascia passare.
+# Difese complementari: <input type="email"> lato form (AccountCreate,
+# MyAccount), e in AccountCreate la tendina dei ruoli previene altri
+# input fuori range.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _validate_email(email: str) -> None:
+    if not _EMAIL_RE.match(email or ""):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid email format.",
         )
 
 # --- SCHEMI PYDANTIC ---
@@ -80,6 +102,7 @@ def get_single_account(user_id: int, db: Session = Depends(get_db), current_user
 @router.post("/api/admin/accounts", status_code=status.HTTP_201_CREATED)
 def create_account(data: AccountCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Crea un nuovo utente (Admin o User)"""
+    _validate_email(data.email)
     if db.query(models.User).filter(models.User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
@@ -153,6 +176,7 @@ def get_my_account(current_user: models.User = Depends(get_current_user)):
 
 @router.put("/api/me")
 def update_my_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    _validate_email(data.email)
     if data.email.lower() != current_user.email.lower():
         existing_user = db.query(models.User).filter(models.User.email == data.email.lower()).first()
         if existing_user:

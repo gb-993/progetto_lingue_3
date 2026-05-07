@@ -19,13 +19,29 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Gestione centralizzata degli errori (es. token scaduto)
+// Path delle rotte pubbliche dell'app: visitabili senza autenticazione.
+// Vedi App.jsx — le altre rotte sono dietro Layout o AdminRoute e quindi
+// richiedono già un token valido in localStorage.
+const PUBLIC_PATHS = ['/', '/how-to-cite', '/login'];
+
+// Gestione centralizzata degli errori (es. token scaduto).
+// Strategia 401:
+//   - rimuoviamo SEMPRE il token: se il backend dice 401, qualunque cosa
+//     ci sia in localStorage è inutile e può solo creare confusione nei
+//     componenti che leggono il flag "loggato" da quel valore;
+//   - facciamo il redirect a /login SOLO se non siamo già su una rotta
+//     pubblica. Da PublicHome/HowToCite/Login l'utente sta legittimamente
+//     navigando senza login, e sbatterlo su /login solo perché un token
+//     stale ha generato un 401 sarebbe un'esperienza pessima.
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
-            window.location.href = '/login';
+            const path = typeof window !== 'undefined' ? window.location.pathname : '';
+            if (!PUBLIC_PATHS.includes(path)) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

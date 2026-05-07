@@ -21,7 +21,11 @@ export default function Login() {
             // ancora li usa per decidere quali voci della sidebar mostrare.
             await login(resp.data.access_token);
             localStorage.setItem('role', resp.data.role);
-            localStorage.setItem('name', resp.data.name);
+            // `resp.data.name` può essere null se l'utente non ha un name
+            // valorizzato (es. account creato senza nome). Senza fallback
+            // `setItem('name', null)` lo serializza come la stringa "null"
+            // che poi compare letterale in topbar/Dashboard ("Welcome, null").
+            localStorage.setItem('name', resp.data.name ?? '');
             navigate('/dashboard');
         } catch {
             setError('Invalid credentials');
