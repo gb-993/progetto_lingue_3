@@ -1,7 +1,15 @@
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from time_utils import utc_now
+import io
+
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
+
 import models
+from services.citation import apply_excel_citation
 
 # Massimo numero di salvataggi storici mantenuti per ogni lingua
 MAX_PER_LANGUAGE = 10
@@ -132,4 +140,147 @@ def create_all_languages_backup(db: Session, user_id: int, note: str = "Global b
         # Se anche un solo elemento fallisce, annulliamo tutto (equivalente di with transaction.atomic() in Django)
         db.rollback()
         raise e
+
+
+# ============================================================================
+# Export di una Submission in xlsx (download dei backup, equivalente al
+# download "Old questions archive"). Riusa lo snapshot in DB: niente lookup
+# sui dati vivi, così il file riflette esattamente lo stato salvato.
+# ============================================================================
+
+_BOLD_WHITE = Font(bold=True, color="FFFFFF")
+
+
+def _bold_header_row(ws, n_cols: int) -> None:
+    for i in range(1, n_cols + 1):
+        ws.cell(row=1, column=i).font = _BOLD_WHITE
+
+
+def _style_table(ws, name: str, n_cols: int, widths) -> None:
+    """Tabella stile TableStyleMedium2 con header su fondo blu (richiesto
+    perché _bold_header_row mette font bianco): senza il fill l'header sarebbe
+    invisibile su fondo bianco."""
+    if ws.max_row >= 2:
+        ref = f"A1:{get_column_letter(n_cols)}{ws.max_row}"
+        tbl = Table(displayName=name, ref=ref)
+        tbl.tableStyleInfo = TableStyleInfo(
+            name="TableStyleMedium2",
+            showFirstColumn=False, showLastColumn=False,
+            showRowStripes=True, showColumnStripes=False,
+        )
+        ws.add_table(tbl)
+        ws.freeze_panes = "A2"
+    for idx, w in enumerate(widths, start=1):
+        if idx > n_cols:
+            break
+        ws.column_dimensions[get_column_letter(idx)].width = w
+
+
+_INFO_HEADERS = ["Field", "Value"]
+_PARAMS_HEADERS = ["Parameter", "Initial value", "Warning init", "Final value", "Warning final"]
+_ANSWERS_HEADERS = ["Question", "Answer", "Motivations", "Comments"]
+_EXAMPLES_HEADERS = ["Question", "Example text", "Transliteration", "Gloss", "Translation", "Reference"]
+
+
+def build_submission_workbook(db: Session, sub: models.Submission) -> Workbook:
+    """Workbook per una singola Submission (backup di una lingua).
+
+    Sheet:
+      - Info       : Language id/name, Backup date, Submitted by, Note
+      - Parameters : value_orig, warning_orig, value_eval, warning_eval
+      - Answers    : question_code, response, motivazioni, comments
+      - Examples   : question_code, textarea, transliteration, gloss, translation, ref
+
+    Tutti i dati derivano dallo snapshot Submission*: niente lookup sulle
+    tabelle vive — il file riflette lo stato congelato del backup.
+    """
+    wb = Workbook()
+
+    # === Info ===
+    ws_info = wb.active
+    ws_info.title = "Info"
+    ws_info.append(_INFO_HEADERS)
+    _bold_header_row(ws_info, len(_INFO_HEADERS))
+
+    lang = sub.language
+    submitter = (
+        f"{sub.submitted_by.name or ''} {sub.submitted_by.surname or ''}".strip()
+        or (sub.submitted_by.email if sub.submitted_by else "")
+    ) if sub.submitted_by_id else "System"
+    submitted_at_str = sub.submitted_at.strftime("%Y-%m-%d %H:%M UTC") if sub.submitted_at else ""
+
+    ws_info.append(["Language ID", lang.id if lang else (sub.language_id or "")])
+    ws_info.append(["Language name", lang.name_full if lang else ""])
+    ws_info.append(["Backup date (UTC)", submitted_at_str])
+    ws_info.append(["Submitted by", submitter])
+    ws_info.append(["Note", sub.note or ""])
+    _style_table(ws_info, "BackupInfo", len(_INFO_HEADERS), [22, 60])
+
+    # === Parameters ===
+    ws_par = wb.create_sheet("Parameters")
+    ws_par.append(_PARAMS_HEADERS)
+    _bold_header_row(ws_par, len(_PARAMS_HEADERS))
+    params_sorted = sorted(sub.params, key=lambda p: p.parameter_id or "")
+    for p in params_sorted:
+        ws_par.append([
+            p.parameter_id or "",
+            p.value_orig or "",
+            "Yes" if p.warning_orig else "",
+            p.value_eval or "",
+            "Yes" if p.warning_eval else "",
+        ])
+    _style_table(ws_par, "BackupParameters", len(_PARAMS_HEADERS), [16, 14, 14, 14, 14])
+
+    # Pre-aggrega le motivations per question_code (label fallback su code)
+    mots_by_q: dict[str, list[str]] = {}
+    for m in sub.answer_motivations:
+        text = m.motivation_label or m.motivation_code or ""
+        if text:
+            mots_by_q.setdefault(m.question_code, []).append(text)
+
+    # === Answers ===
+    ws_ans = wb.create_sheet("Answers")
+    ws_ans.append(_ANSWERS_HEADERS)
+    _bold_header_row(ws_ans, len(_ANSWERS_HEADERS))
+    answers_sorted = sorted(sub.answers, key=lambda a: a.question_code or "")
+    for a in answers_sorted:
+        resp = ""
+        if a.response_text == "yes":
+            resp = "YES"
+        elif a.response_text == "no":
+            resp = "NO"
+        elif a.response_text:
+            resp = a.response_text
+        ws_ans.append([
+            a.question_code or "",
+            resp,
+            "; ".join(mots_by_q.get(a.question_code, [])),
+            a.comments or "",
+        ])
+    _style_table(ws_ans, "BackupAnswers", len(_ANSWERS_HEADERS), [16, 10, 30, 36])
+
+    # === Examples ===
+    ws_ex = wb.create_sheet("Examples")
+    ws_ex.append(_EXAMPLES_HEADERS)
+    _bold_header_row(ws_ex, len(_EXAMPLES_HEADERS))
+    examples_sorted = sorted(sub.examples, key=lambda e: (e.question_code or "", e.id or 0))
+    for e in examples_sorted:
+        ws_ex.append([
+            e.question_code or "",
+            e.textarea or "",
+            e.transliteration or "",
+            e.gloss or "",
+            e.translation or "",
+            e.reference or "",
+        ])
+    _style_table(ws_ex, "BackupExamples", len(_EXAMPLES_HEADERS), [14, 36, 22, 22, 26, 22])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+def workbook_to_bytes(wb: Workbook) -> bytes:
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
     

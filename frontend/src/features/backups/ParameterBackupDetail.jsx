@@ -59,13 +59,35 @@ export default function ParameterBackupDetail() {
     const displayDate = formatBackendDate(sub.submitted_at);
     const p = sub.parameter || {};
 
+    const handleDownloadXlsx = async () => {
+        try {
+            const res = await api.get(`/api/admin/backups/parameters/submissions/${sub.id}/xlsx`, {
+                responseType: 'blob',
+            });
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^";]+)"?/);
+            const fname = m ? m[1] : `PCM_param_backup_${p.id || sub.id}.xlsx`;
+            const blob = new Blob([res.data]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fname;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Could not download the parameter backup xlsx.');
+        }
+    };
+
     return (
         <div className="container">
-            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
                 <Link to={`/admin/backups/parameters/${encodeURIComponent(sub.submitted_at)}`} className="btn btn-outline-secondary">
                     ← Back to Folder
                 </Link>
                 <h1 className="m-0">Parameter backup #{sub.id}</h1>
+                <button type="button" onClick={handleDownloadXlsx} className="btn btn--small" style={{ marginLeft: 'auto' }}>
+                    Download .xlsx
+                </button>
             </header>
 
             {/* HEADER CARD */}

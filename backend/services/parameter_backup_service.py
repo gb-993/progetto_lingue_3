@@ -1,7 +1,17 @@
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from time_utils import utc_now
+import io
+
+from openpyxl import Workbook
+
 import models
+from services.backup_service import (
+    _bold_header_row,
+    _style_table,
+    workbook_to_bytes,
+)
+from services.citation import apply_excel_citation
 
 # Massimo numero di snapshot mantenuti per ogni parametro
 MAX_PER_PARAMETER = 10
@@ -151,3 +161,95 @@ def create_single_parameter_backup(
     except Exception:
         db.rollback()
         raise
+
+
+# ============================================================================
+# Export di una ParameterSubmission in xlsx (download del backup parametro).
+# Tutto deriva dallo snapshot in DB: niente lookup vivi.
+# ============================================================================
+
+_PINFO_HEADERS = ["Field", "Value"]
+_PQUESTIONS_HEADERS = [
+    "Question ID", "Text", "Template type", "Instruction",
+    "Instruction YES", "Instruction NO", "Example YES", "Help info",
+    "Is stop question", "Is active",
+]
+_PQAM_HEADERS = ["Question ID", "Allowed motivation"]
+
+
+def build_parameter_submission_workbook(db: Session, sub: models.ParameterSubmission) -> Workbook:
+    """Workbook per una singola ParameterSubmission (backup di un parametro).
+
+    Sheet:
+      - Info       : id, name, descrizioni, formula, is_active, position
+      - Questions  : 1 riga per question dello snapshot
+      - AllowedMot : 1 riga per (question, motivation_label) consentita
+    """
+    wb = Workbook()
+
+    # === Info ===
+    ws_info = wb.active
+    ws_info.title = "Info"
+    ws_info.append(_PINFO_HEADERS)
+    _bold_header_row(ws_info, len(_PINFO_HEADERS))
+
+    submitter = (
+        f"{sub.submitted_by.name or ''} {sub.submitted_by.surname or ''}".strip()
+        or (sub.submitted_by.email if sub.submitted_by else "")
+    ) if sub.submitted_by_id else "System"
+    submitted_at_str = sub.submitted_at.strftime("%Y-%m-%d %H:%M UTC") if sub.submitted_at else ""
+
+    rows = [
+        ("Parameter ID", sub.parameter_id or ""),
+        ("Parameter name", sub.parameter_name or ""),
+        ("Schema", sub.schema or ""),
+        ("Type", sub.param_type or ""),
+        ("Level of comparison", sub.level_of_comparison or ""),
+        ("Position", sub.position if sub.position is not None else ""),
+        ("Is active", "Yes" if sub.is_active else "No"),
+        ("Short description", sub.short_description or ""),
+        ("Long description", sub.long_description or ""),
+        ("Implicational condition", sub.implicational_condition or ""),
+        ("Explanation of the condition", sub.description_of_the_implicational_condition or ""),
+        ("Backup date (UTC)", submitted_at_str),
+        ("Submitted by", submitter),
+        ("Note", sub.note or ""),
+    ]
+    for k, v in rows:
+        ws_info.append([k, v])
+    _style_table(ws_info, "ParamBackupInfo", len(_PINFO_HEADERS), [28, 70])
+
+    # === Questions ===
+    ws_q = wb.create_sheet("Questions")
+    ws_q.append(_PQUESTIONS_HEADERS)
+    _bold_header_row(ws_q, len(_PQUESTIONS_HEADERS))
+    qs_sorted = sorted(sub.questions, key=lambda q: (q.is_stop_question, q.question_code or ""))
+    for q in qs_sorted:
+        ws_q.append([
+            q.question_code or "",
+            q.text or "",
+            q.template_type or "",
+            q.instruction or "",
+            q.instruction_yes or "",
+            q.instruction_no or "",
+            q.example_yes or "",
+            q.help_info or "",
+            "Yes" if q.is_stop_question else "No",
+            "Yes" if q.is_active else "No",
+        ])
+    _style_table(ws_q, "ParamBackupQuestions", len(_PQUESTIONS_HEADERS),
+                 [16, 36, 16, 24, 24, 24, 24, 22, 12, 10])
+
+    # === Allowed motivations ===
+    ws_qam = wb.create_sheet("AllowedMotivations")
+    ws_qam.append(_PQAM_HEADERS)
+    _bold_header_row(ws_qam, len(_PQAM_HEADERS))
+    for q in qs_sorted:
+        for m in q.allowed_motivations:
+            text = m.motivation_label or m.motivation_code or ""
+            if text:
+                ws_qam.append([q.question_code or "", text])
+    _style_table(ws_qam, "ParamBackupAllowedMot", len(_PQAM_HEADERS), [18, 50])
+
+    apply_excel_citation(wb)
+    return wb

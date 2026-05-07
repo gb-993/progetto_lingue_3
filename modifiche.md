@@ -52,7 +52,7 @@
 
 ## BACKUP
 - [x] L'orario che mostra per i backup è circa due ore indietro
-- [ ] Poter scaricare i backup in formato excel (come in Old questions archive)
+- [x] Poter scaricare i backup in formato excel (come in Old questions archive)
 
 ## ACCOUNTS
 

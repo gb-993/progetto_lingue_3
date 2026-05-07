@@ -1,4 +1,7 @@
+import io
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from pydantic import BaseModel
@@ -10,6 +13,8 @@ from dependencies import get_db, require_admin, get_current_user
 from services import backup_service
 
 router = APIRouter(prefix="/api/admin/backups", tags=["Backups"])
+
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 # Schema per il payload della creazione
 class BackupCreatePayload(BaseModel):
@@ -126,6 +131,34 @@ def get_submission_detail(submission_id: int, db: Session = Depends(get_db), cur
             } for e in sub.examples
         ]
     }
+
+@router.get("/submissions/{submission_id}/xlsx")
+def export_submission_xlsx(submission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Scarica il backup di una lingua come xlsx (4 sheet: Info, Parameters,
+    Answers, Examples). Equivalente al download .xlsx di Old questions archive."""
+    sub = db.query(models.Submission).options(
+        joinedload(models.Submission.language),
+        joinedload(models.Submission.submitted_by),
+        joinedload(models.Submission.params),
+        joinedload(models.Submission.answers),
+        joinedload(models.Submission.examples),
+        joinedload(models.Submission.answer_motivations),
+    ).filter(models.Submission.id == submission_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    wb = backup_service.build_submission_workbook(db, sub)
+    data = backup_service.workbook_to_bytes(wb)
+
+    ts = (sub.submitted_at or datetime.utcnow()).strftime("%Y%m%d_%H%M")
+    lang_id = sub.language_id or "unknown"
+    fname = f"PCM_backup_{lang_id}_{ts}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
 
 @router.post("/create-all", status_code=status.HTTP_201_CREATED)
 def trigger_global_backup(payload: BackupCreatePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):

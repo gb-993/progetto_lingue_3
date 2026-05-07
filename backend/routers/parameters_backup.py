@@ -1,7 +1,9 @@
+import io
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -9,8 +11,11 @@ from sqlalchemy.orm import Session, joinedload
 import models
 from dependencies import get_db, require_admin
 from services import parameter_backup_service
+from services.backup_service import workbook_to_bytes
 
 router = APIRouter(prefix="/api/admin/backups/parameters", tags=["ParameterBackups"])
+
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 class BackupCreatePayload(BaseModel):
@@ -142,6 +147,40 @@ def get_parameter_submission_detail(
             for q in sub.questions
         ],
     }
+
+
+@router.get("/submissions/{submission_id}/xlsx")
+def export_parameter_submission_xlsx(
+    submission_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Scarica il backup di un parametro come xlsx (3 sheet: Info, Questions,
+    AllowedMotivations). Equivalente al download .xlsx degli altri backup."""
+    sub = (
+        db.query(models.ParameterSubmission)
+        .options(
+            joinedload(models.ParameterSubmission.submitted_by),
+            joinedload(models.ParameterSubmission.questions)
+            .joinedload(models.ParameterSubmissionQuestion.allowed_motivations),
+        )
+        .filter(models.ParameterSubmission.id == submission_id)
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="Parameter submission not found")
+
+    wb = parameter_backup_service.build_parameter_submission_workbook(db, sub)
+    data = workbook_to_bytes(wb)
+
+    ts = (sub.submitted_at or datetime.utcnow()).strftime("%Y%m%d_%H%M")
+    pid = sub.parameter_id or "unknown"
+    fname = f"PCM_param_backup_{pid}_{ts}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 
 @router.post("/create-all", status_code=status.HTTP_201_CREATED)

@@ -64,13 +64,35 @@ export default function BackupDetail() {
 
     const displayDate = formatBackendDate(sub.submitted_at);
 
+    const handleDownloadXlsx = async () => {
+        try {
+            const res = await api.get(`/api/admin/backups/submissions/${sub.id}/xlsx`, {
+                responseType: 'blob',
+            });
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^";]+)"?/);
+            const fname = m ? m[1] : `PCM_backup_${sub.language?.id || sub.id}.xlsx`;
+            const blob = new Blob([res.data]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = fname;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Could not download the backup xlsx.');
+        }
+    };
+
     return (
         <div className="container">
-            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
                 <Link to={`/admin/backups/${encodeURIComponent(sub.submitted_at)}`} className="btn btn-outline-secondary">
                     ← Back to Folder
                 </Link>
                 <h1 className="m-0">Backup #{sub.id}</h1>
+                <button type="button" onClick={handleDownloadXlsx} className="btn btn--small" style={{ marginLeft: 'auto' }}>
+                    Download .xlsx
+                </button>
             </header>
 
             {/* HEADER CARD (Identica al tuo CSS originale) */}

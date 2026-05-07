@@ -122,7 +122,8 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/recompute.py'\\).read\\(\\)\\); ast.parse\\(open\\('main.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/questions.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('services/pdf_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/tablea.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/tablea.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/parameter_backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/backup.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters_backup.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }
