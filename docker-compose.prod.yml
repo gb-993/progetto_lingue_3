@@ -50,7 +50,10 @@ services:
       TZ: UTC
     expose:
       - "8000"
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    # Applica le migrazioni alembic PRIMA di uvicorn. Senza questo, il
+    # lifespan di FastAPI (bootstrap_first_admin) crasha al primo avvio
+    # perche' la tabella users non esiste ancora -> backend in restart loop.
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"
     depends_on:
       - db
     restart: unless-stopped

@@ -154,23 +154,7 @@ PASSO 0 (build + commit della dist). Rifallo, push, "Pull and redeploy".
 
 
 ==========================================================================
-PASSO 5 — APPLICARE LE MIGRAZIONI ALEMBIC
-==========================================================================
-
-[PORTAINER]
-   - "Containers" -> clicca su `pcm-hub-backend-1`.
-   - Pulsante "Console" (icona >_  in alto).
-   - Command: /bin/bash. Clicca "Connect".
-   - Nel terminale che si apre digita:
-
-         alembic upgrade head
-
-   - Deve stampare le versioni applicate e finire con "OK".
-   - Chiudi il tab della console.
-
-
-==========================================================================
-PASSO 6 — PRIMO LOGIN E VERIFICA HTTPS
+PASSO 5 — PRIMO LOGIN E VERIFICA HTTPS
 ==========================================================================
 
 [BROWSER] Apri https://hub.parametricomparison.unimore.it
@@ -185,11 +169,11 @@ PASSO 6 — PRIMO LOGIN E VERIFICA HTTPS
         Email:    <ADMIN_EMAIL del passo 2>
         Password: <ADMIN_PASSWORD del passo 2>
 
-   - NON cambiare ancora la password: la sovrascrivera' il PASSO 7.
+   - NON cambiare ancora la password: la sovrascrivera' il PASSO 6.
 
 
 ==========================================================================
-PASSO 7 — IMPORTARE IL BUNDLE DEL SITO VECCHIO
+PASSO 6 — IMPORTARE IL BUNDLE DEL SITO VECCHIO
 ==========================================================================
 
 [BROWSER] Sempre loggato come admin sul sito nuovo:
@@ -208,7 +192,7 @@ PASSO 7 — IMPORTARE IL BUNDLE DEL SITO VECCHIO
 
 
 ==========================================================================
-PASSO 8 — CAMBIARE LA PASSWORD ADMIN
+PASSO 7 — CAMBIARE LA PASSWORD ADMIN
 ==========================================================================
 
 [BROWSER]
@@ -222,7 +206,7 @@ PASSO 8 — CAMBIARE LA PASSWORD ADMIN
 
 
 ==========================================================================
-PASSO 9 — SMOKE TEST
+PASSO 8 — SMOKE TEST
 ==========================================================================
 
 [BROWSER] Da una macchina che NON e' la VM (il tuo PC va benissimo):
@@ -244,7 +228,7 @@ PASSO 9 — SMOKE TEST
 
 
 ==========================================================================
-PASSO 10 — VERIFICARE CHE IL BACKUP PARTE
+PASSO 9 — VERIFICARE CHE IL BACKUP PARTE
 ==========================================================================
 
 [PORTAINER]
