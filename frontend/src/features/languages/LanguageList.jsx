@@ -744,9 +744,9 @@ export default function LanguageList() {
                             <th>ID</th>
                             <th style={{ width: '14%' }}>Name</th>
                             <th>Status</th>
+                            <th>Top family</th>
                             <th>Subfamily</th>
                             <th>Group</th>
-                            <th>Geography</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -764,11 +764,9 @@ export default function LanguageList() {
                                 <td style={{ fontWeight: 'bold' }}>{lang.id}</td>
                                 <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{lang.name_full}</td>
                                 <td><StatusBadge status={lang.status} /></td>
+                                <td className="muted">{lang.top_level_family || '—'}</td>
                                 <td className="muted">{lang.family || '—'}</td>
                                 <td className="muted small">{lang.grp || '—'}</td>
-                                <td className="small">
-                                    {lang.latitude ? `${lang.latitude}, ${lang.longitude}` : 'No coords'}
-                                </td>
                                 <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                     <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
                                         <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>

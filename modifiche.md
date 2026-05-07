@@ -21,7 +21,7 @@
 - [x] Da export parametric data toglierei i fogli Motivations, Param2eters, Questions e QuestionAllowedMotivations. Il foglio Database_model è necessario per reimportare una lingua o sono sufficienti gli altri fogli? Database_model riesce a importare anche le motivazioni selezionate per ciascuna lingua e le admin notes? In quel foglio toglierei le colonne [Question	Question_Examples_YES	Question_Intructions_Comments]
 - [x] Scaricare la mappa di Lorenzo e Federico
 - [x] Mettere un pulsante unico che ricalcoli i final values per tutte le lingue
-- [ ] Nella tabella inserire la colonna Top family prima di Subfamily e possiamo togliere Geography
+- [x] Nella tabella inserire la colonna Top family prima di Subfamily e possiamo togliere Geography
 
 ## LINGUE DATA
 - [ ] Sostituire "Export (.xlsx full)" con "Export parametric data (.xlsx)"

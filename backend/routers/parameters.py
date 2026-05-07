@@ -219,7 +219,7 @@ def reorder_parameters(
 
 
 @router.put("/{id}")
-def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
@@ -250,6 +250,10 @@ def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends
         record_version(db, db_item, operation="update", source="manual",
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
+        # Qualunque modifica al parametro può rendere stale i value_orig/value_eval
+        # (cambio formula → DAG diverso, cambio nome/descrizione → no-op ma costo
+        # trascurabile). Ricalcoliamo sempre in background per coerenza.
+        background_tasks.add_task(recompute_parameter_for_all_languages, id)
         return db_item
     except IntegrityError:
         db.rollback()
@@ -257,7 +261,7 @@ def update_admin_parameter(id: str, item: ParameterUpdate, db: Session = Depends
 
 
 @router.post("/{id}/deactivate")
-def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     # 1. Verifica Password
     if not auth.verify_password(payload.password, current_user.hashed_password):
         raise HTTPException(status_code=403, detail="Wrong password. Cannot deactivate.")
@@ -291,6 +295,9 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, db: Session = Depe
                    user_id=current_user.id,
                    note=f"Deactivated{f': {payload.reason}' if payload.reason else ''}")
     db.commit()
+    # Disattivare un parametro lo esclude dal DAG: ricalcolo per tutte le lingue
+    # così i value_eval dei figli che lo citano si riallineano.
+    background_tasks.add_task(recompute_parameter_for_all_languages, id)
     return {"detail": "Parameter successfully deactivated."}
 
 class ParametersInfoPdfPayload(BaseModel):

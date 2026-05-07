@@ -40,6 +40,7 @@ from sqlalchemy.orm import Session
 import models
 from services.excel_import import import_excel, ImportReport
 from services.migration_progress import ProgressReporter, NULL_PROGRESS
+from services.dag_eval import run_dag_for_language
 
 
 # ============================================================================
@@ -213,5 +214,22 @@ def restore_backup_bundle(
             report.languages_failed.append(lang_id)
         else:
             report.languages_restored.append(lang_id)
+
+    # 5. Recompute final values: il bundle contiene risposte/esempi/motivazioni
+    # ma NON i value_orig/value_eval calcolati. Senza questo step, dopo un
+    # wipe+restore la tabella `language_parameters` resta vuota e TableA /
+    # dashboard / debug parametri appaiono "vuote". Eseguiamo il DAG per
+    # ciascuna lingua restorata.
+    if report.languages_restored:
+        n_lang = len(report.languages_restored)
+        progress.phase("recompute", f"Recomputing final values for {n_lang} language(s)…", total=n_lang)
+        for i, lang_id in enumerate(report.languages_restored, start=1):
+            progress.tick(current=i, label=f"Recomputing {lang_id} ({i}/{n_lang})")
+            try:
+                run_dag_for_language(lang_id, db)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                report.errors.append({"_file": f"recompute/{lang_id}", "reason": f"Recompute failed: {e}"})
 
     return report

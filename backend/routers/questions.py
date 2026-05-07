@@ -128,9 +128,8 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
-    # Snapshot dei valori "che influenzano il consolidate" prima dell'update,
-    # per decidere se schedulare un ricalcolo a fine endpoint.
-    old_is_active = bool(db_item.is_active)
+    # Snapshot del parameter_id prima dell'update: se cambia parent, dobbiamo
+    # ricalcolare anche il parametro vecchio (oltre a quello nuovo, sempre).
     old_parameter_id = db_item.parameter_id
 
     # Wipe + snapshot dei dati nelle tabelle archive PRIMA di applicare le
@@ -181,16 +180,12 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
 
-        # Se il PUT ha modificato qualcosa che impatta il consolidate (is_active
-        # cambiato, parametro spostato, oppure wipe dei dati collegati),
-        # schedula in background il ricalcolo dei parametri impattati per tutte
-        # le lingue. Wipe svuota le Answer e quindi cambia il valore consolidato.
-        impacted_param_ids: set[str] = set()
-        if old_is_active != bool(item.is_active) or item.wipe_data:
-            impacted_param_ids.add(item.parameter_id)
-        if old_parameter_id != item.parameter_id:
+        # Recompute sempre per il parametro corrente (qualunque modifica alla
+        # question, anche solo cosmetica, scatena il ricalcolo). Se la question
+        # ha cambiato parent, ricalcoliamo anche il vecchio parametro.
+        impacted_param_ids = {item.parameter_id}
+        if old_parameter_id and old_parameter_id != item.parameter_id:
             impacted_param_ids.add(old_parameter_id)
-            impacted_param_ids.add(item.parameter_id)
         for pid in impacted_param_ids:
             background_tasks.add_task(recompute_parameter_for_all_languages, pid)
 
