@@ -73,14 +73,19 @@ services:
         max-file: "3"
 
   caddy:
-    image: caddy:2-alpine
+    # Caddy con Caddyfile imbarcato nell'immagine (build da caddy/Dockerfile).
+    # Niente bind-mount del Caddyfile: il file singolo via bind-mount dava
+    # problemi di "no such file" / "not a directory" su Portainer durante
+    # i redeploy (cache git su /data/compose). Cosi' e' robusto.
+    build:
+      context: .
+      dockerfile: caddy/Dockerfile
     depends_on:
       - backend
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy:/etc/caddy:ro
       - ./frontend/dist:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
