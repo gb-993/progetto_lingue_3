@@ -45,7 +45,7 @@
 -  [x] È scomparsa questa pagina
 
 ## TABLE A
-- [ ] Invertire group e historical e sostituire family con subfamily
+- [x] Invertire group e historical e sostituire family con subfamily
 - [ ] Visualizzare come rossi/sfondo rosso i valori dei parametri che sono rossi perché non compilati completamente oppure unsure in lingue data
 
 ## FILTERS

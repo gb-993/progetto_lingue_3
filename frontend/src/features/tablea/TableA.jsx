@@ -335,10 +335,17 @@ export default function TableA() {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Family</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Subfamily</label>
                                 <select className="form-control" name="f_lang_family" value={filters.f_lang_family} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                     <option value="">All</option>
                                     {options.opt_families.map(f => <option key={f} value={f}>{f}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Group</label>
+                                <select className="form-control" name="f_lang_grp" value={filters.f_lang_grp} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
+                                    <option value="">All</option>
+                                    {options.opt_groups.map(g => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -347,13 +354,6 @@ export default function TableA() {
                                     <option value="all">Both</option>
                                     <option value="yes">Only Historical</option>
                                     <option value="no">Only Non-Historical</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Group</label>
-                                <select className="form-control" name="f_lang_grp" value={filters.f_lang_grp} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
-                                    <option value="">All</option>
-                                    {options.opt_groups.map(g => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
                         </div>
