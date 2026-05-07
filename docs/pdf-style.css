@@ -1,0 +1,128 @@
+@page {
+  size: A4;
+  margin: 2cm 1.8cm;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  color: #1f2937;
+}
+
+h1 { font-size: 22pt; margin: 0 0 0.6em; }
+h2 { font-size: 17pt; margin: 0 0 0.4em; }
+h3 { font-size: 13pt; margin: 1.2em 0 0.3em; }
+h4 { font-size: 11.5pt; margin: 1em 0 0.25em; }
+
+/* Each top-level chapter starts on a fresh page (skip the very first one
+   so the title block and the TOC don't waste a blank page). */
+h2 {
+  page-break-before: always;
+  break-before: page;
+}
+h2:first-of-type {
+  page-break-before: avoid;
+  break-before: auto;
+}
+
+/* Never leave a heading orphaned at the bottom of a page, and never split
+   it across pages. */
+h1, h2, h3, h4, h5, h6 {
+  page-break-after: avoid;
+  break-after: avoid-page;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  orphans: 3;
+  widows: 3;
+}
+
+/* Keep the first element after a heading on the same page as the heading
+   itself (this is what fixes "title on one page, image on the next"). */
+h2 + *, h3 + *, h4 + * {
+  page-break-before: avoid;
+  break-before: avoid;
+}
+
+/* Atomic blocks: never split across pages. */
+img, table, figure, pre, blockquote {
+  page-break-inside: avoid;
+  break-inside: avoid;
+  max-width: 100%;
+}
+
+img {
+  display: block;
+  margin: 0.6em auto;
+  max-height: 18cm;
+}
+
+table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.95em;
+}
+
+th, td {
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  vertical-align: top;
+}
+
+th {
+  background: #f3f4f6;
+  text-align: left;
+}
+
+code {
+  font-family: "Cascadia Code", Consolas, "SF Mono", monospace;
+  font-size: 0.9em;
+  background: #f3f4f6;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+pre {
+  background: #f3f4f6;
+  padding: 0.8em 1em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  line-height: 1.4;
+  overflow-x: auto;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+}
+
+blockquote {
+  border-left: 3px solid #9ca3af;
+  margin: 1em 0;
+  padding: 0.4em 1em;
+  color: #4b5563;
+  background: #f9fafb;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 1.4em 0 1em;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+p {
+  orphans: 3;
+  widows: 3;
+  margin: 0.5em 0;
+}
+
+ul, ol {
+  margin: 0.4em 0;
+  padding-left: 1.6em;
+}
+
+li {
+  margin: 0.2em 0;
+}
