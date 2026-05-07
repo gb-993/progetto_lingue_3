@@ -208,9 +208,9 @@ export default function LanguageData() {
                                 alert("Error during export.");
                             }
                         }}
-                        title={isAdmin ? "Export everything (Database_model + Examples + Answers + schema)" : "Export the examples of this language"}
+                        title={isAdmin ? "Export Database_model + Examples + Answers + Admin Notes" : "Export the examples of this language"}
                     >
-                        Export {isAdmin ? '(.xlsx full)' : '(.xlsx examples)'}
+                        {isAdmin ? 'Export parametric data (.xlsx)' : 'Export examples (.xlsx)'}
                     </button>
                 </div>
 

@@ -24,7 +24,7 @@
 - [x] Nella tabella inserire la colonna Top family prima di Subfamily e possiamo togliere Geography
 
 ## LINGUE DATA
-- [ ] Sostituire "Export (.xlsx full)" con "Export parametric data (.xlsx)"
+- [x] Sostituire "Export (.xlsx full)" con "Export parametric data (.xlsx)"
 - [ ] Mi dicevano che piaceva molto l'idea di avere due esempi appaiati
 - [ ] Possiamo ridurre le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc perché nella maggioranza dei casi non ci va molto testo
 
