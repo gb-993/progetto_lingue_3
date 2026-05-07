@@ -17,7 +17,7 @@ hide:
 
 <div class="grid cards" markdown>
 
--   :flag_it: __Italiano__
+-   __Italiano__
 
     ---
 
@@ -29,7 +29,7 @@ hide:
 
     PDF · [Manuale](manuale_utente_it.pdf) · [Documentazione](documentation_it.pdf)
 
--   :flag_gb: __English__
+-   __English__
 
     ---
 
