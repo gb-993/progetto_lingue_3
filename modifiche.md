@@ -26,13 +26,13 @@
 ## LINGUE DATA
 - [x] Sostituire "Export (.xlsx full)" con "Export parametric data (.xlsx)"
 - [x] Mi dicevano che piaceva molto l'idea di avere due esempi appaiati
-- [ ] Possiamo ridurre le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc perché nella maggioranza dei casi non ci va molto testo
+- [x] Possiamo ridurre le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc perché nella maggioranza dei casi non ci va molto testo
 
 ## DEBUG PARAMETRI
 - [x] Fare in modo che se una condizione implicazione è falsa il parametro vada a 0 indipendentemente dalle risposte che sono state date alle sue question. Ora se c’è un’incongruenza tra tra questions e stop-questions giustamente la rileva, mette il warning e lo propaga, mentre vorrebbero che siccome tanto il parametro deve andare a 0 ci fosse un warning “arancione” solo sulle answers/initial value, ma questo non bloccasse lo 0 e i parametri che dipendono da quello
 
 ## LISTA PARAMETRI
-- [ ] In "Download parameters info (.pdf)" aggiungere le info relative alle questions, come nel download dei singoli parametri (per le allowed motivations toglierei il label, es MOT004, e lascerei solo il testo della motivazione senza parentesi, vedi ad esempio nel pdf di SPK, Qa)
+- [x] In "Download parameters info (.pdf)" aggiungere le info relative alle questions, come nel download dei singoli parametri (per le allowed motivations toglierei il label, es MOT004, e lascerei solo il testo della motivazione senza parentesi, vedi ad esempio nel pdf di SPK, Qa)
 
 ## PARAMETERS EDIT
 - [ ] Sia che disattivo una question sia che la riattivo il warning dice sempre "It will disappear from the form"
@@ -46,7 +46,7 @@
 
 ## TABLE A
 - [ ] Invertire group e historical e sostituire family con subfamily
-- [ ] Visualizzare come rossi/sfondo rosso i valori dei parametri che sono2 rossi perché non compilati completamente/unsure in lingue data
+- [ ] Visualizzare come rossi/sfondo rosso i valori dei parametri che sono rossi perché non compilati completamente oppure unsure in lingue data
 
 ## FILTERS
 

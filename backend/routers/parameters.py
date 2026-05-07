@@ -322,7 +322,24 @@ def export_parameters_info_pdf(
         q = q.filter(models.ParameterDef.id.in_(payload.param_ids))
     parameters = q.order_by(models.ParameterDef.position, models.ParameterDef.id).all()
 
-    pdf_bytes = build_all_parameters_pdf(parameters)
+    # Pre-carico tutte le question dei parametri richiesti, con le loro
+    # allowed_motivations.motivation: stesso pattern del single-parameter PDF
+    # (vedi download_parameter_pdf più sotto). Le raggruppo per parameter_id
+    # per un lookup O(1) nel renderer.
+    param_ids = [p.id for p in parameters]
+    questions_by_param: dict[str, list] = {pid: [] for pid in param_ids}
+    if param_ids:
+        questions = (
+            db.query(models.Question)
+            .options(selectinload(models.Question.allowed_motivations).joinedload(models.QuestionAllowedMotivation.motivation))
+            .filter(models.Question.parameter_id.in_(param_ids))
+            .order_by(models.Question.is_stop_question, models.Question.id)
+            .all()
+        )
+        for qst in questions:
+            questions_by_param.setdefault(qst.parameter_id, []).append(qst)
+
+    pdf_bytes = build_all_parameters_pdf(parameters, questions_by_param)
     buf = io.BytesIO(pdf_bytes)
     buf.seek(0)
     ts = utc_now().strftime("%Y%m%d_%H%M%S")

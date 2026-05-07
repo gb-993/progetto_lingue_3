@@ -69,6 +69,85 @@ def _register_fonts(pdf: FPDF) -> None:
     pdf.add_font(FONT_FAMILY, "BI", os.path.join(d, "DejaVuSans-BoldOblique.ttf"))
 
 
+def _render_questions_section(pdf: FPDF, questions, *, base_size: int = 10) -> None:
+    """Render della sezione 'Questions' di un parametro.
+
+    Helper condivisa tra il PDF di singolo parametro (usato con base_size=10)
+    e il bulk PDF di tutti i parametri (base_size=9, un punto più piccolo
+    per ridurre verticalità senza compromettere leggibilità).
+
+    Per le 'Allowed Motivations' viene mostrato solo il testo della motivation
+    (label, fallback su code se il label è vuoto): niente codice tipo "MOT004"
+    e niente parentesi tonde.
+    """
+    questions = list(questions)
+    line_h = 5 if base_size <= 9 else 6
+    block_gap = 2 if base_size <= 9 else 4
+
+    def line(label: str, value: str = "") -> None:
+        pdf.set_font(FONT_FAMILY, style="B", size=base_size)
+        pdf.set_text_color(97, 101, 107)
+        pdf.write(line_h, str(label) + " ")
+        if value:
+            pdf.set_font(FONT_FAMILY, size=base_size)
+            pdf.set_text_color(27, 29, 32)
+            pdf.write(line_h, str(value))
+        pdf.ln(line_h + 1)
+
+    def long_text(label: str, value: Any) -> None:
+        line(label)
+        pdf.set_font(FONT_FAMILY, size=base_size)
+        pdf.set_text_color(27, 29, 32)
+        pdf.multi_cell(0, 5, str(value or "-"))
+        pdf.ln(block_gap)
+
+    if not questions:
+        pdf.set_font(FONT_FAMILY, style="I", size=base_size)
+        pdf.set_text_color(97, 101, 107)
+        pdf.cell(0, 8, "No questions linked to this parameter.", ln=True)
+        return
+
+    for q in questions:
+        q_type = "Stop Question" if q.is_stop_question else ""
+        pdf.set_font(FONT_FAMILY, style="B", size=base_size + 1)
+        pdf.set_text_color(27, 29, 32)
+        pdf.set_fill_color(241, 242, 244)
+        pdf.set_draw_color(218, 221, 226)
+        pdf.cell(0, 8, f"  {q.id} {q_type}", ln=True, fill=True, border="B")
+        pdf.ln(2)
+
+        long_text("Text:", q.text)
+        if q.instruction:
+            long_text("Instructions:", q.instruction)
+        if q.help_info:
+            long_text("Help Info:", q.help_info)
+        if q.example_yes:
+            long_text("Example (YES):", q.example_yes)
+        if q.instruction_yes:
+            long_text("Instruction (YES):", q.instruction_yes)
+        if q.instruction_no:
+            long_text("Instruction (NO):", q.instruction_no)
+
+        links = list(getattr(q, "allowed_motivations", []) or [])
+        if links:
+            line("Allowed Motivations (NO):")
+            pdf.set_font(FONT_FAMILY, size=base_size)
+            pdf.set_text_color(27, 29, 32)
+            for link in links:
+                m = getattr(link, "motivation", None)
+                if m is None:
+                    continue
+                # Solo testo motivation (label) — niente codice né parentesi.
+                # Fallback su code se label è assente, così non rendiamo "- ".
+                text = m.label or m.code or ""
+                if not text:
+                    continue
+                pdf.set_x(15)
+                pdf.multi_cell(0, 5, f"- {text}")
+
+        pdf.ln(block_gap)
+
+
 def build_parameter_pdf(parameter, questions) -> bytes:
     """Render a parameter detail PDF.
 
@@ -145,67 +224,32 @@ def build_parameter_pdf(parameter, questions) -> bytes:
 
     # 4. Questions
     section_title("Questions")
-    questions = list(questions)
-    if not questions:
-        pdf.set_font(FONT_FAMILY, style="I", size=10)
-        pdf.set_text_color(97, 101, 107)
-        pdf.cell(0, 8, "No questions linked to this parameter.", ln=True)
-    else:
-        for q in questions:
-            q_type = "Stop Question" if q.is_stop_question else ""
-
-            pdf.set_font(FONT_FAMILY, style="B", size=11)
-            pdf.set_text_color(27, 29, 32)
-            pdf.set_fill_color(241, 242, 244)
-            pdf.set_draw_color(218, 221, 226)
-            pdf.cell(0, 8, f"  {q.id} {q_type}", ln=True, fill=True, border="B")
-            pdf.ln(3)
-
-            long_text("Text:", q.text)
-            if q.instruction:
-                long_text("Instructions:", q.instruction)
-            if q.help_info:
-                long_text("Help Info:", q.help_info)
-            if q.example_yes:
-                long_text("Example (YES):", q.example_yes)
-            if q.instruction_yes:
-                long_text("Instruction (YES):", q.instruction_yes)
-            if q.instruction_no:
-                long_text("Instruction (NO):", q.instruction_no)
-
-            links = list(getattr(q, "allowed_motivations", []) or [])
-            if links:
-                line("Allowed Motivations (NO):")
-                pdf.set_font(FONT_FAMILY, size=10)
-                pdf.set_text_color(27, 29, 32)
-                for link in links:
-                    m = getattr(link, "motivation", None)
-                    if m is None:
-                        continue
-                    pdf.set_x(15)
-                    pdf.multi_cell(0, 5, f"- {m.code} ({m.label})")
-
-            pdf.ln(4)
+    _render_questions_section(pdf, questions, base_size=10)
 
     return bytes(pdf.output())
 
 
-def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
+def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: dict | None = None) -> bytes:
     """Render a single PDF with the *general info* of every parameter.
 
     Layout:
       1. Cover with title, generation timestamp, total count
       2. Compact summary table (ID, Name, Schema, Type, Level, Status)
       3. One section per parameter with: header band, basic info, descriptions,
-         logic & conditions. No questions (kept short by design).
+         logic & conditions, questions (Text/Instructions/Examples/Allowed
+         Motivations) — stessa struttura del PDF singolo.
 
     Args:
         parameters: Iterable of ParameterDef instances (already ordered).
+        questions_by_param_id: dict {parameter_id: [Question, ...]} con
+            ``allowed_motivations.motivation`` pre-caricati. Se None, la sezione
+            Questions viene omessa (compatibile con vecchi callers).
 
     Returns:
         PDF bytes ready to stream to the client.
     """
     parameters = list(parameters)
+    questions_by_param_id = questions_by_param_id or {}
 
     pdf = _ParamListReport()
     _register_fonts(pdf)
@@ -376,6 +420,12 @@ def build_all_parameters_pdf(parameters: Iterable[Any]) -> bytes:
             "Explication of the implicational condition(s):",
             p.description_of_the_implicational_condition,
         )
+
+        # Questions: stessa struttura del single-parameter PDF, font ridotto
+        # di 1pt per coerenza col resto del bulk PDF.
+        if questions_by_param_id:
+            section_title("Questions")
+            _render_questions_section(pdf, questions_by_param_id.get(p.id, []), base_size=9)
 
     return bytes(pdf.output())
 

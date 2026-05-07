@@ -120,7 +120,8 @@
       "Bash(python -m pytest tests/test_backup_restore.py -q)",
       "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_import.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/recompute.py'\\).read\\(\\)\\); ast.parse\\(open\\('main.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/questions.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/questions.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/pdf_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }
