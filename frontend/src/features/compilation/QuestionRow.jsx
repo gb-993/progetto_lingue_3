@@ -332,47 +332,64 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
 
                         {localError && <div className="alert alert-warning" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
 
-                        {value.examples.map((ex, index) => (
-                            <div key={ex.tempId} className="card" style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>
-                                <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleCopyExample(ex)}
-                                        disabled={isReadOnly}
-                                        className="btn btn--small"
-                                        style={{ borderColor: 'transparent', color: recentlyCopiedTempId === ex.tempId ? '#16a34a' : 'inherit' }}
-                                        title="Copy this example to the clipboard (paste it into any question of this language)"
-                                    >
-                                        {recentlyCopiedTempId === ex.tempId ? '✓ Copied!' : 'Copy'}
-                                    </button>
-                                    <button type="button" onClick={() => handleRemoveExample(ex.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
-                                </div>
-                                <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
+                        {/*
+                            Layout responsive: su schermi larghi (≥ ~880px) gli esempi
+                            stanno a coppie affiancati; sotto si impilano in verticale.
+                            Lo `gap` sul grid genera spaziatura simmetrica orizzontale +
+                            verticale, evitando il classico disallineamento da
+                            margin-bottom quando le card vanno a finire su due colonne.
+                        */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                            gap: '1rem',
+                            marginBottom: value.examples.length > 0 ? '1rem' : 0,
+                        }}>
+                            {value.examples.map((ex, index) => (
+                                <div key={ex.tempId} className="card" style={{ padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>
+                                    <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCopyExample(ex)}
+                                            disabled={isReadOnly}
+                                            className="btn btn--small"
+                                            style={{ borderColor: 'transparent', color: recentlyCopiedTempId === ex.tempId ? '#16a34a' : 'inherit' }}
+                                            title="Copy this example to the clipboard (paste it into any question of this language)"
+                                        >
+                                            {recentlyCopiedTempId === ex.tempId ? '✓ Copied!' : 'Copy'}
+                                        </button>
+                                        <button type="button" onClick={() => handleRemoveExample(ex.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
+                                    </div>
+                                    <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label className="small">Example text</label>
-                                        <textarea rows="2" value={ex.textarea || ''} onChange={e => handleExampleChange(ex.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
-                                    </div>
-                                    <div>
-                                        <label className="small">Transliteration</label>
-                                        <textarea rows="2" value={ex.transliteration || ''} onChange={e => handleExampleChange(ex.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
-                                    </div>
-                                    <div>
-                                        <label className="small">Gloss</label>
-                                        <textarea rows="2" value={ex.gloss || ''} onChange={e => handleExampleChange(ex.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
-                                    </div>
-                                    <div>
-                                        <label className="small">English Translation</label>
-                                        <textarea rows="2" value={ex.translation || ''} onChange={e => handleExampleChange(ex.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
-                                    </div>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label className="small">Reference</label>
-                                        <input type="text" value={ex.reference || ''} onChange={e => handleExampleChange(ex.tempId, 'reference', e.target.value)} disabled={isReadOnly} style={{ width: '100%', padding: '0.4rem' }} />
+                                    {/* In modalità appaiata ogni card occupa metà larghezza, quindi
+                                        i 5 campi sono impilati verticalmente per non comprimere
+                                        i textarea. */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                                        <div>
+                                            <label className="small">Example text</label>
+                                            <textarea rows="2" value={ex.textarea || ''} onChange={e => handleExampleChange(ex.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                        </div>
+                                        <div>
+                                            <label className="small">Transliteration</label>
+                                            <textarea rows="2" value={ex.transliteration || ''} onChange={e => handleExampleChange(ex.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                        </div>
+                                        <div>
+                                            <label className="small">Gloss</label>
+                                            <textarea rows="2" value={ex.gloss || ''} onChange={e => handleExampleChange(ex.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                        </div>
+                                        <div>
+                                            <label className="small">English Translation</label>
+                                            <textarea rows="2" value={ex.translation || ''} onChange={e => handleExampleChange(ex.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                        </div>
+                                        <div>
+                                            <label className="small">Reference</label>
+                                            <input type="text" value={ex.reference || ''} onChange={e => handleExampleChange(ex.tempId, 'reference', e.target.value)} disabled={isReadOnly} style={{ width: '100%', padding: '0.4rem' }} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
 
                         {copied && copied.langId === currentLangId && (
                             <div
