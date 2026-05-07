@@ -1,6 +1,7 @@
 # ---- Segreti / configurazione locale (NON committare) ----
 .env
 .env.*
+.env1
 !.env.example
 
 # ---- Python / FastAPI ----
