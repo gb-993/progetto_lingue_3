@@ -35,7 +35,7 @@
 - [x] In "Download parameters info (.pdf)" aggiungere le info relative alle questions, come nel download dei singoli parametri (per le allowed motivations toglierei il label, es MOT004, e lascerei solo il testo della motivazione senza parentesi, vedi ad esempio nel pdf di SPK, Qa)
 
 ## PARAMETERS EDIT
-- [ ] Sia che disattivo una question sia che la riattivo il warning dice sempre "It will disappear from the form"
+- [x] Sia che disattivo una question sia che la riattivo il warning dice sempre "It will disappear from the form"
 
 ## LISTA QUESTIONS
 

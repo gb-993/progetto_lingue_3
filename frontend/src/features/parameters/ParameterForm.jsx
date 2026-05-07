@@ -275,7 +275,10 @@ export default function ParameterForm() {
     // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
     const handleToggleQuestionActive = async (questionId, currentStatus) => {
         const actionText = currentStatus ? 'deactivate' : 'reactivate';
-        if (!window.confirm(`Are you sure you want to ${actionText} question ${questionId}? (It will disappear from the form)`)) return;
+        const consequence = currentStatus
+            ? 'It will disappear from the form'
+            : 'It will reappear in the form';
+        if (!window.confirm(`Are you sure you want to ${actionText} question ${questionId}? (${consequence})`)) return;
 
         try {
             await api.patch(`/api/admin/questions/${questionId}/toggle-active`);
