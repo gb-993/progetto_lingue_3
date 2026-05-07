@@ -145,7 +145,10 @@
       "Read(//c/Program Files/**)",
       "Bash(C:/Users/Gb/AppData/Local/Microsoft/WinGet/Packages/JohnMacFarlane.Pandoc_Microsoft.Winget.Source_8wekyb3d8bbwe/pandoc-3.9.0.2/pandoc.exe --version)",
       "Bash(\"C:/Users/Gb/AppData/Local/Programs/MiKTeX/miktex/bin/x64/initexmf.exe\" --set-config-value=[MPM]AutoInstall=1)",
-      "Bash(\"C:/Users/Gb/AppData/Local/Programs/MiKTeX/miktex/bin/x64/initexmf.exe\" --show-config-value=[MPM]AutoInstall)"
+      "Bash(\"C:/Users/Gb/AppData/Local/Programs/MiKTeX/miktex/bin/x64/initexmf.exe\" --show-config-value=[MPM]AutoInstall)",
+      "Bash(npm --version)",
+      "Bash(npm ci *)",
+      "Bash(git push *)"
     ]
   }
 }

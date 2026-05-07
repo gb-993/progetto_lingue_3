@@ -7,7 +7,6 @@
 ##     sulla VM (la VM piccola da 8GB / poca RAM andava in OOM su `npm ci`).
 ##   - backup nightly fatto da un sidecar (no cron host, no SSH richiesto).
 ##   - Caddy davanti: HTTPS automatico via Let's Encrypt e SPA statica
-##   - cleaner giornaliero per liberare spazio su VM piccola (8 GB)
 ##   - logging json-file con rotation a 10MB x 3 file
 ##
 ## Tutto vive in volumi nominati Docker. Niente bind-mount su /opt/pcm-hub.
@@ -146,34 +145,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  cleaner:
-    image: docker:25-cli
-    container_name: pcm_cleaner
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    # Pulizia giornaliera. NON tocca i volumes (postgres_data, caddy_data,
-    # caddy_config, frontend_dist, pcm_backups restano intatti). Libera
-    # immagini orfane lasciate dai rebuild e cache di build (importante
-    # con 8 GB di disco).
-    command:
-      - sh
-      - -c
-      - |
-        while true; do
-          echo "[cleaner] $(date -Iseconds) starting cleanup"
-          docker container prune -f
-          docker image prune -af
-          docker builder prune -af
-          docker network prune -f
-          echo "[cleaner] $(date -Iseconds) cleanup done"
-          sleep 86400
-        done
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # cleaner: RIMOSSO. Faceva `docker container prune -f` ogni 24h
+  # (e una volta all'avvio): cancellava container appena creati ma
+  # non ancora startati durante un redeploy, dando errore "No such
+  # container: <hash>". Stesso problema riscontrato dal team del
+  # progetto vecchio (vedi progetto_lingua_2/compose.yml). La pulizia
+  # immagini/cache va fatta a mano via SSH se serve.
 
 volumes:
   postgres_data:

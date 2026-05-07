@@ -148,7 +148,6 @@ Quando finisce vai su "Containers". Devi vedere:
    pcm_backend             running          (healthy)   <- ci mette ~30s
    pcm_caddy               running
    pcm_backup              running
-   pcm_cleaner             running
 
 Se Caddy mostra 404 sulla home: probabilmente hai dimenticato il
 PASSO 0 (build + commit della dist). Rifallo, push, "Pull and redeploy".
