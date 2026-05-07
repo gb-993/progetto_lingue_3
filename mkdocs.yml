@@ -4,6 +4,7 @@ site_url: https://gb-993.github.io/progetto_lingue_3/
 repo_url: https://github.com/gb-993/progetto_lingue_3
 repo_name: gb-993/progetto_lingue_3
 edit_uri: edit/main/docs/
+copyright: PCM-Hub · Parametric Comparison Method · Università di Modena e Reggio Emilia
 
 docs_dir: docs
 site_dir: site
@@ -13,34 +14,47 @@ theme:
   language: it
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
+    - navigation.path
+    - navigation.indexes
     - navigation.top
     - navigation.instant
+    - navigation.instant.progress
     - navigation.tracking
+    - navigation.prune
     - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
+    - content.code.annotate
     - content.action.edit
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: indigo
+      primary: deep purple
+      accent: deep purple
       toggle:
-        icon: material/brightness-7
+        icon: material/weather-night
         name: Passa al tema scuro
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: indigo
+      primary: deep purple
+      accent: purple
       toggle:
-        icon: material/brightness-4
+        icon: material/weather-sunny
         name: Passa al tema chiaro
+  font:
+    text: Inter
+    code: JetBrains Mono
   icon:
+    logo: material/book-open-page-variant
     repo: fontawesome/brands/github
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
   - def_list
@@ -49,16 +63,28 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+      permalink_title: Link a questa sezione
+  - pymdownx.betterem
+  - pymdownx.caret
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
   - pymdownx.snippets
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:
       custom_checkbox: true
+  - pymdownx.tilde
 
 plugins:
   - search:
@@ -76,16 +102,14 @@ nav:
       - Technical documentation: documentation_en.md
 
 extra:
-  alternate:
-    - name: Italiano
-      link: /progetto_lingue_3/manuale_utente_it/
-      lang: it
-    - name: English
-      link: /progetto_lingue_3/user_manual_en/
-      lang: en
+  generator: false
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/gb-993/progetto_lingue_3
+      name: Repository su GitHub
+    - icon: fontawesome/solid/globe
+      link: https://hub.parametricomparison.unimore.it
+      name: PCM-Hub (sito di produzione)
 
-# Tolleranza sui link rotti (alcuni link interni puntano a path repo-relative dei PDF)
+# Tolleranza sui link rotti (i manuali puntano spesso a file di codice nel repo)
 strict: false
