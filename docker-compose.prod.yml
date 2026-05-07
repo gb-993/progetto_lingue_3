@@ -77,7 +77,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy:/etc/caddy:ro
       - ./frontend/dist:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
