@@ -1,7 +1,7 @@
 # RIEPILOGO MODIFICHE
 - [ ] Roberto Romano per problemi con mail, password e https
 - [ ] Servizi informatici per espandere disco della vm a 20 GB
-- [ ] Federico (191685@studenti.unimore.it) per script della mappa su cui sono visualizzati i risultati del k-means clustering
+- [x] Federico (191685@studenti.unimore.it) per script della mappa su cui sono visualizzati i risultati del k-means clustering
 
 ## LANDING PAGE
 
@@ -11,10 +11,10 @@
 ## DASHBOARD
 
 ## HOW TO CITE
-- [ ] Quando si modifica la ref con "Edit reference", si può fare in modo che la ref compaia nel riquadro modificabile come nel sito vecchio? 
+- [x] Quando si modifica la ref con "Edit reference", si può fare in modo che la ref compaia nel riquadro modificabile come nel sito vecchio? -> funziona, ma bisogna effetuare almeno un salvataggio (copi il messaggio attuale -> edit -> lo incolli uguale -> salvi -> poi si vedrà sempre anche là)
 
 ## LISTA LINGUE
-- [ ] Dopo aver applicato i filtri, vorrebbero trovare un modo per deselezionare le lingue che non vogliono ma che sono state identificate dai filtri, es. se seleziono le lingue indoeuropee ma per qualche motivo non voglio l'italiano nella mappa e nelle distanze si dovrebbe poter deselezionare solo l'italiano e mantenere le altre indoeuropee
+- [x] Dopo aver applicato i filtri, vorrebbero trovare un modo per deselezionare le lingue che non vogliono ma che sono state identificate dai filtri, es. se seleziono le lingue indoeuropee ma per qualche motivo non voglio l'italiano nella mappa e nelle distanze si dovrebbe poter deselezionare solo l'italiano e mantenere le altre indoeuropee
 - [ ] Si può inserire un modo per decidere sulla base di cosa assegnare i colori nella mappa? Se per "top-level family", "subfamily", "group" oppure "historical". I filtri mi sembrano ottimi, solo se seleziono due o più top-family oppure subfamily bisognerebbe che la mappa fosse colorata ancora per top-family/subfamily e non per il livello filogenetico più ristretto, mentre se seleziono solo una top-family/subfamily va bene che la mappa sia colorata per il livello più ristretto, come fa ora
 - [ ] Forse vorrebbero che scaricando il png della mappa si vedesse anche la legenda
 - [ ] È scomparsa l'intestazione nel file xlsx scaricabile da "Export language metadata": [Name	ID	Top-level family	Family	Group	ISO code	Glottocode	Location	Latitude	Longitude	Supervisor	Informant	Historical	Source  Status] e possiamo aggiungere le colonne [Assigned user Date last change] 

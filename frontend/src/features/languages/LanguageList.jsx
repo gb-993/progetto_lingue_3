@@ -49,7 +49,11 @@ export default function LanguageList() {
     const [options, setOptions] = useState({ opt_top_families: [], opt_families: [], opt_groups: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [selectedIds, setSelectedIds] = useState(() => new Set());
+    // Esclusioni manuali: lingue spuntate via checkbox per essere ESCLUSE dal set
+    // effettivo (mappa, distanze, export). Default vuoto = tutte incluse.
+    // Le esclusioni persistono tra cambi di filtro: lingue non più visibili
+    // restano nel set ma sono inerti finché non riappaiono.
+    const [excludedIds, setExcludedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
     const [downloadOpen, setDownloadOpen] = useState(false);
     const [globalBackup, setGlobalBackup] = useState(false);
@@ -202,30 +206,48 @@ export default function LanguageList() {
         (filters.status !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
 
-    // ID delle lingue su cui agiscono i bottoni di export:
-    // selezionate via checkbox, oppure quelle filtrate visibili (default)
-    const targetIds = selectedIds.size > 0
-        ? Array.from(selectedIds)
-        : filteredLanguages.map(l => l.id);
+    // Set effettivo (fonte di verità unica): filtri − esclusioni manuali.
+    // Usato da mappa, distanze GCD, tutti gli export, count "X of Y".
+    const effectiveLanguages = useMemo(
+        () => filteredLanguages.filter(l => !excludedIds.has(l.id)),
+        [filteredLanguages, excludedIds]
+    );
+    const targetIds = effectiveLanguages.map(l => l.id);
 
-    const allFilteredSelected = filteredLanguages.length > 0 &&
-        filteredLanguages.every(l => selectedIds.has(l.id));
+    // Numero di lingue attualmente visibili (filtrate) che sono escluse manualmente.
+    // Le esclusioni "fuori filtro" sono ignorate qui — restano nel set ma inerti.
+    const visibleExcludedCount = filteredLanguages.reduce(
+        (acc, l) => acc + (excludedIds.has(l.id) ? 1 : 0),
+        0
+    );
+    const allFilteredIncluded = filteredLanguages.length > 0 && visibleExcludedCount === 0;
 
+    // Click sulla checkbox di riga: aggiunge o rimuove la lingua dalle esclusioni.
     const toggleRow = (id) => {
-        setSelectedIds(prev => {
+        setExcludedIds(prev => {
             const next = new Set(prev);
             next.has(id) ? next.delete(id) : next.add(id);
             return next;
         });
     };
 
+    // Checkbox in testa: se tutte le visibili sono incluse → escludile tutte;
+    // altrimenti → includile tutte (rimuove dalle esclusioni solo le visibili,
+    // lasciando intatte le esclusioni "fuori filtro").
     const toggleAll = () => {
-        if (allFilteredSelected) {
-            setSelectedIds(new Set());
-        } else {
-            setSelectedIds(new Set(filteredLanguages.map(l => l.id)));
-        }
+        setExcludedIds(prev => {
+            const next = new Set(prev);
+            if (allFilteredIncluded) {
+                filteredLanguages.forEach(l => next.add(l.id));
+            } else {
+                filteredLanguages.forEach(l => next.delete(l.id));
+            }
+            return next;
+        });
     };
+
+    // Reset rapido: rimuove tutte le esclusioni (anche quelle fuori filtro).
+    const clearExclusions = () => setExcludedIds(new Set());
 
     const onExportMetadata = async () => {
         setExporting(true);
@@ -431,11 +453,25 @@ export default function LanguageList() {
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
-                        {filteredLanguages.length} of {languages.length} languages
+                        {effectiveLanguages.length} of {languages.length} languages
                         {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
-                        {selectedIds.size > 0 && <span> · <strong>{selectedIds.size} selected</strong></span>}
+                        {visibleExcludedCount > 0 && (
+                            <span> · <strong>{visibleExcludedCount} excluded</strong></span>
+                        )}
+                        {excludedIds.size > visibleExcludedCount && (
+                            <span> · {excludedIds.size - visibleExcludedCount} hidden excluded</span>
+                        )}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {excludedIds.size > 0 && (
+                            <button
+                                onClick={clearExclusions}
+                                className="btn btn--small"
+                                title="Re-include every excluded language (also those outside the current filter)"
+                            >
+                                Clear exclusions
+                            </button>
+                        )}
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
                         <div ref={downloadRef} style={{ position: 'relative' }}>
                             <button
@@ -507,7 +543,7 @@ export default function LanguageList() {
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1rem' }}>
                 <LanguageMap
                     ref={mapExportRef}
-                    languages={filteredLanguages}
+                    languages={effectiveLanguages}
                     filters={filters}
                     allTopFamilies={options.opt_top_families}
                 />
@@ -521,9 +557,9 @@ export default function LanguageList() {
                             <th style={{ width: '40px', textAlign: 'center' }}>
                                 <input
                                     type="checkbox"
-                                    checked={allFilteredSelected}
+                                    checked={allFilteredIncluded}
                                     onChange={toggleAll}
-                                    title="Select / deselect all (filtered)"
+                                    title="Include / exclude all visible languages"
                                 />
                             </th>
                             <th>ID</th>
@@ -541,8 +577,9 @@ export default function LanguageList() {
                                 <td style={{ textAlign: 'center' }}>
                                     <input
                                         type="checkbox"
-                                        checked={selectedIds.has(lang.id)}
+                                        checked={!excludedIds.has(lang.id)}
                                         onChange={() => toggleRow(lang.id)}
+                                        title="Uncheck to exclude from map, distances and exports"
                                     />
                                 </td>
                                 <td style={{ fontWeight: 'bold' }}>{lang.id}</td>
