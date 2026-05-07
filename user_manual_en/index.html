@@ -45,8 +45,8 @@
         
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
-        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
       
     
     
@@ -67,7 +67,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="deep-purple">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -88,12 +88,14 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Intestazione">
     <a href=".." title="PCM-Hub — Documentazione" class="md-header__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m19 2-5 4.5v11l5-4.5zM6.5 5C4.55 5 2.45 5.4 1 6.5v14.66c0 .25.25.5.5.5.1 0 .15-.07.25-.07 1.35-.65 3.3-1.09 4.75-1.09 1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.31 4.75 1.06.1.05.15.03.25.03.25 0 .5-.25.5-.5V6.5c-.6-.45-1.25-.75-2-1V19c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V6.5C10.55 5.4 8.45 5 6.5 5"/></svg>
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -123,20 +125,20 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema scuro"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="deep-purple"  aria-label="Passa al tema scuro"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Passa al tema scuro" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
       </label>
     
   
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema chiaro"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="purple"  aria-label="Passa al tema chiaro"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Passa al tema chiaro" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
       </label>
     
   
@@ -146,32 +148,6 @@
     
       <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
     
-    
-      <div class="md-header__option">
-  <div class="md-select">
-    
-    <button class="md-header__button md-icon" aria-label="Seleziona la lingua">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
-    </button>
-    <div class="md-select__inner">
-      <ul class="md-select__list">
-        
-          <li class="md-select__item">
-            <a href="/progetto_lingue_3/manuale_utente_it/" hreflang="it" class="md-select__link">
-              Italiano
-            </a>
-          </li>
-        
-          <li class="md-select__item">
-            <a href="/progetto_lingue_3/user_manual_en/" hreflang="en" class="md-select__link">
-              English
-            </a>
-          </li>
-        
-      </ul>
-    </div>
-  </div>
-</div>
     
     
       <label class="md-header__button md-icon" for="__search">
@@ -190,6 +166,11 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
       </label>
       <nav class="md-search__options" aria-label="Cerca">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Condividi" aria-label="Condividi" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
         
         <button type="reset" class="md-search__icon md-icon" title="Cancella" aria-label="Cancella" tabindex="-1">
           
@@ -228,14 +209,8 @@
     
   </nav>
   
-</header>
     
-    <div class="md-container" data-md-component="container">
       
-      
-        
-          
-            
 <nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
   <div class="md-grid">
     <ul class="md-tabs__list">
@@ -267,6 +242,8 @@
         <a href="../manuale_utente_it/" class="md-tabs__link">
           
   
+    
+  
   Italiano
 
         </a>
@@ -287,6 +264,8 @@
         <a href="./" class="md-tabs__link">
           
   
+    
+  
   English
 
         </a>
@@ -298,7 +277,13 @@
     </ul>
   </div>
 </nav>
-          
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
         
       
       <main class="md-main" data-md-component="main">
@@ -320,7 +305,7 @@
     <a href=".." title="PCM-Hub — Documentazione" class="md-nav__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m19 2-5 4.5v11l5-4.5zM6.5 5C4.55 5 2.45 5.4 1 6.5v14.66c0 .25.25.5.5.5.1 0 .15-.07.25-.07 1.35-.65 3.3-1.09 4.75-1.09 1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.31 4.75 1.06.1.05.15.03.25.03.25 0 .5-.25.5-.5V6.5c-.6-.45-1.25-.75-2-1V19c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V6.5C10.55 5.4 8.45 5 6.5 5"/></svg>
 
     </a>
     PCM-Hub — Documentazione
@@ -368,82 +353,43 @@
   
     
     
-    
       
+        
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        
+      
+    
+    
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
         
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
-            
+  
+  
+    <a href="../manuale_utente_it/" class="md-nav__link">
+      
   
   <span class="md-ellipsis">
     Italiano
   </span>
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            Italiano
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../manuale_utente_it/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Manuale utente
-  </span>
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../documentation_it/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Documentazione tecnica
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -459,6 +405,12 @@
   
     
     
+      
+        
+      
+        
+      
+    
     
       
         
@@ -468,6 +420,8 @@
         
       
     
+    
+      
     
     <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
@@ -2438,7 +2392,7 @@
   
 
 
-<h1 id="pcm-hub-user-manual">PCM-Hub — User manual<a class="headerlink" href="#pcm-hub-user-manual" title="Permanent link">&para;</a></h1>
+<h1 id="pcm-hub-user-manual">PCM-Hub — User manual<a class="headerlink" href="#pcm-hub-user-manual" title="Link a questa sezione">&para;</a></h1>
 <p>Practical guide to using the <strong>PCM-Hub</strong> website (<code>hub.parametricomparison.unimore.it</code>). This manual is for daily users: linguists who compile their assigned languages, and administrators who manage parameters, questions, accounts and cross-language analyses.</p>
 <blockquote>
 <p><strong>You'll find what you need faster</strong> if you know your role:
@@ -2446,7 +2400,7 @@
 - <strong>Administrator (Admin)</strong> → read everything: admins see all User functionality plus a dozen extra tools (sections 8-15).</p>
 </blockquote>
 <hr />
-<h2 id="table-of-contents">Table of contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<h2 id="table-of-contents">Table of contents<a class="headerlink" href="#table-of-contents" title="Link a questa sezione">&para;</a></h2>
 <ol>
 <li><a href="#1-what-is-pcm-hub">What is PCM-Hub</a></li>
 <li><a href="#2-logging-in">Logging in</a></li>
@@ -2467,7 +2421,7 @@
 <li><a href="#17-quick-interface-glossary">Quick interface glossary</a></li>
 </ol>
 <hr />
-<h2 id="1-what-is-pcm-hub">1. What is PCM-Hub<a class="headerlink" href="#1-what-is-pcm-hub" title="Permanent link">&para;</a></h2>
+<h2 id="1-what-is-pcm-hub">1. What is PCM-Hub<a class="headerlink" href="#1-what-is-pcm-hub" title="Link a questa sezione">&para;</a></h2>
 <p>The <strong>Parametric Comparison Method</strong> (PCM, Longobardi &amp; Guardiano 2009) compares different languages using a set of <strong>universal syntactic parameters</strong>. Every language is "compiled" by a linguist who, for each parameter, answers a set of questions (mostly yes/no) and provides linguistic examples to support the answers.</p>
 <p>From the data collected, the website automatically produces:</p>
 <ul>
@@ -2478,7 +2432,7 @@
 <li>PCA analyses, Mantel tests.</li>
 </ul>
 <p>This makes it possible to study phylogenetic relationships, divergences and convergences across languages from different families.</p>
-<h3 id="the-three-roles">The three roles<a class="headerlink" href="#the-three-roles" title="Permanent link">&para;</a></h3>
+<h3 id="the-three-roles">The three roles<a class="headerlink" href="#the-three-roles" title="Link a questa sezione">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2502,8 +2456,8 @@
 </tbody>
 </table>
 <hr />
-<h2 id="2-logging-in">2. Logging in<a class="headerlink" href="#2-logging-in" title="Permanent link">&para;</a></h2>
-<h3 id="first-access">First access<a class="headerlink" href="#first-access" title="Permanent link">&para;</a></h3>
+<h2 id="2-logging-in">2. Logging in<a class="headerlink" href="#2-logging-in" title="Link a questa sezione">&para;</a></h2>
+<h3 id="first-access">First access<a class="headerlink" href="#first-access" title="Link a questa sezione">&para;</a></h3>
 <p>The administrator who created your account will give you:</p>
 <ul>
 <li>the <strong>email</strong> of your account;</li>
@@ -2513,25 +2467,25 @@
 <p><img alt="Login form with Email and Password fields and the Log in button" src="img/manuale/login.png" /></p>
 <p>On your first login <strong>we recommend changing your password</strong>: top-right click <strong>MyAccount</strong> → <strong>Change password</strong>.</p>
 <hr />
-<h3 id="changing-the-password">Changing the password<a class="headerlink" href="#changing-the-password" title="Permanent link">&para;</a></h3>
+<h3 id="changing-the-password">Changing the password<a class="headerlink" href="#changing-the-password" title="Link a questa sezione">&para;</a></h3>
 <p>From the <strong>My Account</strong> page you have two blocks:</p>
 <ul>
 <li><strong>Profile</strong>: name, surname, email (if you change the email it becomes the new login credential).</li>
 <li><strong>Change password</strong>: requires the current password + the new one twice. Minimum 8 characters.</li>
 </ul>
 <hr />
-<h3 id="forgot-the-password">Forgot the password?<a class="headerlink" href="#forgot-the-password" title="Permanent link">&para;</a></h3>
+<h3 id="forgot-the-password">Forgot the password?<a class="headerlink" href="#forgot-the-password" title="Link a questa sezione">&para;</a></h3>
 <p>For now <strong>email reset is not yet active</strong> (it requires the SMTP integration from Unimore IT services). In the meantime: contact an administrator, who can reassign you a temporary password by creating a new account or intervening from the panel.</p>
 <hr />
-<h3 id="session-expired">Session expired<a class="headerlink" href="#session-expired" title="Permanent link">&para;</a></h3>
+<h3 id="session-expired">Session expired<a class="headerlink" href="#session-expired" title="Link a questa sezione">&para;</a></h3>
 <p>The access token lasts <strong>30 minutes of inactivity</strong>. After that, protected pages will automatically send you back to the login. Nothing is broken, just log in again.</p>
 <hr />
-<h3 id="failed-login-limit">Failed-login limit<a class="headerlink" href="#failed-login-limit" title="Permanent link">&para;</a></h3>
+<h3 id="failed-login-limit">Failed-login limit<a class="headerlink" href="#failed-login-limit" title="Link a questa sezione">&para;</a></h3>
 <p>For security: <strong>after 5 failed login attempts from the same connection within 1 minute</strong>, the system replies with a "Too Many Requests" error for a few seconds. Wait a moment and retry.</p>
 <hr />
-<h2 id="3-getting-around-sidebar-topbar-breadcrumb">3. Getting around: sidebar, topbar, breadcrumb<a class="headerlink" href="#3-getting-around-sidebar-topbar-breadcrumb" title="Permanent link">&para;</a></h2>
+<h2 id="3-getting-around-sidebar-topbar-breadcrumb">3. Getting around: sidebar, topbar, breadcrumb<a class="headerlink" href="#3-getting-around-sidebar-topbar-breadcrumb" title="Link a questa sezione">&para;</a></h2>
 <p>Once logged in, the interface has 3 fixed elements:</p>
-<h3 id="sidebar-left">Sidebar (left)<a class="headerlink" href="#sidebar-left" title="Permanent link">&para;</a></h3>
+<h3 id="sidebar-left">Sidebar (left)<a class="headerlink" href="#sidebar-left" title="Link a questa sezione">&para;</a></h3>
 <p>All the main pages. The visible items depend on your role:</p>
 <table>
 <thead>
@@ -2626,7 +2580,7 @@
 </table>
 <p>The <strong>button at the top of the sidebar</strong> collapses/expands it (useful to gain horizontal space, especially in TableA). The preference is remembered.</p>
 <hr />
-<h3 id="topbar-top">Topbar (top)<a class="headerlink" href="#topbar-top" title="Permanent link">&para;</a></h3>
+<h3 id="topbar-top">Topbar (top)<a class="headerlink" href="#topbar-top" title="Link a questa sezione">&para;</a></h3>
 <ul>
 <li><strong>Breadcrumb</strong> on the left: shows the page path (e.g. <code>Dashboard / Languages / Italian / Data</code>). Items in <strong>blue</strong> are clickable; items in <strong>grey</strong> are informational only (e.g. dynamic IDs).</li>
 <li><strong>MyAccount</strong> on the right: shortcut to the profile page.</li>
@@ -2634,7 +2588,7 @@
 <li><strong>Logout</strong>: ends the session and brings you back to the public home.</li>
 </ul>
 <hr />
-<h3 id="footer">Footer<a class="headerlink" href="#footer" title="Permanent link">&para;</a></h3>
+<h3 id="footer">Footer<a class="headerlink" href="#footer" title="Link a questa sezione">&para;</a></h3>
 <p>At the bottom of every page:</p>
 <ul>
 <li>PCM-Hub citation (CC BY 4.0);</li>
@@ -2643,9 +2597,9 @@
 <li><strong>Role badge</strong> (bottom right): tells you whether you are "Admin Access", "User Access" or "Public View".</li>
 </ul>
 <hr />
-<h2 id="4-the-dashboard">4. The Dashboard<a class="headerlink" href="#4-the-dashboard" title="Permanent link">&para;</a></h2>
+<h2 id="4-the-dashboard">4. The Dashboard<a class="headerlink" href="#4-the-dashboard" title="Link a questa sezione">&para;</a></h2>
 <p>It's the first page you see after login.</p>
-<h3 id="user-dashboard">User dashboard<a class="headerlink" href="#user-dashboard" title="Permanent link">&para;</a></h3>
+<h3 id="user-dashboard">User dashboard<a class="headerlink" href="#user-dashboard" title="Link a questa sezione">&para;</a></h3>
 <p>Shows <strong>the languages assigned to you</strong>. For each language:</p>
 <ul>
 <li>ID and full name (e.g. <code>ITA — Italian</code>);</li>
@@ -2655,7 +2609,7 @@
 </ul>
 <p>If the language is <code>Rejected</code>, below you'll also see the <strong>admin's note</strong> explaining why it was rejected.</p>
 <hr />
-<h3 id="admin-dashboard">Admin dashboard<a class="headerlink" href="#admin-dashboard" title="Permanent link">&para;</a></h3>
+<h3 id="admin-dashboard">Admin dashboard<a class="headerlink" href="#admin-dashboard" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Administrator dashboard with the four summary cards" src="img/manuale/dashboard-admin.png" /></p>
 <p>3+1 card layout:</p>
 <ul>
@@ -2666,8 +2620,8 @@
 </ul>
 <p>From here an admin can quickly open languages that need attention.</p>
 <hr />
-<h2 id="5-shared-pages">5. Shared pages<a class="headerlink" href="#5-shared-pages" title="Permanent link">&para;</a></h2>
-<h3 id="glossary-glossary">Glossary (<code>/glossary</code>)<a class="headerlink" href="#glossary-glossary" title="Permanent link">&para;</a></h3>
+<h2 id="5-shared-pages">5. Shared pages<a class="headerlink" href="#5-shared-pages" title="Link a questa sezione">&para;</a></h2>
+<h3 id="glossary-glossary">Glossary (<code>/glossary</code>)<a class="headerlink" href="#glossary-glossary" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Glossary page: search field, Add term button and table of terms with Edit/Delete" src="img/manuale/glossary.png" /></p>
 <p>Alphabetical list of technical terms used in the project, with descriptions.</p>
 <ul>
@@ -2675,7 +2629,7 @@
 <li>Admin only: <strong>Add term</strong>, <strong>Edit</strong> and <strong>Delete</strong> buttons on rows.</li>
 </ul>
 <hr />
-<h3 id="instructions-instructions">Instructions (<code>/instructions</code>)<a class="headerlink" href="#instructions-instructions" title="Permanent link">&para;</a></h3>
+<h3 id="instructions-instructions">Instructions (<code>/instructions</code>)<a class="headerlink" href="#instructions-instructions" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Instructions page: title, Edit (admin) button at top right and document content" src="img/manuale/instructions.png" /></p>
 <p>Editable HTML document (powered by TinyMCE) with the compilation guidelines. The default version includes:</p>
 <ul>
@@ -2685,7 +2639,7 @@
 </ul>
 <p>Admin only: <strong>Edit</strong> button at top right → WYSIWYG editor with formatting, tables, raw HTML. <strong>Save</strong> persists the document for everyone.</p>
 <hr />
-<h3 id="how-to-cite-how-to-cite">How to cite (<code>/how-to-cite</code>)<a class="headerlink" href="#how-to-cite-how-to-cite" title="Permanent link">&para;</a></h3>
+<h3 id="how-to-cite-how-to-cite">How to cite (<code>/how-to-cite</code>)<a class="headerlink" href="#how-to-cite-how-to-cite" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="How to cite page: two side-by-side cards with the citation text and the Copy button at top right" src="img/manuale/how-to-cite.png" /></p>
 <p>Two cards:</p>
 <ul>
@@ -2695,7 +2649,7 @@
 <p>Below each card there is a <strong>Copy</strong> button that copies the full citation to the system clipboard.</p>
 <p>Admin only: <strong>Edit</strong> button opens the TinyMCE editor for the citation text.</p>
 <hr />
-<h3 id="my-account-me">My Account (<code>/me</code>)<a class="headerlink" href="#my-account-me" title="Permanent link">&para;</a></h3>
+<h3 id="my-account-me">My Account (<code>/me</code>)<a class="headerlink" href="#my-account-me" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="My Account page: Profile card with Save Profile and Change Password card with Update Password" src="img/manuale/my-account.png" /></p>
 <ul>
 <li><strong>Profile</strong>: name, surname, email. <strong>Save</strong> writes directly to your profile.</li>
@@ -2703,9 +2657,9 @@
 </ul>
 <p>⚠ If you change the email, the <strong>new email becomes your login credential</strong>. Memorize it well (or use a password manager).</p>
 <hr />
-<h2 id="6-the-languages-page">6. The Languages page<a class="headerlink" href="#6-the-languages-page" title="Permanent link">&para;</a></h2>
+<h2 id="6-the-languages-page">6. The Languages page<a class="headerlink" href="#6-the-languages-page" title="Link a questa sezione">&para;</a></h2>
 <p>The list of all the languages in the project. <strong>Above</strong> the table there is an <strong>interactive map</strong> (OpenStreetMap) with a pin for each georeferenced language.</p>
-<h3 id="filters-sticky-at-the-top">Filters (sticky at the top)<a class="headerlink" href="#filters-sticky-at-the-top" title="Permanent link">&para;</a></h3>
+<h3 id="filters-sticky-at-the-top">Filters (sticky at the top)<a class="headerlink" href="#filters-sticky-at-the-top" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Languages page toolbar with filters and action buttons" src="img/manuale/languages-toolbar.png" /></p>
 <ul>
 <li><strong>Search</strong> global text (ID, name, family, top family, group, status, rejection note).</li>
@@ -2730,7 +2684,7 @@
 <li><strong>Add Language</strong> (admin): create a new language manually.</li>
 </ul>
 <hr />
-<h3 id="the-table">The table<a class="headerlink" href="#the-table" title="Permanent link">&para;</a></h3>
+<h3 id="the-table">The table<a class="headerlink" href="#the-table" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Languages table: main columns and per-row action buttons" src="img/manuale/languages-table.png" /></p>
 <ul>
 <li><strong>Left checkbox</strong>: toggle "include / exclude" of the language from the effective set (map, distances, exports). Ticking the header excludes/includes all visible languages.</li>
@@ -2744,17 +2698,17 @@
 </li>
 </ul>
 <hr />
-<h3 id="notes-on-the-map">Notes on the map<a class="headerlink" href="#notes-on-the-map" title="Permanent link">&para;</a></h3>
+<h3 id="notes-on-the-map">Notes on the map<a class="headerlink" href="#notes-on-the-map" title="Link a questa sezione">&para;</a></h3>
 <p>Markers are colored by <strong>top-family</strong>. The legend below the map lists every top-family with its color: hovering a label dims the others (useful to visually isolate a family).</p>
 <hr />
-<h2 id="7-compiling-a-language">7. Compiling a language<a class="headerlink" href="#7-compiling-a-language" title="Permanent link">&para;</a></h2>
+<h2 id="7-compiling-a-language">7. Compiling a language<a class="headerlink" href="#7-compiling-a-language" title="Link a questa sezione">&para;</a></h2>
 <p>This is the <strong>heart of the site</strong>: where a linguist enters and answers the questions for a language. You get here from:</p>
 <ul>
 <li>Dashboard → click on an assigned language;</li>
 <li>Languages → row → <strong>Data</strong> button.</li>
 </ul>
 <p>The URL is <code>/languages/&lt;id&gt;/data</code>.</p>
-<h3 id="language-header">Language header<a class="headerlink" href="#language-header" title="Permanent link">&para;</a></h3>
+<h3 id="language-header">Language header<a class="headerlink" href="#language-header" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Compilation page header and status banner: language metadata, Export button and (below) Pending banner with Apply implicational condition(s) and Change Status" src="img/manuale/compilation-header.png" /></p>
 <p>At the top you see:</p>
 <ul>
@@ -2763,7 +2717,7 @@
 <li>a grid with the language <strong>metadata</strong> (top-family, family, group, ISO/Glottocode, coordinates, supervisor, informant, source, etc.). Only admins also see the assigned user.</li>
 </ul>
 <hr />
-<h3 id="status-banner-below-the-header">Status banner (below the header)<a class="headerlink" href="#status-banner-below-the-header" title="Permanent link">&para;</a></h3>
+<h3 id="status-banner-below-the-header">Status banner (below the header)<a class="headerlink" href="#status-banner-below-the-header" title="Link a questa sezione">&para;</a></h3>
 <p>Shows the current status of the language, a short description and the available workflow buttons. The 4 possible statuses:</p>
 <table>
 <thead>
@@ -2798,7 +2752,7 @@
 </table>
 <p>⚠ <strong>Admins instead</strong> can always edit regardless of status (they see a purple "Admin override" banner indicating this). Admins also have a <strong>Change Status ▾</strong> dropdown that lets them force the language to any status (Approve/Reject/Pending/Waiting), bypassing the normal workflow.</p>
 <hr />
-<h3 id="parameter-wizard-the-squares">Parameter wizard (the squares)<a class="headerlink" href="#parameter-wizard-the-squares" title="Permanent link">&para;</a></h3>
+<h3 id="parameter-wizard-the-squares">Parameter wizard (the squares)<a class="headerlink" href="#parameter-wizard-the-squares" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Parameter wizard: row of colored squares, one per active parameter" src="img/manuale/compilation-wizard.png" /></p>
 <p>Below the status banner there is a <strong>row of small squares</strong>, one per active parameter. Clicking a square jumps to <strong>that parameter's question block</strong>.</p>
 <p>Squares are colored by progress:</p>
@@ -2809,7 +2763,7 @@
 </ul>
 <p>Tip: use the colors as a visual to-do list. All green = ready to submit.</p>
 <hr />
-<h3 id="a-parameters-block">A parameter's block<a class="headerlink" href="#a-parameters-block" title="Permanent link">&para;</a></h3>
+<h3 id="a-parameters-block">A parameter's block<a class="headerlink" href="#a-parameters-block" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Open parameter block: header with parameter name, collapsed Admin notes section and one question with Answer (YES) and Examples fields" src="img/manuale/compilation-block.png" /></p>
 <p>When you click a square you see:</p>
 <ul>
@@ -2819,7 +2773,7 @@
 <li>at the bottom-right a <strong>floating ("sticky") toolbar</strong> with two save buttons: <strong>Confident → Next</strong> (green) and <strong>Unsure → Next</strong> (red). See below.</li>
 </ul>
 <hr />
-<h3 id="questions">Questions<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h3>
+<h3 id="questions">Questions<a class="headerlink" href="#questions" title="Link a questa sezione">&para;</a></h3>
 <p>Each question shows:</p>
 <ul>
 <li>a header with the <strong>ID and text</strong> of the question;</li>
@@ -2830,9 +2784,9 @@
 <li><strong>Answer</strong> (dropdown): <code>— select —</code>, <code>YES</code>, <code>NO</code>, <code>UNSURE</code>. This is your answer.</li>
 </ul>
 <p>Depending on the chosen answer, the card expands differently:</p>
-<h4 id="you-selected-no">You selected <strong>NO</strong><a class="headerlink" href="#you-selected-no" title="Permanent link">&para;</a></h4>
+<h4 id="you-selected-no">You selected <strong>NO</strong><a class="headerlink" href="#you-selected-no" title="Link a questa sezione">&para;</a></h4>
 <p>The <strong>Motivations</strong> section appears: a list of checkboxes with predefined reasons why this question is "No" for this language (e.g. "no corresponding structure", "marginal phenomenon"). Tick one or more. If the question has no associated motivations, you'll see an italic message.</p>
-<h4 id="you-selected-yes-or-unsure">You selected <strong>YES</strong> or <strong>UNSURE</strong><a class="headerlink" href="#you-selected-yes-or-unsure" title="Permanent link">&para;</a></h4>
+<h4 id="you-selected-yes-or-unsure">You selected <strong>YES</strong> or <strong>UNSURE</strong><a class="headerlink" href="#you-selected-yes-or-unsure" title="Link a questa sezione">&para;</a></h4>
 <p>The <strong>Examples</strong> block appears: here you must enter <strong>at least 2 linguistic examples</strong> illustrating the answer. For each example:</p>
 <ul>
 <li><strong>Example text</strong>: the sentence in the language (e.g. <em>Mario ha letto il libro nuovo che gli ho consigliato</em>);</li>
@@ -2849,10 +2803,10 @@
 <li><strong>+ Import example from another answer...</strong>: server-side search through examples already written for other questions/languages. Find the example (by text / translation / gloss), click it, and it gets <strong>copied as a new example</strong> in this question. <strong>The imported example is an independent copy</strong>: you can edit it freely without affecting the original.</li>
 </ul>
 <p>⚠ <strong>Important rule</strong>: if you answer YES or UNSURE, you <strong>must</strong> provide <strong>at least 2 non-empty examples</strong>. If you try to save with fewer than 2, the system blocks the save with a warning and <strong>highlights</strong> the offending card in red. Same constraint applies to UNSURE.</p>
-<h4 id="comments">Comments<a class="headerlink" href="#comments" title="Permanent link">&para;</a></h4>
+<h4 id="comments">Comments<a class="headerlink" href="#comments" title="Link a questa sezione">&para;</a></h4>
 <p>At the bottom of each card there is a <strong>Comments</strong> field (free text) for unstructured notes/explanations/doubts.</p>
 <hr />
-<h3 id="example-clipboard">Example clipboard<a class="headerlink" href="#example-clipboard" title="Permanent link">&para;</a></h3>
+<h3 id="example-clipboard">Example clipboard<a class="headerlink" href="#example-clipboard" title="Link a questa sezione">&para;</a></h3>
 <p>Handy utility to avoid retyping the same example in multiple questions of the same language:</p>
 <ol>
 <li>In any example card, click <strong>Copy</strong> at the top-right → the example goes into the internal clipboard (a red dashed banner appears below your current examples).</li>
@@ -2862,7 +2816,7 @@
 </ol>
 <p>⚠ The clipboard is <strong>language-specific</strong>. If you switch to a different language, the clipboard is automatically cleared to avoid carrying around an "orphan" example.</p>
 <hr />
-<h3 id="saving-a-parameter-block">Saving a parameter block<a class="headerlink" href="#saving-a-parameter-block" title="Permanent link">&para;</a></h3>
+<h3 id="saving-a-parameter-block">Saving a parameter block<a class="headerlink" href="#saving-a-parameter-block" title="Link a questa sezione">&para;</a></h3>
 <p>At the bottom-right of the current block you see a <strong>floating (sticky) toolbar</strong> with two buttons:</p>
 <table>
 <thead>
@@ -2891,10 +2845,10 @@
 <li><strong>Network error</strong>: generic alert, retry later.</li>
 </ul>
 <hr />
-<h3 id="switching-parameter-without-saving">Switching parameter without saving<a class="headerlink" href="#switching-parameter-without-saving" title="Permanent link">&para;</a></h3>
+<h3 id="switching-parameter-without-saving">Switching parameter without saving<a class="headerlink" href="#switching-parameter-without-saving" title="Link a questa sezione">&para;</a></h3>
 <p>If you've changed something and click another square without saving, the site <strong>asks for confirmation</strong> before discarding the current block's changes. Same if you close the tab or navigate away via breadcrumb: automatic protection.</p>
 <hr />
-<h3 id="submit-reopen-workflow">Submit / Reopen / workflow<a class="headerlink" href="#submit-reopen-workflow" title="Permanent link">&para;</a></h3>
+<h3 id="submit-reopen-workflow">Submit / Reopen / workflow<a class="headerlink" href="#submit-reopen-workflow" title="Link a questa sezione">&para;</a></h3>
 <p>Once all the parameters you cared about are compiled, <strong>and</strong> the status is <code>Pending</code> or <code>Rejected</code>:</p>
 <ul>
 <li><strong>Submit for approval</strong>: the language goes to <code>Waiting for approval</code>. The form <strong>locks</strong> and the admin receives the language in their dashboard.</li>
@@ -2905,22 +2859,22 @@
 </ul>
 <p>Remember: an admin can force the language status at any time and in any direction (see §9 of <a href="../documentation_en/">documentation_en.md</a> for the full workflow).</p>
 <hr />
-<h3 id="what-an-admin-sees-in-addition">What an admin sees in addition<a class="headerlink" href="#what-an-admin-sees-in-addition" title="Permanent link">&para;</a></h3>
+<h3 id="what-an-admin-sees-in-addition">What an admin sees in addition<a class="headerlink" href="#what-an-admin-sees-in-addition" title="Link a questa sezione">&para;</a></h3>
 <p>Beyond the purple "Admin override" banner and the <strong>Change Status ▾</strong> dropdown, an admin opening a language has:</p>
 <ul>
 <li><strong>Apply implicational condition(s)</strong> (link at the top): opens the <strong>Debug</strong> page showing all init/final parameter values for the language, with the option to re-run the DAG just for this language.</li>
 <li><strong>Admin notes</strong> inside each parameter block: free-text note for (language, parameter). It is not exported and not visible to Users.</li>
 </ul>
 <hr />
-<h2 id="8-admin-only-parameters">8. ADMIN ONLY — Parameters<a class="headerlink" href="#8-admin-only-parameters" title="Permanent link">&para;</a></h2>
+<h2 id="8-admin-only-parameters">8. ADMIN ONLY — Parameters<a class="headerlink" href="#8-admin-only-parameters" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Parameters</strong> (<code>/admin/parameters</code>).</p>
-<h3 id="parameter-list">Parameter list<a class="headerlink" href="#parameter-list" title="Permanent link">&para;</a></h3>
+<h3 id="parameter-list">Parameter list<a class="headerlink" href="#parameter-list" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Parameter Management page: filters (Search, Schema, Type, Level, Active), buttons Reset / Download parameters info (.pdf) / + Full Parameters Backup / Add Parameter, and table with PDF/Backup/Edit buttons per row" src="img/manuale/parameters-list.png" /></p>
 <p>Table with: ID, name, position, schema, type, level of comparison, counters <code>questions_count</code> (regular questions) and <code>stop_count</code> (stop questions), active/inactive status.</p>
 <p>At the top: search field, <strong>Add parameter</strong> button, <strong>Export PDF (all)</strong> (generates a PDF with all parameters).</p>
 <p>Drag &amp; drop to reorder parameters (<code>position</code> is saved automatically).</p>
 <hr />
-<h3 id="edit-parameter">Edit parameter<a class="headerlink" href="#edit-parameter" title="Permanent link">&para;</a></h3>
+<h3 id="edit-parameter">Edit parameter<a class="headerlink" href="#edit-parameter" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Edit Parameter page: Parameter ID, Position, Name, Schema/Type/Level, Short and Long Description, Implicational Condition, and side card &quot;Where Used&quot;" src="img/manuale/parameter-edit.png" /></p>
 <p>Click the <strong>Edit</strong> button on a row → edit page with:</p>
 <ul>
@@ -2939,10 +2893,10 @@
 <li>the history of <strong>change notes</strong> (ParameterChangeLog) with author and date.</li>
 </ul>
 <hr />
-<h3 id="deactivating-a-parameter">Deactivating a parameter<a class="headerlink" href="#deactivating-a-parameter" title="Permanent link">&para;</a></h3>
+<h3 id="deactivating-a-parameter">Deactivating a parameter<a class="headerlink" href="#deactivating-a-parameter" title="Link a questa sezione">&para;</a></h3>
 <p><strong>Deactivate</strong> button: asks for confirmation + the <strong>current admin's password</strong> (safeguard). Once deactivated, the parameter is no longer offered for compilation and doesn't contribute to TableA / DAG / exports. Historical answers remain in the DB.</p>
 <hr />
-<h3 id="implicational-condition-notes">Implicational condition (notes)<a class="headerlink" href="#implicational-condition-notes" title="Permanent link">&para;</a></h3>
+<h3 id="implicational-condition-notes">Implicational condition (notes)<a class="headerlink" href="#implicational-condition-notes" title="Link a questa sezione">&para;</a></h3>
 <p>The target parameter is "comparable" only if its <code>implicational_condition</code> is satisfied by the cited "ref" parameters.</p>
 <ul>
 <li><code>+P</code> means: parameter <code>P</code> has value <code>+</code> for the language;</li>
@@ -2953,17 +2907,17 @@
 <p>Example: <code>+SPK &amp; -DEM</code> means "parameter SPK is <code>+</code> AND parameter DEM is <code>-</code>". If false, the target parameter is forced to <code>0</code> (with warning).</p>
 <p>The condition is <strong>syntactically validated</strong> at save time: if malformed, the system rejects with an error message. If it cites non-existent or inactive parameters, it is <strong>silently ignored</strong> by the DAG (but the save goes through).</p>
 <hr />
-<h3 id="parameters-graph-adminparametersgraph">Parameters Graph (<code>/admin/parameters/graph</code>)<a class="headerlink" href="#parameters-graph-adminparametersgraph" title="Permanent link">&para;</a></h3>
+<h3 id="parameters-graph-adminparametersgraph">Parameters Graph (<code>/admin/parameters/graph</code>)<a class="headerlink" href="#parameters-graph-adminparametersgraph" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Parameters Graph: filters (Language, Schema, Type, Level), Fit all/Reload buttons, parameter graph in the center and side card with details of the selected node" src="img/manuale/parameters-graph.png" /></p>
 <p>Visualization of the <strong>implicational DAG graph</strong> in an interactive diagram. Useful to understand which parameters depend on which. Each node is a parameter, edges go from <code>ref → target</code>.</p>
 <hr />
-<h2 id="9-admin-only-questions">9. ADMIN ONLY — Questions<a class="headerlink" href="#9-admin-only-questions" title="Permanent link">&para;</a></h2>
+<h2 id="9-admin-only-questions">9. ADMIN ONLY — Questions<a class="headerlink" href="#9-admin-only-questions" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Questions</strong> (<code>/admin/questions</code>).</p>
-<h3 id="question-list">Question list<a class="headerlink" href="#question-list" title="Permanent link">&para;</a></h3>
+<h3 id="question-list">Question list<a class="headerlink" href="#question-list" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Questions page: search field, Add Question button, table with ID/Text Snippet/Type/Actions and Edit/Delete buttons per row" src="img/manuale/questions-list.png" /></p>
 <p>All questions in the system (across all parameters). Filters by parameter, template_type, active/inactive, stop question. "Stop" questions are those that close a parameter's block.</p>
 <hr />
-<h3 id="editadd-question">Edit/Add question<a class="headerlink" href="#editadd-question" title="Permanent link">&para;</a></h3>
+<h3 id="editadd-question">Edit/Add question<a class="headerlink" href="#editadd-question" title="Link a questa sezione">&para;</a></h3>
 <p>To create a question, you must first choose its <strong>parent parameter</strong> (ID).</p>
 <p>Main fields:</p>
 <ul>
@@ -2980,7 +2934,7 @@
 <li><strong>Allowed motivations</strong>: list of motivations selectable by the linguist when answering NO. Only the motivations ticked here appear in the compilation checkbox.</li>
 </ul>
 <hr />
-<h3 id="destructive-changes-the-archive">Destructive changes: the archive<a class="headerlink" href="#destructive-changes-the-archive" title="Permanent link">&para;</a></h3>
+<h3 id="destructive-changes-the-archive">Destructive changes: the archive<a class="headerlink" href="#destructive-changes-the-archive" title="Link a questa sezione">&para;</a></h3>
 <p>⚠ Modifying a question can <strong>invalidate</strong> answers already given. Typical examples:</p>
 <ul>
 <li>changing <code>template_type</code> from <code>boolean</code> to something else;</li>
@@ -2989,35 +2943,35 @@
 </ul>
 <p>In these cases, the system <strong>does not lose</strong> the data: it automatically moves the related <code>Answer</code>/<code>Example</code>/<code>AnswerMotivation</code> to the <strong>question archive</strong> (<a href="#15-admin-only--history-backups-import-recompute">History → Old questions archive</a>). They remain readable read-only there, with a snapshot of the question as it was before the change.</p>
 <hr />
-<h2 id="10-admin-only-motivations">10. ADMIN ONLY — Motivations<a class="headerlink" href="#10-admin-only-motivations" title="Permanent link">&para;</a></h2>
+<h2 id="10-admin-only-motivations">10. ADMIN ONLY — Motivations<a class="headerlink" href="#10-admin-only-motivations" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Motivations</strong> (<code>/admin/motivations</code>).</p>
 <p><img alt="Motivations page: search, Add Motivation button, table with Code/Description/Linked Questions/Actions and Edit/Delete per row" src="img/manuale/motivations.png" /></p>
 <p>The <strong>motivations</strong> are the predefined reasons a linguist can tick when answering NO to a question. Example: "no corresponding structure", "marginal phenomenon", "phonetically reduced".</p>
-<h3 id="list">List<a class="headerlink" href="#list" title="Permanent link">&para;</a></h3>
+<h3 id="list">List<a class="headerlink" href="#list" title="Link a questa sezione">&para;</a></h3>
 <p>Each motivation has:</p>
 <ul>
 <li><strong>Code</strong>: unique identifier (e.g. <code>NO_STRUCT</code>);</li>
 <li><strong>Label</strong>: the text shown to the linguist (can be long, multiline).</li>
 </ul>
 <hr />
-<h3 id="edits">Edits<a class="headerlink" href="#edits" title="Permanent link">&para;</a></h3>
+<h3 id="edits">Edits<a class="headerlink" href="#edits" title="Link a questa sezione">&para;</a></h3>
 <p>Standard CRUD. Motivations are never fully "deleted": if used by some answer, their snapshot stays in the archive.</p>
 <p>Motivations are <strong>linked to questions</strong> from the <a href="#9-admin-only--questions">Questions</a> page (field <strong>Allowed motivations</strong>), not from here.</p>
 <hr />
-<h2 id="11-admin-only-taxonomy">11. ADMIN ONLY — Taxonomy<a class="headerlink" href="#11-admin-only-taxonomy" title="Permanent link">&para;</a></h2>
+<h2 id="11-admin-only-taxonomy">11. ADMIN ONLY — Taxonomy<a class="headerlink" href="#11-admin-only-taxonomy" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Taxonomy</strong> (<code>/admin/taxonomy</code>).</p>
 <p><img alt="Taxonomy page: three columns (Top-Families with + New, Unassigned Subfamilies, Unassigned Groups) with cards per family and Edit/Delete buttons" src="img/manuale/taxonomy.png" /></p>
 <p>Editor of the <strong>language family hierarchy</strong>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Top Family (e.g. Indo-European)
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── Family / Subfamily (e.g. Romance)
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    └── Group (e.g. Italian-Romance)
-</code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Top Family (e.g. Indo-European)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── Family / Subfamily (e.g. Romance)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    └── Group (e.g. Italian-Romance)
+</span></code></pre></div>
 <p>Drag &amp; drop across levels to reorder. Click a name to edit, "+" to add a child, trash to delete.</p>
 <p>⚠ The three strings <code>top_level_family</code>, <code>family</code>, <code>grp</code> on Languages are <strong>denormalized</strong>: they're copied from the taxonomy at language save time. Editing the taxonomy <strong>does not</strong> automatically rename the strings on existing languages — you have to reopen and re-save the language to propagate the change.</p>
 <hr />
-<h2 id="12-admin-only-accounts">12. ADMIN ONLY — Accounts<a class="headerlink" href="#12-admin-only-accounts" title="Permanent link">&para;</a></h2>
+<h2 id="12-admin-only-accounts">12. ADMIN ONLY — Accounts<a class="headerlink" href="#12-admin-only-accounts" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Accounts</strong> (<code>/admin/accounts</code>).</p>
-<h3 id="account-list">Account list<a class="headerlink" href="#account-list" title="Permanent link">&para;</a></h3>
+<h3 id="account-list">Account list<a class="headerlink" href="#account-list" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Accounts page: search, Add Account button, three sections Administrators/Users/Public Users with Assign Langs and Delete buttons per row" src="img/manuale/accounts-list.png" /></p>
 <p>Table with: email, name, surname, role (<code>admin/user/public</code>), number of assigned languages.</p>
 <p>Buttons:</p>
@@ -3027,33 +2981,33 @@
 <li><strong>Delete</strong> on the row.</li>
 </ul>
 <hr />
-<h3 id="add-account">Add account<a class="headerlink" href="#add-account" title="Permanent link">&para;</a></h3>
+<h3 id="add-account">Add account<a class="headerlink" href="#add-account" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Create New Account form: Name, Surname, Email, Temporary Password fields, Role dropdown and Cancel / Create Account buttons" src="img/manuale/account-create.png" /></p>
 <p>Form with: name, surname, email, temporary password (min 8 chars), <strong>role</strong> (dropdown: User / Admin / Public).</p>
 <p>After creation, share the credentials with the user; on first login they should change the password.</p>
 <p>⚠ Email validation: the system rejects with "Invalid email format" if the email is malformed (e.g. missing <code>.it</code>, double <code>@</code>, spaces). This prevents creating accounts that then can't log in.</p>
 <hr />
-<h3 id="safeguards">Safeguards<a class="headerlink" href="#safeguards" title="Permanent link">&para;</a></h3>
+<h3 id="safeguards">Safeguards<a class="headerlink" href="#safeguards" title="Link a questa sezione">&para;</a></h3>
 <ul>
 <li><strong>You cannot delete yourself</strong> (have another admin do it).</li>
 <li><strong>You cannot delete the last admin</strong> (the site would be left without an administrator).</li>
 </ul>
 <hr />
-<h3 id="reassigning-languages">Reassigning languages<a class="headerlink" href="#reassigning-languages" title="Permanent link">&para;</a></h3>
+<h3 id="reassigning-languages">Reassigning languages<a class="headerlink" href="#reassigning-languages" title="Link a questa sezione">&para;</a></h3>
 <p>The <strong>Assign languages</strong> action <strong>replaces</strong> the current pool: if a user had 3 languages assigned and you tick only the other 2 keeping them in the new 5, the original 3 go back to "unassigned" (assignable to another user).</p>
 <hr />
-<h2 id="13-admin-only-table-a">13. ADMIN ONLY — Table A<a class="headerlink" href="#13-admin-only-table-a" title="Permanent link">&para;</a></h2>
+<h2 id="13-admin-only-table-a">13. ADMIN ONLY — Table A<a class="headerlink" href="#13-admin-only-table-a" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Table A</strong> (<code>/tablea</code>).</p>
 <p><img alt="Table A page: Parameters View / Questions View toggle, Language Filters and Parameters Filters, Apply Filters / Reset / Download Data buttons, and start of the value matrix" src="img/manuale/tablea.png" /></p>
 <p><strong>TableA</strong> is the project's flagship matrix: <strong>one language per column, one parameter (or question) per row</strong>, with the consolidated value in each cell (<code>+</code>, <code>−</code>, <code>0</code>, <code>?</code>).</p>
-<h3 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h3>
+<h3 id="modes">Modes<a class="headerlink" href="#modes" title="Link a questa sezione">&para;</a></h3>
 <ul>
 <li><strong>Params</strong> (default): rows = parameters.</li>
 <li><strong>Questions</strong>: rows = individual questions.</li>
 </ul>
 <p>Toggle at the top.</p>
 <hr />
-<h3 id="filters">Filters<a class="headerlink" href="#filters" title="Permanent link">&para;</a></h3>
+<h3 id="filters">Filters<a class="headerlink" href="#filters" title="Link a questa sezione">&para;</a></h3>
 <ul>
 <li><strong>Languages</strong>: top family / family / group / historical / specific (per-language checkboxes in the lower section);</li>
 <li><strong>Parameters</strong>: schema, type, level of comparison;</li>
@@ -3061,10 +3015,10 @@
 </ul>
 <p>After choosing filters, click <strong>Apply</strong> (or equivalent) to recompute the matrix.</p>
 <hr />
-<h3 id="manual-selection">Manual selection<a class="headerlink" href="#manual-selection" title="Permanent link">&para;</a></h3>
+<h3 id="manual-selection">Manual selection<a class="headerlink" href="#manual-selection" title="Link a questa sezione">&para;</a></h3>
 <p>Beyond filters, <strong>each table row</strong> has a checkbox: lets you further restrict the analysis to a subset of parameters/questions.</p>
 <hr />
-<h3 id="exports-and-analyses">Exports and analyses<a class="headerlink" href="#exports-and-analyses" title="Permanent link">&para;</a></h3>
+<h3 id="exports-and-analyses">Exports and analyses<a class="headerlink" href="#exports-and-analyses" title="Link a questa sezione">&para;</a></h3>
 <p><strong>Download / Analysis ▾</strong> dropdown at the top:</p>
 <ul>
 <li><strong>XLSX (parameters)</strong> — Excel with citation header.</li>
@@ -3078,7 +3032,7 @@
 </ul>
 <p>⚠ Distances and clusters are meaningful only on sufficiently large and homogeneous sets. Languages without coordinates are excluded from geographic distances and the export's <code>X-Skipped-Languages</code> header lists them.</p>
 <hr />
-<h2 id="14-admin-only-filters-queries-q1q10">14. ADMIN ONLY — Filters (Queries Q1–Q10)<a class="headerlink" href="#14-admin-only-filters-queries-q1q10" title="Permanent link">&para;</a></h2>
+<h2 id="14-admin-only-filters-queries-q1q10">14. ADMIN ONLY — Filters (Queries Q1–Q10)<a class="headerlink" href="#14-admin-only-filters-queries-q1q10" title="Link a questa sezione">&para;</a></h2>
 <p>Page: <strong>Sidebar &gt; Filters</strong> (<code>/queries</code>).</p>
 <p><img alt="Filters &amp; Queries page: on the left the Queries Configuration menu with the 10 queries listed, on the right the execution area for the selected query" src="img/manuale/queries.png" /></p>
 <p>10 predefined views to query the database in a focused way. Menu on the left (collapsible), main area on the right.</p>
@@ -3132,7 +3086,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="q3-the-richest">Q3 — the richest<a class="headerlink" href="#q3-the-richest" title="Permanent link">&para;</a></h3>
+<h3 id="q3-the-richest">Q3 — the richest<a class="headerlink" href="#q3-the-richest" title="Link a questa sezione">&para;</a></h3>
 <p>It's the <strong>DAG debug view</strong>: pick a language and a neutralized parameter, and you get:</p>
 <ul>
 <li>the parameter's implicational condition;</li>
@@ -3142,23 +3096,23 @@
 </ul>
 <p>Useful to understand <strong>why</strong> a particular parameter is not being compared in a particular language.</p>
 <hr />
-<h3 id="q10-answers-and-examples">Q10 — answers and examples<a class="headerlink" href="#q10-answers-and-examples" title="Permanent link">&para;</a></h3>
+<h3 id="q10-answers-and-examples">Q10 — answers and examples<a class="headerlink" href="#q10-answers-and-examples" title="Link a questa sezione">&para;</a></h3>
 <p>Q10 has 2 optional filters (language + parameter) to <strong>restrict the dropdown of available questions</strong>. Leaving them empty, the dropdown shows all the ~N hundreds of system questions.</p>
 <hr />
-<h2 id="15-admin-only-history-backups-migration-backup-restore-import-excel-recompute">15. ADMIN ONLY — History, Backups, Migration, Backup Restore, Import Excel, Recompute<a class="headerlink" href="#15-admin-only-history-backups-migration-backup-restore-import-excel-recompute" title="Permanent link">&para;</a></h2>
+<h2 id="15-admin-only-history-backups-migration-backup-restore-import-excel-recompute">15. ADMIN ONLY — History, Backups, Migration, Backup Restore, Import Excel, Recompute<a class="headerlink" href="#15-admin-only-history-backups-migration-backup-restore-import-excel-recompute" title="Link a questa sezione">&para;</a></h2>
 <p>Everything related to <strong>audit, snapshots, mass import/export</strong>.</p>
-<h3 id="history-backups-adminhistory">History &amp; Backups (<code>/admin/history</code>)<a class="headerlink" href="#history-backups-adminhistory" title="Permanent link">&para;</a></h3>
+<h3 id="history-backups-adminhistory">History &amp; Backups (<code>/admin/history</code>)<a class="headerlink" href="#history-backups-adminhistory" title="Link a questa sezione">&para;</a></h3>
 <p>The site's <strong>audit hub</strong>. The page has <strong>4 tabs</strong> at the top: each one answers a different question ("who changed what", "who answered what", "do I have a complete snapshot somewhere", "what happened to the old version of a question?"). The tabs share the same filter-table layout but populate different data.</p>
-<h4 id="change-history-tab">"Change history" tab<a class="headerlink" href="#change-history-tab" title="Permanent link">&para;</a></h4>
+<h4 id="change-history-tab">"Change history" tab<a class="headerlink" href="#change-history-tab" title="Link a questa sezione">&para;</a></h4>
 <p><img alt="Change history tab: filters for Entity Type, Entity ID, Operation, Source, User, From/To and Text search; Reset / Apply filters buttons; modifications table with When/What/Op./Source/Author/Note and Open button on each row" src="img/manuale/history-versions.png" /></p>
 <p>Table of <strong>all changes</strong> to <em>non-Answer</em> entities in the system: <code>parameter</code>, <code>question</code>, <code>motivation</code>, <code>language</code>. Designed to answer "who modified parameter FGM and why", "when was motivation MOT042 created?", "who deleted language XYZ last month?".</p>
 <p>Available filters: <strong>Entity type</strong> (dropdown), <strong>Entity ID</strong> (e.g. <code>FGM</code>, <code>FGM_01</code>), <strong>Operation</strong> (create / update / delete), <strong>Source</strong> (manual = panel edit, excel_import = arrived from an Excel import, system = generated by the app), <strong>User</strong> (who did it), <strong>From / To</strong> (date range), <strong>Text search</strong> (searches the ID or note). The <strong>Reset</strong> button clears all filters, <strong>Apply filters</strong> re-runs the query.</p>
 <p>Click <strong>Open</strong> on a row (or the row itself) → a <strong>side drawer</strong> opens with the <strong>before/after diff</strong>: for each modified field, the old value in red on the left and the new in green on the right, plus a collapsible full snapshot at the bottom.</p>
-<h4 id="answer-changes-tab">"Answer changes" tab<a class="headerlink" href="#answer-changes-tab" title="Permanent link">&para;</a></h4>
+<h4 id="answer-changes-tab">"Answer changes" tab<a class="headerlink" href="#answer-changes-tab" title="Link a questa sezione">&para;</a></h4>
 <p><img alt="Answer changes tab: same filters as the previous tab (no Entity Type, since these are all Answer entries) and table with all answer modifications" src="img/manuale/history-answers.png" /></p>
 <p>The "Answer-focused" version of the same table. Every time a linguist (or admin) clicks <strong>Confident → Next</strong> or <strong>Unsure → Next</strong> in a parameter block, a row appears here for every touched answer. Designed to answer "when did user X put YES on question FGM_Qb for Italian?" or "who changed the French answer for parameter SPK on day Y?".</p>
 <p>Same experience as the other tab: filters, table, click a row → drawer with diff. The split exists only because Answers change much more frequently than other entities (every block save) and mixing them with parameters/questions would make the "Change history" tab unreadable.</p>
-<h4 id="full-backups-languages-parameters-tab">"Full backups (languages &amp; parameters)" tab<a class="headerlink" href="#full-backups-languages-parameters-tab" title="Permanent link">&para;</a></h4>
+<h4 id="full-backups-languages-parameters-tab">"Full backups (languages &amp; parameters)" tab<a class="headerlink" href="#full-backups-languages-parameters-tab" title="Link a questa sezione">&para;</a></h4>
 <p><img alt="Full backups tab: Languages / Parameters sub-tabs, &quot;Create global languages backup&quot; card with optional Note and &quot;+ Create languages backup now&quot; button, and table of saved backups" src="img/manuale/history-backups.png" /></p>
 <p>List of <strong>complete snapshots</strong> of the system, grouped by timestamp. Sub-tabs <strong>Languages</strong> or <strong>Parameters</strong> (toggle at the top), selecting two different snapshot types:</p>
 <ul>
@@ -3166,13 +3120,13 @@
 <li><strong>Parameter backups</strong> are created from <a href="#8-admin-only--parameters">Parameters → + Full Parameters Backup</a> and contain the state of all parameters (definitions, implicational conditions, descriptions) at capture time.</li>
 </ul>
 <p>You can also <strong>create one on the fly</strong> from here: the top card has an optional <strong>Note</strong> field and a <strong>+ Create languages backup now</strong> (or <strong>+ Create parameters backup now</strong> on the other sub-tab) button. Clicking a row in the table opens the backup detail, with the option to download an Excel of all data for audit or external restore.</p>
-<h4 id="old-questions-archive-tab">"Old questions archive" tab<a class="headerlink" href="#old-questions-archive-tab" title="Permanent link">&para;</a></h4>
+<h4 id="old-questions-archive-tab">"Old questions archive" tab<a class="headerlink" href="#old-questions-archive-tab" title="Link a questa sezione">&para;</a></h4>
 <p><img alt="Old questions archive tab: behavior description, search, and table with Question ID / Parameter / number of Archived versions / Latest archive / Show versions button" src="img/manuale/history-old-questions.png" /></p>
 <p>When a question is modified destructively (see §9 — <code>template_type</code> change, deletion, removal of motivations) or deleted, its Answers/Examples/AnswerMotivations are <strong>not lost</strong>: they are moved here to the archive together with a snapshot of the question text as it was.</p>
 <p>Each row in the table groups <strong>all archived versions of the same question</strong> (e.g. if FGM_Qa was "broken" 3 times, you see 3 versions here). The <strong>Show versions</strong> button opens the detail: for each version you see the original text, the motivations allowed at the time, and all historical answers from every language to that version of the question.</p>
 <p>Useful when you have to demonstrate to a reviewer "the original linguistic data still exists, even if the question has since been modified".</p>
 <hr />
-<h3 id="migration-import-adminmigration-import-dangerous">Migration Import (<code>/admin/migration-import</code>) — dangerous<a class="headerlink" href="#migration-import-adminmigration-import-dangerous" title="Permanent link">&para;</a></h3>
+<h3 id="migration-import-adminmigration-import-dangerous">Migration Import (<code>/admin/migration-import</code>) — dangerous<a class="headerlink" href="#migration-import-adminmigration-import-dangerous" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Restore Database (Migration Import) page: red &quot;Destructive operation&quot; warning that with wipe enabled all data tables are deleted, and &quot;Expected bundle content&quot; block with the ZIP file structure" src="img/manuale/migration.png" /></p>
 <p>⚠ Item shown in <strong>red</strong> in the sidebar because it can <strong>wipe the database</strong>.</p>
 <p>Used to import the <strong>legacy site's ZIP bundle</strong> (Django legacy) during go-live. Typical procedure (see <code>DEPLOY_PROCEDURA.txt</code>):</p>
@@ -3187,15 +3141,15 @@
 <p>After import the admin password is <strong>reset to <code>ADMIN_PASSWORD</code></strong> from the Portainer env vars (change the password <strong>after</strong> the import, not before).</p>
 <p>Validation: 200MB cap on the ZIP, anti-zip-bomb, path-traversal checks on file names.</p>
 <hr />
-<h3 id="backup-restore-adminbackup-restore">Backup Restore (<code>/admin/backup-restore</code>)<a class="headerlink" href="#backup-restore-adminbackup-restore" title="Permanent link">&para;</a></h3>
+<h3 id="backup-restore-adminbackup-restore">Backup Restore (<code>/admin/backup-restore</code>)<a class="headerlink" href="#backup-restore-adminbackup-restore" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Backup Restore page: description of accepted bundle, &quot;Backup ZIP file&quot; file picker, &quot;Wipe data tables before restore&quot; checkbox, Start restore and &quot;← Need Migration Import instead?&quot; buttons" src="img/manuale/backup-restore.png" /></p>
 <p>Restore of a <strong>ZIP bundle exported</strong> from <a href="#6-the-languages-page">Languages → Download Data → Export backup (.zip)</a>. Lets you restore a specific set of languages from a previous snapshot, without wiping the DB.</p>
 <hr />
-<h3 id="import-from-excel-adminimport-excel">Import from Excel (<code>/admin/import-excel</code>)<a class="headerlink" href="#import-from-excel-adminimport-excel" title="Permanent link">&para;</a></h3>
+<h3 id="import-from-excel-adminimport-excel">Import from Excel (<code>/admin/import-excel</code>)<a class="headerlink" href="#import-from-excel-adminimport-excel" title="Link a questa sezione">&para;</a></h3>
 <p><img alt="Import from Excel page: Strategy block (Schema strict update / Database_model full replace / Cascading errors), File picker for Excel file, Start Import and Cancel buttons" src="img/manuale/import-excel.png" /></p>
 <p>Structured Excel import. 50 MB cap on the file. The sheet must follow the round-trip format (<a href="../documentation_en/">documentation_en.md</a> §10.4).</p>
 <hr />
-<h3 id="recompute-final-values">Recompute final values<a class="headerlink" href="#recompute-final-values" title="Permanent link">&para;</a></h3>
+<h3 id="recompute-final-values">Recompute final values<a class="headerlink" href="#recompute-final-values" title="Link a questa sezione">&para;</a></h3>
 <p>⚠ Reached <strong>from Languages → Recompute final values</strong>, no dedicated page.</p>
 <p>Re-runs the <strong>implicational DAG</strong> for <strong>all</strong> languages in the system. Use:</p>
 <ul>
@@ -3205,36 +3159,36 @@
 </ul>
 <p>It's an async job (can take minutes on large datasets). Toast at the bottom-right shows progress. When done: "Recompute complete" message, or "Recompute completed with N error(s) over M language(s). See server logs for details" if some language has problems.</p>
 <hr />
-<h2 id="16-common-errors-and-what-to-do">16. Common errors and what to do<a class="headerlink" href="#16-common-errors-and-what-to-do" title="Permanent link">&para;</a></h2>
-<h3 id="form-locked-by-the-current-language-status">"Form locked by the current language status"<a class="headerlink" href="#form-locked-by-the-current-language-status" title="Permanent link">&para;</a></h3>
+<h2 id="16-common-errors-and-what-to-do">16. Common errors and what to do<a class="headerlink" href="#16-common-errors-and-what-to-do" title="Link a questa sezione">&para;</a></h2>
+<h3 id="form-locked-by-the-current-language-status">"Form locked by the current language status"<a class="headerlink" href="#form-locked-by-the-current-language-status" title="Link a questa sezione">&para;</a></h3>
 <p>The language status is <code>Waiting for approval</code> or <code>Approved</code>, and you are not an admin. Wait for the decision, or (if you are the assigned user and the language is <code>Rejected</code>) click <strong>Reopen</strong>.</p>
-<h3 id="question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure">"Question X needs at least 2 valid examples when answering YES or UNSURE"<a class="headerlink" href="#question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure" title="Permanent link">&para;</a></h3>
+<h3 id="question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure">"Question X needs at least 2 valid examples when answering YES or UNSURE"<a class="headerlink" href="#question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure" title="Link a questa sezione">&para;</a></h3>
 <p>You picked YES or UNSURE on a question with fewer than 2 non-empty examples. Add/complete the examples and retry.</p>
-<h3 id="this-block-has-been-modified-by-another-session">"This block has been modified by another session..."<a class="headerlink" href="#this-block-has-been-modified-by-another-session" title="Permanent link">&para;</a></h3>
+<h3 id="this-block-has-been-modified-by-another-session">"This block has been modified by another session..."<a class="headerlink" href="#this-block-has-been-modified-by-another-session" title="Link a questa sezione">&para;</a></h3>
 <p>Another user (usually an admin) modified the same block while you were working on it. The page automatically reloads: review the other person's changes before retrying your save.</p>
-<h3 id="wrong-email-or-password">"Wrong email or password"<a class="headerlink" href="#wrong-email-or-password" title="Permanent link">&para;</a></h3>
+<h3 id="wrong-email-or-password">"Wrong email or password"<a class="headerlink" href="#wrong-email-or-password" title="Link a questa sezione">&para;</a></h3>
 <p>Wrong credentials. If you don't remember: contact an admin (email reset is not yet active).</p>
-<h3 id="too-many-requests-at-login">"Too Many Requests" at login<a class="headerlink" href="#too-many-requests-at-login" title="Permanent link">&para;</a></h3>
+<h3 id="too-many-requests-at-login">"Too Many Requests" at login<a class="headerlink" href="#too-many-requests-at-login" title="Link a questa sezione">&para;</a></h3>
 <p>You typed the wrong password 5 times within a minute. Wait 1 minute and retry.</p>
-<h3 id="invalid-email-format">"Invalid email format"<a class="headerlink" href="#invalid-email-format" title="Permanent link">&para;</a></h3>
+<h3 id="invalid-email-format">"Invalid email format"<a class="headerlink" href="#invalid-email-format" title="Link a questa sezione">&para;</a></h3>
 <p>You're creating an account or changing email with an invalid value (e.g. missing <code>.it</code>, space, double <code>@</code>). Fix it.</p>
-<h3 id="you-cannot-delete-your-own-account">"You cannot delete your own account"<a class="headerlink" href="#you-cannot-delete-your-own-account" title="Permanent link">&para;</a></h3>
+<h3 id="you-cannot-delete-your-own-account">"You cannot delete your own account"<a class="headerlink" href="#you-cannot-delete-your-own-account" title="Link a questa sezione">&para;</a></h3>
 <p>Have another admin do it.</p>
-<h3 id="you-cannot-delete-the-last-remaining-administrator">"You cannot delete the last remaining administrator"<a class="headerlink" href="#you-cannot-delete-the-last-remaining-administrator" title="Permanent link">&para;</a></h3>
+<h3 id="you-cannot-delete-the-last-remaining-administrator">"You cannot delete the last remaining administrator"<a class="headerlink" href="#you-cannot-delete-the-last-remaining-administrator" title="Link a questa sezione">&para;</a></h3>
 <p>Create a second admin <strong>before</strong> deleting the existing one.</p>
-<h3 id="the-submit-for-approval-button-is-missing">The "Submit for approval" button is missing<a class="headerlink" href="#the-submit-for-approval-button-is-missing" title="Permanent link">&para;</a></h3>
+<h3 id="the-submit-for-approval-button-is-missing">The "Submit for approval" button is missing<a class="headerlink" href="#the-submit-for-approval-button-is-missing" title="Link a questa sezione">&para;</a></h3>
 <ul>
 <li>Language status is already <code>Waiting for approval</code> or <code>Approved</code>: nothing to do.</li>
 <li>Status is <code>Rejected</code>: see <strong>Reopen</strong>, not Submit.</li>
 <li>You're not the assigned user for this language: only the assigned user can Submit.</li>
 <li>You're an admin: admins don't submit (they go directly through approve/reject).</li>
 </ul>
-<h3 id="the-site-logged-me-out-unexpectedly">The site logged me out unexpectedly<a class="headerlink" href="#the-site-logged-me-out-unexpectedly" title="Permanent link">&para;</a></h3>
+<h3 id="the-site-logged-me-out-unexpectedly">The site logged me out unexpectedly<a class="headerlink" href="#the-site-logged-me-out-unexpectedly" title="Link a questa sezione">&para;</a></h3>
 <p>Token expired (30 min of inactivity). Log in again.</p>
-<h3 id="i-changed-the-taxonomy-but-languages-still-show-the-old-names">I changed the taxonomy but languages still show the old names<a class="headerlink" href="#i-changed-the-taxonomy-but-languages-still-show-the-old-names" title="Permanent link">&para;</a></h3>
+<h3 id="i-changed-the-taxonomy-but-languages-still-show-the-old-names">I changed the taxonomy but languages still show the old names<a class="headerlink" href="#i-changed-the-taxonomy-but-languages-still-show-the-old-names" title="Link a questa sezione">&para;</a></h3>
 <p>The <code>top_family</code>/<code>family</code>/<code>group</code> strings on languages are denormalized. Reopen each affected language and Save (even without changing anything) to propagate the new names. To do this in bulk: use Excel export/import.</p>
 <hr />
-<h2 id="17-quick-interface-glossary">17. Quick interface glossary<a class="headerlink" href="#17-quick-interface-glossary" title="Permanent link">&para;</a></h2>
+<h2 id="17-quick-interface-glossary">17. Quick interface glossary<a class="headerlink" href="#17-quick-interface-glossary" title="Link a questa sezione">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -3381,11 +3335,10 @@
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
   
+    <div class="md-copyright__highlight">
+      PCM-Hub · Parametric Comparison Method · Università di Modena e Reggio Emilia
+    </div>
   
-    Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
-      Material for MkDocs
-    </a>
   
 </div>
       
@@ -3395,11 +3348,16 @@
     
     
     
-      
-      
-    
-    <a href="https://github.com/gb-993/progetto_lingue_3" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+    <a href="https://github.com/gb-993/progetto_lingue_3" target="_blank" rel="noopener" title="Repository su GitHub" class="md-social__link">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://hub.parametricomparison.unimore.it" target="_blank" rel="noopener" title="PCM-Hub (sito di produzione)" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M352 256c0 22.2-1.2 43.6-3.3 64H163.4c-2.2-20.4-3.3-41.8-3.3-64s1.2-43.6 3.3-64h185.3c2.2 20.4 3.3 41.8 3.3 64m28.8-64h123.1c5.3 20.5 8.1 41.9 8.1 64s-2.8 43.5-8.1 64H380.8c2.1-20.6 3.2-42 3.2-64s-1.1-43.4-3.2-64m112.6-32H376.7c-10-63.9-29.8-117.4-55.3-151.6 78.3 20.7 142 77.5 171.9 151.6zm-149.1 0H167.7c6.1-36.4 15.5-68.6 27-94.7 10.5-23.6 22.2-40.7 33.5-51.5C239.4 3.2 248.7 0 256 0s16.6 3.2 27.8 13.8c11.3 10.8 23 27.9 33.5 51.5 11.6 26 20.9 58.2 27 94.7m-209 0H18.6c30-74.1 93.6-130.9 172-151.6-25.5 34.2-45.3 87.7-55.3 151.6M8.1 192h123.1c-2.1 20.6-3.2 42-3.2 64s1.1 43.4 3.2 64H8.1C2.8 299.5 0 278.1 0 256s2.8-43.5 8.1-64m186.6 254.6c-11.6-26-20.9-58.2-27-94.6h176.6c-6.1 36.4-15.5 68.6-27 94.6-10.5 23.6-22.2 40.7-33.5 51.5-11.2 10.7-20.5 13.9-27.8 13.9s-16.6-3.2-27.8-13.8c-11.3-10.8-23-27.9-33.5-51.5zM135.3 352c10 63.9 29.8 117.4 55.3 151.6-78.4-20.7-142-77.5-172-151.6zm358.1 0c-30 74.1-93.6 130.9-171.9 151.6 25.5-34.2 45.2-87.7 55.3-151.6h116.7z"/></svg>
     </a>
   
 </div>
@@ -3413,8 +3371,10 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copiato", "clipboard.copy": "Copia", "search.result.more.one": "1 altro in questa pagina", "search.result.more.other": "# altri in questa pagina", "search.result.none": "Nessun documento trovato", "search.result.one": "1 documento trovato", "search.result.other": "# documenti trovati", "search.result.placeholder": "Scrivi per iniziare a cercare", "search.result.term.missing": "Non presente", "select.version": "Seleziona la versione"}}</script>
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.path", "navigation.indexes", "navigation.top", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.prune", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.action.edit", "content.tooltips"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copiato", "clipboard.copy": "Copia", "search.result.more.one": "1 altro in questa pagina", "search.result.more.other": "# altri in questa pagina", "search.result.none": "Nessun documento trovato", "search.result.one": "1 documento trovato", "search.result.other": "# documenti trovati", "search.result.placeholder": "Scrivi per iniziare a cercare", "search.result.term.missing": "Non presente", "select.version": "Seleziona la versione"}}</script>
     
     
       <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
