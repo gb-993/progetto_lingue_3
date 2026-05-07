@@ -16,7 +16,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: pcm_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -35,7 +34,6 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: pcm_backend
     environment:
       ENV: ${ENV}
       SECRET_KEY: ${SECRET_KEY}
@@ -73,7 +71,6 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    container_name: pcm_caddy
     depends_on:
       - backend
     ports:
@@ -97,7 +94,6 @@ services:
   # container pcm_backup -> `cat /backups/<file>.dump | base64`.
   backup:
     image: postgres:16-alpine
-    container_name: pcm_backup
     depends_on:
       - db
     environment:

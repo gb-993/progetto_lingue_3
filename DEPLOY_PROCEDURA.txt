@@ -144,10 +144,10 @@ PASSO 4 — CREARE LO STACK DI PRODUZIONE SU PORTAINER
      vedi PASSO 0). Vedi i log live in fondo alla pagina.
 
 Quando finisce vai su "Containers". Devi vedere:
-   pcm_db                  running          (healthy)
-   pcm_backend             running          (healthy)   <- ci mette ~30s
-   pcm_caddy               running
-   pcm_backup              running
+   pcm-hub-db-1                  running          (healthy)
+   pcm-hub-backend-1             running          (healthy)   <- ci mette ~30s
+   pcm-hub-caddy-1               running
+   pcm-hub-backup-1             running
 
 Se Caddy mostra 404 sulla home: probabilmente hai dimenticato il
 PASSO 0 (build + commit della dist). Rifallo, push, "Pull and redeploy".
@@ -158,7 +158,7 @@ PASSO 5 — APPLICARE LE MIGRAZIONI ALEMBIC
 ==========================================================================
 
 [PORTAINER]
-   - "Containers" -> clicca su `pcm_backend`.
+   - "Containers" -> clicca su `pcm-hub-backend-1`.
    - Pulsante "Console" (icona >_  in alto).
    - Command: /bin/bash. Clicca "Connect".
    - Nel terminale che si apre digita:
@@ -239,7 +239,7 @@ PASSO 9 — SMOKE TEST
        primo, salva il secondo -> il secondo deve dare errore 409.
    [ ] Logout -> torna alla login.
 
-[PORTAINER] Containers: tutti "running". pcm_backend deve essere
+[PORTAINER] Containers: tutti "running". pcm-hub-backend-1 deve essere
 "(healthy)" entro ~30 secondi dall'avvio.
 
 
@@ -248,7 +248,7 @@ PASSO 10 — VERIFICARE CHE IL BACKUP PARTE
 ==========================================================================
 
 [PORTAINER]
-   - Containers -> pcm_backup -> Logs.
+   - Containers -> pcm-hub-backup-1-> Logs.
    - Devi vedere righe tipo:
          [backup] avviato. KEEP=3, dest=/backups
          [backup] 2026-... inizio dump -> /backups/pcm-...dump
@@ -257,7 +257,7 @@ PASSO 10 — VERIFICARE CHE IL BACKUP PARTE
    Il primo dump parte appena il DB e' pronto, poi 1 ogni 24h.
 
    Verifica file dei dump:
-   - Containers -> pcm_backup -> Console -> /bin/sh -> Connect.
+   - Containers -> pcm-hub-backup-1-> Console -> /bin/sh -> Connect.
    - Digita:
          ls -la /backups/
    - Deve mostrare almeno 1 file pcm-YYYYMMDD-HHMMSS.dump.
@@ -269,7 +269,7 @@ COME RECUPERARE UN DUMP SUL PC (senza SSH)
 
 Quando ti serve scaricare un backup sul PC:
 
-[PORTAINER] pcm_backup -> Console -> /bin/sh:
+[PORTAINER] pcm-hub-backup-1-> Console -> /bin/sh:
 
    ls -la /backups/                    # quale vuoi?
    base64 /backups/pcm-YYYYMMDD-HHMMSS.dump
@@ -295,18 +295,18 @@ cosa con in piu' gli asset, e si scarica via HTTPS senza copia-incolla.
 FATTO. Cosa controllare nei giorni successivi:
 ==========================================================================
 
-  - Portainer -> pcm_backup -> Logs: 1 dump al giorno, niente
+  - Portainer -> pcm-hub-backup-1-> Logs: 1 dump al giorno, niente
     "DUMP FALLITO".
-  - Portainer -> pcm_backend -> status sempre "(healthy)".
+  - Portainer -> pcm-hub-backend-1 -> status sempre "(healthy)".
   - Portainer -> Volumes -> pcm_backups: dimensione totale stabile
     (3 dump in rolling).
 
 Se qualcosa rompe: Portainer -> Containers -> Logs.
-   pcm_backend         -> errori app
-   pcm_db              -> problemi DB
-   pcm_caddy           -> problemi HTTPS / Let's Encrypt / 404 su SPA
+   pcm-hub-backend-1         -> errori app
+   pcm-hub-db-1              -> problemi DB
+   pcm-hub-caddy-1           -> problemi HTTPS / Let's Encrypt / 404 su SPA
                           (dist mancante o vecchia: rifai PASSO 0)
-   pcm_backup          -> backup falliti
+   pcm-hub-backup-1         -> backup falliti
 
 Per redeploy del codice:
    1) [PC] Se hai toccato il frontend, ribuilda e committa la dist:
