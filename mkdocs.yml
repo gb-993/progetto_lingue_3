@@ -1,0 +1,91 @@
+site_name: PCM-Hub — Documentazione
+site_description: Manuale utente e documentazione tecnica del PCM-Hub (Parametric Comparison Method)
+site_url: https://gb-993.github.io/progetto_lingue_3/
+repo_url: https://github.com/gb-993/progetto_lingue_3
+repo_name: gb-993/progetto_lingue_3
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: it
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Passa al tema scuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Passa al tema chiaro
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search:
+      lang:
+        - it
+        - en
+
+nav:
+  - Home: index.md
+  - Italiano:
+      - Manuale utente: manuale_utente_it.md
+      - Documentazione tecnica: documentation_it.md
+  - English:
+      - User manual: user_manual_en.md
+      - Technical documentation: documentation_en.md
+
+extra:
+  alternate:
+    - name: Italiano
+      link: /progetto_lingue_3/manuale_utente_it/
+      lang: it
+    - name: English
+      link: /progetto_lingue_3/user_manual_en/
+      lang: en
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gb-993/progetto_lingue_3
+
+# Tolleranza sui link rotti (alcuni link interni puntano a path repo-relative dei PDF)
+strict: false

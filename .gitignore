@@ -23,6 +23,9 @@ env/
 # ---- Node ----
 node_modules/
 
+# ---- MkDocs ----
+site/
+
 # ---- IDE / OS ----
 .idea/
 .vscode/
@@ -34,9 +37,8 @@ Thumbs.db
 *.log
 logs/
 
-# ---- Documentazione: solo i PDF vanno in repo ----
-# Le sorgenti markdown e gli screenshot del manuale stanno solo in locale, così
-# si possono modificare/rigenerare senza appesantire la repo (e la VM tira solo
-# i PDF dalla repo, non serve nient'altro).
-docs/*.md
+# ---- Documentazione ----
+# I markdown sono ora committati per essere serviti da GitHub Pages (MkDocs).
+# Gli screenshot del manuale restano locali per non appesantirli: se in futuro
+# servono nel sito, togli anche la riga docs/img/.
 docs/img/
