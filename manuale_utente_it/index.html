@@ -1,0 +1,3424 @@
+
+<!doctype html>
+<html lang="it" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Manuale utente e documentazione tecnica del PCM-Hub (Parametric Comparison Method)">
+      
+      
+      
+        <link rel="canonical" href="https://gb-993.github.io/progetto_lingue_3/manuale_utente_it/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../documentation_it/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Manuale utente - PCM-Hub — Documentazione</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pcm-hub-manuale-utente" class="md-skip">
+          Vai al contenuto
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Intestazione">
+    <a href=".." title="PCM-Hub — Documentazione" class="md-header__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PCM-Hub — Documentazione
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Manuale utente
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema scuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Passa al tema scuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema chiaro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Passa al tema chiaro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Seleziona la lingua">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="/progetto_lingue_3/manuale_utente_it/" hreflang="it" class="md-select__link">
+              Italiano
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="/progetto_lingue_3/user_manual_en/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Cerca" placeholder="Cerca" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Cerca">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Cancella" aria-label="Cancella" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inizializza la ricerca
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/gb-993/progetto_lingue_3" title="Apri repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    gb-993/progetto_lingue_3
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  Italiano
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user_manual_en/" class="md-tabs__link">
+          
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigazione" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PCM-Hub — Documentazione" class="md-nav__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PCM-Hub — Documentazione
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/gb-993/progetto_lingue_3" title="Apri repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    gb-993/progetto_lingue_3
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Italiano
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Italiano
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Manuale utente
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Manuale utente
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Indice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Indice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#indice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Indice
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-cose-il-pcm-hub" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Cos'è il PCM-Hub
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Cos'è il PCM-Hub">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#i-tre-ruoli" class="md-nav__link">
+    <span class="md-ellipsis">
+      I tre ruoli
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-accedere-al-sito" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Accedere al sito
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Accedere al sito">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primo-accesso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Primo accesso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cambiare-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cambiare password
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimenticato-la-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dimenticato la password?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sessione-scaduta" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sessione scaduta
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limite-tentativi-falliti" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limite tentativi falliti
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-orientarsi-sidebar-topbar-breadcrumb" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Orientarsi: sidebar, topbar, breadcrumb
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Orientarsi: sidebar, topbar, breadcrumb">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-a-sinistra" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sidebar (a sinistra)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#topbar-in-alto" class="md-nav__link">
+    <span class="md-ellipsis">
+      Topbar (in alto)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#footer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Footer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-la-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. La Dashboard
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. La Dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dashboard-utente-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard utente (User)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dashboard-admin" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard admin
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-pagine-condivise" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Pagine condivise
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Pagine condivise">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#glossary-glossary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Glossary (/glossary)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions (/instructions)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-cite-how-to-cite" class="md-nav__link">
+    <span class="md-ellipsis">
+      How to cite (/how-to-cite)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-account-me" class="md-nav__link">
+    <span class="md-ellipsis">
+      My Account (/me)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-la-pagina-languages" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. La pagina Languages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. La pagina Languages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtri-sticky-in-alto" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtri (sticky in alto)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#la-tabella" class="md-nav__link">
+    <span class="md-ellipsis">
+      La tabella
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#note-sulla-mappa" class="md-nav__link">
+    <span class="md-ellipsis">
+      Note sulla mappa
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-compilare-una-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Compilare una lingua
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Compilare una lingua">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#header-della-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      Header della lingua
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#banner-di-stato-sotto-lheader" class="md-nav__link">
+    <span class="md-ellipsis">
+      Banner di stato (sotto l'header)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wizard-dei-parametri-i-quadratini" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wizard dei parametri (i quadratini)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-blocco-di-un-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il blocco di un parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#le-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Le domande
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Le domande">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hai-selezionato-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hai selezionato NO
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hai-selezionato-yes-o-unsure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hai selezionato YES o UNSURE
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#la-clipboard-degli-esempi" class="md-nav__link">
+    <span class="md-ellipsis">
+      La clipboard degli esempi
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#salvare-un-blocco-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Salvare un blocco parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cambiare-parametro-senza-salvare" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cambiare parametro senza salvare
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-reopen-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submit / Reopen / workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cosa-vede-ladmin-in-piu" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cosa vede l'admin in più
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-solo-admin-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. SOLO ADMIN — Parameters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. SOLO ADMIN — Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-parametri" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista parametri
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Edit parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disattivare-un-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Disattivare un parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implicational-condition-cenni" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implicational condition (cenni)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters-graph-adminparametersgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters Graph (/admin/parameters/graph)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-solo-admin-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. SOLO ADMIN — Questions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. SOLO ADMIN — Questions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#editadd-domanda" class="md-nav__link">
+    <span class="md-ellipsis">
+      Edit/Add domanda
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modifiche-distruttive-larchivio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modifiche distruttive: l'archivio
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-solo-admin-motivations" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. SOLO ADMIN — Motivations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. SOLO ADMIN — Motivations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modifiche" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modifiche
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-solo-admin-taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. SOLO ADMIN — Taxonomy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-solo-admin-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. SOLO ADMIN — Accounts
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. SOLO ADMIN — Accounts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista account
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      Add account
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#safeguards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Safeguards
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#riassegnazione-lingue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Riassegnazione lingue
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-solo-admin-table-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. SOLO ADMIN — Table A
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. SOLO ADMIN — Table A">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modalita" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modalità
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filtri" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtri
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selezioni-manuali" class="md-nav__link">
+    <span class="md-ellipsis">
+      Selezioni manuali
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export-e-analisi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export e analisi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-solo-admin-filters-queries-q1q10" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. SOLO ADMIN — Filters (Queries Q1–Q10)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. SOLO ADMIN — Filters (Queries Q1–Q10)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q3-la-piu-ricca" class="md-nav__link">
+    <span class="md-ellipsis">
+      Q3 — la più ricca
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q10-risposte-ed-esempi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Q10 — risposte ed esempi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-solo-admin-history-backups-migration-backup-restore-import-excel-recompute" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. SOLO ADMIN — History, Backups, Migration, Backup Restore, Import Excel, Recompute
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. SOLO ADMIN — History, Backups, Migration, Backup Restore, Import Excel, Recompute">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#history-backups-adminhistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      History &amp; Backups (/admin/history)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="History & Backups (/admin/history)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tab-change-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Change history"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-answer-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Answer changes"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-full-backups-languages-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Full backups (languages &amp; parameters)"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-old-questions-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Old questions archive"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-import-adminmigration-import-pericoloso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration Import (/admin/migration-import) — pericoloso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-restore-adminbackup-restore" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup Restore (/admin/backup-restore)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-from-excel-adminimport-excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import from Excel (/admin/import-excel)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recompute-final-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recompute final values
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-errori-comuni-e-cosa-fare" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Errori comuni e cosa fare
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="16. Errori comuni e cosa fare">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#form-locked-by-the-current-language-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Form locked by the current language status"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Question X needs at least 2 valid examples when answering YES or UNSURE"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#this-block-has-been-modified-by-another-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      "This block has been modified by another session..."
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrong-email-or-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Wrong email or password"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#too-many-requests-al-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Too Many Requests" al login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invalid-email-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Invalid email format"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-cannot-delete-your-own-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      "You cannot delete your own account"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-cannot-delete-the-last-remaining-administrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      "You cannot delete the last remaining administrator"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-pulsante-submit-for-approval-non-ce" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il pulsante "Submit for approval" non c'è
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-sito-mi-ha-sloggato-allimprovviso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il sito mi ha sloggato all'improvviso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ho-cambiato-il-taxonomy-ma-le-lingue-mostrano-ancora-i-vecchi-nomi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ho cambiato il taxonomy ma le lingue mostrano ancora i vecchi nomi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-glossario-rapido-di-interfaccia" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. Glossario rapido di interfaccia
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documentation_it/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Documentazione tecnica
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    English
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            English
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user_manual_en/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    User manual
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documentation_en/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Technical documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Indice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Indice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#indice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Indice
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-cose-il-pcm-hub" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Cos'è il PCM-Hub
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Cos'è il PCM-Hub">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#i-tre-ruoli" class="md-nav__link">
+    <span class="md-ellipsis">
+      I tre ruoli
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-accedere-al-sito" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Accedere al sito
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Accedere al sito">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primo-accesso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Primo accesso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cambiare-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cambiare password
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimenticato-la-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dimenticato la password?
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sessione-scaduta" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sessione scaduta
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limite-tentativi-falliti" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limite tentativi falliti
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-orientarsi-sidebar-topbar-breadcrumb" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Orientarsi: sidebar, topbar, breadcrumb
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Orientarsi: sidebar, topbar, breadcrumb">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-a-sinistra" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sidebar (a sinistra)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#topbar-in-alto" class="md-nav__link">
+    <span class="md-ellipsis">
+      Topbar (in alto)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#footer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Footer
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-la-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. La Dashboard
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. La Dashboard">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dashboard-utente-user" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard utente (User)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dashboard-admin" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard admin
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-pagine-condivise" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Pagine condivise
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Pagine condivise">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#glossary-glossary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Glossary (/glossary)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions-instructions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions (/instructions)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-to-cite-how-to-cite" class="md-nav__link">
+    <span class="md-ellipsis">
+      How to cite (/how-to-cite)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#my-account-me" class="md-nav__link">
+    <span class="md-ellipsis">
+      My Account (/me)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-la-pagina-languages" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. La pagina Languages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. La pagina Languages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#filtri-sticky-in-alto" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtri (sticky in alto)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#la-tabella" class="md-nav__link">
+    <span class="md-ellipsis">
+      La tabella
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#note-sulla-mappa" class="md-nav__link">
+    <span class="md-ellipsis">
+      Note sulla mappa
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-compilare-una-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Compilare una lingua
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Compilare una lingua">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#header-della-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      Header della lingua
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#banner-di-stato-sotto-lheader" class="md-nav__link">
+    <span class="md-ellipsis">
+      Banner di stato (sotto l'header)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wizard-dei-parametri-i-quadratini" class="md-nav__link">
+    <span class="md-ellipsis">
+      Wizard dei parametri (i quadratini)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-blocco-di-un-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il blocco di un parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#le-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Le domande
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Le domande">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hai-selezionato-no" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hai selezionato NO
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hai-selezionato-yes-o-unsure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hai selezionato YES o UNSURE
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comments" class="md-nav__link">
+    <span class="md-ellipsis">
+      Comments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#la-clipboard-degli-esempi" class="md-nav__link">
+    <span class="md-ellipsis">
+      La clipboard degli esempi
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#salvare-un-blocco-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Salvare un blocco parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cambiare-parametro-senza-salvare" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cambiare parametro senza salvare
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submit-reopen-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Submit / Reopen / workflow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cosa-vede-ladmin-in-piu" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cosa vede l'admin in più
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-solo-admin-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. SOLO ADMIN — Parameters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. SOLO ADMIN — Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-parametri" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista parametri
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Edit parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disattivare-un-parametro" class="md-nav__link">
+    <span class="md-ellipsis">
+      Disattivare un parametro
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implicational-condition-cenni" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implicational condition (cenni)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters-graph-adminparametersgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parameters Graph (/admin/parameters/graph)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-solo-admin-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. SOLO ADMIN — Questions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. SOLO ADMIN — Questions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#editadd-domanda" class="md-nav__link">
+    <span class="md-ellipsis">
+      Edit/Add domanda
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modifiche-distruttive-larchivio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modifiche distruttive: l'archivio
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-solo-admin-motivations" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. SOLO ADMIN — Motivations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. SOLO ADMIN — Motivations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modifiche" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modifiche
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-solo-admin-taxonomy" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. SOLO ADMIN — Taxonomy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-solo-admin-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. SOLO ADMIN — Accounts
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. SOLO ADMIN — Accounts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lista-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lista account
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      Add account
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#safeguards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Safeguards
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#riassegnazione-lingue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Riassegnazione lingue
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-solo-admin-table-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. SOLO ADMIN — Table A
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="13. SOLO ADMIN — Table A">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modalita" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modalità
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filtri" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtri
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#selezioni-manuali" class="md-nav__link">
+    <span class="md-ellipsis">
+      Selezioni manuali
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export-e-analisi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export e analisi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-solo-admin-filters-queries-q1q10" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. SOLO ADMIN — Filters (Queries Q1–Q10)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. SOLO ADMIN — Filters (Queries Q1–Q10)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#q3-la-piu-ricca" class="md-nav__link">
+    <span class="md-ellipsis">
+      Q3 — la più ricca
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#q10-risposte-ed-esempi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Q10 — risposte ed esempi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-solo-admin-history-backups-migration-backup-restore-import-excel-recompute" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. SOLO ADMIN — History, Backups, Migration, Backup Restore, Import Excel, Recompute
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. SOLO ADMIN — History, Backups, Migration, Backup Restore, Import Excel, Recompute">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#history-backups-adminhistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      History &amp; Backups (/admin/history)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="History & Backups (/admin/history)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tab-change-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Change history"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-answer-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Answer changes"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-full-backups-languages-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Full backups (languages &amp; parameters)"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tab-old-questions-archive" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tab "Old questions archive"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-import-adminmigration-import-pericoloso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration Import (/admin/migration-import) — pericoloso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-restore-adminbackup-restore" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup Restore (/admin/backup-restore)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-from-excel-adminimport-excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import from Excel (/admin/import-excel)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recompute-final-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recompute final values
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-errori-comuni-e-cosa-fare" class="md-nav__link">
+    <span class="md-ellipsis">
+      16. Errori comuni e cosa fare
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="16. Errori comuni e cosa fare">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#form-locked-by-the-current-language-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Form locked by the current language status"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Question X needs at least 2 valid examples when answering YES or UNSURE"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#this-block-has-been-modified-by-another-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      "This block has been modified by another session..."
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wrong-email-or-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Wrong email or password"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#too-many-requests-al-login" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Too Many Requests" al login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invalid-email-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      "Invalid email format"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-cannot-delete-your-own-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      "You cannot delete your own account"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you-cannot-delete-the-last-remaining-administrator" class="md-nav__link">
+    <span class="md-ellipsis">
+      "You cannot delete the last remaining administrator"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-pulsante-submit-for-approval-non-ce" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il pulsante "Submit for approval" non c'è
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-sito-mi-ha-sloggato-allimprovviso" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il sito mi ha sloggato all'improvviso
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ho-cambiato-il-taxonomy-ma-le-lingue-mostrano-ancora-i-vecchi-nomi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Ho cambiato il taxonomy ma le lingue mostrano ancora i vecchi nomi
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-glossario-rapido-di-interfaccia" class="md-nav__link">
+    <span class="md-ellipsis">
+      17. Glossario rapido di interfaccia
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/gb-993/progetto_lingue_3/edit/main/docs/manuale_utente_it.md" title="Modifica" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="pcm-hub-manuale-utente">PCM-Hub — Manuale utente<a class="headerlink" href="#pcm-hub-manuale-utente" title="Permanent link">&para;</a></h1>
+<p>Guida pratica all'uso del sito <strong>PCM-Hub</strong> (<code>hub.parametricomparison.unimore.it</code>). Questa guida è pensata per chi usa il sito tutti i giorni: linguisti che compilano le lingue assegnate, e amministratori che gestiscono parametri, domande, account e analisi cross-lingua.</p>
+<blockquote>
+<p><strong>Trovi quello che cerchi più in fretta</strong> se sai che ruolo hai:
+- <strong>Linguista (User)</strong> → leggi le sezioni 1-7 e salta direttamente alla §6 (Compilare una lingua).
+- <strong>Amministratore (Admin)</strong> → leggi tutto: gli admin vedono tutte le funzionalità degli User più una decina di strumenti aggiuntivi (sezioni 8-15).</p>
+</blockquote>
+<hr />
+<h2 id="indice">Indice<a class="headerlink" href="#indice" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-cosè-il-pcm-hub">Cos'è il PCM-Hub</a></li>
+<li><a href="#2-accedere-al-sito">Accedere al sito</a></li>
+<li><a href="#3-orientarsi-sidebar-topbar-breadcrumb">Orientarsi: sidebar, topbar, breadcrumb</a></li>
+<li><a href="#4-la-dashboard">La Dashboard</a></li>
+<li><a href="#5-pagine-condivise">Pagine condivise: Glossary, Instructions, How to cite, My Account</a></li>
+<li><a href="#6-la-pagina-languages">La pagina Languages</a></li>
+<li><a href="#7-compilare-una-lingua">Compilare una lingua (linguista o admin)</a></li>
+<li><a href="#8-solo-admin--parameters">SOLO ADMIN — Parameters</a></li>
+<li><a href="#9-solo-admin--questions">SOLO ADMIN — Questions</a></li>
+<li><a href="#10-solo-admin--motivations">SOLO ADMIN — Motivations</a></li>
+<li><a href="#11-solo-admin--taxonomy">SOLO ADMIN — Taxonomy</a></li>
+<li><a href="#12-solo-admin--accounts">SOLO ADMIN — Accounts</a></li>
+<li><a href="#13-solo-admin--table-a">SOLO ADMIN — Table A</a></li>
+<li><a href="#14-solo-admin--filters-queries-q1q10">SOLO ADMIN — Filters (Queries Q1–Q10)</a></li>
+<li><a href="#15-solo-admin--history-backups-import-recompute">SOLO ADMIN — History &amp; Backups, Migration, Backup Restore, Import Excel, Recompute</a></li>
+<li><a href="#16-errori-comuni-e-cosa-fare">Errori comuni e cosa fare</a></li>
+<li><a href="#17-glossario-rapido-di-interfaccia">Glossario rapido di interfaccia</a></li>
+</ol>
+<hr />
+<h2 id="1-cose-il-pcm-hub">1. Cos'è il PCM-Hub<a class="headerlink" href="#1-cose-il-pcm-hub" title="Permanent link">&para;</a></h2>
+<p>Il <strong>Parametric Comparison Method</strong> (PCM, Longobardi &amp; Guardiano 2009) confronta lingue diverse usando un set di <strong>parametri sintattici universali</strong>. Ogni lingua viene "compilata" da un linguista che, per ciascun parametro, risponde a un set di domande (di solito sì/no) e fornisce esempi linguistici a supporto delle risposte.</p>
+<p>A partire dai dati raccolti, il sito produce automaticamente:</p>
+<ul>
+<li>valori di parametro consolidati per ogni lingua (<code>+</code>, <code>−</code>, <code>0</code>, <code>?</code>);</li>
+<li>matrici comparative tra lingue;</li>
+<li>distanze di Hamming, Jaccard e geografiche;</li>
+<li>dendrogrammi e cluster map;</li>
+<li>analisi PCA, test di Mantel.</li>
+</ul>
+<p>Tutto questo permette di studiare relazioni filogenetiche, divergenze e convergenze tra lingue di famiglie diverse.</p>
+<h3 id="i-tre-ruoli">I tre ruoli<a class="headerlink" href="#i-tre-ruoli" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Ruolo</th>
+<th>Cosa può fare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Public</strong> (visitatore non loggato)</td>
+<td>vede solo la home con la mappa interattiva e la pagina How to cite</td>
+</tr>
+<tr>
+<td><strong>User</strong> (linguista assegnatario)</td>
+<td>compila le lingue che gli sono state assegnate, vede glossario, istruzioni, lista lingue, dashboard personale</td>
+</tr>
+<tr>
+<td><strong>Admin</strong></td>
+<td>tutto quello che fa lo User, più: gestione parametri/domande/motivazioni/tassonomia, creazione account, TableA, query Q1-Q10, history/backup, migration, recompute</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-accedere-al-sito">2. Accedere al sito<a class="headerlink" href="#2-accedere-al-sito" title="Permanent link">&para;</a></h2>
+<h3 id="primo-accesso">Primo accesso<a class="headerlink" href="#primo-accesso" title="Permanent link">&para;</a></h3>
+<p>L'amministratore che ti ha creato l'account ti comunica:</p>
+<ul>
+<li>l'<strong>email</strong> del tuo account;</li>
+<li>una <strong>password temporanea</strong> (almeno 8 caratteri).</li>
+</ul>
+<p>Vai sull'URL del sito → clicca <strong>Login</strong> dalla home (o vai direttamente a <code>/login</code>) → inserisci le credenziali → <strong>Log in</strong>.</p>
+<p><img alt="Form di login con i campi Email e Password e il pulsante Log in" src="img/manuale/login.png" /></p>
+<p>Al primo login <strong>ti consigliamo di cambiare la password</strong>: in alto a destra clicca <strong>MyAccount</strong> → sezione <strong>Change password</strong>.</p>
+<hr />
+<h3 id="cambiare-password">Cambiare password<a class="headerlink" href="#cambiare-password" title="Permanent link">&para;</a></h3>
+<p>Dalla pagina <strong>My Account</strong> trovi due blocchi:</p>
+<ul>
+<li><strong>Profilo</strong>: nome, cognome, email (se cambi l'email diventa la nuova credenziale di login).</li>
+<li><strong>Change password</strong>: serve la password attuale + la nuova due volte. Minimo 8 caratteri.</li>
+</ul>
+<hr />
+<h3 id="dimenticato-la-password">Dimenticato la password?<a class="headerlink" href="#dimenticato-la-password" title="Permanent link">&para;</a></h3>
+<p>Al momento il <strong>reset via email non è ancora attivo</strong> (ci vorrà l'integrazione SMTP dei servizi informatici Unimore). Nel frattempo: contatta un amministratore, che può riassegnarti una password temporanea creando un nuovo account o intervenendo dal pannello.</p>
+<hr />
+<h3 id="sessione-scaduta">Sessione scaduta<a class="headerlink" href="#sessione-scaduta" title="Permanent link">&para;</a></h3>
+<p>Il token di accesso dura <strong>30 minuti di inattività</strong>. Dopo, le pagine protette ti rimanderanno automaticamente al login. Niente di rotto, basta fare login di nuovo.</p>
+<hr />
+<h3 id="limite-tentativi-falliti">Limite tentativi falliti<a class="headerlink" href="#limite-tentativi-falliti" title="Permanent link">&para;</a></h3>
+<p>Per sicurezza: <strong>dopo 5 tentativi falliti di login dalla stessa connessione in 1 minuto</strong>, il sistema risponde con un errore "Too Many Requests" per qualche secondo. Aspetta un minuto e riprova.</p>
+<hr />
+<h2 id="3-orientarsi-sidebar-topbar-breadcrumb">3. Orientarsi: sidebar, topbar, breadcrumb<a class="headerlink" href="#3-orientarsi-sidebar-topbar-breadcrumb" title="Permanent link">&para;</a></h2>
+<p>Una volta loggato, l'interfaccia ha 3 elementi fissi:</p>
+<h3 id="sidebar-a-sinistra">Sidebar (a sinistra)<a class="headerlink" href="#sidebar-a-sinistra" title="Permanent link">&para;</a></h3>
+<p>Tutte le pagine principali. Le voci che vedi dipendono dal tuo ruolo:</p>
+<table>
+<thead>
+<tr>
+<th>Voce</th>
+<th>User</th>
+<th>Admin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboard</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Citation Guidelines</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Languages</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Parameters</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Parameters Graph</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Questions</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Motivations</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Taxonomy</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Table A</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Filters</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Accounts</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>History &amp; Backups</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Migration Import</td>
+<td>—</td>
+<td>✓ (danger zone)</td>
+</tr>
+<tr>
+<td>Backup Restore</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Instructions</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Glossary</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table>
+<p>Il <strong>bottone in alto della sidebar</strong> la collassa/espande (utile per recuperare spazio orizzontale, soprattutto in TableA). La preferenza viene ricordata.</p>
+<hr />
+<h3 id="topbar-in-alto">Topbar (in alto)<a class="headerlink" href="#topbar-in-alto" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Breadcrumb</strong> a sinistra: mostra il percorso della pagina (es. <code>Dashboard / Languages / Italiano / Data</code>). Le voci cliccabili in <strong>azzurro</strong> sono navigabili; quelle in <strong>grigio</strong> sono solo informative (es. ID dinamici).</li>
+<li><strong>MyAccount</strong> a destra: shortcut alla pagina del profilo.</li>
+<li><strong>Toggle tema (Light/Dark)</strong>: cambia il tema visivo. Anche questa preferenza è ricordata.</li>
+<li><strong>Logout</strong>: termina la sessione e ti riporta alla home pubblica.</li>
+</ul>
+<hr />
+<h3 id="footer">Footer<a class="headerlink" href="#footer" title="Permanent link">&para;</a></h3>
+<p>In fondo a ogni pagina:</p>
+<ul>
+<li>citazione del PCM-Hub (CC BY 4.0);</li>
+<li>link a Privacy Policy, Disclaimer, contatto email del laboratorio (<code>pcm_lab@unimore.it</code>);</li>
+<li>link al sito istituzionale del progetto PCM Unimore;</li>
+<li><strong>Role badge</strong> (in basso a destra): dice se sei "Admin Access", "User Access" o "Public View".</li>
+</ul>
+<hr />
+<h2 id="4-la-dashboard">4. La Dashboard<a class="headerlink" href="#4-la-dashboard" title="Permanent link">&para;</a></h2>
+<p>È la prima pagina che vedi dopo il login.</p>
+<h3 id="dashboard-utente-user">Dashboard utente (User)<a class="headerlink" href="#dashboard-utente-user" title="Permanent link">&para;</a></h3>
+<p>Mostra <strong>le lingue che ti sono state assegnate</strong>. Per ogni lingua:</p>
+<ul>
+<li>ID e nome completo (es. <code>ITA — Italian</code>);</li>
+<li><strong>stato</strong> (<code>Pending</code>, <code>Waiting</code>, <code>Approved</code>, <code>Rejected</code>);</li>
+<li><strong>barra di progresso</strong> (numero di risposte date / totale domande, percentuale);</li>
+<li>pulsante <strong>Fill in</strong> (o <strong>View rejection and reopen</strong> se la lingua è stata rifiutata) che ti porta alla pagina di compilazione.</li>
+</ul>
+<p>Se la lingua è in <code>Rejected</code>, sotto vedi anche la <strong>nota dell'admin</strong> che spiega perché è stata respinta.</p>
+<hr />
+<h3 id="dashboard-admin">Dashboard admin<a class="headerlink" href="#dashboard-admin" title="Permanent link">&para;</a></h3>
+<p><img alt="Dashboard amministratore con le quattro card riassuntive" src="img/manuale/dashboard-admin.png" /></p>
+<p>Layout a 3+1 card:</p>
+<ul>
+<li><strong>Waiting for Approval</strong>: numero di lingue in attesa di revisione + click rapidi per aprirle.</li>
+<li><strong>Languages by Status</strong>: contatori <code>Pending / Waiting / Approved / Rejected</code> cliccabili. Cliccando un contatore si espande un menù con la lista delle lingue in quello stato.</li>
+<li><strong>Flagged/Unsure Parameters</strong>: numero di parametri "rossi" (compilazione parziale o segnati Unsure) raggruppati per lingua, con conteggio.</li>
+<li><strong>Latest Changes</strong> (a destra): tabella con le ultime modifiche ai parametri (chi, quando, cosa, nota).</li>
+</ul>
+<p>Da qui un admin può aprire rapidamente le lingue che richiedono attenzione.</p>
+<hr />
+<h2 id="5-pagine-condivise">5. Pagine condivise<a class="headerlink" href="#5-pagine-condivise" title="Permanent link">&para;</a></h2>
+<h3 id="glossary-glossary">Glossary (<code>/glossary</code>)<a class="headerlink" href="#glossary-glossary" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Glossary: campo di ricerca, pulsante Add term e tabella dei termini con Edit/Delete" src="img/manuale/glossary.png" /></p>
+<p>Lista alfabetica dei termini tecnici usati nel progetto, con descrizione.</p>
+<ul>
+<li>Tutti gli utenti possono <strong>cercare</strong> (campo di ricerca in alto).</li>
+<li>Solo admin: pulsante <strong>Add term</strong>, <strong>Edit</strong> e <strong>Delete</strong> sulle righe.</li>
+</ul>
+<hr />
+<h3 id="instructions-instructions">Instructions (<code>/instructions</code>)<a class="headerlink" href="#instructions-instructions" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Instructions: titolo, pulsante Edit (admin) in alto a destra e contenuto del documento" src="img/manuale/instructions.png" /></p>
+<p>Documento HTML editabile (powered by TinyMCE) con le linee guida per la compilazione. La versione di default include:</p>
+<ul>
+<li>regole generali (read → identify → answer YES/NO → save → submit);</li>
+<li>istruzioni specifiche per le <strong>glosse linguistiche</strong> con tabella dei simboli (ACC, NOM, GEN, ecc.);</li>
+<li>esempi di glossing.</li>
+</ul>
+<p>Solo admin: pulsante <strong>Edit</strong> in alto a destra → editor WYSIWYG con formattazione, tabelle, codice HTML raw. <strong>Save</strong> persiste il documento per tutti.</p>
+<hr />
+<h3 id="how-to-cite-how-to-cite">How to cite (<code>/how-to-cite</code>)<a class="headerlink" href="#how-to-cite-how-to-cite" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina How to cite: due card affiancate con il testo della citazione e il pulsante Copy in alto a destra" src="img/manuale/how-to-cite.png" /></p>
+<p>Due card:</p>
+<ul>
+<li><strong>Parameters &amp; Manifestations</strong>: come citare i parametri/domande del PCM Hub (consigliato per User e Admin).</li>
+<li><strong>Database</strong> (linguistic data): come citare i dati linguistici raccolti.</li>
+</ul>
+<p>Sotto ogni card c'è un pulsante <strong>Copy</strong> che copia la stringa di citazione completa nella clipboard del sistema.</p>
+<p>Solo admin: pulsante <strong>Edit</strong> che apre l'editor TinyMCE per modificare il testo della citazione.</p>
+<hr />
+<h3 id="my-account-me">My Account (<code>/me</code>)<a class="headerlink" href="#my-account-me" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina My Account: card Profile con Save Profile e card Change Password con Update Password" src="img/manuale/my-account.png" /></p>
+<ul>
+<li><strong>Profile</strong>: nome, cognome, email. Il <strong>Save</strong> scrive direttamente sul tuo profilo.</li>
+<li><strong>Change password</strong>: vecchia password + nuova due volte. Minimo 8 caratteri. Se le due copie non coincidono il sistema rifiuta.</li>
+</ul>
+<p>⚠ Se cambi l'email, la <strong>nuova email diventa la tua credenziale di login</strong>. Memorizzala bene (o usa un password manager).</p>
+<hr />
+<h2 id="6-la-pagina-languages">6. La pagina Languages<a class="headerlink" href="#6-la-pagina-languages" title="Permanent link">&para;</a></h2>
+<p>L'elenco di tutte le lingue del progetto. <strong>Sopra</strong> alla tabella c'è una <strong>mappa interattiva</strong> (OpenStreetMap) con un pin per ogni lingua georeferenziata.</p>
+<h3 id="filtri-sticky-in-alto">Filtri (sticky in alto)<a class="headerlink" href="#filtri-sticky-in-alto" title="Permanent link">&para;</a></h3>
+<p><img alt="Toolbar della pagina Languages con filtri e pulsanti di azione" src="img/manuale/languages-toolbar.png" /></p>
+<ul>
+<li><strong>Search</strong> testuale globale (ID, nome, family, top family, group, status, rejection note).</li>
+<li><strong>Top Family / Subfamily / Group</strong>: multi-select gerarchico. Selezionare una top-family ristringe le subfamily disponibili, e così via.</li>
+<li><strong>Historical</strong>: tutte / solo storiche / solo non storiche.</li>
+<li><strong>Status</strong>: tutti / Pending / Waiting / Approved / Rejected.</li>
+</ul>
+<p>A destra dei filtri: contatore "X di Y lingue", e i pulsanti:</p>
+<ul>
+<li><strong>Reset</strong>: pulisce i filtri.</li>
+<li><strong>Clear exclusions</strong> (compare se hai escluso lingue manualmente).</li>
+<li><strong>Download Data ▾</strong> (admin): apre un menù per esportare i dati delle lingue <strong>attualmente filtrate e non escluse</strong>:<ul>
+<li><strong>Export language metadata (.xlsx)</strong> — ID, nome, famiglia, coordinate, ecc.</li>
+<li><strong>Export backup (.zip)</strong> — bundle completo con tutte le risposte e gli esempi delle lingue selezionate (job asincrono: appare un toast in basso a destra che mostra il progresso).</li>
+<li><strong>Map (.png)</strong> — la mappa attuale come immagine.</li>
+<li><strong>Geographic distances (.txt)</strong> — matrice GCD in km tra le lingue selezionate.</li>
+</ul>
+</li>
+<li><strong>+ Full Languages Backup</strong> (admin): crea uno snapshot in DB di <strong>tutte</strong> le lingue (richiede una nota opzionale). Lo trovi poi in History &amp; Backups → Full backups.</li>
+<li><strong>Recompute final values</strong> (admin): rilancia il DAG implicazionale per <strong>tutte</strong> le lingue. Job asincrono con barra di progresso. Da usare dopo aver modificato condizioni implicazionali importanti, o dopo un import.</li>
+<li><strong>Import from Excel</strong> (admin): pagina di import strutturato.</li>
+<li><strong>Add Language</strong> (admin): crea una nuova lingua a mano.</li>
+</ul>
+<hr />
+<h3 id="la-tabella">La tabella<a class="headerlink" href="#la-tabella" title="Permanent link">&para;</a></h3>
+<p><img alt="Tabella delle lingue: colonne principali e pulsanti azione per ogni riga" src="img/manuale/languages-table.png" /></p>
+<ul>
+<li><strong>Checkbox a sinistra</strong>: toggle "include / esclude" la lingua dal set effettivo (mappa, distanze, export). Spuntando l'header tutte le lingue visibili vengono escluse/incluse insieme.</li>
+<li><strong>ID, Name, Status, Top family, Subfamily, Group</strong>.</li>
+<li><strong>Actions</strong>:<ul>
+<li><strong>Data</strong>: apre la pagina di compilazione (utenti normali e admin).</li>
+<li><strong>Duplicate</strong> (admin): duplica la lingua con tutte le risposte e gli esempi (utile come template).</li>
+<li><strong>Debug</strong> (admin): apre una pagina che mostra valori <code>init</code>/<code>final</code> di ogni parametro per la lingua, con possibilità di <strong>Apply implicational condition(s)</strong> (rilancia DAG sulla singola lingua).</li>
+<li><strong>Edit</strong> (admin): modifica i metadati della lingua (nome, coordinate, family, ecc.).</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h3 id="note-sulla-mappa">Note sulla mappa<a class="headerlink" href="#note-sulla-mappa" title="Permanent link">&para;</a></h3>
+<p>I marker sono colorati per <strong>top-family</strong>. La legenda sotto la mappa elenca tutte le top-family con il loro colore: passandoci sopra col mouse, le altre famiglie si attenuano (utile per isolare visivamente una famiglia).</p>
+<hr />
+<h2 id="7-compilare-una-lingua">7. Compilare una lingua<a class="headerlink" href="#7-compilare-una-lingua" title="Permanent link">&para;</a></h2>
+<p>Questo è il <strong>cuore del sito</strong>: dove un linguista entra e risponde alle domande per una lingua. Si arriva qui da:</p>
+<ul>
+<li>Dashboard → click su una lingua assegnata;</li>
+<li>Languages → riga della lingua → pulsante <strong>Data</strong>.</li>
+</ul>
+<p>L'URL è <code>/languages/&lt;id&gt;/data</code>.</p>
+<h3 id="header-della-lingua">Header della lingua<a class="headerlink" href="#header-della-lingua" title="Permanent link">&para;</a></h3>
+<p><img alt="Header e banner di stato della pagina di compilazione: metadati lingua, pulsante Export e (sotto) banner Pending con Apply implicational condition(s) e Change Status" src="img/manuale/compilation-header.png" /></p>
+<p>In alto vedi:</p>
+<ul>
+<li><strong>Nome e ID</strong> della lingua;</li>
+<li>pulsante <strong>Export parametric data (.xlsx)</strong> (admin) o <strong>Export examples (.xlsx)</strong> (user) per scaricare un file Excel con i dati che hai inserito;</li>
+<li>una griglia con i <strong>metadati</strong> della lingua (top-family, family, group, ISO/Glottocode, coordinate, supervisor, informant, source, ecc.). Solo admin vede anche l'utente assegnato.</li>
+</ul>
+<hr />
+<h3 id="banner-di-stato-sotto-lheader">Banner di stato (sotto l'header)<a class="headerlink" href="#banner-di-stato-sotto-lheader" title="Permanent link">&para;</a></h3>
+<p>Mostra lo stato corrente della lingua, una breve descrizione e i pulsanti di workflow disponibili. I 4 stati possibili:</p>
+<table>
+<thead>
+<tr>
+<th>Stato</th>
+<th>Significato</th>
+<th>Cosa puoi fare (User assegnato)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pending</strong></td>
+<td>In compilazione, modificabile</td>
+<td>scrivi/modifica liberamente; quando hai finito clicca <strong>Submit for approval</strong></td>
+</tr>
+<tr>
+<td><strong>Waiting for approval</strong></td>
+<td>Inviata, aspetta che un admin revisioni</td>
+<td>il form è <strong>bloccato</strong>, devi aspettare. L'admin riceverà la lingua nel suo widget Dashboard</td>
+</tr>
+<tr>
+<td><strong>Approved</strong></td>
+<td>Approvata, congelata</td>
+<td>il form è <strong>bloccato</strong> in sola lettura. La lingua entra a far parte dei dati ufficiali.</td>
+</tr>
+<tr>
+<td><strong>Rejected</strong></td>
+<td>Rifiutata, va rivista</td>
+<td>leggi la nota dell'admin, clicca <strong>Reopen</strong> per rimettere la lingua in <code>Pending</code> e riprendere l'editing</td>
+</tr>
+</tbody>
+</table>
+<p>⚠ <strong>L'admin invece</strong> può sempre editare a prescindere dallo stato (vede un banner viola "Admin override" che lo segnala). Inoltre l'admin ha un dropdown <strong>Change Status ▾</strong> che permette di forzare la lingua a qualsiasi stato (Approve/Reject/Pending/Waiting), saltando il workflow normale.</p>
+<hr />
+<h3 id="wizard-dei-parametri-i-quadratini">Wizard dei parametri (i quadratini)<a class="headerlink" href="#wizard-dei-parametri-i-quadratini" title="Permanent link">&para;</a></h3>
+<p><img alt="Wizard dei parametri: griglia di quadratini colorati, uno per ogni parametro attivo" src="img/manuale/compilation-wizard.png" /></p>
+<p>Sotto il banner di stato c'è una <strong>fila di quadratini</strong>, uno per ogni parametro attivo. Cliccando un quadratino salti al <strong>blocco di domande di quel parametro</strong>.</p>
+<p>I quadratini sono colorati in base al progresso:</p>
+<ul>
+<li><strong>Grigio (vuoto)</strong> — nessuna risposta ancora.</li>
+<li><strong>Giallo (in corso)</strong> — alcune domande risposte ma non tutte, oppure parametro segnato come "Unsure".</li>
+<li><strong>Verde (completo)</strong> — tutte le domande hanno una risposta valida (<code>yes</code> o <code>no</code>; <code>unsure</code> non conta come completata).</li>
+</ul>
+<p>Suggerimento: usa il colore dei quadratini come "to-do list" visiva. Tutti verdi = pronto per il submit.</p>
+<hr />
+<h3 id="il-blocco-di-un-parametro">Il blocco di un parametro<a class="headerlink" href="#il-blocco-di-un-parametro" title="Permanent link">&para;</a></h3>
+<p><img alt="Blocco parametro aperto: header con nome parametro, sezione Admin notes collassata e una domanda con Answer (YES) e i campi degli Examples" src="img/manuale/compilation-block.png" /></p>
+<p>Quando clicchi su un quadratino vedi:</p>
+<ul>
+<li>intestazione con <strong>ID e nome</strong> del parametro, più una <code>short_description</code>;</li>
+<li>(solo admin) area collassabile <strong>Admin notes</strong> dove l'admin può scrivere una nota libera per questa coppia (lingua, parametro). La nota non è visibile agli User e non viene esportata.</li>
+<li><strong>una card per ogni domanda</strong> del parametro;</li>
+<li>in basso a destra una <strong>toolbar fluttuante</strong> ("sticky") con due pulsanti di salvataggio: <strong>Confident → Next</strong> (verde) e <strong>Unsure → Next</strong> (rosso). Vedi sotto.</li>
+</ul>
+<hr />
+<h3 id="le-domande">Le domande<a class="headerlink" href="#le-domande" title="Permanent link">&para;</a></h3>
+<p>Ogni domanda mostra:</p>
+<ul>
+<li>un'intestazione con <strong>ID e testo</strong> della domanda;</li>
+<li>un pulsante <strong>More info</strong> (se c'è un help testuale, espandibile);</li>
+<li><strong>Instructions</strong>: istruzione generale, sempre visibile;</li>
+<li><strong>Example YES</strong>: un esempio illustrativo, sempre visibile (è solo decorativo, non lo devi compilare);</li>
+<li><strong>Instructions (YES)</strong> o <strong>Instructions (NO)</strong>: istruzioni specifiche, mostrate solo dopo che selezioni la risposta corrispondente;</li>
+<li><strong>Answer</strong> (tendina): <code>— select —</code>, <code>YES</code>, <code>NO</code>, <code>UNSURE</code>. Questa è la tua risposta.</li>
+</ul>
+<p>A seconda della risposta scelta, la card si espande in modo diverso:</p>
+<h4 id="hai-selezionato-no">Hai selezionato <strong>NO</strong><a class="headerlink" href="#hai-selezionato-no" title="Permanent link">&para;</a></h4>
+<p>Compaiono le <strong>Motivations</strong>: una serie di checkbox con i motivi predefiniti per cui questa domanda è "No" in questa lingua (es. "non c'è una struttura corrispondente", "il fenomeno è marginale"). Spunta una o più motivazioni. Se la domanda non ha motivations associate, vedrai un messaggio in italico.</p>
+<h4 id="hai-selezionato-yes-o-unsure">Hai selezionato <strong>YES</strong> o <strong>UNSURE</strong><a class="headerlink" href="#hai-selezionato-yes-o-unsure" title="Permanent link">&para;</a></h4>
+<p>Compare il blocco <strong>Examples</strong>: qui devi inserire <strong>almeno 2 esempi linguistici</strong> che illustrano la risposta. Per ogni esempio:</p>
+<ul>
+<li><strong>Example text</strong>: la frase nella lingua (es. <em>Mario ha letto il libro nuovo che gli ho consigliato</em>);</li>
+<li><strong>Transliteration</strong>: traslitterazione se serve (es. per alfabeti non latini);</li>
+<li><strong>Gloss</strong>: glossa morfema-per-morfema (es. <em>book.M.SG.NOM</em>);</li>
+<li><strong>English Translation</strong>: traduzione in inglese;</li>
+<li><strong>Reference</strong>: fonte (es. <em>Hauser, M. 1992. p. 12</em>).</li>
+</ul>
+<p>Pulsanti utili:</p>
+<ul>
+<li><strong>+ Add another example</strong>: aggiunge una card vuota per un nuovo esempio.</li>
+<li><strong>Remove</strong>: cancella un esempio.</li>
+<li><strong>Copy</strong>: copia l'esempio nella <strong>clipboard interna del sito</strong> (vedi sotto).</li>
+<li><strong>+ Import example from another answer...</strong>: ricerca server-side nel database degli esempi già scritti per altre domande/lingue. Trova l'esempio cercato (per testo / traduzione / gloss), cliccalo, e viene <strong>copiato come nuovo esempio</strong> in questa domanda. <strong>L'esempio importato è una copia indipendente</strong>: puoi modificarlo liberamente senza toccare l'originale.</li>
+</ul>
+<p>⚠ <strong>Regola importante</strong>: se rispondi YES o UNSURE, <strong>devi</strong> fornire <strong>almeno 2 esempi non vuoti</strong>. Se provi a salvare con meno di 2, il sistema blocca il save mostrando un avviso e <strong>evidenziando in rosso</strong> la card incriminata. Stesso vincolo vale per UNSURE.</p>
+<h4 id="comments">Comments<a class="headerlink" href="#comments" title="Permanent link">&para;</a></h4>
+<p>In fondo a ogni card c'è un campo <strong>Comments</strong> (testo libero) per aggiungere note/spiegazioni/dubbi non strutturati.</p>
+<hr />
+<h3 id="la-clipboard-degli-esempi">La clipboard degli esempi<a class="headerlink" href="#la-clipboard-degli-esempi" title="Permanent link">&para;</a></h3>
+<p>Pratica utility per non riscrivere a mano lo stesso esempio in più domande della stessa lingua:</p>
+<ol>
+<li>In una qualsiasi card di esempio, clicca <strong>Copy</strong> in alto a destra → l'esempio finisce nella clipboard interna (banner rosso tratteggiato che appare sotto i tuoi esempi correnti).</li>
+<li>Sposta su un'altra domanda della stessa lingua → vedi lo stesso banner.</li>
+<li>Clicca <strong>Paste here</strong> → l'esempio viene aggiunto come <strong>nuovo</strong> esempio in questa domanda. La clipboard rimane piena, quindi puoi incollarlo in altre domande in fila.</li>
+<li><strong>Clear</strong> sul banner svuota la clipboard.</li>
+</ol>
+<p>⚠ La clipboard è specifica per la <strong>lingua corrente</strong>. Se passi a una lingua diversa, la clipboard si svuota automaticamente per evitare di trascinare un esempio orfano.</p>
+<hr />
+<h3 id="salvare-un-blocco-parametro">Salvare un blocco parametro<a class="headerlink" href="#salvare-un-blocco-parametro" title="Permanent link">&para;</a></h3>
+<p>In basso a destra del blocco corrente vedi una <strong>toolbar fluttuante</strong> (sticky) con due pulsanti:</p>
+<table>
+<thead>
+<tr>
+<th>Pulsante</th>
+<th>Quando usarlo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Confident → Next</strong> (verde)</td>
+<td>I dati sono completi e verificati. Il quadratino del parametro diventa verde.</td>
+</tr>
+<tr>
+<td><strong>Unsure → Next</strong> (rosso)</td>
+<td>Hai dei dubbi e vuoi salvare per riguardarci più tardi. Il quadratino del parametro resta giallo (flagged).</td>
+</tr>
+</tbody>
+</table>
+<p>Entrambi i pulsanti <strong>salvano tutti i dati del blocco corrente</strong> (risposte + esempi + motivazioni + comments + admin note se sei admin) e poi <strong>avanzano automaticamente al parametro successivo</strong>.</p>
+<p>Se il save va a buon fine: nessun feedback particolare, ti ritrovi sul parametro successivo.</p>
+<p>Se invece il save fallisce, può essere per uno di questi motivi:</p>
+<ul>
+<li><strong>400 missing examples</strong>: hai messo YES o UNSURE su una domanda con meno di 2 esempi → vedrai un alert e la card incriminata diventa rossa per qualche secondo.</li>
+<li><strong>409 stale block</strong>: nel frattempo qualcun altro (di solito un admin) ha modificato lo stesso blocco. Il sistema ti avvisa e ricarica automaticamente la pagina così puoi rivedere le modifiche fatte da altri prima di riprovare.</li>
+<li><strong>Errore di rete</strong>: alert generico, ritenta più tardi.</li>
+</ul>
+<hr />
+<h3 id="cambiare-parametro-senza-salvare">Cambiare parametro senza salvare<a class="headerlink" href="#cambiare-parametro-senza-salvare" title="Permanent link">&para;</a></h3>
+<p>Se hai modificato qualcosa e clicchi un altro quadratino senza salvare, il sito <strong>ti chiede conferma</strong> prima di scartare le modifiche del blocco corrente. Stessa cosa se chiudi la tab o navighi via con il breadcrumb: protezione automatica.</p>
+<hr />
+<h3 id="submit-reopen-workflow">Submit / Reopen / workflow<a class="headerlink" href="#submit-reopen-workflow" title="Permanent link">&para;</a></h3>
+<p>Quando tutti i parametri che ti interessavano sono compilati, <strong>e</strong> lo stato è <code>Pending</code> o <code>Rejected</code>:</p>
+<ul>
+<li><strong>Submit for approval</strong>: la lingua passa a <code>Waiting for approval</code>. Da questo momento il form si <strong>blocca</strong> e l'admin riceve la lingua nella sua dashboard.</li>
+</ul>
+<p>Quando lo stato è <code>Rejected</code>:</p>
+<ul>
+<li><strong>Reopen</strong>: la lingua torna a <code>Pending</code> (dopo aver letto la nota di rifiuto). Puoi riprendere l'editing.</li>
+</ul>
+<p>Ricorda: l'admin può forzare lo stato della lingua in qualsiasi momento e in qualsiasi direzione (vedi §6 del <a href="../documentation_it/">documentation_it.md</a> per il workflow completo).</p>
+<hr />
+<h3 id="cosa-vede-ladmin-in-piu">Cosa vede l'admin in più<a class="headerlink" href="#cosa-vede-ladmin-in-piu" title="Permanent link">&para;</a></h3>
+<p>Oltre al banner viola "Admin override" e al dropdown <strong>Change Status ▾</strong>, un admin che apre una lingua ha:</p>
+<ul>
+<li><strong>Apply implicational condition(s)</strong> (link in alto): apre la pagina <strong>Debug</strong> che mostra tutti i valori init/final dei parametri della lingua, e da lì può rilanciare il DAG implicazionale solo per questa lingua.</li>
+<li><strong>Admin notes</strong> dentro a ogni blocco parametro: nota libera per (lingua, parametro). Non viene esportata e non è visibile agli User.</li>
+</ul>
+<hr />
+<h2 id="8-solo-admin-parameters">8. SOLO ADMIN — Parameters<a class="headerlink" href="#8-solo-admin-parameters" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Parameters</strong> (<code>/admin/parameters</code>).</p>
+<h3 id="lista-parametri">Lista parametri<a class="headerlink" href="#lista-parametri" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Parameter Management: filtri (Search, Schema, Type, Level, Active), pulsanti Reset/Download parameters info (.pdf)/+ Full Parameters Backup/Add Parameter, e tabella con i pulsanti PDF/Backup/Edit per riga" src="img/manuale/parameters-list.png" /></p>
+<p>Tabella con: ID, nome, position, schema, type, level of comparison, contatori <code>questions_count</code> (domande normali) e <code>stop_count</code> (domande di chiusura), stato attivo/disattivo.</p>
+<p>In alto: campo di ricerca, pulsante <strong>Add parameter</strong>, <strong>Export PDF (all)</strong> (genera un PDF con tutti i parametri formattati).</p>
+<p>Drag &amp; drop per riordinare i parametri (la <code>position</code> viene salvata automaticamente).</p>
+<hr />
+<h3 id="edit-parametro">Edit parametro<a class="headerlink" href="#edit-parametro" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Edit Parameter: Parameter ID, Position, Name, Schema/Type/Level, Short e Long Description, Implicational Condition, e card laterale &quot;Where Used&quot;" src="img/manuale/parameter-edit.png" /></p>
+<p>Click sul pulsante <strong>Edit</strong> della riga → pagina di edit con:</p>
+<ul>
+<li>ID (read-only, non si cambia dopo la creazione);</li>
+<li>Nome, position, schema, type, level of comparison;</li>
+<li><strong>Short description</strong> (mostrata in compilazione);</li>
+<li><strong>Long description</strong> (mostrata in PDF);</li>
+<li><strong>Implicational condition</strong>: stringa con sintassi tipo <code>+SPK &amp; -DEM</code> (vedi §8.1);</li>
+<li><strong>Description of the implicational condition</strong>: descrizione testuale;</li>
+<li><strong>Active</strong>: toggle attivo/disattivo (un parametro disattivo non è proposto in compilazione né compare in TableA);</li>
+<li><strong>Change note</strong> (obbligatorio): perché stai facendo questa modifica. Va in History.</li>
+</ul>
+<p>A sinistra del form vedi anche:</p>
+<ul>
+<li>la lista delle <strong>domande del parametro</strong> con drag &amp; drop di riordino, e la possibilità di aprire il drawer di edit di una domanda direttamente da qui;</li>
+<li>la cronologia delle <strong>change notes</strong> (ParameterChangeLog) con autore e data.</li>
+</ul>
+<hr />
+<h3 id="disattivare-un-parametro">Disattivare un parametro<a class="headerlink" href="#disattivare-un-parametro" title="Permanent link">&para;</a></h3>
+<p>Pulsante <strong>Deactivate</strong>: chiede conferma + la <strong>password dell'admin corrente</strong> (safeguard). Una volta disattivato, il parametro non è più proposto in compilazione e non concorre a TableA / DAG / export. Le risposte storiche restano in DB.</p>
+<hr />
+<h3 id="implicational-condition-cenni">Implicational condition (cenni)<a class="headerlink" href="#implicational-condition-cenni" title="Permanent link">&para;</a></h3>
+<p>Il parametro target è "comparabile" solo se la sua <code>implicational_condition</code> è soddisfatta dai parametri "ref" che cita.</p>
+<ul>
+<li><code>+P</code> significa: il parametro <code>P</code> ha valore <code>+</code> per la lingua;</li>
+<li><code>-P</code>: valore <code>-</code>;</li>
+<li><code>0P</code>: valore <code>0</code> (neutralizzato);</li>
+<li><code>&amp;</code> = AND, <code>|</code> = OR, <code>~</code> = NOT, <code>( )</code> = raggruppamento.</li>
+</ul>
+<p>Esempio: <code>+SPK &amp; -DEM</code> significa "il parametro SPK è <code>+</code> E il parametro DEM è <code>-</code>". Se è falso, il parametro target viene forzato a <code>0</code> (con warning).</p>
+<p>La condizione viene <strong>validata sintatticamente</strong> al save: se è malformata, il sistema rifiuta con un messaggio di errore. Se cita parametri inesistenti o disattivati, viene <strong>silenziosamente ignorata</strong> dal DAG (ma il save passa).</p>
+<hr />
+<h3 id="parameters-graph-adminparametersgraph">Parameters Graph (<code>/admin/parameters/graph</code>)<a class="headerlink" href="#parameters-graph-adminparametersgraph" title="Permanent link">&para;</a></h3>
+<p><img alt="Parameters Graph: filtri (Language, Schema, Type, Level), pulsanti Fit all/Reload, grafo dei parametri al centro e card laterale con dettagli del nodo selezionato" src="img/manuale/parameters-graph.png" /></p>
+<p>Visualizzazione del <strong>grafo del DAG implicazionale</strong> in un diagramma interattivo. Utile per capire quali parametri dipendono da quali. Ogni nodo è un parametro, gli archi vanno da <code>ref → target</code>.</p>
+<hr />
+<h2 id="9-solo-admin-questions">9. SOLO ADMIN — Questions<a class="headerlink" href="#9-solo-admin-questions" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Questions</strong> (<code>/admin/questions</code>).</p>
+<h3 id="lista-domande">Lista domande<a class="headerlink" href="#lista-domande" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Questions: campo di ricerca, pulsante Add Question, tabella con ID/Text Snippet/Type/Actions e i pulsanti Edit/Delete per riga" src="img/manuale/questions-list.png" /></p>
+<p>Tutte le domande del sistema (di tutti i parametri). Filtri per parametro, template_type, stato attivo/inattivo, stop question. Le domande "stop" sono quelle che chiudono il blocco di un parametro.</p>
+<hr />
+<h3 id="editadd-domanda">Edit/Add domanda<a class="headerlink" href="#editadd-domanda" title="Permanent link">&para;</a></h3>
+<p>Per creare una domanda devi prima sceglierne il <strong>parametro di appartenenza</strong> (ID).</p>
+<p>I campi principali:</p>
+<ul>
+<li><strong>ID</strong> (es. <code>FGM_01</code>, convenzione <code>&lt;param_id&gt;_&lt;NN&gt;</code>);</li>
+<li><strong>Text</strong>: il testo della domanda mostrato al linguista;</li>
+<li><strong>Template type</strong>: classifica la domanda (utile per filtri statistici);</li>
+<li><strong>Instruction</strong> (sempre visibile in compilazione);</li>
+<li><strong>Instruction YES</strong> (visibile solo se la risposta è YES o UNSURE);</li>
+<li><strong>Instruction NO</strong> (visibile solo se la risposta è NO);</li>
+<li><strong>Example YES</strong>: un esempio illustrativo che il linguista vede sempre come riferimento;</li>
+<li><strong>Help info</strong>: testo lungo, mostrato dietro un pulsante "More info";</li>
+<li><strong>Is stop question</strong>: spunta se è una domanda di chiusura del parametro;</li>
+<li><strong>Active</strong>: spunta per renderla disponibile in compilazione;</li>
+<li><strong>Allowed motivations</strong>: lista di motivations selezionabili dal linguista quando risponde NO. Solo le motivations qui spuntate compaiono nel checkbox della compilazione.</li>
+</ul>
+<hr />
+<h3 id="modifiche-distruttive-larchivio">Modifiche distruttive: l'archivio<a class="headerlink" href="#modifiche-distruttive-larchivio" title="Permanent link">&para;</a></h3>
+<p>⚠ Modificare una domanda può <strong>invalidare</strong> le risposte già date. Esempi tipici:</p>
+<ul>
+<li>cambiare <code>template_type</code> da <code>boolean</code> a qualcos'altro;</li>
+<li>cancellare la domanda;</li>
+<li>eliminare delle motivations dalla lista delle "allowed";</li>
+</ul>
+<p>In questi casi il sistema <strong>non perde</strong> i dati: sposta automaticamente le <code>Answer</code>/<code>Example</code>/<code>AnswerMotivation</code> collegate nell'<strong>archivio domande</strong> (<a href="#15-solo-admin--history-backups-import-recompute">History → Old questions archive</a>). Lì restano consultabili in sola lettura, con uno snapshot della domanda così com'era prima della modifica.</p>
+<hr />
+<h2 id="10-solo-admin-motivations">10. SOLO ADMIN — Motivations<a class="headerlink" href="#10-solo-admin-motivations" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Motivations</strong> (<code>/admin/motivations</code>).</p>
+<p><img alt="Pagina Motivations: ricerca, pulsante Add Motivation, tabella con Code/Description/Linked Questions/Actions e Edit/Delete per riga" src="img/manuale/motivations.png" /></p>
+<p>Le <strong>motivations</strong> sono i motivi predefiniti che un linguista può spuntare quando risponde NO a una domanda. Esempio: "no corresponding structure", "marginal phenomenon", "phonetically reduced".</p>
+<h3 id="lista">Lista<a class="headerlink" href="#lista" title="Permanent link">&para;</a></h3>
+<p>Ogni motivation ha:</p>
+<ul>
+<li><strong>Code</strong>: identificativo univoco (es. <code>NO_STRUCT</code>);</li>
+<li><strong>Label</strong>: il testo che appare al linguista (può essere lungo, multilinea).</li>
+</ul>
+<hr />
+<h3 id="modifiche">Modifiche<a class="headerlink" href="#modifiche" title="Permanent link">&para;</a></h3>
+<p>CRUD standard. Le motivations non si "cancellano" mai del tutto: se sono state usate da qualche risposta, il loro snapshot resta nell'archivio.</p>
+<p>Le motivations vengono <strong>collegate alle domande</strong> dalla pagina <a href="#9-solo-admin--questions">Questions</a> (campo <strong>Allowed motivations</strong>), non da qui.</p>
+<hr />
+<h2 id="11-solo-admin-taxonomy">11. SOLO ADMIN — Taxonomy<a class="headerlink" href="#11-solo-admin-taxonomy" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Taxonomy</strong> (<code>/admin/taxonomy</code>).</p>
+<p><img alt="Pagina Taxonomy: tre colonne (Top-Families con + New, Unassigned Subfamilies, Unassigned Groups) con card per ciascuna famiglia e pulsanti Edit/Delete" src="img/manuale/taxonomy.png" /></p>
+<p>Editor della <strong>gerarchia delle famiglie linguistiche</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Top Family (es. Indo-European)
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>└── Family / Subfamily (es. Romance)
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    └── Group (es. Italian-Romance)
+</code></pre></div>
+<p>Drag &amp; drop tra livelli per riordinare. Click su un nome per editarlo, "+" per aggiungere un figlio, cestino per cancellare.</p>
+<p>⚠ Le tre stringhe <code>top_level_family</code>, <code>family</code>, <code>grp</code> sulle Languages sono <strong>denormalizzate</strong>: vengono ricopiate dal taxonomy al save di una lingua. Modificare il taxonomy <strong>non</strong> rinomina automaticamente le stringhe sulle lingue esistenti — ti tocca riaprire e risalvare la lingua per propagare il cambio.</p>
+<hr />
+<h2 id="12-solo-admin-accounts">12. SOLO ADMIN — Accounts<a class="headerlink" href="#12-solo-admin-accounts" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Accounts</strong> (<code>/admin/accounts</code>).</p>
+<h3 id="lista-account">Lista account<a class="headerlink" href="#lista-account" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Accounts: ricerca, pulsante Add Account, tre sezioni Administrators/Users/Public Users con i pulsanti Assign Langs e Delete per riga" src="img/manuale/accounts-list.png" /></p>
+<p>Tabella con: email, nome, cognome, ruolo (<code>admin/user/public</code>), numero di lingue assegnate.</p>
+<p>Pulsanti:</p>
+<ul>
+<li><strong>Add account</strong> (<code>/admin/accounts/add</code>): crea un nuovo account.</li>
+<li><strong>Assign languages</strong> sulla riga: apre un pannello per selezionare il pool di lingue da assegnare a un user (multi-select).</li>
+<li><strong>Delete</strong> sulla riga.</li>
+</ul>
+<hr />
+<h3 id="add-account">Add account<a class="headerlink" href="#add-account" title="Permanent link">&para;</a></h3>
+<p><img alt="Form Create New Account: campi Name, Surname, Email, Temporary Password, dropdown Role e i pulsanti Cancel / Create Account" src="img/manuale/account-create.png" /></p>
+<p>Form con: nome, cognome, email, password temporanea (min 8 char), <strong>role</strong> (tendina: User / Admin / Public).</p>
+<p>Dopo la creazione comunica all'utente le credenziali; al primo login lui dovrebbe cambiare la password.</p>
+<p>⚠ Validazione email: il sistema rifiuta con errore "Invalid email format" se l'email è malformata (es. dimenticato il <code>.it</code>, doppia <code>@</code>, spazi). Questo evita la creazione di account che poi non riescono a loggarsi.</p>
+<hr />
+<h3 id="safeguards">Safeguards<a class="headerlink" href="#safeguards" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Non puoi cancellare te stesso</strong> (devi farti cancellare da un altro admin).</li>
+<li><strong>Non puoi cancellare l'ultimo admin</strong> (rimarrebbe il sito senza amministratore).</li>
+</ul>
+<hr />
+<h3 id="riassegnazione-lingue">Riassegnazione lingue<a class="headerlink" href="#riassegnazione-lingue" title="Permanent link">&para;</a></h3>
+<p>L'<strong>Assign languages</strong> <strong>sostituisce</strong> il pool corrente: se un user aveva 3 lingue assegnate e tu spunti solo le altre 2 mantenendole nelle 5 nuove, le 3 vecchie tornano "non assegnate" (assegnabili ad un altro utente).</p>
+<hr />
+<h2 id="13-solo-admin-table-a">13. SOLO ADMIN — Table A<a class="headerlink" href="#13-solo-admin-table-a" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Table A</strong> (<code>/tablea</code>).</p>
+<p><img alt="Pagina Table A: toggle Parameters View / Questions View, Language Filters e Parameters Filters, pulsanti Apply Filters / Reset / Download Data, e l'inizio della matrice valori" src="img/manuale/tablea.png" /></p>
+<p>La <strong>TableA</strong> è la matrice fondamentale del progetto: <strong>una lingua per colonna, un parametro (o domanda) per riga</strong>, con il valore consolidato in ogni cella (<code>+</code>, <code>−</code>, <code>0</code>, <code>?</code>).</p>
+<h3 id="modalita">Modalità<a class="headerlink" href="#modalita" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Params</strong> (default): righe = parametri.</li>
+<li><strong>Questions</strong>: righe = singole domande.</li>
+</ul>
+<p>Toggle in alto.</p>
+<hr />
+<h3 id="filtri">Filtri<a class="headerlink" href="#filtri" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Lingue</strong>: top family / family / group / historical / specifiche (checkbox per lingua nella sezione bassa);</li>
+<li><strong>Parametri</strong>: schema, type, level of comparison;</li>
+<li><strong>Domande</strong>: template, stop question (visibili solo in modalità Questions).</li>
+</ul>
+<p>Dopo aver scelto i filtri, clicca <strong>Apply</strong> (o equivalente) per ricalcolare la matrice.</p>
+<hr />
+<h3 id="selezioni-manuali">Selezioni manuali<a class="headerlink" href="#selezioni-manuali" title="Permanent link">&para;</a></h3>
+<p>Oltre ai filtri, <strong>per ogni riga</strong> della tabella c'è una checkbox: ti permette di restringere ulteriormente l'analisi a un sottoinsieme di parametri/domande.</p>
+<hr />
+<h3 id="export-e-analisi">Export e analisi<a class="headerlink" href="#export-e-analisi" title="Permanent link">&para;</a></h3>
+<p>Dropdown <strong>Download / Analysis ▾</strong> in alto:</p>
+<ul>
+<li><strong>XLSX (parameters)</strong> — Excel con header di citazione.</li>
+<li><strong>CSV (transposed)</strong> — formato analitico standard.</li>
+<li><strong>Distance matrices (.txt)</strong> — matrici Hamming e Jaccard.</li>
+<li><strong>Geographic distances (.zip)</strong> — matrice GCD in km.</li>
+<li><strong>Dendrograms (.png)</strong> — dendrogrammi UPGMA.</li>
+<li><strong>Cluster map (.html)</strong> — mappa interattiva HTML dei cluster geografici.</li>
+<li><strong>PCA (.png)</strong> — analisi delle componenti principali.</li>
+<li><strong>Mantel test (.zip)</strong> — modale con tre checkbox (GCD, Hamming, Jaccard) per scegliere quali matrici correlare. Output: tabelle di correlazione + grafici.</li>
+</ul>
+<p>⚠ Le distanze e i cluster sono significativi solo su set sufficientemente grandi e omogenei. Le lingue senza coordinate vengono escluse dalle distanze geografiche e l'header <code>X-Skipped-Languages</code> dell'export elenca quali.</p>
+<hr />
+<h2 id="14-solo-admin-filters-queries-q1q10">14. SOLO ADMIN — Filters (Queries Q1–Q10)<a class="headerlink" href="#14-solo-admin-filters-queries-q1q10" title="Permanent link">&para;</a></h2>
+<p>Pagina: <strong>Sidebar &gt; Filters</strong> (<code>/queries</code>).</p>
+<p><img alt="Pagina Filters &amp; Queries: a sinistra il menu Queries Configuration con le 10 query elencate, a destra l'area di esecuzione della query selezionata" src="img/manuale/queries.png" /></p>
+<p>10 viste predefinite per interrogare il database in modo mirato. Menu a sinistra (collassabile), area principale a destra.</p>
+<table>
+<thead>
+<tr>
+<th>Query</th>
+<th>Domanda</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q1</strong></td>
+<td>Show implicational condition(s) (per parameter)</td>
+</tr>
+<tr>
+<td><strong>Q2</strong></td>
+<td>Show parameter values for all languages (per parameter)</td>
+</tr>
+<tr>
+<td><strong>Q3</strong></td>
+<td>Show <strong>why</strong> a parameter is neutralized (per language) ⭐</td>
+</tr>
+<tr>
+<td><strong>Q4</strong></td>
+<td>Parameters with value <code>+</code> (per language)</td>
+</tr>
+<tr>
+<td><strong>Q5</strong></td>
+<td>Parameters with value <code>−</code> (per language)</td>
+</tr>
+<tr>
+<td><strong>Q6</strong></td>
+<td>Parameters with value <code>0</code> (per language)</td>
+</tr>
+<tr>
+<td><strong>Q7</strong></td>
+<td>Comparable parameters (per pair of languages)</td>
+</tr>
+<tr>
+<td><strong>Q8</strong></td>
+<td>Questions with answer YES (per language)</td>
+</tr>
+<tr>
+<td><strong>Q9</strong></td>
+<td>Questions with answer NO (per language)</td>
+</tr>
+<tr>
+<td><strong>Q10</strong></td>
+<td>Show answers and examples (per question)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="q3-la-piu-ricca">Q3 — la più ricca<a class="headerlink" href="#q3-la-piu-ricca" title="Permanent link">&para;</a></h3>
+<p>È la <strong>debug view del DAG</strong>: scegli una lingua e un parametro neutralizzato, e ottieni:</p>
+<ul>
+<li>la condizione implicazionale del parametro;</li>
+<li>per ogni <code>ref</code> citato nella condizione, qual è il suo valore (<code>value_eval</code> se presente, altrimenti <code>value_orig</code>);</li>
+<li>se la condizione è soddisfatta o no;</li>
+<li>la lista delle Answer del linguista che hanno contribuito al <code>value_orig</code> di ogni ref.</li>
+</ul>
+<p>Utile per capire <strong>perché</strong> un certo parametro non viene confrontato in una certa lingua.</p>
+<hr />
+<h3 id="q10-risposte-ed-esempi">Q10 — risposte ed esempi<a class="headerlink" href="#q10-risposte-ed-esempi" title="Permanent link">&para;</a></h3>
+<p>Q10 ha 2 filtri opzionali (lingua + parametro) per <strong>restringere il dropdown delle domande</strong> disponibili. Lasciandoli vuoti, il dropdown mostra tutte le ~N centinaia di domande del sistema.</p>
+<hr />
+<h2 id="15-solo-admin-history-backups-migration-backup-restore-import-excel-recompute">15. SOLO ADMIN — History, Backups, Migration, Backup Restore, Import Excel, Recompute<a class="headerlink" href="#15-solo-admin-history-backups-migration-backup-restore-import-excel-recompute" title="Permanent link">&para;</a></h2>
+<p>Tutto quello che riguarda <strong>audit, snapshot, import/export massivi</strong>.</p>
+<h3 id="history-backups-adminhistory">History &amp; Backups (<code>/admin/history</code>)<a class="headerlink" href="#history-backups-adminhistory" title="Permanent link">&para;</a></h3>
+<p>Centro di <strong>audit</strong> del sito. La pagina ha <strong>4 tab</strong> in alto: ognuna risponde a una domanda diversa ("chi ha cambiato cosa", "chi ha risposto cosa", "ho uno snapshot completo da qualche parte", "che fine ha fatto la vecchia versione di una domanda?"). Le tab condividono lo stesso layout filtro-tabella ma popolano dati diversi.</p>
+<h4 id="tab-change-history">Tab "Change history"<a class="headerlink" href="#tab-change-history" title="Permanent link">&para;</a></h4>
+<p><img alt="Tab Change history: filtri per Entity Type, Entity ID, Operation, Source, User, From/To e Text search; pulsanti Reset / Apply filters; tabella delle modifiche con When/What/Op./Source/Author/Note e pulsante Open per ciascuna riga" src="img/manuale/history-versions.png" /></p>
+<p>Tabella di <strong>tutte le modifiche</strong> alle entità <em>non-Answer</em> del sistema: <code>parameter</code>, <code>question</code>, <code>motivation</code>, <code>language</code>. Pensata per rispondere a "chi ha modificato il parametro FGM e perché", "quando è stata creata la motivation MOT042?", "chi ha cancellato la lingua XYZ il mese scorso?".</p>
+<p>Filtri disponibili: <strong>Entity type</strong> (tendina), <strong>Entity ID</strong> (es. <code>FGM</code>, <code>FGM_01</code>), <strong>Operation</strong> (create / update / delete), <strong>Source</strong> (manual = modifica dal pannello, excel_import = arrivata da un import Excel, system = generata dall'app), <strong>User</strong> (chi l'ha fatta), <strong>From / To</strong> (intervallo di date), <strong>Text search</strong> (cerca nell'ID o nella note). I pulsanti <strong>Reset</strong> azzera tutti i filtri, <strong>Apply filters</strong> rilancia la query.</p>
+<p>Click sul pulsante <strong>Open</strong> di una riga (o sulla riga stessa) → si apre un <strong>drawer laterale</strong> con il <strong>diff prima/dopo</strong>: per ogni campo modificato, il valore vecchio in rosso a sinistra e quello nuovo in verde a destra, più uno snapshot completo collassabile in fondo.</p>
+<h4 id="tab-answer-changes">Tab "Answer changes"<a class="headerlink" href="#tab-answer-changes" title="Permanent link">&para;</a></h4>
+<p><img alt="Tab Answer changes: stessi filtri della tab precedente (senza Entity Type, perché qui sono solo Answer) e tabella con tutte le modifiche alle risposte" src="img/manuale/history-answers.png" /></p>
+<p>Versione "focalizzata sulle Answer" della stessa tabella. Ogni volta che un linguista (o un admin) clicca <strong>Confident → Next</strong> o <strong>Unsure → Next</strong> in un blocco parametro, qui compare una riga per ogni risposta toccata. Pensata per rispondere a "quando l'utente X ha messo YES alla domanda FGM_Qb per la lingua Italian?" o "chi ha cambiato la risposta della lingua francese per il parametro SPK il giorno tot?".</p>
+<p>Stessa esperienza dell'altra tab: filtri, tabella, click su una riga → drawer con diff. La separazione esiste solo perché le Answer cambiano molto più spesso delle altre entità (ogni save di un blocco) e mescolarle con i parametri/domande renderebbe la tab "Change history" illeggibile.</p>
+<h4 id="tab-full-backups-languages-parameters">Tab "Full backups (languages &amp; parameters)"<a class="headerlink" href="#tab-full-backups-languages-parameters" title="Permanent link">&para;</a></h4>
+<p><img alt="Tab Full backups: sotto-tab Languages / Parameters, card &quot;Create global languages backup&quot; con Note opzionale e pulsante &quot;+ Create languages backup now&quot;, e tabella dei backup salvati" src="img/manuale/history-backups.png" /></p>
+<p>Lista degli <strong>snapshot completi</strong> del sistema, raggruppati per timestamp. Sotto-tab <strong>Languages</strong> o <strong>Parameters</strong> (toggle in alto), che selezionano due tipi diversi di snapshot:</p>
+<ul>
+<li>I <strong>backup languages</strong> sono creati da <a href="#6-la-pagina-languages">Languages → + Full Languages Backup</a> e contengono tutte le lingue con risposte ed esempi al momento dello scatto.</li>
+<li>I <strong>backup parameters</strong> sono creati da <a href="#8-solo-admin--parameters">Parameters → + Full Parameters Backup</a> e contengono lo stato di tutti i parametri (definizioni, condizioni implicazionali, descrizioni) al momento dello scatto.</li>
+</ul>
+<p>Da qui puoi anche <strong>crearne uno nuovo "al volo"</strong>: la card in alto ha un campo <strong>Note (optional)</strong> e il pulsante <strong>+ Create languages backup now</strong> (o <strong>+ Create parameters backup now</strong> sull'altra sotto-tab). Cliccando una riga della tabella si apre il dettaglio del backup, con la possibilità di scaricare un Excel di tutti i dati per audit o restore esterno.</p>
+<h4 id="tab-old-questions-archive">Tab "Old questions archive"<a class="headerlink" href="#tab-old-questions-archive" title="Permanent link">&para;</a></h4>
+<p><img alt="Tab Old questions archive: descrizione del comportamento, ricerca, e tabella con Question ID / Parameter / numero di Archived versions / Latest archive / pulsante Show versions" src="img/manuale/history-old-questions.png" /></p>
+<p>Quando una domanda viene modificata in modo distruttivo (vedi §9 — cambio di <code>template_type</code>, cancellazione, rimozione di motivations) o cancellata, le sue Answer/Example/AnswerMotivation <strong>non vengono perse</strong>: vengono spostate qui in archivio insieme a uno snapshot del testo della domanda così com'era.</p>
+<p>Ogni riga della tabella raggruppa <strong>tutte le versioni archiviate di una stessa domanda</strong> (es. se la domanda FGM_Qa è stata "rotta" 3 volte, qui vedi 3 versioni). Il pulsante <strong>Show versions</strong> apre il dettaglio: per ogni versione vedi il testo originale, le motivations consentite all'epoca, e tutte le risposte storiche di ogni lingua a quella versione della domanda.</p>
+<p>Utile per chi deve dimostrare a un revisore "i dati linguistici originali esistono ancora, anche se la domanda nel frattempo è stata modificata".</p>
+<hr />
+<h3 id="migration-import-adminmigration-import-pericoloso">Migration Import (<code>/admin/migration-import</code>) — pericoloso<a class="headerlink" href="#migration-import-adminmigration-import-pericoloso" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Restore Database (Migration Import): box rosso &quot;Operazione distruttiva&quot; con l'avviso che con wipe attivo cancella tutte le tabelle dati, e blocco &quot;Contenuto atteso del bundle&quot; con la struttura del file ZIP" src="img/manuale/migration.png" /></p>
+<p>⚠ Voce in <strong>rosso</strong> nella sidebar perché può <strong>cancellare il database</strong>.</p>
+<p>Serve a importare il <strong>bundle ZIP del sito vecchio</strong> (Django legacy) durante il go-live. Procedura tipica (vedi <code>DEPLOY_PROCEDURA.txt</code>):</p>
+<ol>
+<li>Scarichi il bundle dal sito vecchio.</li>
+<li>Vai su Migration Import.</li>
+<li>Selezioni il file ZIP.</li>
+<li>Spunti <strong>wipe = true</strong> per pulire il DB prima di importare.</li>
+<li>Click <strong>Import</strong>.</li>
+<li>Aspetti (può richiedere minuti, ci sono progress).</li>
+</ol>
+<p>A fine import la password admin viene <strong>riportata al valore di <code>ADMIN_PASSWORD</code></strong> delle env di Portainer (cambiala dopo l'import, non prima).</p>
+<p>Validazione: cap 200MB sullo ZIP, anti-zip-bomb e check path-traversal sui nomi dei file.</p>
+<hr />
+<h3 id="backup-restore-adminbackup-restore">Backup Restore (<code>/admin/backup-restore</code>)<a class="headerlink" href="#backup-restore-adminbackup-restore" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Backup Restore: descrizione del bundle accettato, file picker &quot;Backup ZIP file&quot;, checkbox &quot;Wipe data tables before restore&quot;, pulsanti Start restore e &quot;← Need Migration Import instead?&quot;" src="img/manuale/backup-restore.png" /></p>
+<p>Restore di un <strong>bundle ZIP esportato</strong> da <a href="#6-la-pagina-languages">Languages → Download Data → Export backup (.zip)</a>. Permette di ripristinare un set di lingue specifiche da uno snapshot precedente, senza wipe del DB.</p>
+<hr />
+<h3 id="import-from-excel-adminimport-excel">Import from Excel (<code>/admin/import-excel</code>)<a class="headerlink" href="#import-from-excel-adminimport-excel" title="Permanent link">&para;</a></h3>
+<p><img alt="Pagina Import from Excel: blocco Strategy (Schema strict update / Database_model full replace / Cascading errors), file picker File Excel, pulsanti Start Import e Cancel" src="img/manuale/import-excel.png" /></p>
+<p>Import strutturato da Excel. Cap 50 MB sul file. Il foglio deve seguire il formato del round-trip (<a href="../documentation_it/">documentation_it.md</a> §10.4).</p>
+<hr />
+<h3 id="recompute-final-values">Recompute final values<a class="headerlink" href="#recompute-final-values" title="Permanent link">&para;</a></h3>
+<p>⚠ <strong>Da Languages → Recompute final values</strong>, non c'è una pagina dedicata.</p>
+<p>Rilancia il <strong>DAG implicazionale</strong> per <strong>tutte</strong> le lingue del sistema. Da usare:</p>
+<ul>
+<li>dopo aver modificato condizioni implicazionali importanti;</li>
+<li>dopo un import bulk;</li>
+<li>se sospetti che qualche <code>value_eval</code> sia stale.</li>
+</ul>
+<p>È un job asincrono (può richiedere minuti su dataset grossi). Toast in basso a destra mostra il progresso. Quando finisce: messaggio "Recompute complete" o "Recompute completed with N error(s) over M language(s). See server logs for details" se qualche lingua ha problemi.</p>
+<hr />
+<h2 id="16-errori-comuni-e-cosa-fare">16. Errori comuni e cosa fare<a class="headerlink" href="#16-errori-comuni-e-cosa-fare" title="Permanent link">&para;</a></h2>
+<h3 id="form-locked-by-the-current-language-status">"Form locked by the current language status"<a class="headerlink" href="#form-locked-by-the-current-language-status" title="Permanent link">&para;</a></h3>
+<p>Stato della lingua è <code>Waiting for approval</code> o <code>Approved</code>, e tu non sei admin. Aspetta la decisione, oppure (se sei tu l'utente assegnato e la lingua è <code>Rejected</code>) clicca <strong>Reopen</strong>.</p>
+<h3 id="question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure">"Question X needs at least 2 valid examples when answering YES or UNSURE"<a class="headerlink" href="#question-x-needs-at-least-2-valid-examples-when-answering-yes-or-unsure" title="Permanent link">&para;</a></h3>
+<p>Hai messo YES o UNSURE su una domanda con meno di 2 esempi non vuoti. Aggiungi/completa gli esempi, riprova.</p>
+<h3 id="this-block-has-been-modified-by-another-session">"This block has been modified by another session..."<a class="headerlink" href="#this-block-has-been-modified-by-another-session" title="Permanent link">&para;</a></h3>
+<p>Un altro utente (di solito un admin) ha modificato lo stesso blocco mentre lavoravi. La pagina si ricarica automaticamente: rivedi le modifiche fatte da altri prima di riprovare il tuo save.</p>
+<h3 id="wrong-email-or-password">"Wrong email or password"<a class="headerlink" href="#wrong-email-or-password" title="Permanent link">&para;</a></h3>
+<p>Le credenziali sono errate. Se non ricordi: contatta un admin (il reset via email non è ancora attivo).</p>
+<h3 id="too-many-requests-al-login">"Too Many Requests" al login<a class="headerlink" href="#too-many-requests-al-login" title="Permanent link">&para;</a></h3>
+<p>Hai sbagliato password 5 volte di fila in 1 minuto. Aspetta 1 minuto e riprova.</p>
+<h3 id="invalid-email-format">"Invalid email format"<a class="headerlink" href="#invalid-email-format" title="Permanent link">&para;</a></h3>
+<p>Stai creando un account o cambiando email con un valore non valido (es. dimenticato il <code>.it</code>, spazio, doppia <code>@</code>). Correggi.</p>
+<h3 id="you-cannot-delete-your-own-account">"You cannot delete your own account"<a class="headerlink" href="#you-cannot-delete-your-own-account" title="Permanent link">&para;</a></h3>
+<p>Devi farti cancellare da un altro admin.</p>
+<h3 id="you-cannot-delete-the-last-remaining-administrator">"You cannot delete the last remaining administrator"<a class="headerlink" href="#you-cannot-delete-the-last-remaining-administrator" title="Permanent link">&para;</a></h3>
+<p>Crea un secondo admin <strong>prima</strong> di cancellare quello esistente.</p>
+<h3 id="il-pulsante-submit-for-approval-non-ce">Il pulsante "Submit for approval" non c'è<a class="headerlink" href="#il-pulsante-submit-for-approval-non-ce" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Stato della lingua è già <code>Waiting for approval</code> o <code>Approved</code>: niente da fare.</li>
+<li>Stato è <code>Rejected</code>: vedi <strong>Reopen</strong>, non Submit.</li>
+<li>Non sei l'utente assegnato a questa lingua: solo l'utente assegnato può fare Submit.</li>
+<li>Sei admin: gli admin non submittano (passano direttamente da approve/reject).</li>
+</ul>
+<h3 id="il-sito-mi-ha-sloggato-allimprovviso">Il sito mi ha sloggato all'improvviso<a class="headerlink" href="#il-sito-mi-ha-sloggato-allimprovviso" title="Permanent link">&para;</a></h3>
+<p>Token scaduto (30 min di inattività). Fai login di nuovo.</p>
+<h3 id="ho-cambiato-il-taxonomy-ma-le-lingue-mostrano-ancora-i-vecchi-nomi">Ho cambiato il taxonomy ma le lingue mostrano ancora i vecchi nomi<a class="headerlink" href="#ho-cambiato-il-taxonomy-ma-le-lingue-mostrano-ancora-i-vecchi-nomi" title="Permanent link">&para;</a></h3>
+<p>Le stringhe <code>top_family</code>/<code>family</code>/<code>group</code> sulle lingue sono denormalizzate. Riapri ogni lingua interessata e fai un Save (anche senza cambiare nulla) per propagare i nuovi nomi. Per fare questo in massa: usa l'export Excel, modifica e ri-importa.</p>
+<hr />
+<h2 id="17-glossario-rapido-di-interfaccia">17. Glossario rapido di interfaccia<a class="headerlink" href="#17-glossario-rapido-di-interfaccia" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Termine</th>
+<th>Significato</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wizard / quadratini</strong></td>
+<td>la fila di pulsantini in alto nella pagina di compilazione, uno per parametro</td>
+</tr>
+<tr>
+<td><strong>Block / blocco parametro</strong></td>
+<td>l'insieme di tutte le domande di un parametro per una lingua</td>
+</tr>
+<tr>
+<td><strong>Confident / Unsure</strong></td>
+<td>i due pulsanti di salvataggio del blocco. Confident = tutto verificato; Unsure = ho dei dubbi, ricontrollo dopo</td>
+</tr>
+<tr>
+<td><strong>Stale block (409)</strong></td>
+<td>un blocco che è stato modificato da un'altra sessione mentre stavi editando</td>
+</tr>
+<tr>
+<td><strong>Submit for approval</strong></td>
+<td>l'invio della lingua all'admin per la revisione</td>
+</tr>
+<tr>
+<td><strong>Reopen</strong></td>
+<td>riportare a <code>Pending</code> una lingua <code>Rejected</code></td>
+</tr>
+<tr>
+<td><strong>Approved / Rejected / Pending / Waiting</strong></td>
+<td>i 4 stati di una lingua</td>
+</tr>
+<tr>
+<td><strong>Admin override</strong></td>
+<td>il banner viola che ricorda all'admin che sta editando una lingua bloccata</td>
+</tr>
+<tr>
+<td><strong>Force status</strong></td>
+<td>il dropdown admin per forzare lo stato di una lingua bypassando il workflow</td>
+</tr>
+<tr>
+<td><strong>DAG implicazionale</strong></td>
+<td>il grafo di dipendenze tra parametri (<code>+SPK &amp; -DEM</code>) che decide se un valore va neutralizzato</td>
+</tr>
+<tr>
+<td><strong>value_orig vs value_eval</strong></td>
+<td><code>orig</code> = aggregato dalle risposte del linguista; <code>eval</code> = <code>orig</code> post-DAG (può essere <code>0</code> se neutralizzato)</td>
+</tr>
+<tr>
+<td><strong>Comparable</strong></td>
+<td>un parametro è "comparable" tra due lingue se entrambe hanno un <code>value_eval</code> non nullo</td>
+</tr>
+<tr>
+<td><strong>Implicational condition</strong></td>
+<td>la stringa tipo <code>+SPK &amp; -DEM</code> che scatena la neutralizzazione</td>
+</tr>
+<tr>
+<td><strong>Neutralized</strong></td>
+<td>un parametro forzato a <code>0</code> perché la sua condizione implicazionale non è soddisfatta</td>
+</tr>
+<tr>
+<td><strong>Flagged / Unsure parameter</strong></td>
+<td>parametro segnato come "incerto" dal linguista (quadratino giallo)</td>
+</tr>
+<tr>
+<td><strong>Red parameter</strong></td>
+<td>nella Dashboard admin, parametri "rossi" = unsure o incompleti</td>
+</tr>
+<tr>
+<td><strong>Hamming / Jaccard distance</strong></td>
+<td>metriche di distanza tra lingue basate sui valori dei parametri</td>
+</tr>
+<tr>
+<td><strong>GCD</strong></td>
+<td>Geographic Distance, distanza in km calcolata da lat/lng</td>
+</tr>
+<tr>
+<td><strong>Mantel test</strong></td>
+<td>test statistico che misura la correlazione tra matrici di distanza</td>
+</tr>
+<tr>
+<td><strong>Top family / Family / Group</strong></td>
+<td>i 3 livelli della tassonomia linguistica</td>
+</tr>
+<tr>
+<td><strong>Glossary / Glossario</strong></td>
+<td>dizionario dei termini tecnici</td>
+</tr>
+<tr>
+<td><strong>Instructions</strong></td>
+<td>la pagina con le linee guida di compilazione</td>
+</tr>
+<tr>
+<td><strong>How to cite</strong></td>
+<td>la pagina con le citazioni bibliografiche del PCM Hub</td>
+</tr>
+<tr>
+<td><strong>Bundle ZIP</strong></td>
+<td>l'archivio compresso usato per migration / backup-restore</td>
+</tr>
+<tr>
+<td><strong>Recompute</strong></td>
+<td>il job che rilancia il DAG su tutte le lingue</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Per dubbi, suggerimenti o segnalazioni di bug: scrivi a <code>pcm_lab@unimore.it</code> (link in fondo a ogni pagina del sito).</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Torna su
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/gb-993/progetto_lingue_3" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copiato", "clipboard.copy": "Copia", "search.result.more.one": "1 altro in questa pagina", "search.result.more.other": "# altri in questa pagina", "search.result.none": "Nessun documento trovato", "search.result.one": "1 documento trovato", "search.result.other": "# documenti trovati", "search.result.placeholder": "Scrivi per iniziare a cercare", "search.result.term.missing": "Non presente", "select.version": "Seleziona la versione"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3687 @@
+
+<!doctype html>
+<html lang="it" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Manuale utente e documentazione tecnica del PCM-Hub (Parametric Comparison Method)">
+      
+      
+      
+        <link rel="canonical" href="https://gb-993.github.io/progetto_lingue_3/documentation_it/">
+      
+      
+        <link rel="prev" href="../manuale_utente_it/">
+      
+      
+        <link rel="next" href="../user_manual_en/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
+    
+    
+      
+        <title>Documentazione tecnica - PCM-Hub — Documentazione</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.6f8fc17f.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#pcm-hub-documentazione-tecnica" class="md-skip">
+          Vai al contenuto
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Intestazione">
+    <a href=".." title="PCM-Hub — Documentazione" class="md-header__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PCM-Hub — Documentazione
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Documentazione tecnica
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema scuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Passa al tema scuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Passa al tema chiaro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Passa al tema chiaro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Seleziona la lingua">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="/progetto_lingue_3/manuale_utente_it/" hreflang="it" class="md-select__link">
+              Italiano
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="/progetto_lingue_3/user_manual_en/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Cerca" placeholder="Cerca" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Cerca">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Cancella" aria-label="Cancella" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inizializza la ricerca
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/gb-993/progetto_lingue_3" title="Apri repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    gb-993/progetto_lingue_3
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../manuale_utente_it/" class="md-tabs__link">
+          
+  
+  Italiano
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user_manual_en/" class="md-tabs__link">
+          
+  
+  English
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigazione" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="PCM-Hub — Documentazione" class="md-nav__button md-logo" aria-label="PCM-Hub — Documentazione" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PCM-Hub — Documentazione
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/gb-993/progetto_lingue_3" title="Apri repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    gb-993/progetto_lingue_3
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Italiano
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Italiano
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manuale_utente_it/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Manuale utente
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Documentazione tecnica
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Documentazione tecnica
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Indice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Indice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#indice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Indice
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-panoramica" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Panoramica
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-stack-tecnologico" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Stack tecnologico
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-architettura" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Architettura
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Architettura">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vista-a-runtime-produzione" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vista a runtime (produzione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vista-logica-componenti-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vista logica (componenti backend)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-setup-dellambiente-di-sviluppo" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Setup dell'ambiente di sviluppo
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Setup dell'ambiente di sviluppo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisiti" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisiti
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primo-avvio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Primo avvio
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hot-reload" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hot reload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trappola-comune-node_modules-disallineato" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trappola comune (node_modules disallineato)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variabili-dambiente-vedi-backendconfigpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variabili d'ambiente (vedi backend/config.py)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-struttura-del-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Struttura del repository
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-modello-dei-dati" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Modello dei dati
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Modello dei dati">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-mappa-delle-famiglie" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.1 Mappa delle famiglie
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-diagrammi-er-per-famiglia" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.2 Diagrammi ER per famiglia
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.2 Diagrammi ER per famiglia">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auth &amp; Users
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lingue-tassonomia" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lingue &amp; Tassonomia
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parametri-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parametri &amp; Domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risposte-esempi-compilazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      Risposte &amp; Esempi (compilazione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-submission-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup &amp; Submission (snapshot)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivio-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Archivio Domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cronologia-site-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cronologia &amp; Site Content
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-modelli-chiave-dettaglio" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.3 Modelli chiave (dettaglio)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.3 Modelli chiave (dettaglio)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-modelspy12-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      User (models.py:12-26)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#language-modelspy31-76" class="md-nav__link">
+    <span class="md-ellipsis">
+      Language (models.py:31-76)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameterdef-modelspy118-133" class="md-nav__link">
+    <span class="md-ellipsis">
+      ParameterDef (models.py:118-133)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-modelspy169-185" class="md-nav__link">
+    <span class="md-ellipsis">
+      Question (models.py:169-185)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#answer-modelspy190-209" class="md-nav__link">
+    <span class="md-ellipsis">
+      Answer (models.py:190-209)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-autenticazione-e-autorizzazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Autenticazione e autorizzazione
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Autenticazione e autorizzazione">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      Login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt" class="md-nav__link">
+    <span class="md-ellipsis">
+      JWT
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-lato-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage lato client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dipendenze-server-side-dependenciespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dipendenze server-side (dependencies.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mappa-autorizzazioni-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mappa autorizzazioni endpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend-adminroute" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend: &lt;AdminRoute&gt;
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. API reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. API reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth-routersauthpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /auth (routers/auth.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apime-routersuserspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/me (routers/users.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminaccounts-routersuserspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/accounts (routers/users.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apilanguages-compilation-routerscompilationpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/languages (compilation) (routers/compilation.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminlanguages-routerslanguagespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/languages (routers/languages.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminparameters-routersparameterspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/parameters (routers/parameters.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminparameters_graph-routersparameters_graphpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/parameters_graph (routers/parameters_graph.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminquestions-routersquestionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/questions (routers/questions.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminmotivations-routersmotivationspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/motivations (routers/motivations.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadmintaxonomy-routerstaxonomypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/taxonomy (routers/taxonomy.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiglossary-apiadminglossary-routersglossarypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/glossary + /api/admin/glossary (routers/glossary.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apicontentkey-apiadminsite-contentkey-apipublicsite-content-apipublicmap-data-routerssite_contentpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/content/{key}, /api/admin/site-content/{key}, /api/public/site-content, /api/public/map-data (routers/site_content.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiinstructions-routersinstructionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/instructions (routers/instructions.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apitablea-routerstableapy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/tablea (routers/tablea.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiqueries-routersqueriespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/queries (routers/queries.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadmindashboard-apiuserdashboard-routersdashboardpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/dashboard, /api/user/dashboard (routers/dashboard.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminbackups-apiadminbackupsparameters-routersbackuppy-routersparameters_backuppy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/backups, /api/admin/backups/parameters (routers/backup.py, routers/parameters_backup.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminmigration-routersmigrationpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/migration (routers/migration.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminbackup_restore-routersbackup_restorepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/backup_restore (routers/backup_restore.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminimport-excel-routersimport_excelpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/import-excel (routers/import_excel.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiexport-routersexportpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/export (routers/export.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminrecompute-routersrecomputepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/recompute (routers/recompute.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminversions-apiadminarchived-questions-routershistorypy-routersarchived_questionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/versions, /api/admin/archived-questions (routers/history.py, routers/archived_questions.py)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-workflow-di-compilazione-di-una-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Workflow di compilazione di una lingua
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Workflow di compilazione di una lingua">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stati" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stati
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permessi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Permessi
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lock-di-scrittura" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lock di scrittura
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_parameter_block-cuore-dellapplicazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_parameter_block (cuore dell'applicazione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-dag-implicazionale" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il DAG implicazionale
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-funzionalita-chiave" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Funzionalità chiave
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Funzionalità chiave">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tablea-routerstableapy-featurestableatableajsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      TableA (routers/tablea.py, features/tablea/TableA.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#queries-dashboard-q1-q10-routersqueriespy-featuresqueriesqueriesdashboardjsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      Queries Dashboard (Q1-Q10) (routers/queries.py, features/queries/QueriesDashboard.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#history-backups-featureshistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      History &amp; Backups (features/history/)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup &amp; Migration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-servizi-e-processi-in-background" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Servizi e processi in background
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Servizi e processi in background">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backgroundtasks-di-fastapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundTasks di FastAPI
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#job-asincroni-con-polling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Job asincroni con polling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidecar-di-prod" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sidecar di prod
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-frontend-spa" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Frontend SPA
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Frontend SPA">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routing-appjsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      Routing (App.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#axios-client-centralizzato-apijs" class="md-nav__link">
+    <span class="md-ellipsis">
+      axios client centralizzato (api.js)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-di-dirty-tracking-nei-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pattern di dirty tracking nei form
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#esempio-clipboard-utilsexampleclipboardjs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Esempio clipboard (utils/exampleClipboard.js)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. Deploy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backend
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-debt-tecnico-noto" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Debt tecnico noto
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Debt tecnico noto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicurezza-robustezza" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sicurezza / robustezza
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code quality
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance / scaling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#db-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      DB / data model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#housekeeping-minore" class="md-nav__link">
+    <span class="md-ellipsis">
+      Housekeeping minore
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    English
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            English
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user_manual_en/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    User manual
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../documentation_en/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Technical documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Indice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Indice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#indice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Indice
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-panoramica" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Panoramica
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-stack-tecnologico" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Stack tecnologico
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-architettura" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Architettura
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Architettura">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vista-a-runtime-produzione" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vista a runtime (produzione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vista-logica-componenti-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vista logica (componenti backend)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-setup-dellambiente-di-sviluppo" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Setup dell'ambiente di sviluppo
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Setup dell'ambiente di sviluppo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisiti" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisiti
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#primo-avvio" class="md-nav__link">
+    <span class="md-ellipsis">
+      Primo avvio
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hot-reload" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hot reload
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trappola-comune-node_modules-disallineato" class="md-nav__link">
+    <span class="md-ellipsis">
+      Trappola comune (node_modules disallineato)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variabili-dambiente-vedi-backendconfigpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variabili d'ambiente (vedi backend/config.py)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-struttura-del-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Struttura del repository
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-modello-dei-dati" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Modello dei dati
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Modello dei dati">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-mappa-delle-famiglie" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.1 Mappa delle famiglie
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-diagrammi-er-per-famiglia" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.2 Diagrammi ER per famiglia
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.2 Diagrammi ER per famiglia">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auth &amp; Users
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lingue-tassonomia" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lingue &amp; Tassonomia
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parametri-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parametri &amp; Domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risposte-esempi-compilazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      Risposte &amp; Esempi (compilazione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-submission-snapshot" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup &amp; Submission (snapshot)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#archivio-domande" class="md-nav__link">
+    <span class="md-ellipsis">
+      Archivio Domande
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cronologia-site-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cronologia &amp; Site Content
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-modelli-chiave-dettaglio" class="md-nav__link">
+    <span class="md-ellipsis">
+      6.3 Modelli chiave (dettaglio)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6.3 Modelli chiave (dettaglio)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-modelspy12-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      User (models.py:12-26)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#language-modelspy31-76" class="md-nav__link">
+    <span class="md-ellipsis">
+      Language (models.py:31-76)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameterdef-modelspy118-133" class="md-nav__link">
+    <span class="md-ellipsis">
+      ParameterDef (models.py:118-133)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-modelspy169-185" class="md-nav__link">
+    <span class="md-ellipsis">
+      Question (models.py:169-185)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#answer-modelspy190-209" class="md-nav__link">
+    <span class="md-ellipsis">
+      Answer (models.py:190-209)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-autenticazione-e-autorizzazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Autenticazione e autorizzazione
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Autenticazione e autorizzazione">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#login" class="md-nav__link">
+    <span class="md-ellipsis">
+      Login
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jwt" class="md-nav__link">
+    <span class="md-ellipsis">
+      JWT
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-lato-client" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storage lato client
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dipendenze-server-side-dependenciespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dipendenze server-side (dependencies.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mappa-autorizzazioni-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mappa autorizzazioni endpoint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend-adminroute" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend: &lt;AdminRoute&gt;
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. API reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. API reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auth-routersauthpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /auth (routers/auth.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apime-routersuserspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/me (routers/users.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminaccounts-routersuserspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/accounts (routers/users.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apilanguages-compilation-routerscompilationpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/languages (compilation) (routers/compilation.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminlanguages-routerslanguagespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/languages (routers/languages.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminparameters-routersparameterspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/parameters (routers/parameters.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminparameters_graph-routersparameters_graphpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/parameters_graph (routers/parameters_graph.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminquestions-routersquestionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/questions (routers/questions.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminmotivations-routersmotivationspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/motivations (routers/motivations.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadmintaxonomy-routerstaxonomypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/taxonomy (routers/taxonomy.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiglossary-apiadminglossary-routersglossarypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/glossary + /api/admin/glossary (routers/glossary.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apicontentkey-apiadminsite-contentkey-apipublicsite-content-apipublicmap-data-routerssite_contentpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/content/{key}, /api/admin/site-content/{key}, /api/public/site-content, /api/public/map-data (routers/site_content.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiinstructions-routersinstructionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/instructions (routers/instructions.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apitablea-routerstableapy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/tablea (routers/tablea.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiqueries-routersqueriespy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/queries (routers/queries.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadmindashboard-apiuserdashboard-routersdashboardpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/dashboard, /api/user/dashboard (routers/dashboard.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminbackups-apiadminbackupsparameters-routersbackuppy-routersparameters_backuppy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/backups, /api/admin/backups/parameters (routers/backup.py, routers/parameters_backup.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminmigration-routersmigrationpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/migration (routers/migration.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminbackup_restore-routersbackup_restorepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/backup_restore (routers/backup_restore.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminimport-excel-routersimport_excelpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/import-excel (routers/import_excel.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiexport-routersexportpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/export (routers/export.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminrecompute-routersrecomputepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/recompute (routers/recompute.py)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#apiadminversions-apiadminarchived-questions-routershistorypy-routersarchived_questionspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      /api/admin/versions, /api/admin/archived-questions (routers/history.py, routers/archived_questions.py)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-workflow-di-compilazione-di-una-lingua" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Workflow di compilazione di una lingua
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Workflow di compilazione di una lingua">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stati" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stati
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permessi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Permessi
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lock-di-scrittura" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lock di scrittura
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save_parameter_block-cuore-dellapplicazione" class="md-nav__link">
+    <span class="md-ellipsis">
+      save_parameter_block (cuore dell'applicazione)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#il-dag-implicazionale" class="md-nav__link">
+    <span class="md-ellipsis">
+      Il DAG implicazionale
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-funzionalita-chiave" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Funzionalità chiave
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Funzionalità chiave">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tablea-routerstableapy-featurestableatableajsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      TableA (routers/tablea.py, features/tablea/TableA.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#queries-dashboard-q1-q10-routersqueriespy-featuresqueriesqueriesdashboardjsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      Queries Dashboard (Q1-Q10) (routers/queries.py, features/queries/QueriesDashboard.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#history-backups-featureshistory" class="md-nav__link">
+    <span class="md-ellipsis">
+      History &amp; Backups (features/history/)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backup &amp; Migration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-servizi-e-processi-in-background" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Servizi e processi in background
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Servizi e processi in background">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backgroundtasks-di-fastapi" class="md-nav__link">
+    <span class="md-ellipsis">
+      BackgroundTasks di FastAPI
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#job-asincroni-con-polling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Job asincroni con polling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidecar-di-prod" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sidecar di prod
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-frontend-spa" class="md-nav__link">
+    <span class="md-ellipsis">
+      12. Frontend SPA
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Frontend SPA">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routing-appjsx" class="md-nav__link">
+    <span class="md-ellipsis">
+      Routing (App.jsx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Context
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#axios-client-centralizzato-apijs" class="md-nav__link">
+    <span class="md-ellipsis">
+      axios client centralizzato (api.js)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-di-dirty-tracking-nei-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pattern di dirty tracking nei form
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#esempio-clipboard-utilsexampleclipboardjs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Esempio clipboard (utils/exampleClipboard.js)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-deploy" class="md-nav__link">
+    <span class="md-ellipsis">
+      13. Deploy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      14. Testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Backend
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Frontend
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-debt-tecnico-noto" class="md-nav__link">
+    <span class="md-ellipsis">
+      15. Debt tecnico noto
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Debt tecnico noto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sicurezza-robustezza" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sicurezza / robustezza
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      Code quality
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance / scaling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#db-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      DB / data model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#housekeeping-minore" class="md-nav__link">
+    <span class="md-ellipsis">
+      Housekeeping minore
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/gb-993/progetto_lingue_3/edit/main/docs/documentation_it.md" title="Modifica" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="pcm-hub-documentazione-tecnica">PCM-Hub — Documentazione tecnica<a class="headerlink" href="#pcm-hub-documentazione-tecnica" title="Permanent link">&para;</a></h1>
+<p>Documentazione di riferimento per sviluppatori e manutentori. Per l'utilizzo del sito da parte di linguisti/admin vedi <a href="../manuale_utente_it/">manuale_utente_it.md</a>.</p>
+<hr />
+<h2 id="indice">Indice<a class="headerlink" href="#indice" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-panoramica">Panoramica</a></li>
+<li><a href="#2-stack-tecnologico">Stack tecnologico</a></li>
+<li><a href="#3-architettura">Architettura</a></li>
+<li><a href="#4-setup-dellambiente-di-sviluppo">Setup dell'ambiente di sviluppo</a></li>
+<li><a href="#5-struttura-del-repository">Struttura del repository</a></li>
+<li><a href="#6-modello-dei-dati">Modello dei dati</a></li>
+<li><a href="#7-autenticazione-e-autorizzazione">Autenticazione e autorizzazione</a></li>
+<li><a href="#8-api-reference">API reference</a></li>
+<li><a href="#9-workflow-di-compilazione-di-una-lingua">Workflow di compilazione di una lingua</a></li>
+<li><a href="#10-funzionalità-chiave">Funzionalità chiave</a></li>
+<li><a href="#11-servizi-e-processi-in-background">Servizi e processi in background</a></li>
+<li><a href="#12-frontend-spa">Frontend SPA</a></li>
+<li><a href="#13-deploy">Deploy</a></li>
+<li><a href="#14-testing">Testing</a></li>
+<li><a href="#15-debt-tecnico-noto">Debt tecnico noto</a></li>
+</ol>
+<hr />
+<h2 id="1-panoramica">1. Panoramica<a class="headerlink" href="#1-panoramica" title="Permanent link">&para;</a></h2>
+<p>PCM-Hub è la web app del <strong>Parametric Comparison Method</strong> (PCM, Longobardi &amp; Guardiano 2009): raccoglie, organizza e confronta dati sintattici di lingue naturali tramite un set di <strong>parametri universali</strong>. Ogni lingua viene "compilata" (un linguista assegnato risponde a un set di domande per ogni parametro) e l'app produce in automatico le matrici comparative, le distanze inter-lingua, dendrogrammi, mappe geografiche e altri output di analisi.</p>
+<p>Tre categorie di utenti:</p>
+<ul>
+<li><strong>Public</strong> (anonimo): vede la home con la mappa interattiva delle lingue e le citation guidelines.</li>
+<li><strong>User</strong> (linguista): compila le lingue che gli sono state assegnate, accede a glossario, istruzioni, lista lingue.</li>
+<li><strong>Admin</strong>: gestisce parametri, domande, motivazioni, tassonomia, account, backup, export massivi, TableA, query analitiche cross-lingua.</li>
+</ul>
+<p>L'istanza di produzione è ospitata sul dominio <code>hub.parametricomparison.unimore.it</code> su una VM gestita via Portainer.</p>
+<hr />
+<h2 id="2-stack-tecnologico">2. Stack tecnologico<a class="headerlink" href="#2-stack-tecnologico" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Tecnologia</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td><strong>FastAPI</strong> + Uvicorn</td>
+<td>Python 3.x, <a href="backend/main.py">backend/main.py</a></td>
+</tr>
+<tr>
+<td>ORM</td>
+<td><strong>SQLAlchemy 2.x</strong></td>
+<td><a href="backend/models.py">backend/models.py</a></td>
+</tr>
+<tr>
+<td>DB</td>
+<td><strong>PostgreSQL 16</strong></td>
+<td>Postgres in Alpine, schema gestito da Alembic</td>
+</tr>
+<tr>
+<td>Migrations</td>
+<td><strong>Alembic</strong></td>
+<td><a href="backend/alembic/">backend/alembic/</a></td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT (python-jose) + bcrypt</td>
+<td>Token Bearer in header, no cookie</td>
+</tr>
+<tr>
+<td>Rate limiting</td>
+<td><strong>slowapi</strong></td>
+<td>login 5 tentativi/min/IP</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td><strong>React 18 + Vite + Rolldown</strong></td>
+<td><a href="frontend/src/">frontend/src/</a></td>
+</tr>
+<tr>
+<td>Routing SPA</td>
+<td><strong>react-router-dom v6</strong></td>
+<td><code>createBrowserRouter</code></td>
+</tr>
+<tr>
+<td>Mappe</td>
+<td><strong>OpenLayers</strong></td>
+<td>OSM tiles</td>
+</tr>
+<tr>
+<td>Editor WYSIWYG</td>
+<td><strong>TinyMCE</strong></td>
+<td>lazy-loaded, solo admin</td>
+</tr>
+<tr>
+<td>Charts/analitica</td>
+<td>scipy, numpy, matplotlib, plotly</td>
+<td>server-side rendering per export</td>
+</tr>
+<tr>
+<td>Reverse proxy + HTTPS</td>
+<td><strong>Caddy 2</strong></td>
+<td><a href="caddy/Caddyfile">caddy/Caddyfile</a></td>
+</tr>
+<tr>
+<td>Container</td>
+<td>Docker Compose</td>
+<td>dev: <a href="docker-compose.yml">docker-compose.yml</a>; prod: <a href="docker-compose.prod.yml">docker-compose.prod.yml</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-architettura">3. Architettura<a class="headerlink" href="#3-architettura" title="Permanent link">&para;</a></h2>
+<h3 id="vista-a-runtime-produzione">Vista a runtime (produzione)<a class="headerlink" href="#vista-a-runtime-produzione" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                          Internet
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                              │
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                       ┌──────┴──────┐
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                       │   Caddy 2   │  ← HTTPS Let&#39;s Encrypt automatico
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                       │ (porte 80/443) │     gzip, security headers
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                       └──┬──────┬───┘
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                          │      │
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            /api/*, /auth/*│     │/{*}
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                          │      │
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                ┌─────────▼──┐ ┌─▼─────────────────┐
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                │  FastAPI   │ │  SPA React        │
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>                │  backend   │ │  (frontend_dist)  │
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                │  uvicorn   │ │   served by Caddy │
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                └─────┬──────┘ └───────────────────┘
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                      │
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                ┌─────▼──────┐    ┌──────────────────┐
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                │ PostgreSQL │    │  pcm_backup      │
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                │   16       │◄───┤  pg_dump 1×24h   │
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                └────────────┘    └──────────────────┘
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>Sidecar: pcm_cleaner (docker prune giornaliero)
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>         pcm_frontend_build (one-shot al deploy: npm ci &amp;&amp; npm run build)
+</code></pre></div>
+<p>Tutti i servizi vivono in volumi Docker nominati: <code>postgres_data</code>, <code>caddy_data</code>, <code>caddy_config</code>, <code>frontend_dist</code>, <code>pcm_backups</code>. Vedi <a href="DEPLOY_NOTES.txt">DEPLOY_NOTES.txt</a> §1, §4.</p>
+<h3 id="vista-logica-componenti-backend">Vista logica (componenti backend)<a class="headerlink" href="#vista-logica-componenti-backend" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>backend/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── main.py              ← FastAPI app, CORS, rate limiter, lifespan, router include
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── config.py            ← env vars, fail-fast in prod
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── auth.py              ← bcrypt + JWT helpers
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── dependencies.py      ← get_db, get_current_user, require_admin
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── database.py          ← create_engine, SessionLocal
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>├── models.py            ← TUTTI i modelli SQLAlchemy
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>├── time_utils.py        ← utc_now() naive UTC
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>├── rate_limit.py        ← limiter slowapi condiviso
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>├── routers/             ← un file per area funzionale (vedi §8)
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>└── services/            ← logica complessa fuori dai router (DAG, export, ecc.)
+</code></pre></div>
+<p>I <strong>router</strong> delegano alla logica di business presente in <a href="backend/services/">backend/services/</a> per mantenere gli endpoint sottili. Esempi:</p>
+<ul>
+<li><code>services/dag_eval.py</code> — esegue il DAG implicazionale dei parametri per una lingua</li>
+<li><code>services/recompute.py</code> — ricalcola i <code>value_orig</code>/<code>value_eval</code> di un parametro su tutte le lingue</li>
+<li><code>services/excel_import.py</code>, <code>services/excel_export.py</code> — round-trip Excel</li>
+<li><code>services/backup_service.py</code>, <code>services/parameter_backup_service.py</code> — snapshot di lingue e parametri</li>
+<li><code>services/migration_import.py</code> — import del bundle ZIP dal sito vecchio</li>
+<li><code>services/versioning.py</code> — registra <code>EntityVersion</code> per audit</li>
+</ul>
+<hr />
+<h2 id="4-setup-dellambiente-di-sviluppo">4. Setup dell'ambiente di sviluppo<a class="headerlink" href="#4-setup-dellambiente-di-sviluppo" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisiti">Prerequisiti<a class="headerlink" href="#prerequisiti" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Docker Desktop (con Compose v2)</li>
+<li>Git</li>
+<li>Per lavorare sul codice: editor a piacere (consigliato VS Code)</li>
+</ul>
+<h3 id="primo-avvio">Primo avvio<a class="headerlink" href="#primo-avvio" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">git</span> <span class="n">clone</span> <span class="p">&lt;</span><span class="n">repo-url</span><span class="p">&gt;</span> <span class="n">pcm-hub</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd </span><span class="n">pcm-hub</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nb">copy </span><span class="p">.</span><span class="n">env</span><span class="p">.</span><span class="n">example</span> <span class="p">.</span><span class="n">env</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c"># Modifica .env se vuoi (default funzionano per dev)</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">up</span> <span class="n">-d</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">backend</span> <span class="n">alembic</span> <span class="n">upgrade</span> <span class="n">head</span>
+</code></pre></div>
+<p>Al primo avvio <a href="backend/services/admin_bootstrap.py">services/admin_bootstrap.py</a> crea automaticamente un admin con le credenziali di <code>ADMIN_EMAIL</code>/<code>ADMIN_PASSWORD</code> (default dev: <code>admin@local</code>/<code>admin</code>).</p>
+<p>URL:</p>
+<ul>
+<li>Frontend Vite dev: <a href="http://localhost:5173">http://localhost:5173</a></li>
+<li>Backend FastAPI: <a href="http://localhost:8000">http://localhost:8000</a></li>
+<li>Swagger UI (solo dev): <a href="http://localhost:8000/docs">http://localhost:8000/docs</a></li>
+<li>DB Postgres dall'host: <code>127.0.0.1:5433</code> (utente/password da <code>.env</code>)</li>
+</ul>
+<h3 id="hot-reload">Hot reload<a class="headerlink" href="#hot-reload" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Backend: <code>uvicorn --reload</code> riavvia su modifica di file Python (volume bind-mount <code>./backend:/app</code>).</li>
+<li>Frontend: Vite HMR.</li>
+</ul>
+<h3 id="trappola-comune-node_modules-disallineato">Trappola comune (<code>node_modules</code> disallineato)<a class="headerlink" href="#trappola-comune-node_modules-disallineato" title="Permanent link">&para;</a></h3>
+<p>Il container <code>pcm_frontend</code> ha un volume anonimo che maschera <code>/app/node_modules</code>. Se aggiungi una dipendenza in <code>package.json</code> la prima volta non la troverai dentro al container. Soluzione:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">frontend</span> <span class="n">npm</span> <span class="n">ci</span>
+</code></pre></div>
+<p>In <strong>prod</strong> non succede: <code>frontend_build</code> parte sempre da zero su <code>npm ci</code>.</p>
+<h3 id="variabili-dambiente-vedi-backendconfigpy">Variabili d'ambiente (vedi <a href="backend/config.py">backend/config.py</a>)<a class="headerlink" href="#variabili-dambiente-vedi-backendconfigpy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Dev default</th>
+<th>Prod</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENV</code></td>
+<td><code>dev</code></td>
+<td><code>prod</code></td>
+<td>abilita fail-fast</td>
+</tr>
+<tr>
+<td><code>SECRET_KEY</code></td>
+<td><code>dev-insecure-change-me</code></td>
+<td>obbligatoria</td>
+<td>JWT signing</td>
+</tr>
+<tr>
+<td><code>ACCESS_TOKEN_EXPIRE_MINUTES</code></td>
+<td><code>30</code></td>
+<td><code>30</code></td>
+<td>scadenza token</td>
+</tr>
+<tr>
+<td><code>ADMIN_EMAIL</code> / <code>ADMIN_PASSWORD</code></td>
+<td><code>admin@local</code> / <code>admin</code></td>
+<td>obbligatorie</td>
+<td>bootstrap primo admin</td>
+</tr>
+<tr>
+<td><code>POSTGRES_*</code></td>
+<td><code>pcm_user</code>/<code>pcm_password</code>/<code>pcm_hub</code></td>
+<td>obbligatorie</td>
+<td>credenziali DB</td>
+</tr>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>costruito</td>
+<td>esplicito</td>
+<td>override URL completo</td>
+</tr>
+<tr>
+<td><code>CORS_ORIGINS</code></td>
+<td><code>http://localhost:5173,...</code></td>
+<td>dominio prod</td>
+<td>whitelist CORS, no wildcard</td>
+</tr>
+</tbody>
+</table>
+<p>In prod: SECRET_KEY, ADMIN_EMAIL, ADMIN_PASSWORD obbligatorie. Senza, l'app <strong>non parte</strong> (vedi <a href="backend/config.py">config.py</a> §Auth/JWT, §Bootstrap admin).</p>
+<hr />
+<h2 id="5-struttura-del-repository">5. Struttura del repository<a class="headerlink" href="#5-struttura-del-repository" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pcm-hub/
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── backend/                 ← FastAPI + SQLAlchemy + Alembic
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── alembic/             ← migrations versionate
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   ├── routers/             ← endpoint per area funzionale (vedi §8)
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   ├── services/            ← logica complessa (DAG, export, backup, ecc.)
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   ├── tests/               ← pytest + sqlite in-memory
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│   ├── main.py
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>│   ├── config.py
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>│   ├── auth.py
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>│   ├── dependencies.py
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>│   ├── database.py
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>│   ├── models.py
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>│   ├── rate_limit.py
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>│   ├── time_utils.py
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>│   ├── requirements.txt
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>│   └── Dockerfile
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>├── frontend/                ← React 18 + Vite
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>│   ├── src/
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>│   │   ├── api.js           ← axios client centralizzato
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>│   │   ├── App.jsx          ← createBrowserRouter
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>│   │   ├── main.jsx
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>│   │   ├── context/
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>│   │   │   └── AuthContext.jsx
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>│   │   ├── components/      ← Layout, AdminRoute, Drawer, ecc.
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>│   │   ├── features/        ← un sottodir per area funzionale
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>│   │   │   ├── auth/
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>│   │   │   ├── public/
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>│   │   │   ├── dashboard/
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>│   │   │   ├── languages/
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>│   │   │   ├── compilation/
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>│   │   │   ├── parameters/
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>│   │   │   ├── questions/
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>│   │   │   ├── motivations/
+<a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a>│   │   │   ├── glossary/
+<a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a>│   │   │   ├── instructions/
+<a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a>│   │   │   ├── tablea/
+<a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a>│   │   │   ├── queries/
+<a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a>│   │   │   ├── accounts/
+<a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a>│   │   │   ├── taxonomy/
+<a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a>│   │   │   ├── history/
+<a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a>│   │   │   ├── backups/
+<a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a>│   │   │   └── admin/       ← Migration, BackupRestore, ImportExcel
+<a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a>│   │   └── utils/           ← helper condivisi (search, dateFormat, ecc.)
+<a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a>│   ├── public/              ← favicon, PDF informative, asset statici
+<a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a>│   ├── package.json
+<a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a>│   └── Dockerfile
+<a id="__codelineno-4-47" name="__codelineno-4-47" href="#__codelineno-4-47"></a>├── caddy/
+<a id="__codelineno-4-48" name="__codelineno-4-48" href="#__codelineno-4-48"></a>│   └── Caddyfile            ← reverse proxy + HTTPS Let&#39;s Encrypt
+<a id="__codelineno-4-49" name="__codelineno-4-49" href="#__codelineno-4-49"></a>├── docker-compose.yml       ← stack dev
+<a id="__codelineno-4-50" name="__codelineno-4-50" href="#__codelineno-4-50"></a>├── docker-compose.prod.yml  ← stack prod (Portainer)
+<a id="__codelineno-4-51" name="__codelineno-4-51" href="#__codelineno-4-51"></a>├── DEPLOY_NOTES.txt         ← notes architetturali deploy
+<a id="__codelineno-4-52" name="__codelineno-4-52" href="#__codelineno-4-52"></a>├── DEPLOY_PROCEDURA.txt     ← checklist clic-per-clic deploy
+<a id="__codelineno-4-53" name="__codelineno-4-53" href="#__codelineno-4-53"></a>├── .env.example             ← template env
+<a id="__codelineno-4-54" name="__codelineno-4-54" href="#__codelineno-4-54"></a>└── docs/                    ← (questa cartella)
+<a id="__codelineno-4-55" name="__codelineno-4-55" href="#__codelineno-4-55"></a>    ├── documentation_it.md  ← (questo file)
+<a id="__codelineno-4-56" name="__codelineno-4-56" href="#__codelineno-4-56"></a>    ├── documentation_en.md
+<a id="__codelineno-4-57" name="__codelineno-4-57" href="#__codelineno-4-57"></a>    ├── manuale_utente_it.md
+<a id="__codelineno-4-58" name="__codelineno-4-58" href="#__codelineno-4-58"></a>    └── user_manual_en.md
+</code></pre></div>
+<hr />
+<h2 id="6-modello-dei-dati">6. Modello dei dati<a class="headerlink" href="#6-modello-dei-dati" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>⚠ La <strong>fonte di verità</strong> sui modelli è sempre <a href="backend/models.py">backend/models.py</a>. Questo capitolo è una mappa per orientarsi, non un riferimento campo-per-campo che andrà fatalmente out-of-sync. Le migrazioni Alembic in <a href="backend/alembic/versions/">backend/alembic/versions/</a> congelano il DDL effettivo applicato.</p>
+</blockquote>
+<h3 id="61-mappa-delle-famiglie">6.1 Mappa delle famiglie<a class="headerlink" href="#61-mappa-delle-famiglie" title="Permanent link">&para;</a></h3>
+<p>I 27 modelli si raggruppano in 7 famiglie logiche:</p>
+<table>
+<thead>
+<tr>
+<th>Famiglia</th>
+<th>Scope</th>
+<th>Modelli</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Auth &amp; Users</strong></td>
+<td>Identità, ruoli, assegnazioni</td>
+<td><code>User</code></td>
+</tr>
+<tr>
+<td><strong>Lingue &amp; Tassonomia</strong></td>
+<td>Lingue + gerarchia (top-family &gt; family &gt; group)</td>
+<td><code>Language</code>, <code>TopFamily</code>, <code>Family</code>, <code>Group</code></td>
+</tr>
+<tr>
+<td><strong>Parametri &amp; Domande</strong></td>
+<td>Definizione parametri, condizioni implicazionali, valutazione per lingua</td>
+<td><code>ParameterDef</code>, <code>Question</code>, <code>ParamSchema</code>, <code>ParamType</code>, <code>ParamLevelOfComparison</code>, <code>LanguageParameter</code>, <code>LanguageParameterEval</code>, <code>LanguageParameterStatus</code>, <code>ParameterChangeLog</code></td>
+</tr>
+<tr>
+<td><strong>Risposte &amp; Esempi</strong></td>
+<td>Compilazione di un linguista per una lingua</td>
+<td><code>Answer</code>, <code>Example</code>, <code>Motivation</code>, <code>QuestionAllowedMotivation</code>, <code>AnswerMotivation</code></td>
+</tr>
+<tr>
+<td><strong>Backup &amp; Submission</strong></td>
+<td>Snapshot di lingue (dati) e parametri (definizioni)</td>
+<td><code>Submission</code>, <code>SubmissionAnswer</code>, <code>SubmissionExample</code>, <code>SubmissionAnswerMotivation</code>, <code>SubmissionParam</code>, <code>ParameterSubmission</code>, <code>ParameterSubmissionQuestion</code>, <code>ParameterSubmissionAllowedMotivation</code></td>
+</tr>
+<tr>
+<td><strong>Archivio Domande</strong></td>
+<td>Domande "ritirate" + dati ad esse collegati, freezati</td>
+<td><code>ArchivedQuestion</code>, <code>ArchivedQuestionMotivation</code>, <code>ArchivedAnswer</code>, <code>ArchivedExample</code>, <code>ArchivedAnswerMotivation</code></td>
+</tr>
+<tr>
+<td><strong>Cronologia &amp; Site Content</strong></td>
+<td>Audit/diff + contenuti dinamici + glossario</td>
+<td><code>EntityVersion</code>, <code>SiteContent</code>, <code>Glossary</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-diagrammi-er-per-famiglia">6.2 Diagrammi ER per famiglia<a class="headerlink" href="#62-diagrammi-er-per-famiglia" title="Permanent link">&para;</a></h3>
+<h4 id="auth-users">Auth &amp; Users<a class="headerlink" href="#auth-users" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>erDiagram
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    User ||--o{ Language : &quot;assigned_user&quot;
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    User {
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        int id PK
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        string email UK
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        string hashed_password
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        string name
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>        string surname
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        enum role &quot;admin|user|public&quot;
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        bool is_active
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>        datetime date_joined
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    }
+</code></pre></div>
+<h4 id="lingue-tassonomia">Lingue &amp; Tassonomia<a class="headerlink" href="#lingue-tassonomia" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>erDiagram
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    TopFamily ||--o{ Family : &quot;contains&quot;
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    Family ||--o{ Group : &quot;contains&quot;
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    TopFamily ||--o{ Language : &quot;FK top_family_id&quot;
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    Family ||--o{ Language : &quot;FK family_id&quot;
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    Group ||--o{ Language : &quot;FK group_id&quot;
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    User ||..o{ Language : &quot;assigned_user_id&quot;
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    Language {
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        string id PK &quot;10 char&quot;
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        string name_full
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        int position
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>        string family &quot;denormalized&quot;
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>        string top_level_family &quot;denormalized&quot;
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>        string grp &quot;denormalized&quot;
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        int top_family_id FK
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        int family_id FK
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        int group_id FK
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>        decimal latitude
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>        decimal longitude
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>        bool historical_language
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>        string isocode
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        string glottocode
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>        string informant
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>        string supervisor
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>        text source
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>        int assigned_user_id FK
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>        enum status &quot;pending|waiting|approved|rejected&quot;
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a>        text rejection_note
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>        datetime submitted_at
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>        datetime reviewed_at
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a>        datetime updated_at
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>    }
+</code></pre></div>
+<h4 id="parametri-domande">Parametri &amp; Domande<a class="headerlink" href="#parametri-domande" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>erDiagram
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    ParameterDef ||--o{ Question : &quot;has&quot;
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    ParameterDef ||--o{ LanguageParameter : &quot;evaluated as&quot;
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    ParameterDef ||--o{ LanguageParameterStatus : &quot;tracks completion&quot;
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    ParameterDef ||--o{ ParameterChangeLog : &quot;audit&quot;
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    Language ||--o{ LanguageParameter : &quot;for&quot;
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    Language ||--o{ LanguageParameterStatus : &quot;for&quot;
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    LanguageParameter ||--|| LanguageParameterEval : &quot;1-1 evaluated value&quot;
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    User ||..o{ ParameterChangeLog : &quot;by&quot;
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    ParameterDef {
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        string id PK &quot;10 char&quot;
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        string name
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>        text short_description
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        text long_description
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        string implicational_condition &quot;es. +SPK &amp; -DEM&quot;
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        text description_of_condition
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>        bool is_active
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>        int position
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>        string schema
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>        string param_type
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>        string level_of_comparison
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    }
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    Question {
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>        string id PK &quot;40 char&quot;
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>        string parameter_id FK
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>        text text
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>        string template_type
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>        text instruction
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>        text instruction_yes
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>        text instruction_no
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>        text example_yes
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>        text help_info
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>        bool is_stop_question
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>        bool is_active
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    }
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>    LanguageParameter {
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>        int id PK
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>        string language_id FK
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a>        string parameter_id FK
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>        enum value_orig &quot;+|-|0|?&quot;
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>        bool warning_orig
+<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a>    }
+<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a>    LanguageParameterEval {
+<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>        int id PK
+<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a>        int language_parameter_id FK,UK
+<a id="__codelineno-7-47" name="__codelineno-7-47" href="#__codelineno-7-47"></a>        enum value_eval &quot;+|-|0|?&quot;
+<a id="__codelineno-7-48" name="__codelineno-7-48" href="#__codelineno-7-48"></a>        bool warning_eval
+<a id="__codelineno-7-49" name="__codelineno-7-49" href="#__codelineno-7-49"></a>    }
+<a id="__codelineno-7-50" name="__codelineno-7-50" href="#__codelineno-7-50"></a>    LanguageParameterStatus {
+<a id="__codelineno-7-51" name="__codelineno-7-51" href="#__codelineno-7-51"></a>        int id PK
+<a id="__codelineno-7-52" name="__codelineno-7-52" href="#__codelineno-7-52"></a>        string language_id FK
+<a id="__codelineno-7-53" name="__codelineno-7-53" href="#__codelineno-7-53"></a>        string parameter_id FK
+<a id="__codelineno-7-54" name="__codelineno-7-54" href="#__codelineno-7-54"></a>        bool is_unsure
+<a id="__codelineno-7-55" name="__codelineno-7-55" href="#__codelineno-7-55"></a>        text admin_note &quot;admin only&quot;
+<a id="__codelineno-7-56" name="__codelineno-7-56" href="#__codelineno-7-56"></a>    }
+</code></pre></div>
+<p><code>ParamSchema</code>, <code>ParamType</code>, <code>ParamLevelOfComparison</code> sono tabelle di lookup (id+label) usate per popolare le tendine di ParameterForm; il valore "vincente" resta la stringa salvata su <code>ParameterDef.schema/param_type/level_of_comparison</code>.</p>
+<h4 id="risposte-esempi-compilazione">Risposte &amp; Esempi (compilazione)<a class="headerlink" href="#risposte-esempi-compilazione" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>erDiagram
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    Language ||--o{ Answer : &quot;compiled&quot;
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    Question ||--o{ Answer : &quot;answered&quot;
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    Answer ||--o{ Example : &quot;supports&quot;
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    Answer ||--o{ AnswerMotivation : &quot;uses&quot;
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    Question ||--o{ QuestionAllowedMotivation : &quot;allows&quot;
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    Motivation ||--o{ QuestionAllowedMotivation : &quot;allowed in&quot;
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    Motivation ||--o{ AnswerMotivation : &quot;used in&quot;
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    Answer {
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        int id PK
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>        string language_id FK
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>        string question_id FK
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>        enum status
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>        enum response_text &quot;yes|no|unsure&quot;
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>        text comments
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>        datetime updated_at
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>    }
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>    Example {
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>        int id PK
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>        int answer_id FK
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>        string number
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>        text textarea
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>        text transliteration
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>        text gloss
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>        text translation
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>        text reference
+<a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>    }
+<a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>    Motivation {
+<a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>        int id PK
+<a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>        string code
+<a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>        text label
+<a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>    }
+</code></pre></div>
+<p><code>Answer</code> ha <code>UniqueConstraint(language_id, question_id)</code> → una sola Answer per (lingua, domanda).</p>
+<h4 id="backup-submission-snapshot">Backup &amp; Submission (snapshot)<a class="headerlink" href="#backup-submission-snapshot" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>erDiagram
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    Submission ||--o{ SubmissionAnswer : &quot;&quot;
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    Submission ||--o{ SubmissionExample : &quot;&quot;
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    Submission ||--o{ SubmissionAnswerMotivation : &quot;&quot;
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    Submission ||--o{ SubmissionParam : &quot;&quot;
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    Language ||..o{ Submission : &quot;snapshot of&quot;
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    User ||..o{ Submission : &quot;by&quot;
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    ParameterSubmission ||--o{ ParameterSubmissionQuestion : &quot;&quot;
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    ParameterSubmissionQuestion ||--o{ ParameterSubmissionAllowedMotivation : &quot;&quot;
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    User ||..o{ ParameterSubmission : &quot;by&quot;
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    Submission {
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>        int id PK
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>        string language_id FK
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>        int submitted_by_id FK
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>        datetime submitted_at
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>        text note
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>    }
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>    ParameterSubmission {
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>        int id PK
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>        string parameter_id &quot;no FK, snapshot&quot;
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>        string parameter_name
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>        int submitted_by_id FK
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a>        datetime submitted_at
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a>        text note
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a>        text short_description
+<a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>        text long_description
+<a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a>        string implicational_condition
+<a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a>        bool is_active
+<a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a>        int position
+<a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a>        string schema
+<a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a>        string param_type
+<a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a>        string level_of_comparison
+<a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a>    }
+</code></pre></div>
+<p>Le <code>Submission*</code> congelano lo stato di una lingua nel tempo (per il restore), le <code>ParameterSubmission*</code> congelano la definizione di un parametro. <strong>In entrambi i casi</strong> i riferimenti verso <code>Language</code>/<code>Question</code>/<code>Motivation</code> sono salvati come stringhe (no FK rigide), così uno snapshot resta leggibile anche se l'entità originale è stata cancellata o rinominata. Pattern denormalizzato voluto.</p>
+<h4 id="archivio-domande">Archivio Domande<a class="headerlink" href="#archivio-domande" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>erDiagram
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    ArchivedQuestion ||--o{ ArchivedQuestionMotivation : &quot;&quot;
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    ArchivedQuestion ||--o{ ArchivedAnswer : &quot;&quot;
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    ArchivedAnswer ||--o{ ArchivedExample : &quot;&quot;
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    ArchivedAnswer ||--o{ ArchivedAnswerMotivation : &quot;&quot;
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    User ||..o{ ArchivedQuestion : &quot;archived_by&quot;
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    ArchivedQuestion {
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        int id PK
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>        string original_question_id &quot;string, no FK&quot;
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>        string parameter_id &quot;string, no FK&quot;
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>        string parameter_name
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>        text text
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>        bool is_stop_question
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>        bool is_active
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>        datetime archived_at
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>        int archived_by_id FK
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>        text archive_note
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>        int answers_count
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>        int examples_count
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>    }
+</code></pre></div>
+<p>Quando una <code>Question</code> viene modificata in modo non compatibile con i dati raccolti, le <code>Answer</code>/<code>Example</code>/<code>AnswerMotivation</code> collegate vengono spostate qui insieme a uno snapshot della Question stessa. Anche qui le motivations e le lingue sono denormalizzate (code/label/name come stringhe).</p>
+<h4 id="cronologia-site-content">Cronologia &amp; Site Content<a class="headerlink" href="#cronologia-site-content" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>erDiagram
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    User ||..o{ EntityVersion : &quot;by&quot;
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    User ||..o{ SiteContent : &quot;updated_by&quot;
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    EntityVersion {
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        int id PK
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        string entity_type &quot;parameter|question|motivation|language|answer&quot;
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>        string entity_id
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>        json snapshot &quot;stato dopo la modifica&quot;
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>        string operation &quot;create|update|delete&quot;
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>        string source &quot;manual|excel_import|system&quot;
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>        text note
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>        int user_id FK
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>        datetime created_at
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>    }
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>    SiteContent {
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>        string key PK &quot;es. instr_body&quot;
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>        text content &quot;HTML editor&quot;
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>        string page
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>        datetime updated_at
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>        int updated_by_id FK
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>    }
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>    Glossary {
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>        int id PK
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>        string word UK
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>        text description
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>    }
+</code></pre></div>
+<p><code>EntityVersion</code> è la tabella generica usata per audit/diff: ogni modifica di Parameter/Question/Motivation/Language/Answer ne genera una riga con lo snapshot completo, e nella UI History si visualizza il "prima/dopo" confrontando con la versione precedente. Vedi <a href="backend/services/versioning.py">services/versioning.py</a>.</p>
+<h3 id="63-modelli-chiave-dettaglio">6.3 Modelli chiave (dettaglio)<a class="headerlink" href="#63-modelli-chiave-dettaglio" title="Permanent link">&para;</a></h3>
+<p>Per le 5 entità più centrali ecco le <strong>invarianti</strong> importanti, che le tabelle di sopra non mostrano:</p>
+<h4 id="user-modelspy12-26"><code>User</code> (<a href="backend/models.py#L12-L26">models.py:12-26</a>)<a class="headerlink" href="#user-modelspy12-26" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>email</code> <code>UNIQUE</code>. Nel codice viene sempre <code>email.lower()</code> prima di salvare/cercare (vedi <a href="backend/routers/users.py">routers/users.py</a>).</li>
+<li><code>role</code> è un Enum Postgres con valori <code>admin|user|public</code>. Modificarlo richiede una migrazione Alembic dedicata (Alembic non gestisce nativamente l'evoluzione degli enum, va fatto a mano con <code>ALTER TYPE</code>).</li>
+<li><code>terms_accepted</code> / <code>terms_accepted_at</code> previsti per consenso GDPR ma oggi non esposti nella UI (gli account sono creati direttamente dall'admin in <a href="frontend/src/features/accounts/AccountCreate.jsx">AccountCreate.jsx</a>).</li>
+<li>L'eliminazione di un User che ha lingue assegnate non cascade-elimina la lingua: <code>assigned_user_id</code> viene messo a NULL (<a href="backend/routers/users.py">routers/users.py</a> <code>delete_account</code>).</li>
+</ul>
+<h4 id="language-modelspy31-76"><code>Language</code> (<a href="backend/models.py#L31-L76">models.py:31-76</a>)<a class="headerlink" href="#language-modelspy31-76" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>id</code> è una <strong>stringa</strong> di max 10 caratteri (es. <code>ITA</code>, <code>LATC</code>), case-insensitive nelle query (vedi pattern <code>func.lower(Language.id) == lang_id.lower()</code> in <a href="backend/routers/compilation.py">compilation.py</a>).</li>
+<li>I tre campi <code>top_level_family</code>, <code>family</code>, <code>grp</code> sono <strong>stringhe denormalizzate</strong>, parallele alle FK <code>top_family_id</code>/<code>family_id</code>/<code>group_id</code>. Tenute sincronizzate al save di <a href="frontend/src/features/languages/LanguageForm.jsx">LanguageForm.jsx</a>. Le stringhe restano la fonte di verità per filtri e export, le FK servono per il modulo "Taxonomy" (CRUD gerarchico).</li>
+<li><code>status</code> segue il workflow <code>pending → waiting_for_approval → approved/rejected → (reopen) pending</code>. Vedi §9.</li>
+<li><code>updated_at</code> è bumpato automaticamente da SQLAlchemy a ogni UPDATE della riga <code>Language</code>. <strong>Cambi alle answers non aggiornano questo campo.</strong></li>
+</ul>
+<h4 id="parameterdef-modelspy118-133"><code>ParameterDef</code> (<a href="backend/models.py#L118-L133">models.py:118-133</a>)<a class="headerlink" href="#parameterdef-modelspy118-133" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>id</code> stringa, max 10 caratteri (es. <code>FGM</code>, <code>SPK</code>).</li>
+<li><code>implicational_condition</code>: stringa con sintassi tipo <code>+SPK &amp; -DEM</code>, parsata da <a href="backend/services/logic_parser.py">services/logic_parser.py</a> (pyparsing). Validata al save in <a href="backend/routers/parameters.py">routers/parameters.py</a>.</li>
+<li><code>is_active=False</code> esclude il parametro dalla compilazione, dal DAG, da TableA, dagli export. Mantenere lo storico delle risposte è gestito dall'archivio (vedi sotto e §10).</li>
+<li><code>position</code> è l'ordine di visualizzazione (drag &amp; drop in ParameterList). Riordinare invoca <code>POST /api/admin/parameters/reorder</code> che riassegna le <code>position</code> di tutti i parametri.</li>
+<li>Cancellare un <code>ParameterDef</code> cascade-cancella le <code>Question</code> (cascade SQLAlchemy <code>all, delete-orphan</code>).</li>
+</ul>
+<h4 id="question-modelspy169-185"><code>Question</code> (<a href="backend/models.py#L169-L185">models.py:169-185</a>)<a class="headerlink" href="#question-modelspy169-185" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>id</code> stringa, max 40 caratteri (convenzione: <code>&lt;param_id&gt;_&lt;NN&gt;</code>, es. <code>FGM_01</code>).</li>
+<li><code>is_stop_question=True</code> segna le "domande di chiusura" del blocco parametro.</li>
+<li><code>instruction</code>, <code>instruction_yes</code>, <code>instruction_no</code>, <code>example_yes</code>, <code>help_info</code> sono testo libero che la UI di compilazione mostra contestualmente alla risposta scelta dal linguista (vedi <a href="frontend/src/features/compilation/QuestionRow.jsx">QuestionRow.jsx</a>).</li>
+<li><code>is_active=False</code>: la domanda non viene proposta in compilazione. Le risposte storiche si vedono ancora in TableA in modalità "questions" se l'admin spunta "show inactive".</li>
+<li>Modifiche distruttive (es. cambio <code>template_type</code>) spostano le Answer e gli Example collegati nell'archivio (vedi <a href="backend/services/archive_service.py">services/archive_service.py</a>).</li>
+</ul>
+<h4 id="answer-modelspy190-209"><code>Answer</code> (<a href="backend/models.py#L190-L209">models.py:190-209</a>)<a class="headerlink" href="#answer-modelspy190-209" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>UniqueConstraint(language_id, question_id)</code>: <strong>una sola Answer per (lingua, domanda)</strong>.</li>
+<li><code>response_text</code> è un Enum nullable <code>yes|no|unsure</code>. La stringa vuota nel payload viene normalizzata a <code>None</code> in <a href="backend/routers/compilation.py">compilation.py</a>.</li>
+<li>Vincolo applicativo (non DB): se <code>response_text in ('yes','unsure')</code>, <strong>almeno 2 esempi non vuoti</strong> devono essere presenti. Validato in <code>save_parameter_block</code> con <code>HTTPException(400, code="missing_examples")</code>. Il frontend usa il payload strutturato per scrollare alla card incriminata e applicarle un highlight rosso.</li>
+<li><code>updated_at</code> bumpato a ogni UPDATE: usato come <strong>fingerprint</strong> per l'optimistic concurrency check del save (vedi §9).</li>
+</ul>
+<hr />
+<h2 id="7-autenticazione-e-autorizzazione">7. Autenticazione e autorizzazione<a class="headerlink" href="#7-autenticazione-e-autorizzazione" title="Permanent link">&para;</a></h2>
+<h3 id="login">Login<a class="headerlink" href="#login" title="Permanent link">&para;</a></h3>
+<p>Endpoint: <code>POST /auth/login</code> (<a href="backend/routers/auth.py">routers/auth.py</a>).</p>
+<ul>
+<li>Rate-limit: 5 tentativi/minuto per IP (slowapi). Quando superato → HTTP 429.</li>
+<li>Verifica password con <code>bcrypt.checkpw</code> (<a href="backend/auth.py">auth.py</a>).</li>
+<li>Risposta: <code>{ access_token, token_type: "bearer", role, name }</code>.</li>
+</ul>
+<h3 id="jwt">JWT<a class="headerlink" href="#jwt" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Algoritmo: HS256 (configurabile via <code>JWT_ALGORITHM</code>).</li>
+<li>Payload: <code>{ sub: &lt;email&gt;, role: &lt;role&gt;, exp: &lt;utc_timestamp&gt; }</code>.</li>
+<li>Scadenza: <code>ACCESS_TOKEN_EXPIRE_MINUTES</code> (default 30).</li>
+<li>Niente refresh token, niente blacklist (vedi §15 Debt).</li>
+</ul>
+<h3 id="storage-lato-client">Storage lato client<a class="headerlink" href="#storage-lato-client" title="Permanent link">&para;</a></h3>
+<p>Il frontend salva il token in <strong>localStorage</strong>. Conseguenze:</p>
+<ul>
+<li>L'interceptor di request in <a href="frontend/src/api.js">api.js</a> aggiunge <code>Authorization: Bearer &lt;token&gt;</code> a ogni chiamata.</li>
+<li>L'interceptor di response gestisce 401: rimuove il token e (se non si è su <code>/</code>, <code>/login</code>, <code>/how-to-cite</code>) ridireziona a <code>/login</code>.</li>
+<li>Suscettibile a XSS: vedi <code>DEPLOY_NOTES.txt</code> §8 — migrazione a cookie HttpOnly è un debt noto.</li>
+</ul>
+<h3 id="dipendenze-server-side-dependenciespy">Dipendenze server-side (<a href="backend/dependencies.py">dependencies.py</a>)<a class="headerlink" href="#dipendenze-server-side-dependenciespy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>get_db()</code>: yields a <code>Session</code>, chiusa al return.</li>
+<li><code>get_current_user()</code>: decodifica il JWT, recupera lo <code>User</code> dal DB. 401 se token mancante/scaduto/firma non valida.</li>
+<li><code>require_admin()</code>: chiama <code>get_current_user</code> e poi controlla <code>role == "admin"</code>. 403 altrimenti.</li>
+</ul>
+<h3 id="mappa-autorizzazioni-endpoint">Mappa autorizzazioni endpoint<a class="headerlink" href="#mappa-autorizzazioni-endpoint" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Auth richiesta</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/auth/login</code></td>
+<td>nessuna</td>
+<td>rate-limited</td>
+</tr>
+<tr>
+<td><code>/healthz</code></td>
+<td>nessuna</td>
+<td>health check Docker</td>
+</tr>
+<tr>
+<td><code>/api/public/*</code></td>
+<td>nessuna</td>
+<td>mappa, site-content, glossario read-only</td>
+</tr>
+<tr>
+<td><code>/api/me</code>, <code>/api/me/password</code></td>
+<td><code>get_current_user</code></td>
+<td>profilo personale</td>
+</tr>
+<tr>
+<td><code>/api/languages/*/compilation</code>, <code>/save_block</code>, <code>/workflow/*</code></td>
+<td><code>get_current_user</code></td>
+<td>con check addizionale <code>assigned_user_id</code> per non-admin (vedi §9)</td>
+</tr>
+<tr>
+<td><code>/api/admin/*</code></td>
+<td><code>require_admin</code></td>
+<td>parametri, motivations, taxonomy, accounts, backups, history, migration, ecc.</td>
+</tr>
+<tr>
+<td><code>/api/tablea/options</code></td>
+<td><code>get_current_user</code></td>
+<td>usato anche dai filtri di LanguageList</td>
+</tr>
+<tr>
+<td><code>/api/tablea/matrix</code>, <code>/api/tablea/export/*</code></td>
+<td><code>require_admin</code></td>
+<td>TableA matrice + export</td>
+</tr>
+<tr>
+<td><code>/api/queries/*</code></td>
+<td><code>require_admin</code></td>
+<td>dashboard analitica Q1-Q10</td>
+</tr>
+</tbody>
+</table>
+<h3 id="frontend-adminroute">Frontend: <code>&lt;AdminRoute&gt;</code><a class="headerlink" href="#frontend-adminroute" title="Permanent link">&para;</a></h3>
+<p><a href="frontend/src/components/AdminRoute.jsx">components/AdminRoute.jsx</a> protegge le rotte SPA admin-only leggendo <code>useAuth().user.role</code> (NON da <code>localStorage</code>, per evitare bypass via DevTools). È solo UX: la difesa vera è server-side.</p>
+<hr />
+<h2 id="8-api-reference">8. API reference<a class="headerlink" href="#8-api-reference" title="Permanent link">&para;</a></h2>
+<p>Per ogni router elenco prefisso, scope e endpoint principali. Per il dettaglio dei payload Pydantic vedere il file linkato.</p>
+<h3 id="auth-routersauthpy"><code>/auth</code> (<a href="backend/routers/auth.py">routers/auth.py</a>)<a class="headerlink" href="#auth-routersauthpy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /auth/login</code></td>
+<td>nessuna</td>
+<td>rate-limited 5/min/IP</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apime-routersuserspy"><code>/api/me</code> (<a href="backend/routers/users.py">routers/users.py</a>)<a class="headerlink" href="#apime-routersuserspy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/me</code></td>
+<td>utente</td>
+<td>profilo</td>
+</tr>
+<tr>
+<td><code>PUT /api/me</code></td>
+<td>utente</td>
+<td>aggiorna name/surname/email (con validazione formato email)</td>
+</tr>
+<tr>
+<td><code>PUT /api/me/password</code></td>
+<td>utente</td>
+<td>cambia password (richiede <code>old_password</code> + min 8 char)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apiadminaccounts-routersuserspy"><code>/api/admin/accounts</code> (<a href="backend/routers/users.py">routers/users.py</a>)<a class="headerlink" href="#apiadminaccounts-routersuserspy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/admin/accounts</code></td>
+<td>admin</td>
+<td>lista utenti + lingue assegnate</td>
+</tr>
+<tr>
+<td><code>GET /api/admin/accounts/{user_id}</code></td>
+<td>admin</td>
+<td>dettaglio utente</td>
+</tr>
+<tr>
+<td><code>POST /api/admin/accounts</code></td>
+<td>admin</td>
+<td>crea utente (validazione email + password)</td>
+</tr>
+<tr>
+<td><code>PUT /api/admin/accounts/{user_id}/languages</code></td>
+<td>admin</td>
+<td>(ri)assegna pool di lingue (sostituisce il precedente)</td>
+</tr>
+<tr>
+<td><code>DELETE /api/admin/accounts/{user_id}</code></td>
+<td>admin</td>
+<td>safeguard: non elimina te stesso, non l'ultimo admin</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apilanguages-compilation-routerscompilationpy"><code>/api/languages</code> (compilation) (<a href="backend/routers/compilation.py">routers/compilation.py</a>)<a class="headerlink" href="#apilanguages-compilation-routerscompilationpy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/languages/{lang_id}/compilation</code></td>
+<td>utente</td>
+<td>bundle dati per la pagina di compilazione (tutti i parametri attivi + answers + admin_note solo per admin)</td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/parameters/{param_id}/save_block</code></td>
+<td>utente</td>
+<td>salva un blocco parametro: optimistic concurrency check, validazione <code>≥2 esempi su yes/unsure</code>, ricalcolo <code>LanguageParameter</code>, DAG eseguito in <code>BackgroundTask</code></td>
+</tr>
+<tr>
+<td><code>GET /api/languages/{lang_id}/debug</code></td>
+<td>admin</td>
+<td>debug page (valori init/eval per tutti i parametri + condizioni)</td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/submit</code></td>
+<td>utente assegnato</td>
+<td><code>pending\|rejected → waiting_for_approval</code></td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/approve</code></td>
+<td>admin</td>
+<td><code>waiting_for_approval → approved</code></td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/reject</code></td>
+<td>admin</td>
+<td><code>waiting_for_approval → rejected</code>, con nota</td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/reopen</code></td>
+<td>utente assegnato o admin</td>
+<td><code>rejected → pending</code></td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/admin_force_*</code></td>
+<td>admin</td>
+<td>force-transitions: approve/reject/pending/waiting da QUALSIASI stato</td>
+</tr>
+<tr>
+<td><code>POST /api/languages/{lang_id}/workflow/run_dag</code></td>
+<td>admin</td>
+<td>esegue DAG manualmente</td>
+</tr>
+<tr>
+<td><code>GET /api/languages/examples/search</code></td>
+<td>utente</td>
+<td>ricerca esempi per il selettore di import in compilazione (priorità stessa-lingua)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apiadminlanguages-routerslanguagespy"><code>/api/admin/languages</code> (<a href="backend/routers/languages.py">routers/languages.py</a>)<a class="headerlink" href="#apiadminlanguages-routerslanguagespy" title="Permanent link">&para;</a></h3>
+<p>CRUD lingue (list, get, create, update, delete, duplicate). Vedi file per il dettaglio.</p>
+<h3 id="apiadminparameters-routersparameterspy"><code>/api/admin/parameters</code> (<a href="backend/routers/parameters.py">routers/parameters.py</a>)<a class="headerlink" href="#apiadminparameters-routersparameterspy" title="Permanent link">&para;</a></h3>
+<p>CRUD parametri + reorder + deactivate (con conferma password). Endpoint export PDF di un parametro o di tutti.</p>
+<h3 id="apiadminparameters_graph-routersparameters_graphpy"><code>/api/admin/parameters_graph</code> (<a href="backend/routers/parameters_graph.py">routers/parameters_graph.py</a>)<a class="headerlink" href="#apiadminparameters_graph-routersparameters_graphpy" title="Permanent link">&para;</a></h3>
+<p>Grafo del DAG implicazionale visualizzabile in <a href="frontend/src/features/parameters/ParameterGraph.jsx">ParameterGraph.jsx</a>.</p>
+<h3 id="apiadminquestions-routersquestionspy"><code>/api/admin/questions</code> (<a href="backend/routers/questions.py">routers/questions.py</a>)<a class="headerlink" href="#apiadminquestions-routersquestionspy" title="Permanent link">&para;</a></h3>
+<p>CRUD domande. Modifiche distruttive (cambio <code>template_type</code> o cancellazione) spostano le Answer collegate nell'<code>ArchivedQuestion</code>.</p>
+<h3 id="apiadminmotivations-routersmotivationspy"><code>/api/admin/motivations</code> (<a href="backend/routers/motivations.py">routers/motivations.py</a>)<a class="headerlink" href="#apiadminmotivations-routersmotivationspy" title="Permanent link">&para;</a></h3>
+<p>CRUD motivations + collegamento a <code>QuestionAllowedMotivation</code>.</p>
+<h3 id="apiadmintaxonomy-routerstaxonomypy"><code>/api/admin/taxonomy</code> (<a href="backend/routers/taxonomy.py">routers/taxonomy.py</a>)<a class="headerlink" href="#apiadmintaxonomy-routerstaxonomypy" title="Permanent link">&para;</a></h3>
+<p>CRUD gerarchia top-family &gt; family &gt; group. Drag &amp; drop in <a href="frontend/src/features/taxonomy/Taxonomy.jsx">Taxonomy.jsx</a>.</p>
+<h3 id="apiglossary-apiadminglossary-routersglossarypy"><code>/api/glossary</code> + <code>/api/admin/glossary</code> (<a href="backend/routers/glossary.py">routers/glossary.py</a>)<a class="headerlink" href="#apiglossary-apiadminglossary-routersglossarypy" title="Permanent link">&para;</a></h3>
+<p><code>/api/glossary</code> (no auth) read-only, <code>/api/admin/glossary</code> CRUD admin.</p>
+<h3 id="apicontentkey-apiadminsite-contentkey-apipublicsite-content-apipublicmap-data-routerssite_contentpy"><code>/api/content/{key}</code>, <code>/api/admin/site-content/{key}</code>, <code>/api/public/site-content</code>, <code>/api/public/map-data</code> (<a href="backend/routers/site_content.py">routers/site_content.py</a>)<a class="headerlink" href="#apicontentkey-apiadminsite-contentkey-apipublicsite-content-apipublicmap-data-routerssite_contentpy" title="Permanent link">&para;</a></h3>
+<p>CMS minimo per i blocchi HTML editabili (Instructions, How to cite). Public endpoints per home e how-to-cite.</p>
+<h3 id="apiinstructions-routersinstructionspy"><code>/api/instructions</code> (<a href="backend/routers/instructions.py">routers/instructions.py</a>)<a class="headerlink" href="#apiinstructions-routersinstructionspy" title="Permanent link">&para;</a></h3>
+<p>Helper specifici per la pagina Instructions.</p>
+<h3 id="apitablea-routerstableapy"><code>/api/tablea</code> (<a href="backend/routers/tablea.py">routers/tablea.py</a>)<a class="headerlink" href="#apitablea-routerstableapy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/tablea/options</code></td>
+<td>utente</td>
+<td>tendine filtri (top family, family, group, schema, type, level, template, lingue)</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/matrix</code></td>
+<td>admin</td>
+<td>matrice cross-language (params o questions in righe)</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/xlsx</code></td>
+<td>admin</td>
+<td>XLSX con header citazione</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/csv</code></td>
+<td>admin</td>
+<td>CSV trasposto</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/distances</code></td>
+<td>admin</td>
+<td>matrici Hamming/Jaccard in <code>.txt</code></td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/geo_distances</code></td>
+<td>admin</td>
+<td>matrici GCD in km</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/dendrograms</code></td>
+<td>admin</td>
+<td>dendrogrammi UPGMA in PNG</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/cluster_map</code></td>
+<td>admin</td>
+<td>mappa interattiva HTML cluster UPGMA</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/pca</code></td>
+<td>admin</td>
+<td>analisi PCA in PNG</td>
+</tr>
+<tr>
+<td><code>POST /api/tablea/export/mantel</code></td>
+<td>admin</td>
+<td GCD_="GCD," Hamming_="Hamming," Jaccard_="Jaccard+">Mantel test su sottoinsieme di</td>
+</tr>
+</tbody>
+</table>
+<h3 id="apiqueries-routersqueriespy"><code>/api/queries</code> (<a href="backend/routers/queries.py">routers/queries.py</a>)<a class="headerlink" href="#apiqueries-routersqueriespy" title="Permanent link">&para;</a></h3>
+<p>10 query analitiche (Q1-Q10). Vedi <a href="frontend/src/features/queries/QueriesDashboard.jsx">QueriesDashboard.jsx</a> per le label utente. Tutti gli endpoint admin-only.</p>
+<h3 id="apiadmindashboard-apiuserdashboard-routersdashboardpy"><code>/api/admin/dashboard</code>, <code>/api/user/dashboard</code> (<a href="backend/routers/dashboard.py">routers/dashboard.py</a>)<a class="headerlink" href="#apiadmindashboard-apiuserdashboard-routersdashboardpy" title="Permanent link">&para;</a></h3>
+<p>Aggregati per il widget Dashboard (admin: lingue da revisionare, parametri rossi, ultime modifiche; user: lingue assegnate con progress).</p>
+<h3 id="apiadminbackups-apiadminbackupsparameters-routersbackuppy-routersparameters_backuppy"><code>/api/admin/backups</code>, <code>/api/admin/backups/parameters</code> (<a href="backend/routers/backup.py">routers/backup.py</a>, <a href="backend/routers/parameters_backup.py">routers/parameters_backup.py</a>)<a class="headerlink" href="#apiadminbackups-apiadminbackupsparameters-routersbackuppy-routersparameters_backuppy" title="Permanent link">&para;</a></h3>
+<p>Snapshot via Submission/ParameterSubmission, listing per timestamp.</p>
+<h3 id="apiadminmigration-routersmigrationpy"><code>/api/admin/migration</code> (<a href="backend/routers/migration.py">routers/migration.py</a>)<a class="headerlink" href="#apiadminmigration-routersmigrationpy" title="Permanent link">&para;</a></h3>
+<p>Import del bundle ZIP dal sito vecchio. <code>wipe=true</code> opzionale. File caps e validation antizip-bomb in <a href="backend/services/migration_import.py">services/migration_import.py</a>.</p>
+<h3 id="apiadminbackup_restore-routersbackup_restorepy"><code>/api/admin/backup_restore</code> (<a href="backend/routers/backup_restore.py">routers/backup_restore.py</a>)<a class="headerlink" href="#apiadminbackup_restore-routersbackup_restorepy" title="Permanent link">&para;</a></h3>
+<p>Restore di un backup pregresso da bundle ZIP.</p>
+<h3 id="apiadminimport-excel-routersimport_excelpy"><code>/api/admin/import-excel</code> (<a href="backend/routers/import_excel.py">routers/import_excel.py</a>)<a class="headerlink" href="#apiadminimport-excel-routersimport_excelpy" title="Permanent link">&para;</a></h3>
+<p>Round-trip Excel admin: import strutturato cap 50 MB, <a href="backend/services/excel_import.py">services/excel_import.py</a>.</p>
+<h3 id="apiexport-routersexportpy"><code>/api/export</code> (<a href="backend/routers/export.py">routers/export.py</a>)<a class="headerlink" href="#apiexport-routersexportpy" title="Permanent link">&para;</a></h3>
+<p>Export bundle ZIP di lingue (job asincrono con polling status), export GCD txt, export metadata XLSX.</p>
+<h3 id="apiadminrecompute-routersrecomputepy"><code>/api/admin/recompute</code> (<a href="backend/routers/recompute.py">routers/recompute.py</a>)<a class="headerlink" href="#apiadminrecompute-routersrecomputepy" title="Permanent link">&para;</a></h3>
+<p>Job asincrono di "recompute final values for all languages": rilancia DAG + consolidate su tutte le lingue. Polling status simile all'export ZIP.</p>
+<h3 id="apiadminversions-apiadminarchived-questions-routershistorypy-routersarchived_questionspy"><code>/api/admin/versions</code>, <code>/api/admin/archived-questions</code> (<a href="backend/routers/history.py">routers/history.py</a>, <a href="backend/routers/archived_questions.py">routers/archived_questions.py</a>)<a class="headerlink" href="#apiadminversions-apiadminarchived-questions-routershistorypy-routersarchived_questionspy" title="Permanent link">&para;</a></h3>
+<p>Filtraggio cronologia <code>EntityVersion</code> + accesso all'archivio domande/risposte.</p>
+<hr />
+<h2 id="9-workflow-di-compilazione-di-una-lingua">9. Workflow di compilazione di una lingua<a class="headerlink" href="#9-workflow-di-compilazione-di-una-lingua" title="Permanent link">&para;</a></h2>
+<h3 id="stati">Stati<a class="headerlink" href="#stati" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>            submit
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>   pending ─────────► waiting_for_approval
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>      ▲                    │
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>      │                    │ approve  │ reject
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>      │ admin_force_pending│          │
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>      │                    ▼          ▼
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>      │                approved   rejected
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>      │                              │
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>      └──────────  reopen  ◄─────────┘
+</code></pre></div>
+<h3 id="permessi">Permessi<a class="headerlink" href="#permessi" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>submit</code>: solo l'utente assegnato. Admin no.</li>
+<li><code>approve</code>/<code>reject</code>: solo admin.</li>
+<li><code>reopen</code>: utente assegnato o admin.</li>
+<li><code>admin_force_*</code>: solo admin, da qualsiasi stato (per fix manuali, rollback, dopo migrazione bundle).</li>
+</ul>
+<h3 id="lock-di-scrittura">Lock di scrittura<a class="headerlink" href="#lock-di-scrittura" title="Permanent link">&para;</a></h3>
+<p><code>_ensure_can_modify</code> (<a href="backend/routers/compilation.py">compilation.py</a>):</p>
+<ul>
+<li><strong>admin</strong>: può sempre scrivere, a prescindere dallo stato.</li>
+<li><strong>utente assegnato</strong>: può scrivere solo se <code>status in {pending, rejected}</code>.</li>
+<li>altri: <code>403 Forbidden</code>.</li>
+</ul>
+<h3 id="save_parameter_block-cuore-dellapplicazione"><code>save_parameter_block</code> (cuore dell'applicazione)<a class="headerlink" href="#save_parameter_block-cuore-dellapplicazione" title="Permanent link">&para;</a></h3>
+<p>Endpoint: <code>POST /api/languages/{lang_id}/parameters/{param_id}/save_block</code> (<a href="backend/routers/compilation.py">compilation.py</a>).</p>
+<p>Sequenza:</p>
+<ol>
+<li><strong>Lock pessimistico</strong> sulla <code>Language</code> (<code>SELECT ... FOR UPDATE</code>) per serializzare due save concorrenti sulla stessa lingua.</li>
+<li><strong><code>_ensure_can_modify</code></strong> (vedi sopra).</li>
+<li><strong>Optimistic concurrency check</strong>: il client manda <code>expected_last_modified</code> (il MAX(updated_at) delle Answer del parametro al momento del fetch). Se il valore corrente nel DB è diverso → 409 con <code>code: stale_block</code>. Tipico caso: admin e linguista che editano in parallelo.</li>
+<li><strong>Upsert <code>LanguageParameterStatus</code></strong> con <code>is_unsure</code> (e <code>admin_note</code> se admin).</li>
+<li><strong>Per ogni Answer in payload</strong>:</li>
+<li>normalizza <code>response_text</code> (<code>""</code> → <code>None</code>);</li>
+<li>se <code>response_text in ('yes', 'unsure')</code> valida ≥2 esempi non vuoti, altrimenti <code>400 missing_examples</code> con <code>question_id</code> dell'incriminata (frontend usa il campo per scrollare e flashare la card);</li>
+<li>upsert dell'<code>Answer</code>, ricrea <code>AnswerMotivation</code> (se <code>no</code>) e <code>Example</code> (se <code>yes</code>/<code>unsure</code>);</li>
+<li>aggiungi alla lista <code>touched</code>.</li>
+<li><strong>Versioning</strong>: per ogni Answer touched, se è cambiata davvero (snapshot diff), registra una <code>EntityVersion</code>.</li>
+<li><code>db.commit()</code>.</li>
+<li><strong>Recompute consolidate</strong> del parametro per la lingua (<code>recompute_and_persist_language_parameter</code>): ricalcola <code>LanguageParameter.value_orig</code> e <code>warning_orig</code> aggregando le Answer.</li>
+<li><code>db.commit()</code>.</li>
+<li><strong>DAG</strong> (<code>run_dag_for_language</code>) schedulato come <code>BackgroundTask</code>: parte dopo l'invio della response al client. Aggiorna <code>LanguageParameterEval.value_eval/warning_eval</code> per tutti i parametri della lingua, propagando le condizioni implicazionali.</li>
+</ol>
+<p>Ritorno: <code>{ detail, last_modified }</code> — il client usa <code>last_modified</code> come nuovo fingerprint per il prossimo save.</p>
+<h3 id="il-dag-implicazionale">Il DAG implicazionale<a class="headerlink" href="#il-dag-implicazionale" title="Permanent link">&para;</a></h3>
+<p>Vedi <a href="backend/services/dag_eval.py">services/dag_eval.py</a>.</p>
+<ul>
+<li>Per ogni <code>ParameterDef.implicational_condition</code> (es. <code>+SPK &amp; -DEM</code>), si estraggono i parametri "ref" citati.</li>
+<li>Si costruisce il grafo <code>ref → target</code> (un parametro target dipende dai suoi ref).</li>
+<li>Topological sort.</li>
+<li>In ordine, per ogni parametro target: si valuta la condizione usando i <code>value_eval</code> (o, se assenti, <code>value_orig</code>) dei ref. Se la condizione <strong>non è soddisfatta</strong>, il <code>value_eval</code> del target è forzato a <code>0</code> (neutralizzato) con <code>warning_eval=True</code>.</li>
+<li>Le warning si propagano: se un ref ha <code>warning_eval=True</code>, anche tutti i suoi discendenti ereditano la warning.</li>
+</ul>
+<p>L'idea: un parametro è "comparabile" solo se le sue precondizioni linguistiche sono soddisfatte; altrimenti il valore originale è mascherato da uno <code>0</code>.</p>
+<p><code>logic_parser.py</code> usa <strong>pyparsing</strong> (versione lock-ata <code>3.1.2</code>) per supportare grammatica <code>+P</code>, <code>-P</code>, <code>0P</code>, <code>&amp;</code>, <code>|</code>, parentesi, <code>~</code> (not).</p>
+<hr />
+<h2 id="10-funzionalita-chiave">10. Funzionalità chiave<a class="headerlink" href="#10-funzionalita-chiave" title="Permanent link">&para;</a></h2>
+<h3 id="tablea-routerstableapy-featurestableatableajsx">TableA (<a href="backend/routers/tablea.py">routers/tablea.py</a>, <a href="frontend/src/features/tablea/TableA.jsx">features/tablea/TableA.jsx</a>)<a class="headerlink" href="#tablea-routerstableapy-featurestableatableajsx" title="Permanent link">&para;</a></h3>
+<p>Matrice <strong>lingue × parametri</strong> (o lingue × domande). Filtri: top-family/family/group, lingue specifiche (checkbox), schema/type/level del parametro, template/stop della domanda. Selezione manuale righe.</p>
+<p>Export: XLSX, CSV trasposto, matrici di distanza Hamming/Jaccard (.txt zip), distanze geografiche GCD (km), dendrogrammi PNG, cluster map HTML interattiva, PCA, Mantel test.</p>
+<h3 id="queries-dashboard-q1-q10-routersqueriespy-featuresqueriesqueriesdashboardjsx">Queries Dashboard (Q1-Q10) (<a href="backend/routers/queries.py">routers/queries.py</a>, <a href="frontend/src/features/queries/QueriesDashboard.jsx">features/queries/QueriesDashboard.jsx</a>)<a class="headerlink" href="#queries-dashboard-q1-q10-routersqueriespy-featuresqueriesqueriesdashboardjsx" title="Permanent link">&para;</a></h3>
+<p>Dashboard di interrogazione del DB con 10 viste pre-definite:</p>
+<ul>
+<li>Q1: condizioni implicazionali per parametro</li>
+<li>Q2: valori del parametro su tutte le lingue</li>
+<li>Q3: "perché un parametro è neutralizzato per una lingua" (debug del DAG con blame)</li>
+<li>Q4-Q6: parametri con valore +/-/0 per lingua</li>
+<li>Q7: parametri comparabili tra coppie di lingue</li>
+<li>Q8-Q9: domande con yes/no per lingua</li>
+<li>Q10: risposte ed esempi per domanda</li>
+</ul>
+<p>Q3 (<code>BlameTable</code>) merita una nota: ricostruisce il "perché" un parametro è stato forzato a 0 mostrando quale condizione è fallita e qual è il valore di ogni ref citato.</p>
+<h3 id="history-backups-featureshistory">History &amp; Backups (<a href="frontend/src/features/history/">features/history/</a>)<a class="headerlink" href="#history-backups-featureshistory" title="Permanent link">&para;</a></h3>
+<p>4 tab:</p>
+<ul>
+<li><strong>Change history</strong> — <code>EntityVersion</code> filtrabile (entity_type, operation, source, user, date, search). Drawer con diff prima/dopo per ogni versione.</li>
+<li><strong>Answer changes</strong> — stesso, focalizzato sulle modifiche <code>entity_type=answer</code>.</li>
+<li><strong>Full backups</strong> — Submission e ParameterSubmission listate per timestamp, dettaglio drawer.</li>
+<li><strong>Old questions archive</strong> — domande archiviate con le risposte storicizzate.</li>
+</ul>
+<h3 id="backup-migration">Backup &amp; Migration<a class="headerlink" href="#backup-migration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Bundle ZIP</strong> scaricabile/uploadabile da <a href="frontend/src/features/admin/BackupRestore.jsx">BackupRestore.jsx</a> e <a href="frontend/src/features/admin/MigrationImport.jsx">MigrationImport.jsx</a>. Cap 200 MB, validation contro path-traversal e zip-bomb.</li>
+<li><strong>pg_dump nightly</strong> dal sidecar <code>pcm_backup</code> (vedi <a href="docker-compose.prod.yml">docker-compose.prod.yml</a>). Volume <code>pcm_backups</code>, KEEP=3.</li>
+<li><strong>Excel import/export</strong>: round-trip strutturato in <a href="backend/services/excel_import.py">services/excel_import.py</a> e <a href="backend/services/excel_export.py">services/excel_export.py</a>. Cap 50 MB sul file.</li>
+</ul>
+<hr />
+<h2 id="11-servizi-e-processi-in-background">11. Servizi e processi in background<a class="headerlink" href="#11-servizi-e-processi-in-background" title="Permanent link">&para;</a></h2>
+<h3 id="backgroundtasks-di-fastapi"><code>BackgroundTasks</code> di FastAPI<a class="headerlink" href="#backgroundtasks-di-fastapi" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>_run_dag_in_background</code> (<a href="backend/routers/compilation.py">compilation.py</a>): post-<code>save_block</code>, gira il DAG su una sessione DB dedicata. Errori loggati ma mai propagati.</li>
+</ul>
+<h3 id="job-asincroni-con-polling">Job asincroni con polling<a class="headerlink" href="#job-asincroni-con-polling" title="Permanent link">&para;</a></h3>
+<p>Pattern usato per export ZIP (<code>/api/export/languages/zip/*</code>) e recompute massivo (<code>/api/admin/recompute/all</code>):</p>
+<ol>
+<li><code>POST /start</code> → restituisce <code>{ job_id }</code>, lavoro accodato in <code>services/migration_progress.py</code>.</li>
+<li>Frontend polla <code>GET /status/{job_id}</code> ogni 1.5s leggendo <code>{ phase, phase_label, current, total, finished, error }</code>.</li>
+<li>Quando <code>finished:true</code> e niente <code>error</code>: <code>GET /download/{job_id}</code> per scaricare il file (oppure messaggio di successo per recompute).</li>
+</ol>
+<p>Cleanup: TTL 1h sui job completati, no cancel server-side (cancel = chiudo solo il toast, il job continua).</p>
+<h3 id="sidecar-di-prod">Sidecar di prod<a class="headerlink" href="#sidecar-di-prod" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>pcm_backup</code>: while-true loop con <code>pg_dump</code> + ritenzione KEEP=3.</li>
+<li><code>pcm_cleaner</code>: <code>docker prune</code> giornaliero (containers/images/builder/network), volumi nominati intoccati.</li>
+</ul>
+<hr />
+<h2 id="12-frontend-spa">12. Frontend SPA<a class="headerlink" href="#12-frontend-spa" title="Permanent link">&para;</a></h2>
+<h3 id="routing-appjsx">Routing (<a href="frontend/src/App.jsx">App.jsx</a>)<a class="headerlink" href="#routing-appjsx" title="Permanent link">&para;</a></h3>
+<p><code>createBrowserRouter</code> v6 con tre layer di rotta:</p>
+<ul>
+<li><strong>rotte pubbliche</strong> wrappate da <code>&lt;ConditionalLayout&gt;</code> (Layout normale se loggato, footer pubblico se no): <code>/</code>, <code>/how-to-cite</code>, <code>/login</code>.</li>
+<li><strong>rotte autenticate generiche</strong> wrappate da <code>&lt;Layout&gt;</code>: <code>/dashboard</code>, <code>/me</code>, <code>/languages</code>, <code>/languages/:id/data</code>, <code>/glossary</code>, <code>/instructions</code>.</li>
+<li><strong>rotte admin</strong> wrappate da <code>&lt;AdminRoute&gt;&lt;Layout&gt;</code>: tutto sotto <code>/admin/*</code>, plus <code>/languages/add</code>, <code>/languages/:id/edit|debug</code>, <code>/tablea</code>, <code>/queries</code>.</li>
+</ul>
+<p>Il <code>Layout</code> ha:</p>
+<ul>
+<li>sidebar collassabile (stato persistito in <code>localStorage</code> chiave <code>pcm-sidebar-collapsed</code>);</li>
+<li>topbar con breadcrumb auto-generato dal pathname (vedi <code>PATH_LABELS</code> in <a href="frontend/src/components/Layout.jsx">Layout.jsx</a>);</li>
+<li>toggle dark/light theme (chiave <code>pcm-theme</code>);</li>
+<li><code>BackToTop</code> quando <code>scrollY &gt; 400</code>;</li>
+<li><code>SiteFooter</code> con link a Privacy Policy, Terms of Use, contatti.</li>
+</ul>
+<h3 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h3>
+<p><a href="frontend/src/context/AuthContext.jsx">AuthContext.jsx</a>: provider unico per <code>user</code>, <code>loading</code>, <code>login(token)</code>, <code>logout(redirectTo='/login')</code>, <code>isAdmin</code>. Caricato dentro il <code>RouterProvider</code> per consentire ai consumer di usare hooks del router.</p>
+<h3 id="axios-client-centralizzato-apijs"><code>axios</code> client centralizzato (<a href="frontend/src/api.js">api.js</a>)<a class="headerlink" href="#axios-client-centralizzato-apijs" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>baseURL</code>: in dev <code>http://localhost:8000</code>, in prod <code>''</code> (path relativi serviti da Caddy).</li>
+<li>Interceptor request: aggiunge <code>Authorization: Bearer &lt;token&gt;</code> se presente.</li>
+<li>Interceptor response: su 401 rimuove il token e ridireziona a <code>/login</code> (eccetto se si è già su rotte pubbliche <code>/</code>, <code>/login</code>, <code>/how-to-cite</code>).</li>
+</ul>
+<h3 id="pattern-di-dirty-tracking-nei-form">Pattern di dirty tracking nei form<a class="headerlink" href="#pattern-di-dirty-tracking-nei-form" title="Permanent link">&para;</a></h3>
+<p>I form più complessi (es. compilazione lingua) usano:</p>
+<ul>
+<li><code>useFormDraft</code> (<a href="frontend/src/utils/useFormDraft.js">utils/useFormDraft.js</a>): autosave del draft in localStorage con namespace per evitare clash tra entità diverse;</li>
+<li><code>useUnsavedChangesGuard</code> (<a href="frontend/src/utils/useUnsavedChangesGuard.js">utils/useUnsavedChangesGuard.js</a>): unisce <code>beforeunload</code> (chiusura tab/refresh) + <code>useBlocker</code> di react-router (navigazione interna, breadcrumb, back).</li>
+</ul>
+<p>Vedi <a href="frontend/src/features/compilation/LanguageData.jsx">LanguageData.jsx</a> per il pattern completo.</p>
+<h3 id="esempio-clipboard-utilsexampleclipboardjs">Esempio clipboard (<a href="frontend/src/utils/exampleClipboard.js">utils/exampleClipboard.js</a>)<a class="headerlink" href="#esempio-clipboard-utilsexampleclipboardjs" title="Permanent link">&para;</a></h3>
+<p>Clipboard interna (localStorage) per copiare un esempio da una question all'altra <strong>della stessa lingua</strong>. Persistente cross-tab. Si svuota automaticamente quando si entra in una lingua diversa da quella di origine, per evitare di "trascinare" un esempio orfano.</p>
+<hr />
+<h2 id="13-deploy">13. Deploy<a class="headerlink" href="#13-deploy" title="Permanent link">&para;</a></h2>
+<p>Documentato a parte. Vedi:</p>
+<ul>
+<li><a href="DEPLOY_NOTES.txt">DEPLOY_NOTES.txt</a> — note architetturali, sezioni 0-10</li>
+<li><a href="DEPLOY_PROCEDURA.txt">DEPLOY_PROCEDURA.txt</a> — checklist clic-per-clic per il go-live</li>
+</ul>
+<p>In sintesi: stack di prod = <code>db + backend + frontend_build (one-shot) + caddy + backup + cleaner</code> orchestrato da Portainer su una VM. HTTPS automatico via Let's Encrypt. Ribuilds via "Pull and redeploy".</p>
+<hr />
+<h2 id="14-testing">14. Testing<a class="headerlink" href="#14-testing" title="Permanent link">&para;</a></h2>
+<h3 id="backend">Backend<a class="headerlink" href="#backend" title="Permanent link">&para;</a></h3>
+<p>Suite pytest in <a href="backend/tests/">backend/tests/</a> con fixture comune in <a href="backend/tests/conftest.py">conftest.py</a>: SQLite in-memory + <code>metadata.create_all</code> dai modelli SQLAlchemy.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">backend</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">pytest</span> <span class="n">httpx</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">backend</span> <span class="n">bash</span> <span class="n">-lc</span> <span class="s2">&quot;cd /app &amp;&amp; python -m pytest -q&quot;</span>
+</code></pre></div>
+<p>Nota: pytest <strong>non è in <code>requirements.txt</code></strong> (non è una dipendenza runtime); installalo solo nel container quando serve.</p>
+<p>Test attuali coprono:</p>
+<ul>
+<li><code>test_versioning.py</code> — registrazione e diff <code>EntityVersion</code></li>
+<li><code>test_excel_import.py</code> — round-trip Excel, gestione errori</li>
+<li><code>test_excel_export.py</code> — generazione XLSX</li>
+<li><code>test_backup_restore.py</code> — backup + restore di submission</li>
+</ul>
+<p>⚠ <strong>Debt noto</strong> (<a href="#15-debt-tecnico-noto">Bug 7</a>): 5 test in <code>test_excel_import.py</code> cercano stringhe italiane (<code>"non esiste"</code>, <code>"errore upstream"</code>, <code>"Sintassi"</code>) ma il codice produce stringhe inglesi. Da riallineare.</p>
+<h3 id="frontend">Frontend<a class="headerlink" href="#frontend" title="Permanent link">&para;</a></h3>
+<p>Nessuna suite di test al momento. Lint via <code>eslint</code>. Build di produzione = test implicito di compilazione.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">frontend</span> <span class="n">npx</span> <span class="n">eslint</span> <span class="n">src</span><span class="p">/</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">docker</span> <span class="n">compose</span> <span class="n">exec</span> <span class="n">frontend</span> <span class="n">npm</span> <span class="n">run</span> <span class="n">build</span>
+</code></pre></div>
+<p>Lint segnala 2 errori pre-esistenti che abbiamo deciso di non risolvere (vedi §15).</p>
+<hr />
+<h2 id="15-debt-tecnico-noto">15. Debt tecnico noto<a class="headerlink" href="#15-debt-tecnico-noto" title="Permanent link">&para;</a></h2>
+<p>Cose <strong>non bloccanti</strong> ma da pulire un domani.</p>
+<h3 id="sicurezza-robustezza">Sicurezza / robustezza<a class="headerlink" href="#sicurezza-robustezza" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Token in cookie HttpOnly</strong> invece di localStorage. Oggi un XSS legge il token. Richiede modifiche FE+BE (set-cookie SameSite=Strict). Già documentato in <code>DEPLOY_NOTES.txt</code> §8.</li>
+<li><strong>Refresh token + blacklist</strong>: oggi un token rubato vive 30 minuti senza revoca possibile.</li>
+<li><strong>Reset password via email</strong>: bloccato finché non arriva la API key SMTP dei servizi informatici Unimore.</li>
+</ul>
+<h3 id="code-quality">Code quality<a class="headerlink" href="#code-quality" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Bug 7</strong> — i 5 test di <code>test_excel_import.py</code> cercano stringhe italiane mentre il codice produce stringhe inglesi:<ul>
+<li><code>test_unknown_param_id_not_created</code></li>
+<li><code>test_unknown_question_id_not_created</code></li>
+<li><code>test_unknown_motivation_code_not_created</code></li>
+<li><code>test_cascade_qam_when_motivation_failed</code></li>
+<li><code>test_param_invalid_condition_skipped</code>
+Va deciso se aggiornare i test (accettando i18n inglese) o ritradurre in italiano.</li>
+</ul>
+</li>
+<li><strong>ESLint #2</strong> (<a href="frontend/src/context/AuthContext.jsx#L18">AuthContext.jsx:18</a>): <code>setLoading(false)</code> chiamato sincronamente nell'<code>useEffect</code>. Anti-pattern minore ("cascading renders"). Fix possibile con <code>useState(() =&gt; Boolean(localStorage.getItem('token')))</code>.</li>
+<li><strong>ESLint #4</strong> (<a href="frontend/src/context/AuthContext.jsx">AuthContext.jsx</a>): il file esporta sia <code>AuthProvider</code> che <code>useAuth</code> → Vite Fast Refresh fa full reload invece di hot reload. Solo DX dev. Splittare in 2 file richiede aggiornare ~10 import in tutta la SPA.</li>
+<li><strong><code>schema</code> field shadows BaseModel attribute</strong> in <a href="backend/routers/parameters.py#L41">parameters.py:41</a> — Pydantic warning all'avvio. Rinominare <code>schema</code> in <code>param_schema</code> richiederebbe migration DB (colonna <code>schema</code> nel DB) e cambi a frontend.</li>
+</ul>
+<h3 id="performance-scaling">Performance / scaling<a class="headerlink" href="#performance-scaling" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Lazy-loading rotte admin</strong>: <a href="frontend/src/App.jsx">App.jsx</a> importa staticamente tutti i 30+ componenti admin. Un linguista standard scarica ~1.5MB di JS (gzip ~450KB) anche se non vedrà mai quelle rotte. <code>React.lazy</code> + <code>Suspense</code> ridurrebbe il bundle iniziale.</li>
+<li><strong><code>Bundle larger than 500 kB</code></strong> warning da Vite/Rolldown: legato al punto sopra.</li>
+<li><strong><code>updated_at</code> di <code>Language</code></strong> non viene aggiornato quando cambiano le sue Answer/Example: oggi non è un problema perché niente lo legge, ma se in futuro si volesse usarlo come "ultima attività" andrebbe esteso il bump dai service di compilazione.</li>
+</ul>
+<h3 id="db-data-model">DB / data model<a class="headerlink" href="#db-data-model" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>TIMESTAMPTZ vs naive UTC</strong>: tutto il codice usa <code>datetime</code> naive in UTC (<a href="backend/time_utils.py">time_utils.py</a>) per evitare ambiguità tra il <code>TZ</code> del container e il <code>PGTZ</code> del DB. Funziona, ma se si introducesse una UI timezone-aware sarebbe meglio migrare le colonne a <code>TIMESTAMPTZ</code>.</li>
+<li><strong>Duplicazione <code>family</code>/<code>top_level_family</code>/<code>grp</code> (stringhe) ↔ <code>family_id</code>/<code>top_family_id</code>/<code>group_id</code> (FK)</strong>: tenuti sincronizzati al save. Decisione voluta per non rompere export/filtri esistenti che usano le stringhe come "fonte di verità", ma è un punto di fragilità (uno potrebbe finire fuori sync).</li>
+</ul>
+<h3 id="housekeeping-minore">Housekeeping minore<a class="headerlink" href="#housekeeping-minore" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>docker-compose.yml</code> (dev) ha un volume anonimo <code>/app/node_modules</code> che maschera l'host. Prima volta che si aggiunge una dipendenza a <code>package.json</code> bisogna ricordarsi di lanciare <code>docker compose exec frontend npm ci</code>. Documentato in §4.</li>
+<li>File legacy <code>frontend/README.md</code> è il template Vite di default: andrebbe rimpiazzato con un puntamento a <code>docs/</code>.</li>
+</ul>
+<hr />
+<p><em>Per dubbi sul codice partire sempre da <a href="backend/main.py">backend/main.py</a> (entrypoint backend) e <a href="frontend/src/App.jsx">frontend/src/App.jsx</a> (entrypoint SPA): da lì tutto il resto è raggiungibile via import.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Torna su
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/gb-993/progetto_lingue_3" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "navigation.tracking", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copiato", "clipboard.copy": "Copia", "search.result.more.one": "1 altro in questa pagina", "search.result.more.other": "# altri in questa pagina", "search.result.none": "Nessun documento trovato", "search.result.one": "1 documento trovato", "search.result.other": "# documenti trovati", "search.result.placeholder": "Scrivi per iniziare a cercare", "search.result.term.missing": "Non presente", "select.version": "Seleziona la versione"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
+      
+    
+  </body>
+</html>
