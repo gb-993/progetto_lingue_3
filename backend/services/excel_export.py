@@ -108,6 +108,7 @@ LANGUAGE_LIST_HEADERS = [
     "Status",
     "Assigned user",
     "Email",
+    "Date last change",
 ]
 
 
@@ -437,22 +438,20 @@ def build_language_list_workbook(
             _xlsx_sanitize(L.status or "pending"),
             _xlsx_sanitize(assigned_name),
             _xlsx_sanitize(assigned_email),
+            L.updated_at if L.updated_at is not None else None,
         ])
 
-    # Larghezze auto-stimate
+    # Stile tabella: header bianco su fondo blu (TableStyleMedium2) +
+    # freeze pane + larghezze. Senza il fill colorato del table style
+    # l'header (font bianco) sarebbe invisibile su fondo bianco.
     n_cols = len(LANGUAGE_LIST_HEADERS)
-    for col_idx in range(1, n_cols + 1):
-        col_letter = get_column_letter(col_idx)
-        max_len = 8
-        for cell in ws[col_letter]:
-            val = cell.value
-            if val is None:
-                continue
-            max_len = max(max_len, len(str(val)))
-        ws.column_dimensions[col_letter].width = min(max_len + 2, 60)
+    widths = [22, 10, 16, 16, 14, 10, 12, 18, 10, 10, 16, 16, 10, 28, 12, 22, 26, 18]
+    _style_table(ws, "Languages", n_cols, widths)
 
-    if ws.max_row >= 2:
-        ws.freeze_panes = "A2"
+    # Formatta la colonna Date last change (ultima) come datetime locale
+    last_col = get_column_letter(n_cols)
+    for cell in ws[last_col][1:]:
+        cell.number_format = "yyyy-mm-dd hh:mm"
 
     apply_excel_citation(wb)
     return wb

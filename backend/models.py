@@ -66,6 +66,12 @@ class Language(Base):
     submitted_at = Column(DateTime, nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
 
+    # Bumpato automaticamente da SQLAlchemy ad ogni UPDATE della riga Language
+    # (vedi `onupdate`). Cattura solo modifiche ai metadati della lingua: per
+    # cambi alle answers/examples occorrerebbe estendere il bump da quei
+    # service. La colonna è popolata dalla migrazione su righe pre-esistenti.
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=True)
+
     assigned_user = relationship("User", back_populates="assigned_languages")
     answers = relationship("Answer", back_populates="language")
 

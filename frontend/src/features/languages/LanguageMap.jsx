@@ -87,17 +87,18 @@ function spreadColorsGrouped(items, itemToTop, topHueMap) {
 
 function computeColorPlan({ languages, filters, allTopFamilies }) {
     const topHueMap = buildTopHueMap(allTopFamilies);
-    // La modalità "scende" automaticamente di un livello rispetto al filtro più
-    // "fine" selezionato: avere già scelto una top family rende inutile colorare
-    // per top family (sarebbero tutti dello stesso colore), quindi mostriamo le
-    // subfamily distinte; analogamente selezionare una subfamily attiva la
-    // colorazione per group. Selezionare direttamente group resta esplicito.
-    const hasTop = (filters.top_family?.length || 0) > 0;
-    const hasFamily = (filters.family?.length || 0) > 0;
-    const hasGroup = (filters.grp?.length || 0) > 0;
-    const mode = (hasGroup || hasFamily) ? 'group'
-        : hasTop ? 'family'
-        : 'top_family';
+    // La modalità scende di un livello rispetto al filtro più "fine" SOLO se
+    // l'utente ha selezionato una sola voce a quel livello (altrimenti la mappa
+    // sarebbe monocromatica). Se invece ci sono 2+ voci, la legenda resta a
+    // quel livello: scendere produrrebbe troppe categorie poco distinguibili.
+    const numTop = filters.top_family?.length || 0;
+    const numFamily = filters.family?.length || 0;
+    const numGroup = filters.grp?.length || 0;
+    let mode;
+    if (numGroup >= 1) mode = 'group';
+    else if (numFamily >= 1) mode = numFamily === 1 ? 'group' : 'family';
+    else if (numTop >= 1) mode = numTop === 1 ? 'family' : 'top_family';
+    else mode = 'top_family';
 
     if (mode === 'top_family') {
         const tops = [...new Set(languages.map(l => l.top_level_family).filter(Boolean))]
@@ -165,13 +166,16 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
     const mapInstance = useRef(null);
     const vectorSource = useRef(null);
     const navigateRef = useRef(navigate);
+    const planRef = useRef(null);
+    const countsRef = useRef(null);
     const [hoveredKey, setHoveredKey] = useState(null);
 
     useEffect(() => { navigateRef.current = navigate; }, [navigate]);
 
-    // Esporto exportPng al parent: cattura tutti i canvas OL renderizzati e li
-    // fonde su un canvas finale, restituendo un Blob PNG. Ricalca l'esempio
-    // ufficiale di OpenLayers (https://openlayers.org/en/latest/examples/export-map.html).
+    // Esporto exportPng al parent: cattura i canvas OL renderizzati, li fonde
+    // su un canvas finale e disegna sotto la legenda (titolo + cerchi colorati
+    // + label + count) con wrapping orizzontale. Ricalca l'esempio ufficiale di
+    // OpenLayers (https://openlayers.org/en/latest/examples/export-map.html).
     useImperativeHandle(ref, () => ({
         exportPng: () => new Promise((resolve, reject) => {
             const map = mapInstance.current;
@@ -182,11 +186,57 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
             map.once('rendercomplete', () => {
                 try {
                     const size = map.getSize();
+                    const mapW = size[0];
+                    const mapH = size[1];
+                    const plan = planRef.current;
+                    const counts = countsRef.current || {};
+
+                    // ===== Layout legenda =====
+                    const PAD = 16;
+                    const TITLE_FONT = 'bold 12px system-ui, -apple-system, "Segoe UI", sans-serif';
+                    const ENTRY_FONT = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+                    const TITLE_H = 16;
+                    const TITLE_GAP = 10;
+                    const ROW_H = 22;
+                    const CIRCLE_R = 5;
+                    const CIRCLE_TEXT_GAP = 6;
+                    const ENTRY_GAP_X = 18;
+
+                    const measureCtx = document.createElement('canvas').getContext('2d');
+                    measureCtx.font = ENTRY_FONT;
+
+                    const entries = plan && plan.entries.length > 0 ? plan.entries : [];
+                    const entryW = entries.map(({ key }) => {
+                        const text = `${key} (${counts[key] || 0})`;
+                        return CIRCLE_R * 2 + CIRCLE_TEXT_GAP + measureCtx.measureText(text).width;
+                    });
+
+                    const maxRow = mapW - 2 * PAD;
+                    let rows = entries.length === 0 ? 1 : 1;
+                    let rowW = 0;
+                    entryW.forEach(w => {
+                        const candidate = rowW === 0 ? w : rowW + ENTRY_GAP_X + w;
+                        if (rowW > 0 && candidate > maxRow) {
+                            rows++;
+                            rowW = w;
+                        } else {
+                            rowW = candidate;
+                        }
+                    });
+
+                    const legendH = PAD + TITLE_H + TITLE_GAP + rows * ROW_H + PAD;
+                    const totalH = mapH + legendH;
+
                     const out = document.createElement('canvas');
-                    out.width = size[0];
-                    out.height = size[1];
+                    out.width = mapW;
+                    out.height = totalH;
                     const ctx = out.getContext('2d');
 
+                    // sfondo bianco totale
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, mapW, totalH);
+
+                    // ===== Mappa =====
                     const viewport = map.getViewport();
                     const canvases = viewport.querySelectorAll('.ol-layer canvas, canvas.ol-layer');
                     canvases.forEach(canvas => {
@@ -218,6 +268,55 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
                     ctx.globalAlpha = 1;
                     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
+                    // ===== Legenda =====
+                    const legendY = mapH;
+                    // separatore
+                    ctx.fillStyle = '#e5e7eb';
+                    ctx.fillRect(0, legendY, mapW, 1);
+
+                    // titolo
+                    ctx.fillStyle = '#6b7280';
+                    ctx.font = TITLE_FONT;
+                    ctx.textBaseline = 'top';
+                    const titleText = plan
+                        ? `Coloring ${plan.modeLabel}`.toUpperCase()
+                        : 'COLORING';
+                    ctx.fillText(titleText, PAD, legendY + PAD);
+
+                    // voci
+                    ctx.font = ENTRY_FONT;
+                    ctx.textBaseline = 'middle';
+                    let cx = PAD;
+                    let cy = legendY + PAD + TITLE_H + TITLE_GAP;
+
+                    if (entries.length === 0) {
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.fillText('No data to display.', PAD, cy + ROW_H / 2);
+                    } else {
+                        entries.forEach(({ key, color }, i) => {
+                            const w = entryW[i];
+                            if (cx > PAD && cx + w > mapW - PAD) {
+                                cx = PAD;
+                                cy += ROW_H;
+                            }
+                            const centerY = cy + ROW_H / 2;
+                            // cerchio
+                            ctx.fillStyle = color;
+                            ctx.beginPath();
+                            ctx.arc(cx + CIRCLE_R, centerY, CIRCLE_R, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                            // testo
+                            ctx.fillStyle = '#111827';
+                            const text = `${key} (${counts[key] || 0})`;
+                            ctx.fillText(text, cx + CIRCLE_R * 2 + CIRCLE_TEXT_GAP, centerY);
+                            cx += w + ENTRY_GAP_X;
+                        });
+                    }
+                    ctx.textBaseline = 'alphabetic';
+
                     out.toBlob(blob => {
                         if (blob) resolve(blob);
                         else reject(new Error('Canvas toBlob failed (tainted canvas?)'));
@@ -243,6 +342,11 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
         });
         return c;
     }, [languages, plan]);
+
+    // Tieni i ref allineati: exportPng vive in un useImperativeHandle con deps
+    // vuote e legge plan/counts via ref per non dover ricreare il handle.
+    useEffect(() => { planRef.current = plan; }, [plan]);
+    useEffect(() => { countsRef.current = counts; }, [counts]);
 
     // init map once
     useEffect(() => {

@@ -101,7 +101,9 @@
       "Bash(git reset *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "Bash(python -c \"from alembic.config import Config; from alembic.script import ScriptDirectory; cfg=Config\\('alembic.ini'\\); s=ScriptDirectory.from_config\\(cfg\\); print\\(s.get_current_head\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('models.py'\\).read\\(\\)\\); ast.parse\\(open\\('alembic/versions/d8e2f5b9a410_language_updated_at.py'\\).read\\(\\)\\); print\\('OK: syntax'\\)\")"
     ]
   }
 }
