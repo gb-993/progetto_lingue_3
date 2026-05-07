@@ -86,7 +86,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./frontend/dist:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
