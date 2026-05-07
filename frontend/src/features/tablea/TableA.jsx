@@ -526,7 +526,19 @@ export default function TableA() {
                                         </td>
                                     )}
                                     {row.cells.map((cell, idx) => (
-                                        <td key={`${row.item.id}-${idx}`} style={{ textAlign: 'center', fontWeight: cell.val ? 'bold' : 'normal' }}>
+                                        <td
+                                            key={`${row.item.id}-${idx}`}
+                                            style={{
+                                                textAlign: 'center',
+                                                fontWeight: cell.val ? 'bold' : 'normal',
+                                                // Sfondo rosso pallido se il parametro è "incompleto"
+                                                // per quella lingua (stessa regola della pagina
+                                                // LanguageData). Distingue visivamente da "valore -"
+                                                // (testo rosso) e da "valore +" (testo verde).
+                                                background: cell.is_incomplete ? 'rgba(220, 53, 69, 0.15)' : undefined,
+                                            }}
+                                            title={cell.is_incomplete ? 'Parameter incomplete or flagged unsure for this language' : undefined}
+                                        >
                                             {cell.val ? (
                                                 <Link to={`/languages/${cell.lang_id}/data#${view === 'questions' ? 'q_' : ''}${row.item.id}`} style={{ textDecoration: 'none', color: cell.val === '-' ? '#dc3545' : cell.val === '+' ? '#28a745' : 'inherit' }}>
                                                     {cell.val}

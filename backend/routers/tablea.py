@@ -159,14 +159,103 @@ def get_tablea_options(db: Session = Depends(get_db)):
         "opt_all_languages": [{"id": l.id, "name": l.name_full} for l in db.query(models.Language).order_by(models.Language.name_full).all()]
     }
 
+def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, bool]:
+    """Mappa (lang_id, param_id) -> bool dove True = "rosso" in TableA.
+
+    Replica la stessa regola del wizard navigation in LanguageData
+    (services/compilation _build_lang_data, classe CSS `is-incomplete`):
+        red = is_unsure == True
+              OR (answered > 0 AND answered < total)
+    dove `answered` è il numero di question attive con `response_text` in
+    ("yes","no") — unsure NON conta come risposta — e `total` è il numero
+    di question attive del parametro.
+
+    Costa 3 query batch (status, questions, answers): O(N×M) in memoria
+    Python, niente N+1.
+    """
+    if not lang_ids or not param_ids:
+        return {}
+
+    # 1. is_unsure flags
+    flagged: set[tuple] = set()
+    for lid, pid in db.query(
+        models.LanguageParameterStatus.language_id,
+        models.LanguageParameterStatus.parameter_id,
+    ).filter(
+        models.LanguageParameterStatus.language_id.in_(lang_ids),
+        models.LanguageParameterStatus.parameter_id.in_(param_ids),
+        models.LanguageParameterStatus.is_unsure == True,
+    ).all():
+        flagged.add((lid, pid))
+
+    # 2. Total question attive per parametro
+    qid_to_param: Dict[str, str] = {}
+    param_total: Dict[str, int] = {}
+    for q_id, p_id in db.query(
+        models.Question.id, models.Question.parameter_id,
+    ).filter(
+        models.Question.parameter_id.in_(param_ids),
+        models.Question.is_active == True,
+    ).all():
+        qid_to_param[q_id] = p_id
+        param_total[p_id] = param_total.get(p_id, 0) + 1
+
+    # 3. answered count per (lang, param)
+    answered_count: Dict[tuple, int] = {}
+    if qid_to_param:
+        for l_id, q_id in db.query(
+            models.Answer.language_id, models.Answer.question_id,
+        ).filter(
+            models.Answer.language_id.in_(lang_ids),
+            models.Answer.question_id.in_(list(qid_to_param.keys())),
+            models.Answer.response_text.in_(["yes", "no"]),
+        ).all():
+            p_id = qid_to_param.get(q_id)
+            if p_id is not None:
+                key = (l_id, p_id)
+                answered_count[key] = answered_count.get(key, 0) + 1
+
+    # 4. Compose: True se flagged OR parzialmente compilato.
+    result: Dict[tuple, bool] = {}
+    for l_id in lang_ids:
+        for p_id in param_ids:
+            if (l_id, p_id) in flagged:
+                result[(l_id, p_id)] = True
+                continue
+            answered = answered_count.get((l_id, p_id), 0)
+            total = param_total.get(p_id, 0)
+            if answered > 0 and answered < total:
+                result[(l_id, p_id)] = True
+    return result
+
+
 @router.post("/matrix")
 def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db)):
     langs, rows = _get_filtered_data(db, filters)
+    lang_ids = [l.id for l in langs]
+
+    # Solo per vista params: calcoliamo se la cella va segnalata "rossa"
+    # (incomplete o flagged unsure). La vista questions mostra le singole
+    # Answer e non ha questo concetto.
+    incomplete_map: Dict[tuple, bool] = {}
+    if filters.view == "params":
+        incomplete_map = _compute_param_incomplete_map(
+            db, lang_ids, [r["id"] for r in rows],
+        )
+
     return {
         "languages": [{"id": l.id, "name": l.name_full} for l in langs],
-        "rows": [{"item": {"id": r["id"], "name": r["name"], "extra": r["extra"]},
-                  "cells": [{"lang_id": lid, "val": val} for lid, val in zip([l.id for l in langs], r["cells"])]}
-                 for r in rows]
+        "rows": [{
+            "item": {"id": r["id"], "name": r["name"], "extra": r["extra"]},
+            "cells": [
+                {
+                    "lang_id": lid,
+                    "val": val,
+                    "is_incomplete": incomplete_map.get((lid, r["id"]), False),
+                }
+                for lid, val in zip(lang_ids, r["cells"])
+            ],
+        } for r in rows]
     }
 
 # ==========================================
