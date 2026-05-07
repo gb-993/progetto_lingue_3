@@ -133,7 +133,19 @@
       "PowerShell(if \\(Test-Path c:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub\\\\.env\\) { Get-Content c:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub\\\\.env | Where-Object { $_ -match 'ADMIN_\\(EMAIL|PASSWORD\\)|^ENV=' } } else { 'no .env' })",
       "Bash(git stash *)",
       "Bash(git -C c:/Users/Gb/Desktop/pcm-hub diff -- backend/routers/tablea.py)",
-      "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:5173/' -UseBasicParsing; \"vite dev: $\\($r.StatusCode\\)\" } catch { \"vite dev errore: $\\($_.Exception.Message\\)\" })"
+      "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:5173/' -UseBasicParsing; \"vite dev: $\\($r.StatusCode\\)\" } catch { \"vite dev errore: $\\($_.Exception.Message\\)\" })",
+      "Bash(curl -s http://localhost:5173/ -o /dev/null -w \"HTTP:%{http_code}\\\\n\")",
+      "Bash(rm -f c:/Users/Gb/Desktop/pcm-hub/docs/img/manuale/languages-table.png)",
+      "Bash(node screenshots.mjs)",
+      "Bash(find c:/Users/Gb -maxdepth 6 -type d -name playwright -path \"*/node_modules/*\" 2>/dev/null)",
+      "Read(//c/Users/Gb/**)",
+      "Bash(pandoc --version)",
+      "Bash(winget install *)",
+      "Bash(ls -1 \"C:/Users/Gb/AppData/Local/Pandoc/\" 2>&1 | head -5; echo ---; ls -1 \"C:/Program Files/Pandoc/\" 2>&1 | head -5)",
+      "Read(//c/Program Files/**)",
+      "Bash(C:/Users/Gb/AppData/Local/Microsoft/WinGet/Packages/JohnMacFarlane.Pandoc_Microsoft.Winget.Source_8wekyb3d8bbwe/pandoc-3.9.0.2/pandoc.exe --version)",
+      "Bash(\"C:/Users/Gb/AppData/Local/Programs/MiKTeX/miktex/bin/x64/initexmf.exe\" --set-config-value=[MPM]AutoInstall=1)",
+      "Bash(\"C:/Users/Gb/AppData/Local/Programs/MiKTeX/miktex/bin/x64/initexmf.exe\" --show-config-value=[MPM]AutoInstall)"
     ]
   }
 }
