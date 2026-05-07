@@ -243,32 +243,33 @@ def _wipe_all(db: Session) -> None:
 # ============================================================================
 
 def _ensure_default_admin(db: Session) -> str:
-    """Crea/aggiorna l'admin di default. Ritorna l'email."""
+    """Crea l'admin di default se manca. Idempotente: non tocca utenti esistenti.
+
+    Storico: prima questa funzione *resettava* password/role/flags dell'admin
+    a ogni import del bundle, sovrascrivendo le modifiche fatte dall'utente
+    via UI (cambio password, ecc.). Ora se l'utente con `ADMIN_EMAIL`
+    esiste gia' viene lasciato intatto.
+    """
     email = os.getenv("ADMIN_EMAIL", "admin@pcm.local").strip().lower()
-    password = os.getenv("ADMIN_PASSWORD", "admin")
 
     user = db.query(models.User).filter(models.User.email == email).first()
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
     if user:
-        user.hashed_password = hashed
-        user.role = "admin"
-        user.is_active = True
-        user.terms_accepted = True
-        user.terms_accepted_at = user.terms_accepted_at or utc_now()
-    else:
-        user = models.User(
-            email=email,
-            hashed_password=hashed,
-            name="Admin",
-            surname="PCM",
-            role="admin",
-            terms_accepted=True,
-            terms_accepted_at=utc_now(),
-            is_active=True,
-            date_joined=utc_now(),
-        )
-        db.add(user)
+        return email
+
+    password = os.getenv("ADMIN_PASSWORD", "admin")
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    user = models.User(
+        email=email,
+        hashed_password=hashed,
+        name="Admin",
+        surname="PCM",
+        role="admin",
+        terms_accepted=True,
+        terms_accepted_at=utc_now(),
+        is_active=True,
+        date_joined=utc_now(),
+    )
+    db.add(user)
     db.flush()
     return email
 

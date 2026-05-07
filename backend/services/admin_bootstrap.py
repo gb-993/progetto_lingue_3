@@ -12,10 +12,10 @@ container. Per evitarlo, all'avvio FastAPI esegue questo bootstrap:
     niente reset password, niente log rumorosi. Idempotente sui
     riavvii successivi del container.
 
-Differenza con `_ensure_default_admin` di services/migration_import.py:
-quello viene chiamato a fine import e *resetta sempre* la password
-dell'email indicata. Questo bootstrap, invece, gira solo davvero la
-prima volta e poi sparisce dai radar.
+Affine a `_ensure_default_admin` di services/migration_import.py: entrambi
+sono idempotenti e creano l'admin di env solo se manca, senza mai toccare
+record gia' presenti. Quel secondo gira a fine import bundle, questo
+all'avvio del processo.
 """
 from __future__ import annotations
 import logging
