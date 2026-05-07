@@ -35,6 +35,8 @@ from routers import (auth,
                      history,
                      taxonomy,
                      migration,
+                     backup_restore,
+                     recompute,
                      archived_questions)
 
 @asynccontextmanager
@@ -106,4 +108,6 @@ app.include_router(import_excel.router)
 app.include_router(history.router)
 app.include_router(taxonomy.router)
 app.include_router(migration.router)
+app.include_router(backup_restore.router)
+app.include_router(recompute.router)
 app.include_router(archived_questions.router)

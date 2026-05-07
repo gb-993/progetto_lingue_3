@@ -57,6 +57,15 @@ export default function LanguageList() {
     const [exporting, setExporting] = useState(false);
     const [downloadOpen, setDownloadOpen] = useState(false);
     const [globalBackup, setGlobalBackup] = useState(false);
+    // Job di export backup (asincrono): { jobId, state, error }.
+    // state è il payload restituito da /status: { phase, phase_label, current,
+    // total, finished, error, ... }. Quando finished:true scatta il download.
+    const [exportJob, setExportJob] = useState(null);
+    const exportStartedAtRef = useRef(null);
+    // Job di "Recompute final values for all languages": stesso pattern del
+    // backup ma senza download — finito = success notification.
+    const [recomputeJob, setRecomputeJob] = useState(null);
+    const [recomputing, setRecomputing] = useState(false);
     const downloadRef = useRef(null);
     const mapExportRef = useRef(null);
 
@@ -266,22 +275,181 @@ export default function LanguageList() {
         }
     };
 
-    const onExportZip = async () => {
+    // Backup zip async: POST → {job_id} → poll status → GET download quando finished.
+    // La barra di progresso appare in basso a destra finché il job è attivo.
+    const onStartExportZip = async () => {
         setExporting(true);
+        setExportJob(null);
+        exportStartedAtRef.current = Date.now();
         try {
-            await downloadBlob(
-                api.post('/api/admin/export/languages/zip',
-                    { lang_ids: targetIds },
-                    { responseType: 'blob' }
-                ),
-                'PCM_languages.zip'
+            const res = await api.post(
+                '/api/admin/export/languages/zip',
+                { lang_ids: targetIds }
             );
-        } catch {
-            alert("Error while exporting the ZIP.");
-        } finally {
+            const jobId = res.data?.job_id;
+            if (!jobId) throw new Error('Server did not return a job_id.');
+            setExportJob({ jobId, state: null, error: null });
+        } catch (err) {
+            alert(err.response?.data?.detail || err.message || 'Could not start the backup.');
             setExporting(false);
         }
     };
+
+    const onCancelExport = () => {
+        // Nessun cancel server-side: smettiamo solo il polling/UI. Il job
+        // continua in background ma il file verrà purgato dal TTL (1h).
+        setExporting(false);
+        setExportJob(null);
+    };
+
+    // Polling stato + auto-download a fine job.
+    useEffect(() => {
+        if (!exportJob?.jobId) return;
+        const jobId = exportJob.jobId;
+        let cancelled = false;
+        let intervalId;
+
+        const stopPolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        const downloadFile = async () => {
+            try {
+                const res = await api.get(
+                    `/api/admin/export/languages/zip/download/${jobId}`,
+                    { responseType: 'blob' }
+                );
+                const cd = res.headers['content-disposition'] || '';
+                const m = cd.match(/filename="?([^";]+)"?/);
+                const filename = m ? m[1] : 'PCM_backup.zip';
+                const blob = new Blob([res.data]);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert(err.response?.data?.detail || 'Could not download the backup file.');
+            }
+        };
+
+        const poll = async () => {
+            try {
+                const res = await api.get(`/api/admin/export/languages/zip/status/${jobId}`);
+                if (cancelled) return;
+                setExportJob(prev => prev?.jobId === jobId ? { ...prev, state: res.data } : prev);
+                if (res.data.finished) {
+                    stopPolling();
+                    if (res.data.error) {
+                        setExportJob(prev => prev?.jobId === jobId ? { ...prev, error: res.data.error } : prev);
+                        setExporting(false);
+                    } else {
+                        await downloadFile();
+                        if (!cancelled) {
+                            setExporting(false);
+                            setExportJob(null);
+                        }
+                    }
+                }
+            } catch (err) {
+                if (cancelled) return;
+                stopPolling();
+                const msg = err.response?.data?.detail || 'Error polling export job.';
+                setExportJob(prev => prev?.jobId === jobId ? { ...prev, error: msg } : prev);
+                setExporting(false);
+            }
+        };
+
+        poll();
+        intervalId = setInterval(poll, 1500);
+
+        return () => {
+            cancelled = true;
+            stopPolling();
+        };
+    }, [exportJob?.jobId]);
+
+    // Recompute final values per TUTTE le lingue. Stessa meccanica del job
+    // di backup (POST start → polling status → done) ma senza download.
+    const onStartRecompute = async () => {
+        const ok = window.confirm(
+            'Recompute the final values for ALL languages?\n\n' +
+            'This re-runs the parameter DAG and consolidate step on every language. ' +
+            'Can take some minutes on large datasets.'
+        );
+        if (!ok) return;
+        setRecomputing(true);
+        setRecomputeJob(null);
+        try {
+            const res = await api.post('/api/admin/recompute/all');
+            const jobId = res.data?.job_id;
+            if (!jobId) throw new Error('Server did not return a job_id.');
+            setRecomputeJob({ jobId, state: null, error: null });
+        } catch (err) {
+            alert(err.response?.data?.detail || err.message || 'Could not start recompute.');
+            setRecomputing(false);
+        }
+    };
+
+    const onCancelRecompute = () => {
+        // Nessun cancel server-side: chiudiamo solo il toast, il job
+        // continua e termina da solo (TTL 1h).
+        setRecomputing(false);
+        setRecomputeJob(null);
+    };
+
+    useEffect(() => {
+        if (!recomputeJob?.jobId) return;
+        const jobId = recomputeJob.jobId;
+        let cancelled = false;
+        let intervalId;
+
+        const stopPolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        const poll = async () => {
+            try {
+                const res = await api.get(`/api/admin/recompute/status/${jobId}`);
+                if (cancelled) return;
+                setRecomputeJob(prev => prev?.jobId === jobId ? { ...prev, state: res.data } : prev);
+                if (res.data.finished) {
+                    stopPolling();
+                    if (res.data.error) {
+                        setRecomputeJob(prev => prev?.jobId === jobId ? { ...prev, error: res.data.error } : prev);
+                    } else {
+                        const errCount = res.data.report?.errors_count || 0;
+                        const total = res.data.report?.languages_processed || 0;
+                        if (errCount > 0) {
+                            alert(`Recompute completed with ${errCount} error(s) over ${total} language(s). See server logs for details.`);
+                        }
+                        setRecomputeJob(null);
+                    }
+                    setRecomputing(false);
+                }
+            } catch (err) {
+                if (cancelled) return;
+                stopPolling();
+                const msg = err.response?.data?.detail || 'Error polling recompute job.';
+                setRecomputeJob(prev => prev?.jobId === jobId ? { ...prev, error: msg } : prev);
+                setRecomputing(false);
+            }
+        };
+
+        poll();
+        intervalId = setInterval(poll, 1500);
+
+        return () => {
+            cancelled = true;
+            stopPolling();
+        };
+    }, [recomputeJob?.jobId]);
 
     const onExportMap = async () => {
         if (!mapExportRef.current) {
@@ -504,8 +672,8 @@ export default function LanguageList() {
                                     <DropdownItem onClick={() => { setDownloadOpen(false); onExportMetadata(); }} disabled={exporting}>
                                         Export language metadata (.xlsx)
                                     </DropdownItem>
-                                    <DropdownItem onClick={() => { setDownloadOpen(false); onExportZip(); }} disabled={exporting}>
-                                        Export parametric data (.zip)
+                                    <DropdownItem onClick={() => { setDownloadOpen(false); onStartExportZip(); }} disabled={exporting}>
+                                        Export backup (.zip)
                                     </DropdownItem>
                                     <DropdownItem onClick={onExportMap} disabled={exporting}>
                                         Map (.png)
@@ -525,6 +693,17 @@ export default function LanguageList() {
                                 title="Snapshot every language (definitions + answers)"
                             >
                                 {globalBackup ? 'Backing up…' : '+ Full Languages Backup'}
+                            </button>
+                        )}
+                        {isAdmin && (
+                            <button
+                                type="button"
+                                onClick={onStartRecompute}
+                                disabled={recomputing}
+                                className="btn btn--small"
+                                title="Re-run the parameter DAG on every language"
+                            >
+                                {recomputing ? 'Recomputing…' : 'Recompute final values'}
                             </button>
                         )}
                         {isAdmin && (
@@ -620,6 +799,28 @@ export default function LanguageList() {
                     </tbody>
                 </table>
             </div>
+
+            {/* ==== TOAST PROGRESSO BACKUP ==== */}
+            {(exporting || exportJob) && (
+                <ExportProgressToast
+                    job={exportJob}
+                    starting={exporting && !exportJob}
+                    onClose={onCancelExport}
+                />
+            )}
+
+            {/* ==== TOAST PROGRESSO RECOMPUTE ==== */}
+            {(recomputing || recomputeJob) && (
+                <ProgressToast
+                    job={recomputeJob}
+                    starting={recomputing && !recomputeJob}
+                    onClose={onCancelRecompute}
+                    titleBuilding="Recomputing final values…"
+                    titleDone="Recompute complete"
+                    titleErrored="Recompute failed"
+                    bottom="5rem"
+                />
+            )}
         </div>
     );
 }
@@ -801,5 +1002,118 @@ function DropdownItem({ onClick, disabled, children }) {
         >
             {children}
         </button>
+    );
+}
+
+// Toast fisso in basso a destra per l'avanzamento di un job backend basato su
+// migration_progress (POST → polling /status → done). Titoli e posizione
+// verticale configurabili così istanze multiple non si sovrappongono.
+function ProgressToast({
+    job, starting, onClose,
+    titleBuilding = 'Working…',
+    titleDone = 'Done',
+    titleErrored = 'Failed',
+    bottom = '1rem',
+}) {
+    const state = job?.state;
+    const finished = !!state?.finished;
+    const errored = !!(job?.error || state?.error);
+    const current = state?.current || 0;
+    const total = state?.total || 0;
+    const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+    const phaseLabel = state?.phase_label || (starting ? 'Starting…' : 'Queued, waiting for backend…');
+
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            style={{
+                position: 'fixed',
+                right: '1rem',
+                bottom,
+                width: 'min(380px, calc(100vw - 2rem))',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
+                padding: '0.9rem 1rem',
+                zIndex: 100,
+            }}
+        >
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: '0.5rem',
+                gap: '0.5rem',
+            }}>
+                <strong style={{ fontSize: '0.9rem' }}>
+                    {errored ? titleErrored : finished ? titleDone : titleBuilding}
+                </strong>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    title={errored || finished ? 'Close' : 'Hide (job continues in background)'}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        fontSize: '1rem',
+                        cursor: 'pointer',
+                        lineHeight: 1,
+                    }}
+                >
+                    ×
+                </button>
+            </div>
+
+            {!errored && (
+                <>
+                    <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '14px',
+                        background: 'var(--surface-2)',
+                        borderRadius: '7px',
+                        overflow: 'hidden',
+                        border: '1px solid var(--border)',
+                        marginBottom: '0.5rem',
+                    }}>
+                        <div style={{
+                            width: `${percent}%`,
+                            height: '100%',
+                            background: 'linear-gradient(90deg, var(--brand, #3b82f6), #6366f1)',
+                            transition: 'width 0.4s ease',
+                        }} />
+                    </div>
+                    <div className="small muted" style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {phaseLabel}
+                        </span>
+                        {total > 0 && <span>{current} / {total}</span>}
+                    </div>
+                </>
+            )}
+
+            {errored && (
+                <div className="small" style={{ color: '#b91c1c' }}>
+                    {job?.error || state?.error}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Wrapper specifico per il toast del backup: stesso UI di ProgressToast con
+// preset di etichette. Tenuto come componente separato così il call-site
+// rimane terso ("<ExportProgressToast .../>") senza props ridondanti.
+function ExportProgressToast(props) {
+    return (
+        <ProgressToast
+            {...props}
+            titleBuilding="Building backup…"
+            titleDone="Backup ready"
+            titleErrored="Backup failed"
+        />
     );
 }

@@ -2,32 +2,43 @@
 Router di export Excel.
 
 Endpoint:
-  GET  /api/export/language/{lang_id}/xlsx        -> singola lingua (admin: 7 sheet, user: 1 sheet)
-  POST /api/admin/export/languages-list/xlsx       -> metadata di lingue selezionate (admin)
-  POST /api/admin/export/languages/zip             -> ZIP con un xlsx per lingua (admin)
-  GET  /api/admin/export/schema/xlsx               -> schema only (parametri/domande/motivazioni) (admin)
+  GET  /api/export/language/{lang_id}/xlsx                       -> singola lingua (admin: 4 sheet, user: 1 sheet)
+  POST /api/admin/export/languages-list/xlsx                     -> metadata di lingue selezionate (admin)
+  POST /api/admin/export/languages/zip                           -> AVVIA backup zip async, ritorna {job_id}
+  GET  /api/admin/export/languages/zip/status/{job_id}           -> stato del job (phase, current, total, finished, error)
+  GET  /api/admin/export/languages/zip/download/{job_id}         -> scarica il file pronto (one-shot, poi cleanup)
+  GET  /api/admin/export/schema/xlsx                             -> schema only (parametri/domande/motivazioni) (admin)
 """
 from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
 from time_utils import utc_now
 import io
+import logging
 import math
+import os
 import zipfile
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 import models
+from database import SessionLocal
 from dependencies import get_db, get_current_user, require_admin
 from services.excel_export import (
     build_language_workbook,
     build_language_list_workbook,
     build_schema_workbook,
+    build_glossary_workbook,
+    build_backup_zip_bytes,
 )
+from services import export_jobs
+
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api", tags=["Export"])
@@ -101,39 +112,125 @@ def export_language_list(
 
 
 # ============================================================================
-# 3. ZIP di lingue (un xlsx per lingua, admin only)
+# 3. BACKUP ZIP (admin only) — flusso asincrono con barra di progresso
+#
+#    Pensato come metodo di backup completo dei dati: contiene lo schema globale
+#    una volta sola (non più replicato in ogni xlsx per-lingua), i metadati di
+#    tutte le lingue selezionate, il glossario, e un xlsx per lingua col
+#    Database_model esteso (lossless: motivations + admin_note inclusi).
+#
+#    Struttura prodotta:
+#        PCM_backup_<ts>.zip
+#        ├── schema.xlsx              (Motivations / Parameters / Questions / QAM)
+#        ├── languages_metadata.xlsx  (lista lingue con metadata)
+#        ├── glossary.xlsx
+#        └── languages/
+#            ├── <ID>.xlsx            (Database_model + Answers + Examples + Admin Notes)
+#            └── ...
+#
+#    Flusso:
+#    1) Client POSTa la selezione → ritorna {job_id} subito
+#    2) Client polla GET status/{job_id} → mostra barra di progresso
+#    3) A fine job, client GET download/{job_id} → riceve il file (one-shot)
+#
+#    L'import totale (Fase 5) riconosce questa struttura.
 # ============================================================================
 
+
+def _run_backup_in_background(payload_lang_ids: Optional[List[str]], job_id: str) -> None:
+    """Eseguito dal threadpool di BackgroundTasks. Apre la propria DB session
+    perché quella iniettata via Depends() viene chiusa al ritorno della response."""
+    db = SessionLocal()
+    try:
+        q = db.query(models.Language).order_by(models.Language.position, models.Language.id)
+        if payload_lang_ids:
+            q = q.filter(models.Language.id.in_(payload_lang_ids))
+        languages = q.all()
+
+        if not languages:
+            export_jobs.finish_error(job_id, "No language to export.")
+            return
+
+        total = len(languages)
+        export_jobs.set_phase(job_id, "building", "Building backup…", total=total)
+
+        def on_lang(idx: int, total_count: int, lang) -> None:
+            export_jobs.tick(
+                job_id,
+                current=idx,
+                label=f"Processing {lang.id} ({idx}/{total_count})",
+            )
+
+        data = build_backup_zip_bytes(db, languages, on_language=on_lang)
+
+        target = export_jobs.get_target_path(job_id)
+        with open(target, "wb") as f:
+            f.write(data)
+        export_jobs.set_file_ready(job_id, target)
+    except Exception as e:
+        logger.exception("Backup export job %s failed", job_id)
+        export_jobs.finish_error(job_id, f"Unexpected error: {e}")
+    finally:
+        db.close()
+
+
 @router.post("/admin/export/languages/zip")
-def export_languages_zip(
+def start_export_languages_zip(
     payload: LanguageListExportPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    q = db.query(models.Language).order_by(models.Language.position, models.Language.id)
+    # Validazione rapida prima di lanciare il job: count senza materializzare
+    # gli oggetti, così rispondiamo subito con 400 se la selezione è vuota.
+    q = db.query(models.Language.id)
     if payload.lang_ids:
         q = q.filter(models.Language.id.in_(payload.lang_ids))
-    languages = q.all()
-
-    if not languages:
+    if q.count() == 0:
         raise HTTPException(status_code=400, detail="No language to export.")
 
-    ts = _ts()
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for lang in languages:
-            wb = build_language_workbook(db, lang, is_admin=True)
-            inner = io.BytesIO()
-            wb.save(inner)
-            inner.seek(0)
-            zf.writestr(f"PCM_{lang.id}_full_{ts}.xlsx", inner.getvalue())
+    job_id = export_jobs.new_job()
+    background_tasks.add_task(_run_backup_in_background, payload.lang_ids, job_id)
+    return {"job_id": job_id}
 
-    zip_buf.seek(0)
-    fname = f"PCM_languages_selected_{ts}.zip" if payload.lang_ids else f"PCM_languages_full_{ts}.zip"
-    return StreamingResponse(
-        zip_buf,
+
+@router.get("/admin/export/languages/zip/status/{job_id}")
+def get_export_status(
+    job_id: str,
+    current_user: models.User = Depends(require_admin),
+):
+    state = export_jobs.get_state(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Job not found or expired")
+    return state
+
+
+@router.get("/admin/export/languages/zip/download/{job_id}")
+def download_export(
+    job_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(require_admin),
+):
+    state = export_jobs.get_state(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Job not found or expired")
+    if not state.get("finished"):
+        raise HTTPException(status_code=409, detail="Job not finished yet")
+    if state.get("error"):
+        raise HTTPException(status_code=500, detail=state["error"])
+
+    path = export_jobs.consume_file(job_id)
+    if path is None or not os.path.exists(path):
+        raise HTTPException(status_code=410, detail="File already downloaded or expired")
+
+    fname = f"PCM_backup_{_ts()}.zip"
+    # Cleanup post-invio: BackgroundTasks gira DOPO che la response è stata
+    # spedita, quindi il file resta integro per tutta la durata dello stream.
+    background_tasks.add_task(export_jobs.cleanup_file, path)
+    return FileResponse(
+        path=path,
         media_type=ZIP_MIME,
-        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        filename=fname,
     )
 
 

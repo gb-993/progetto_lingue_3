@@ -44,6 +44,7 @@ import TableA from './features/tablea/TableA';
 import QueriesDashboard from "./features/queries/QueriesDashboard.jsx";
 import ImportExcel from './features/admin/ImportExcel';
 import MigrationImport from './features/admin/MigrationImport';
+import BackupRestore from './features/admin/BackupRestore';
 import History from './features/history/History';
 import Taxonomy from './features/taxonomy/Taxonomy';
 
@@ -149,6 +150,7 @@ const router = createBrowserRouter([
             { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
             { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },
             { path: 'admin/migration-import', element: <AdminRoute><Layout><MigrationImport /></Layout></AdminRoute> },
+            { path: 'admin/backup-restore', element: <AdminRoute><Layout><BackupRestore /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
             { path: 'tablea', element: <Layout><TableA /></Layout> },

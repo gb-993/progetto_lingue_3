@@ -126,10 +126,22 @@ def _get(row: Tuple, header_map: Dict[str, int], col_name: str) -> Any:
 # Main entry point
 # ============================================================================
 
-def import_excel(db: Session, file_bytes: bytes, current_user_id: int) -> ImportReport:
+def import_excel(
+    db: Session,
+    file_bytes: bytes,
+    current_user_id: int,
+    *,
+    create_missing: bool = False,
+) -> ImportReport:
     """
     Punto di ingresso. Apre il file, riconosce i sheet presenti, processa
     in ordine di dipendenza, ritorna un ImportReport completo.
+
+    `create_missing`: se True, gli importer schema (Motivations / Parameters /
+    Questions) creano la entità invece di errorare quando l'ID non esiste.
+    Pensato per il backup-restore (dove dopo wipe schema è vuoto). Default
+    False mantiene il comportamento "strict update" per gli upload manuali da
+    UI, che non devono creare schema accidentalmente.
     """
     try:
         wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
@@ -148,7 +160,8 @@ def import_excel(db: Session, file_bytes: bytes, current_user_id: int) -> Import
     failed_question_ids: Set[str] = set()
 
     if "Motivations" in wb.sheetnames:
-        _import_motivations(db, wb["Motivations"], report, failed_motivation_codes, user_id=current_user_id)
+        _import_motivations(db, wb["Motivations"], report, failed_motivation_codes,
+                            user_id=current_user_id, create_missing=create_missing)
         try:
             db.commit()
         except Exception as e:
@@ -156,7 +169,8 @@ def import_excel(db: Session, file_bytes: bytes, current_user_id: int) -> Import
             report.errors.append(ImportError(sheet="Motivations", row=0, reason=f"Commit fallito: {e}"))
 
     if "Parameters" in wb.sheetnames:
-        _import_parameters(db, wb["Parameters"], report, current_user_id, failed_parameter_ids)
+        _import_parameters(db, wb["Parameters"], report, current_user_id, failed_parameter_ids,
+                           create_missing=create_missing)
         try:
             db.commit()
         except Exception as e:
@@ -165,7 +179,8 @@ def import_excel(db: Session, file_bytes: bytes, current_user_id: int) -> Import
 
     if "Questions" in wb.sheetnames:
         _import_questions(db, wb["Questions"], report, current_user_id,
-                          failed_parameter_ids, failed_question_ids)
+                          failed_parameter_ids, failed_question_ids,
+                          create_missing=create_missing)
         try:
             db.commit()
         except Exception as e:
@@ -180,6 +195,25 @@ def import_excel(db: Session, file_bytes: bytes, current_user_id: int) -> Import
         except Exception as e:
             db.rollback()
             report.errors.append(ImportError(sheet="QuestionAllowedMotivations", row=0, reason=f"Commit fallito: {e}"))
+
+    # "Languages" e "Glossary" sono presenti nei file del backup-zip
+    # (languages_metadata.xlsx, glossary.xlsx). Li gestiamo qui così l'import
+    # totale può semplicemente alimentare ogni xlsx del bundle a import_excel.
+    if "Languages" in wb.sheetnames:
+        _import_languages_metadata(db, wb["Languages"], report)
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            report.errors.append(ImportError(sheet="Languages", row=0, reason=f"Commit fallito: {e}"))
+
+    if "Glossary" in wb.sheetnames:
+        _import_glossary(db, wb["Glossary"], report)
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            report.errors.append(ImportError(sheet="Glossary", row=0, reason=f"Commit fallito: {e}"))
 
     if COMPILATION_SHEET in wb.sheetnames:
         _import_compilation(db, wb[COMPILATION_SHEET], report, failed_question_ids)
@@ -227,7 +261,8 @@ def _format_db_error(e: Exception) -> str:
 # ============================================================================
 
 def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
-                        failed_codes: Set[str], user_id: Optional[int] = None) -> None:
+                        failed_codes: Set[str], user_id: Optional[int] = None,
+                        *, create_missing: bool = False) -> None:
     summary = SheetSummary()
     report.sheets_processed.append("Motivations")
     report.by_sheet["Motivations"] = summary
@@ -256,16 +291,37 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             continue
 
         existing = by_code.get(code)
-        if not existing:
-            summary.errors += 1
-            failed_codes.add(code)
-            report.errors.append(ImportError(
-                sheet="Motivations", row=ridx, column="Code", value=code,
-                reason=f"Motivation '{code}' does not exist in the DB. Create it via the UI before importing."
-            ))
-            continue
-
         label = _str(_get(row, hmap, "Label"))
+
+        if not existing:
+            if not create_missing:
+                summary.errors += 1
+                failed_codes.add(code)
+                report.errors.append(ImportError(
+                    sheet="Motivations", row=ridx, column="Code", value=code,
+                    reason=f"Motivation '{code}' does not exist in the DB. Create it via the UI before importing."
+                ))
+                continue
+            # create_missing path
+            def apply_create():
+                m = models.Motivation(code=code, label=label or "")
+                db.add(m)
+                db.flush()
+                by_code[code] = m
+
+            ok, err = _safe_apply(db, apply_create)
+            if ok:
+                summary.inserted += 1
+                record_version(db, by_code[code], operation="create",
+                               source="backup_restore", user_id=user_id,
+                               note="Backup restore")
+            else:
+                summary.errors += 1
+                failed_codes.add(code)
+                report.errors.append(ImportError(
+                    sheet="Motivations", row=ridx, value=code, reason=err
+                ))
+            continue
 
         def apply():
             existing.label = label or existing.label
@@ -300,7 +356,8 @@ PARAM_FIELDS = (
 
 
 def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
-                       user_id: int, failed_ids: Set[str]) -> None:
+                       user_id: int, failed_ids: Set[str],
+                       *, create_missing: bool = False) -> None:
     summary = SheetSummary()
     report.sheets_processed.append("Parameters")
     report.by_sheet["Parameters"] = summary
@@ -328,16 +385,9 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
             continue
 
         existing = by_id.get(pid)
-        if not existing:
-            summary.errors += 1
-            failed_ids.add(pid)
-            report.errors.append(ImportError(
-                sheet="Parameters", row=ridx, column="ID", value=pid,
-                reason=f"Parameter '{pid}' does not exist in the DB. Create it via the UI before importing."
-            ))
-            continue
 
-        # Validazione condition (se presente)
+        # Validazione condition (se presente). La facciamo prima del branch
+        # create-vs-update così si applica anche al nuovo parametro.
         cond_raw = _none_if_empty(_get(row, hmap, "Implicational Condition"))
         if cond_raw:
             try:
@@ -352,7 +402,48 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 ))
                 continue
 
-        # Capture stato prima (per ChangeLog diff)
+        # CREATE branch (solo se create_missing=True e parametro non esiste)
+        if existing is None:
+            if not create_missing:
+                summary.errors += 1
+                failed_ids.add(pid)
+                report.errors.append(ImportError(
+                    sheet="Parameters", row=ridx, column="ID", value=pid,
+                    reason=f"Parameter '{pid}' does not exist in the DB. Create it via the UI before importing."
+                ))
+                continue
+
+            new_position = _get(row, hmap, "Position")
+            try:
+                new_position = int(new_position) if new_position not in (None, "") else 0
+            except (TypeError, ValueError):
+                new_position = 0
+            new_is_active = _bool_yn(_get(row, hmap, "Is Active"))
+
+            def apply_create():
+                kwargs = {"id": pid, "position": new_position, "is_active": new_is_active}
+                for col_name, attr_name, parser in PARAM_FIELDS:
+                    kwargs[attr_name] = parser(_get(row, hmap, col_name))
+                p = models.ParameterDef(**kwargs)
+                db.add(p)
+                db.flush()
+                by_id[pid] = p
+
+            ok, err = _safe_apply(db, apply_create)
+            if ok:
+                summary.inserted += 1
+                record_version(db, by_id[pid], operation="create",
+                               source="backup_restore", user_id=user_id,
+                               note="Backup restore")
+            else:
+                summary.errors += 1
+                failed_ids.add(pid)
+                report.errors.append(ImportError(
+                    sheet="Parameters", row=ridx, value=pid, reason=err
+                ))
+            continue
+
+        # UPDATE branch (parametro esistente)
         old_snapshot = {f[1]: getattr(existing, f[1]) for f in PARAM_FIELDS}
         old_position = existing.position
         old_is_active = existing.is_active
@@ -422,7 +513,8 @@ QUESTION_FIELDS = (
 
 def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                       user_id: int, failed_param_ids: Set[str],
-                      failed_question_ids: Set[str]) -> None:
+                      failed_question_ids: Set[str],
+                      *, create_missing: bool = False) -> None:
     summary = SheetSummary()
     report.sheets_processed.append("Questions")
     report.by_sheet["Questions"] = summary
@@ -451,16 +543,64 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
             continue
 
         existing = by_id.get(qid)
-        if not existing:
-            summary.errors += 1
-            failed_question_ids.add(qid)
-            report.errors.append(ImportError(
-                sheet="Questions", row=ridx, column="ID", value=qid,
-                reason=f"Question '{qid}' does not exist in the DB. Create it via the UI before importing."
-            ))
+        new_param_id = _str(_get(row, hmap, "Parameter ID"))
+
+        # CREATE branch (solo se create_missing=True e domanda non esiste)
+        if existing is None:
+            if not create_missing:
+                summary.errors += 1
+                failed_question_ids.add(qid)
+                report.errors.append(ImportError(
+                    sheet="Questions", row=ridx, column="ID", value=qid,
+                    reason=f"Question '{qid}' does not exist in the DB. Create it via the UI before importing."
+                ))
+                continue
+            if not new_param_id:
+                summary.errors += 1
+                failed_question_ids.add(qid)
+                report.errors.append(ImportError(
+                    sheet="Questions", row=ridx, column="Parameter ID", value=qid,
+                    reason="Empty Parameter ID for new question"
+                ))
+                continue
+            if new_param_id not in valid_param_ids:
+                summary.errors += 1
+                failed_question_ids.add(qid)
+                report.errors.append(ImportError(
+                    sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
+                    reason=f"Parameter '{new_param_id}' does not exist"
+                ))
+                continue
+
+            new_stop = _bool_yn(_get(row, hmap, "Is Stop Question"))
+            new_active = _bool_yn(_get(row, hmap, "Is Active"))
+
+            def apply_create():
+                kwargs = {
+                    "id": qid, "parameter_id": new_param_id,
+                    "is_stop_question": new_stop, "is_active": new_active,
+                }
+                for col_name, attr_name, parser in QUESTION_FIELDS:
+                    kwargs[attr_name] = parser(_get(row, hmap, col_name))
+                q = models.Question(**kwargs)
+                db.add(q)
+                db.flush()
+                by_id[qid] = q
+
+            ok, err = _safe_apply(db, apply_create)
+            if ok:
+                summary.inserted += 1
+                record_version(db, by_id[qid], operation="create",
+                               source="backup_restore", user_id=user_id,
+                               note="Backup restore")
+            else:
+                summary.errors += 1
+                failed_question_ids.add(qid)
+                report.errors.append(ImportError(
+                    sheet="Questions", row=ridx, value=qid, reason=err
+                ))
             continue
 
-        new_param_id = _str(_get(row, hmap, "Parameter ID"))
         if new_param_id and new_param_id != existing.parameter_id:
             # Cambio parent: verifica che esista e non sia in lista falliti
             if new_param_id in failed_param_ids:
@@ -702,10 +842,23 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         db.query(models.Answer).filter(
             models.Answer.id.in_(old_answer_ids)
         ).delete(synchronize_session=False)
+    # Reset delle admin notes per questa lingua. Settiamo a None senza cancellare
+    # la riga di LanguageParameterStatus, così preserviamo `is_unsure`. Le note
+    # verranno re-applicate dal file in fondo all'import.
+    db.query(models.LanguageParameterStatus).filter(
+        models.LanguageParameterStatus.language_id == lang.id
+    ).update({"admin_note": None}, synchronize_session=False)
     db.flush()
 
-    # 3. Pre-load di tutte le question + motivations per code
+    # 3. Pre-load di tutte le question + motivations per id e per code
     valid_qids = {q.id for q in db.query(models.Question.id).all()}
+    mot_by_code = {m.code: m for m in db.query(models.Motivation).all()}
+    valid_param_ids = {p.id for p in db.query(models.ParameterDef.id).all()}
+
+    # Admin notes da applicare a fine import. Una riga per parametro.
+    # Se la stessa Admin_Note compare su più question dello stesso parametro
+    # (caso normale dell'export, che la duplica), l'ultima vince — sono uguali.
+    admin_notes_by_pid: dict[str, str] = {}
 
     # 4. Per ogni riga del file, tenta l'inserimento
     for ridx, row in rows:
@@ -760,8 +913,35 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
 
-        # Crea Answer
-        def apply():
+        # Motivations (colonna opzionale, presente nei file dal 2026-05).
+        # Codici separati da `;` o `,`. Codici sconosciuti: errore non bloccante,
+        # la motivation viene saltata ma l'answer e le altre motivations valide
+        # vengono comunque inserite.
+        mot_codes_raw = _str(_get(row, hmap, "Motivations"))
+        mot_codes_to_apply: list[int] = []
+        if mot_codes_raw:
+            for token in mot_codes_raw.replace(",", ";").split(";"):
+                code = token.strip()
+                if not code:
+                    continue
+                m = mot_by_code.get(code)
+                if m is None:
+                    report.errors.append(ImportError(
+                        sheet=COMPILATION_SHEET, row=ridx, column="Motivations", value=code,
+                        reason=f"Motivation code '{code}' not found"
+                    ))
+                    continue
+                mot_codes_to_apply.append(m.id)
+
+        # Admin_Note: associata al parametro, non alla question. Accumula a
+        # fine loop per applicarla una volta sola per parametro.
+        note_cell = _str(_get(row, hmap, "Admin_Note"))
+        param_label = _str(_get(row, hmap, "Parameter_Label"))
+        if note_cell and param_label and param_label in valid_param_ids:
+            admin_notes_by_pid[param_label] = note_cell
+
+        # Crea Answer + Examples + AnswerMotivations
+        def apply(mot_ids=mot_codes_to_apply):
             answer = models.Answer(
                 language_id=lang.id, question_id=qid,
                 response_text=response, comments=comments or None,
@@ -787,6 +967,10 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 )
                 db.add(ex)
 
+            # Dedup difensivo: stesso codice ripetuto nella cella → 1 sola riga.
+            for mid in set(mot_ids):
+                db.add(models.AnswerMotivation(answer_id=answer.id, motivation_id=mid))
+
         ok, err = _safe_apply(db, apply)
         if ok:
             summary.inserted += 1
@@ -794,4 +978,200 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, value=qid, reason=err
+            ))
+
+    # 5. Applica admin notes accumulate (uno-shot, una per parametro).
+    for pid, note in admin_notes_by_pid.items():
+        status = db.query(models.LanguageParameterStatus).filter(
+            models.LanguageParameterStatus.language_id == lang.id,
+            models.LanguageParameterStatus.parameter_id == pid,
+        ).first()
+        if status is None:
+            db.add(models.LanguageParameterStatus(
+                language_id=lang.id,
+                parameter_id=pid,
+                admin_note=note,
+                is_unsure=False,
+            ))
+        else:
+            status.admin_note = note
+
+
+# ============================================================================
+# 7. LANGUAGES METADATA — upsert per ID
+# ============================================================================
+#
+# Foglio "Languages" prodotto da build_language_list_workbook (export "language
+# metadata" e file `languages_metadata.xlsx` del backup-zip).
+#
+# Strategia: upsert per ID. Se la lingua esiste in DB → aggiorno i campi
+# scrivibili. Se non esiste → la creo. Mai cancello lingue non menzionate.
+# Campi NON ripristinati: assigned_user (richiede una lookup utenti per email,
+# meglio gestita lato UI), submitted_at, reviewed_at, updated_at (auto da
+# SQLAlchemy onupdate). I dati di compilazione (Answer/Example/Motivation)
+# vengono dai per-lingua xlsx, non da qui.
+# ============================================================================
+
+def _bool_yn_or_none(v: Any) -> Optional[bool]:
+    if v is None:
+        return None
+    s = _str(v).lower()
+    if s in ("yes", "y", "true", "1"):
+        return True
+    if s in ("no", "n", "false", "0"):
+        return False
+    return None
+
+
+def _float_or_none(v: Any) -> Optional[float]:
+    if v is None or _str(v) == "":
+        return None
+    try:
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+
+_LANGUAGE_VALID_STATUSES = {"pending", "waiting_for_approval", "approved", "rejected"}
+
+
+def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport) -> None:
+    summary = SheetSummary()
+    report.sheets_processed.append("Languages")
+    report.by_sheet["Languages"] = summary
+
+    hmap = _build_header_map(ws)
+    if "ID" not in hmap or "Name" not in hmap:
+        report.errors.append(ImportError(
+            sheet="Languages", row=1,
+            reason="Colonne 'ID' e 'Name' obbligatorie."
+        ))
+        return
+
+    # Per i nuovi inserimenti la `position` viene calcolata progressivamente
+    # come max(position attuale) + 1 al momento dell'inserimento (vedi apply()).
+
+    for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if all(v is None or _str(v) == "" for v in row):
+            continue
+        summary.rows_total += 1
+
+        lid = _str(_get(row, hmap, "ID"))
+        name = _str(_get(row, hmap, "Name"))
+        if not lid:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Languages", row=ridx, column="ID", reason="Empty ID"
+            ))
+            continue
+        if not name:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Languages", row=ridx, column="Name", value=lid, reason="Empty Name"
+            ))
+            continue
+
+        status_raw = _str(_get(row, hmap, "Status")).lower()
+        status = status_raw if status_raw in _LANGUAGE_VALID_STATUSES else "pending"
+
+        fields = {
+            "name_full": name,
+            "top_level_family": _str(_get(row, hmap, "Top-level family")) or "",
+            "family": _str(_get(row, hmap, "Family")) or "",
+            "grp": _str(_get(row, hmap, "Group")) or "",
+            "isocode": _str(_get(row, hmap, "ISO code")) or "",
+            "glottocode": _str(_get(row, hmap, "Glottocode")) or "",
+            "location": _str(_get(row, hmap, "Location")) or "",
+            "latitude": _float_or_none(_get(row, hmap, "Latitude")),
+            "longitude": _float_or_none(_get(row, hmap, "Longitude")),
+            "supervisor": _str(_get(row, hmap, "Supervisor")) or "",
+            "informant": _str(_get(row, hmap, "Informant")) or "",
+            "historical_language": _bool_yn_or_none(_get(row, hmap, "Historical")) or False,
+            "source": _str(_get(row, hmap, "Source")) or "",
+            "status": status,
+        }
+
+        existing = db.query(models.Language).filter(models.Language.id == lid).first()
+
+        def apply():
+            if existing is None:
+                last = db.query(models.Language).order_by(
+                    models.Language.position.desc()
+                ).first()
+                pos = (last.position + 1) if last else 1
+                lang = models.Language(id=lid, position=pos, **fields)
+                db.add(lang)
+            else:
+                for k, v in fields.items():
+                    setattr(existing, k, v)
+
+        ok, err = _safe_apply(db, apply)
+        if ok:
+            if existing is None:
+                summary.inserted += 1
+            else:
+                summary.updated += 1
+        else:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Languages", row=ridx, value=lid, reason=err
+            ))
+
+
+# ============================================================================
+# 8. GLOSSARY — upsert per word
+# ============================================================================
+
+def _import_glossary(db: Session, ws: Worksheet, report: ImportReport) -> None:
+    summary = SheetSummary()
+    report.sheets_processed.append("Glossary")
+    report.by_sheet["Glossary"] = summary
+
+    hmap = _build_header_map(ws)
+    if "Word" not in hmap or "Description" not in hmap:
+        report.errors.append(ImportError(
+            sheet="Glossary", row=1,
+            reason="Colonne 'Word' e 'Description' obbligatorie."
+        ))
+        return
+
+    for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if all(v is None or _str(v) == "" for v in row):
+            continue
+        summary.rows_total += 1
+
+        word = _str(_get(row, hmap, "Word"))
+        desc = _str(_get(row, hmap, "Description"))
+        if not word:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Glossary", row=ridx, column="Word", reason="Empty Word"
+            ))
+            continue
+        if not desc:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Glossary", row=ridx, column="Description", value=word,
+                reason="Empty Description"
+            ))
+            continue
+
+        existing = db.query(models.Glossary).filter(models.Glossary.word == word).first()
+
+        def apply():
+            if existing is None:
+                db.add(models.Glossary(word=word, description=desc))
+            else:
+                existing.description = desc
+
+        ok, err = _safe_apply(db, apply)
+        if ok:
+            if existing is None:
+                summary.inserted += 1
+            else:
+                summary.updated += 1
+        else:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Glossary", row=ridx, value=word, reason=err
             ))

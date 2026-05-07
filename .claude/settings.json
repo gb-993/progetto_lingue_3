@@ -103,7 +103,23 @@
       "Bash(git commit -m ' *)",
       "Bash(echo \"exit=$?\")",
       "Bash(python -c \"from alembic.config import Config; from alembic.script import ScriptDirectory; cfg=Config\\('alembic.ini'\\); s=ScriptDirectory.from_config\\(cfg\\); print\\(s.get_current_head\\(\\)\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('models.py'\\).read\\(\\)\\); ast.parse\\(open\\('alembic/versions/d8e2f5b9a410_language_updated_at.py'\\).read\\(\\)\\); print\\('OK: syntax'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('models.py'\\).read\\(\\)\\); ast.parse\\(open\\('alembic/versions/d8e2f5b9a410_language_updated_at.py'\\).read\\(\\)\\); print\\('OK: syntax'\\)\")",
+      "Bash(python -m pip install -q pytest)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python -m pip install -q sqlalchemy openpyxl bcrypt fastapi alembic pydantic)",
+      "Bash(python -m pytest tests/test_excel_export.py tests/test_excel_import.py -q)",
+      "Bash(python -m pytest tests/test_excel_import.py::test_unknown_param_id_not_created -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_export.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_import.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/test_excel_import.py::test_database_model_replace_with_invalid_question_skipped tests/test_excel_import.py::test_database_model_invalid_answer_value_skipped -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/export.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/excel_export.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -m pip install -q httpx)",
+      "Bash(python -c \"from main import app; print\\('app loaded, routes:'\\); print\\([r.path for r in app.routes if 'export' in str\\(r.path\\)]\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/export.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/export_jobs.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_import.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/backup_restore.py'\\).read\\(\\)\\); ast.parse\\(open\\('main.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -m pytest tests/test_backup_restore.py -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/excel_import.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/recompute.py'\\).read\\(\\)\\); ast.parse\\(open\\('main.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
     ]
   }
 }

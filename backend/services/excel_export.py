@@ -14,6 +14,8 @@ Questo garantisce che i file siano scambiabili: download + re-upload = round-tri
 from __future__ import annotations
 from typing import Iterable, List, Optional
 from datetime import datetime
+import io
+import zipfile
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
@@ -30,18 +32,25 @@ from services.citation import apply_excel_citation
 # ============================================================================
 
 DATABASE_MODEL_HEADERS = [
+    # Identificazione lingua/domanda. Le colonne testuali Question /
+    # Question_Examples_YES / Question_Intructions_Comments del vecchio progetto
+    # sono state rimosse: ridondanti rispetto al foglio schema globale (deducibili
+    # da Question_ID), non lette in import, appesantivano il file inutilmente.
     "Language",
     "Parameter_Label",
     "Question_ID",
-    "Question",
-    "Question_Examples_YES",
-    "Question_Intructions_Comments",
     "Language_Answer",
     "Language_Comments",
     "Language_Examples",
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
+    # Aggiunte per backup lossless: senza queste, round-trip export → import
+    # perdeva motivazioni e admin notes. Codici motivazione separati da "; ".
+    # Admin_Note è duplicato su tutte le righe dello stesso parametro perché
+    # vive a livello di (lingua, parametro), non di (lingua, question).
+    "Motivations",
+    "Admin_Note",
 ]
 
 EXAMPLES_HEADERS = [
@@ -219,6 +228,17 @@ def build_language_workbook(
     # AnswerMotivation -> mappa motivation_id per veloce lookup
     mot_by_id = {m.id: m for m in db.query(models.Motivation).all()}
 
+    # Admin notes per parametro (lingua corrente). Servono al foglio "Admin Notes"
+    # e alla colonna Admin_Note di Database_model. Filtra in Python così
+    # l'unico round-trip in DB è lineare nei parametri della lingua.
+    notes_by_pid = {
+        s.parameter_id: (s.admin_note or "")
+        for s in db.query(models.LanguageParameterStatus)
+        .filter(models.LanguageParameterStatus.language_id == lang.id)
+        .all()
+        if s.admin_note
+    }
+
     wb = Workbook()
 
     # === Sheet Examples (sempre presente) ===
@@ -253,16 +273,26 @@ def build_language_workbook(
     _bold_header_row(ws_db, len(DATABASE_MODEL_HEADERS))
 
     for p in params:
+        param_admin_note = notes_by_pid.get(p.id, "")
         for q in questions_by_param.get(p.id, []):
             a = answers_by_qid.get(q.id)
             lang_answer = ""
             lang_comments = ""
+            mot_codes_str = ""
             if a:
                 if a.response_text == "yes":
                     lang_answer = "YES"
                 elif a.response_text == "no":
                     lang_answer = "NO"
                 lang_comments = a.comments or ""
+                # Codici motivazione (non label): identificatore stabile per
+                # round-trip. Separatore "; " coerente col foglio Answers.
+                codes = []
+                for am in a.answer_motivations:
+                    m = mot_by_id.get(am.motivation_id)
+                    if m and m.code:
+                        codes.append(m.code)
+                mot_codes_str = "; ".join(codes)
 
             ex_list = examples_by_qid.get(q.id, [])
             cell_examples = "\n".join((ex.textarea or "") for ex in ex_list) if ex_list else ""
@@ -274,20 +304,19 @@ def build_language_workbook(
                 lang.name_full,
                 p.id,
                 q.id,
-                q.text or "",
-                q.example_yes or "",
-                q.instruction or "",
                 lang_answer,
                 lang_comments,
                 cell_examples,
                 cell_gloss,
                 cell_transl,
                 cell_refs,
+                mot_codes_str,
+                param_admin_note,
             ])
 
     _style_table(
         ws_db, "DatabaseModel", len(DATABASE_MODEL_HEADERS),
-        [18, 14, 18, 36, 24, 24, 12, 26, 30, 22, 22, 22],
+        [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 30],
     )
 
     # === Sheet Answers (admin) ===
@@ -348,18 +377,12 @@ def build_language_workbook(
     # === Sheet Admin Notes (admin) ===
     # Nota libera (testo) per ogni (lingua, parametro). Vivono su
     # LanguageParameterStatus.admin_note. Lo sheet contiene solo i parametri
-    # con una nota non vuota, ordinati come gli altri sheet.
+    # con una nota non vuota, ordinati come gli altri sheet. Riusa
+    # `notes_by_pid` già caricato in cima alla funzione per Database_model.
     ws_notes = wb.create_sheet("Admin Notes")
     ws_notes.append(ADMIN_NOTES_HEADERS)
     _bold_header_row(ws_notes, len(ADMIN_NOTES_HEADERS))
 
-    notes_by_pid = {
-        s.parameter_id: (s.admin_note or "")
-        for s in db.query(models.LanguageParameterStatus)
-        .filter(models.LanguageParameterStatus.language_id == lang.id)
-        .all()
-        if s.admin_note
-    }
     for p in params:
         note = notes_by_pid.get(p.id, "")
         if note:
@@ -367,8 +390,11 @@ def build_language_workbook(
 
     _style_table(ws_notes, "AdminNotes", len(ADMIN_NOTES_HEADERS), [14, 36, 60])
 
-    # === Sheet schema (Motivations, Parameters, Questions, QuestionAllowedMotivations) ===
-    _append_schema_sheets(db, wb)
+    # I fogli schema (Motivations / Parameters / Questions /
+    # QuestionAllowedMotivations) NON sono più replicati in ogni xlsx
+    # per-lingua: sono globali, identici tra lingue, e gonfiavano inutilmente
+    # ogni file. Vivono ora in `schema.xlsx` alla radice del backup-zip e
+    # restano scaricabili via /api/admin/export/schema/xlsx.
 
     apply_excel_citation(wb)
     return wb
@@ -544,3 +570,95 @@ def build_schema_workbook(db: Session) -> Workbook:
     _append_schema_sheets(db, wb)
     apply_excel_citation(wb)
     return wb
+
+
+# ============================================================================
+# 4. GLOSSARY WORKBOOK (1 sheet)
+# ============================================================================
+
+GLOSSARY_HEADERS = ["Word", "Description"]
+
+
+def build_glossary_workbook(db: Session) -> Workbook:
+    """Workbook con un solo sheet 'Glossary' (Word, Description).
+
+    Usato dal backup-zip per portare in dote anche i termini del glossario:
+    sono dati di "contenuto" che dovrebbero sopravvivere a un restore."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Glossary"
+    ws.append(GLOSSARY_HEADERS)
+    _bold_header_row(ws, len(GLOSSARY_HEADERS))
+
+    for g in db.query(models.Glossary).order_by(models.Glossary.word).all():
+        ws.append([_xlsx_sanitize(g.word), _xlsx_sanitize(g.description)])
+
+    _style_table(ws, "Glossary", len(GLOSSARY_HEADERS), [22, 60])
+    apply_excel_citation(wb)
+    return wb
+
+
+# ============================================================================
+# 5. BACKUP ZIP BUILDER
+# ============================================================================
+#
+# Struttura del bundle (v1, 2026-05):
+#
+#     PCM_backup_<ts>.zip
+#     ├── schema.xlsx              (4 sheet schema globale)
+#     ├── languages_metadata.xlsx  (lista lingue con metadati)
+#     ├── glossary.xlsx            (Word, Description)
+#     └── languages/
+#         ├── <ID>.xlsx            (Database_model esteso + Answers + Examples + Admin Notes)
+#         └── ...
+#
+# Pensato come metodo di backup/restore: l'import totale (Fase 5) riconosce
+# questa struttura e ripristina lo stato del DB.
+# ============================================================================
+
+BACKUP_BUNDLE_VERSION = 1
+
+
+def _wb_to_bytes(wb: Workbook) -> bytes:
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def build_backup_zip_bytes(
+    db: Session,
+    languages: Iterable[models.Language],
+    *,
+    on_language=None,
+) -> bytes:
+    """Costruisce il bundle backup completo per la selezione di `languages` data.
+
+    Restituisce i bytes dello zip (NON streaming). Per file grandi conviene
+    generarlo in background e servirlo da una tmp directory: vedi Fase 4
+    (export asincrono via migration_progress).
+
+    `on_language(idx, total, lang)` è un callback opzionale invocato prima di
+    serializzare ogni xlsx per-lingua, utile per il progress reporting.
+    """
+    languages = list(languages)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("schema.xlsx", _wb_to_bytes(build_schema_workbook(db)))
+        zf.writestr(
+            "languages_metadata.xlsx",
+            _wb_to_bytes(build_language_list_workbook(db, languages)),
+        )
+        zf.writestr("glossary.xlsx", _wb_to_bytes(build_glossary_workbook(db)))
+
+        total = len(languages)
+        for idx, lang in enumerate(languages, start=1):
+            if on_language is not None:
+                try:
+                    on_language(idx, total, lang)
+                except Exception:
+                    # Mai bloccare la generazione del backup per un errore di reporting
+                    pass
+            wb = build_language_workbook(db, lang, is_admin=True)
+            zf.writestr(f"languages/{lang.id}.xlsx", _wb_to_bytes(wb))
+
+    return buf.getvalue()

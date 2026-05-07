@@ -118,12 +118,13 @@ def test_roundtrip_no_changes_keeps_state(db_session):
     assert mot.label == "Old label"
 
 
-def test_roundtrip_modify_param_via_excel(db_session):
-    """Modifico il name del parametro nel file e re-importo: il DB deve riflettere
-    il cambio + ci dev'essere un ParameterChangeLog."""
+def test_roundtrip_modify_param_via_schema_excel(db_session):
+    """Da 2026-05 lo schema vive solo nel workbook schema dedicato (NON più
+    replicato in ogni per-lingua xlsx). Modifico il name del parametro nel
+    file schema, re-importo: il DB riflette il cambio + ParameterChangeLog."""
     lang, user = _seed_full(db_session)
 
-    wb = build_language_workbook(db_session, lang, is_admin=True)
+    wb = build_schema_workbook(db_session)
 
     # Modifica della cella "Name" del parametro FGM nel sheet Parameters
     ws_par = wb["Parameters"]
@@ -227,25 +228,27 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
     ws.append(DATABASE_MODEL_HEADERS)
+    # Layout colonne (11): Language, Parameter_Label, Question_ID,
+    # Language_Answer, Language_Comments, Language_Examples,
+    # Language_Example_Gloss, Language_Example_Translation, Language_References,
+    # Motivations, Admin_Note
     # riga valida
     ws.append([
         "Italiano", "FGM", "FGM_01",
-        "text", "ex_yes", "instr",
         "YES", "new comment",
         "Esempio nuovo 1\nEsempio nuovo 2",
         "g1\ng2", "t1\nt2", "r1\nr2",
+        "", "",
     ])
     # riga valida (FGM_02 = no, no esempi)
     ws.append([
         "Italiano", "FGM", "FGM_02",
-        "text", "", "",
-        "NO", "", "", "", "", "",
+        "NO", "", "", "", "", "", "", "",
     ])
     # riga errata (FGM_99 inesistente)
     ws.append([
         "Italiano", "FGM", "FGM_99",
-        "text", "", "",
-        "YES", "should fail", "ex", "g", "t", "r",
+        "YES", "should fail", "ex", "g", "t", "r", "", "",
     ])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
@@ -283,8 +286,7 @@ def test_database_model_invalid_answer_value_skipped(db_session):
     ws.append(DATABASE_MODEL_HEADERS)
     ws.append([
         "Italiano", "FGM", "FGM_01",
-        "text", "", "",
-        "MAYBE", "", "", "", "", "",
+        "MAYBE", "", "", "", "", "", "", "",
     ])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
@@ -304,7 +306,7 @@ def test_database_model_unknown_language(db_session):
     ws.append(DATABASE_MODEL_HEADERS)
     ws.append([
         "Klingon", "FGM", "FGM_01",
-        "text", "", "", "YES", "", "", "", "", "",
+        "YES", "", "", "", "", "", "", "",
     ])
 
     # le risposte ITA esistenti devono restare invariate
@@ -422,3 +424,61 @@ def test_param_invalid_condition_skipped(db_session):
     p_after = db_session.query(models.ParameterDef).filter_by(id="FGM").one()
     assert p_after.name == name_before  # NON aggiornato per errore di sintassi
     assert any("Sintassi" in e.reason for e in report.errors)
+
+
+# ============================================================================
+# Round-trip lossless: backup → restore preserva motivazioni e admin notes
+# ============================================================================
+
+def test_roundtrip_preserves_motivations(db_session):
+    """Lingua con motivazione su FGM_02 → export → wipe → import → motivazione
+    presente sull'answer di FGM_02 (round-trip lossless)."""
+    lang, user = _seed_full(db_session)
+    # Aggiungo una motivazione all'answer FGM_02 (creandola: c'è solo FGM_01 in seed)
+    ans2 = models.Answer(language_id="ITA", question_id="FGM_02",
+                         response_text="no", comments="", status="approved")
+    db_session.add(ans2)
+    db_session.flush()
+    mot = db_session.query(models.Motivation).filter_by(code="MOT_X").one()
+    db_session.add(models.AnswerMotivation(answer_id=ans2.id, motivation_id=mot.id))
+    db_session.commit()
+
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    file_bytes = _wb_to_bytes(wb)
+
+    report = import_excel(db_session, file_bytes, user.id)
+    db_session.commit()
+    assert report.errors == [], f"Errori inattesi: {report.errors}"
+
+    # Recupero answer FGM_02 dopo round-trip
+    a = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_02"
+    ).one()
+    mot_codes = [
+        db_session.query(models.Motivation).get(am.motivation_id).code
+        for am in a.answer_motivations
+    ]
+    assert "MOT_X" in mot_codes
+
+
+def test_roundtrip_preserves_admin_note(db_session):
+    """Lingua con admin_note su FGM → export → import → admin_note ripristinata."""
+    lang, user = _seed_full(db_session)
+    db_session.add(models.LanguageParameterStatus(
+        language_id="ITA", parameter_id="FGM",
+        admin_note="Nota admin di prova\ncon a capo",
+        is_unsure=False,
+    ))
+    db_session.commit()
+
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    file_bytes = _wb_to_bytes(wb)
+
+    report = import_excel(db_session, file_bytes, user.id)
+    db_session.commit()
+    assert report.errors == [], f"Errori inattesi: {report.errors}"
+
+    s = db_session.query(models.LanguageParameterStatus).filter_by(
+        language_id="ITA", parameter_id="FGM"
+    ).one()
+    assert s.admin_note == "Nota admin di prova\ncon a capo"

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
-    DatabaseZap, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
+    DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
 } from 'lucide-react';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
@@ -35,6 +35,7 @@ const PATH_LABELS = {
     'history': 'History & Backups',
     'backups': 'History & Backups',
     'migration-import': 'Migration Import',
+    'backup-restore': 'Backup Restore',
     'import-excel': 'Import Excel',
     'edit-content': 'Edit content',
     'submissions': 'Submissions',
@@ -367,6 +368,12 @@ export default function Layout({ children }) {
                                                 <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: '#b91c1c' }}>
                                                     <DatabaseZap size={18} className="nav-icon" />
                                                     <span className="nav-label">Migration Import</span>
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
+                                                    <Upload size={18} className="nav-icon" />
+                                                    <span className="nav-label">Backup Restore</span>
                                                 </Link>
                                             </li>
                                         </>

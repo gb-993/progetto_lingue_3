@@ -16,6 +16,7 @@ Due livelli:
      - Round-trip: salva su BytesIO, riapri, contenuto identico.
 """
 import io
+import zipfile
 from datetime import datetime
 
 import pytest
@@ -26,6 +27,8 @@ from services.excel_export import (
     build_language_workbook,
     build_language_list_workbook,
     build_schema_workbook,
+    build_glossary_workbook,
+    build_backup_zip_bytes,
     DATABASE_MODEL_HEADERS,
     EXAMPLES_HEADERS,
     ANSWERS_HEADERS,
@@ -34,6 +37,7 @@ from services.excel_export import (
     PARAMETERS_HEADERS,
     QUESTIONS_HEADERS,
     QUESTION_ALLOWED_MOTIVATIONS_HEADERS,
+    GLOSSARY_HEADERS,
 )
 
 
@@ -45,19 +49,22 @@ from services.excel_export import (
 # core/views/languages.py (vedi messaggio dell'utente). Qualsiasi modifica
 # accidentale all'ordine o ai nomi delle colonne fa fallire questo test.
 
-_OLD_DATABASE_MODEL_HEADERS = [
+# Database_model è stato ristrutturato (2026-05): le 3 colonne ridondanti
+# rispetto allo schema globale (Question, Question_Examples_YES,
+# Question_Intructions_Comments) sono state rimosse, e in coda sono state
+# aggiunte 2 colonne per backup lossless: Motivations, Admin_Note.
+_EXPECTED_DATABASE_MODEL_HEADERS = [
     "Language",
     "Parameter_Label",
     "Question_ID",
-    "Question",
-    "Question_Examples_YES",
-    "Question_Intructions_Comments",
     "Language_Answer",
     "Language_Comments",
     "Language_Examples",
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
+    "Motivations",
+    "Admin_Note",
 ]
 
 _OLD_EXAMPLES_HEADERS = [
@@ -71,11 +78,12 @@ _OLD_ANSWERS_HEADERS = [
 ]
 
 
-def test_database_model_headers_match_legacy():
-    assert DATABASE_MODEL_HEADERS == _OLD_DATABASE_MODEL_HEADERS, (
-        "Gli header del sheet 'Database_model' DEVONO essere identici al vecchio "
-        "progetto: il file dev'essere round-trip per l'import. Verifica il "
-        "service excel_export.py e l'ordine delle colonne."
+def test_database_model_headers():
+    assert DATABASE_MODEL_HEADERS == _EXPECTED_DATABASE_MODEL_HEADERS, (
+        "Modifica all'ordine/contenuto delle colonne di 'Database_model'. "
+        "Questo foglio è la fonte canonica per re-import / backup-restore. "
+        "Verifica services/excel_export.py e services/excel_import.py "
+        "(_import_compilation) restino allineati."
     )
 
 
@@ -88,7 +96,7 @@ def test_answers_headers_match_legacy():
 
 
 def test_database_model_headers_count():
-    assert len(DATABASE_MODEL_HEADERS) == 12
+    assert len(DATABASE_MODEL_HEADERS) == 11
 
 
 def test_examples_headers_count():
@@ -182,13 +190,15 @@ def _read_workbook_from_memory(wb: Workbook) -> Workbook:
     return load_workbook(buf, data_only=True)
 
 
-def test_language_workbook_admin_has_eight_sheets(db_session):
+def test_language_workbook_admin_has_four_sheets(db_session):
+    """Da 2026-05 i fogli schema (Motivations/Parameters/Questions/QAM) NON
+    sono più replicati in ogni per-lingua xlsx (vivono in schema.xlsx separato).
+    L'admin riceve 4 sheet: Database_model + Answers + Examples + Admin Notes."""
     lang = _seed_basic(db_session)
     wb = build_language_workbook(db_session, lang, is_admin=True)
     wb2 = _read_workbook_from_memory(wb)
     assert wb2.sheetnames == [
         "Database_model", "Answers", "Examples", "Admin Notes",
-        "Motivations", "Parameters", "Questions", "QuestionAllowedMotivations",
     ]
 
 
@@ -205,7 +215,7 @@ def test_database_model_sheet_headers_and_count(db_session):
     wb2 = _read_workbook_from_memory(wb)
     ws = wb2["Database_model"]
     headers = [c.value for c in ws[1]]
-    assert headers == _OLD_DATABASE_MODEL_HEADERS
+    assert headers == _EXPECTED_DATABASE_MODEL_HEADERS
 
     # 2 question rows (FGM_01 e FGM_02), entrambe attive
     data_rows = [r for r in ws.iter_rows(min_row=2, values_only=True)]
@@ -217,17 +227,14 @@ def test_database_model_sheet_examples_concatenation(db_session):
     wb = build_language_workbook(db_session, lang, is_admin=True)
     wb2 = _read_workbook_from_memory(wb)
     ws = wb2["Database_model"]
-    # Trova la riga di FGM_01
+    # Indici colonna by name, robusto a future ristrutturazioni
+    h = {name: i for i, name in enumerate(_EXPECTED_DATABASE_MODEL_HEADERS)}
     for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[2] == "FGM_01":
-            # Language_Examples (col 9, index 8)
-            assert row[8] == "Esempio uno\nEsempio due\nEsempio tre"
-            # Language_Example_Gloss (col 10)
-            assert row[9] == "gloss-1\ngloss-2\ngloss-3"
-            # Language_Example_Translation (col 11)
-            assert row[10] == "translation-1\ntranslation-2\ntranslation-3"
-            # Language_References (col 12)
-            assert row[11] == "ref-1\nref-2\nref-3"
+        if row[h["Question_ID"]] == "FGM_01":
+            assert row[h["Language_Examples"]] == "Esempio uno\nEsempio due\nEsempio tre"
+            assert row[h["Language_Example_Gloss"]] == "gloss-1\ngloss-2\ngloss-3"
+            assert row[h["Language_Example_Translation"]] == "translation-1\ntranslation-2\ntranslation-3"
+            assert row[h["Language_References"]] == "ref-1\nref-2\nref-3"
             break
     else:
         pytest.fail("Riga FGM_01 non trovata in Database_model")
@@ -328,3 +335,82 @@ def test_language_list_user_metadata_export_works_with_zero_languages(db_session
     rows = list(ws.iter_rows(min_row=2, values_only=True))
     assert rows == []
     assert [c.value for c in ws[1]] == LANGUAGE_LIST_HEADERS
+
+
+# ============================================================================
+# 3) GLOSSARY WORKBOOK
+# ============================================================================
+
+def test_glossary_workbook_empty_db(db_session):
+    """DB senza glossario → workbook con solo header."""
+    wb = build_glossary_workbook(db_session)
+    wb2 = _read_workbook_from_memory(wb)
+    assert wb2.sheetnames == ["Glossary"]
+    ws = wb2["Glossary"]
+    assert [c.value for c in ws[1]] == GLOSSARY_HEADERS
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    assert rows == []
+
+
+def test_glossary_workbook_with_entries(db_session):
+    db_session.add_all([
+        models.Glossary(word="alpha", description="first letter"),
+        models.Glossary(word="beta", description="second letter"),
+    ])
+    db_session.commit()
+
+    wb = build_glossary_workbook(db_session)
+    wb2 = _read_workbook_from_memory(wb)
+    ws = wb2["Glossary"]
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    # Ordinati alfabeticamente
+    assert rows == [("alpha", "first letter"), ("beta", "second letter")]
+
+
+# ============================================================================
+# 4) BACKUP ZIP — struttura del bundle completo
+# ============================================================================
+
+def test_backup_zip_structure(db_session):
+    """Il backup zip deve contenere: schema.xlsx, languages_metadata.xlsx,
+    glossary.xlsx, e una entry languages/<ID>.xlsx per ogni lingua."""
+    _seed_basic(db_session)
+    db_session.add(models.Glossary(word="hub", description="central node"))
+    db_session.commit()
+
+    languages = db_session.query(models.Language).all()
+    data = build_backup_zip_bytes(db_session, languages)
+
+    with zipfile.ZipFile(io.BytesIO(data), "r") as zf:
+        names = set(zf.namelist())
+        assert "schema.xlsx" in names
+        assert "languages_metadata.xlsx" in names
+        assert "glossary.xlsx" in names
+        assert "languages/ITA.xlsx" in names
+
+        # Schema dentro lo zip ha i 4 sheet attesi
+        with zf.open("schema.xlsx") as f:
+            schema_wb = load_workbook(io.BytesIO(f.read()), data_only=True)
+            assert schema_wb.sheetnames == [
+                "Motivations", "Parameters", "Questions", "QuestionAllowedMotivations",
+            ]
+
+        # Per-lingua dentro lo zip ha solo i 4 sheet (no più schema replicato)
+        with zf.open("languages/ITA.xlsx") as f:
+            lang_wb = load_workbook(io.BytesIO(f.read()), data_only=True)
+            assert lang_wb.sheetnames == [
+                "Database_model", "Answers", "Examples", "Admin Notes",
+            ]
+
+
+def test_backup_zip_progress_callback(db_session):
+    """on_language deve essere chiamato (idx, total, lang) per ciascuna lingua."""
+    _seed_basic(db_session)
+    languages = db_session.query(models.Language).all()
+
+    calls = []
+    build_backup_zip_bytes(
+        db_session, languages,
+        on_language=lambda idx, total, lang: calls.append((idx, total, lang.id)),
+    )
+    assert calls == [(1, 1, "ITA")]

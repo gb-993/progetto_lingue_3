@@ -18,9 +18,9 @@
 - [x] Si può inserire un modo per decidere sulla base di cosa assegnare i colori nella mappa? Se per "top-level family", "subfamily", "group" oppure "historical". I filtri mi sembrano ottimi, solo se seleziono due o più top-family oppure subfamily bisognerebbe che la mappa fosse colorata ancora per top-family/subfamily e non per il livello filogenetico più ristretto, mentre se seleziono solo una top-family/subfamily va bene che la mappa sia colorata per il livello più ristretto, come fa ora
 - [x] Forse vorrebbero che scaricando il png della mappa si vedesse anche la legenda
 - [x] È scomparsa l'intestazione nel file xlsx scaricabile da "Export language metadata": [Name	ID	Top-level family	Family	Group	ISO code	Glottocode	Location	Latitude	Longitude	Supervisor	Informant	Historical	Source  Status] e possiamo aggiungere le colonne [Assigned user Date last change] 
-- [ ] Da export parametric data toglierei i fogli Motivations, Param2eters, Questions e QuestionAllowedMotivations. Il foglio Database_model è necessario per reimportare una lingua o sono sufficienti gli altri fogli? Database_model riesce a importare anche le motivazioni selezionate per ciascuna lingua e le admin notes? In quel foglio toglierei le colonne [Question	Question_Examples_YES	Question_Intructions_Comments]
-- [ ] Scaricare la mappa di Lorenzo e Federico
-- [ ] Mettere un pulsante unico che ricalcoli i final values per tutte le lingue
+- [x] Da export parametric data toglierei i fogli Motivations, Param2eters, Questions e QuestionAllowedMotivations. Il foglio Database_model è necessario per reimportare una lingua o sono sufficienti gli altri fogli? Database_model riesce a importare anche le motivazioni selezionate per ciascuna lingua e le admin notes? In quel foglio toglierei le colonne [Question	Question_Examples_YES	Question_Intructions_Comments]
+- [x] Scaricare la mappa di Lorenzo e Federico
+- [x] Mettere un pulsante unico che ricalcoli i final values per tutte le lingue
 - [ ] Nella tabella inserire la colonna Top family prima di Subfamily e possiamo togliere Geography
 
 ## LINGUE DATA
@@ -42,11 +42,11 @@
 ## LISTA MOTIVATIONS
 
 ## NETWORK
--  [ ] È scomparsa questa pagina
+-  [x] È scomparsa questa pagina
 
 ## TABLE A
 - [ ] Invertire group e historical e sostituire family con subfamily
-- [ ] Visualizzare come rossi/sfondo rosso i valori dei parametri che sono rossi perché non compilati completamente/unsure in lingue data
+- [ ] Visualizzare come rossi/sfondo rosso i valori dei parametri che sono2 rossi perché non compilati completamente/unsure in lingue data
 
 ## FILTERS
 
