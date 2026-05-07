@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 export default function BackupFolder() {
     const { timestamp } = useParams();
@@ -40,7 +41,7 @@ export default function BackupFolder() {
     });
 
     // Formattiamo la data per renderla più leggibile nell'header
-    const displayDate = new Date(timestamp).toLocaleString();
+    const displayDate = formatBackendDate(timestamp);
 
     return (
         <div className="container">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 // Sotto-componente per l'Accordion (sostituisce il vecchio JS vanilla)
 const AccordionItem = ({ title, defaultOpen = false, children }) => {
@@ -61,7 +62,7 @@ export default function BackupDetail() {
     if (error) return <div className="container"><div className="alert alert-error">{error}</div></div>;
     if (!sub) return null;
 
-    const displayDate = new Date(sub.submitted_at).toLocaleString();
+    const displayDate = formatBackendDate(sub.submitted_at);
 
     return (
         <div className="container">

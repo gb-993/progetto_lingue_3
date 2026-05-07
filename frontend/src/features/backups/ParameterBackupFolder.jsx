@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 // Lista parametri salvati in una cartella (timestamp) di backup parametri.
 export default function ParameterBackupFolder() {
@@ -37,7 +38,7 @@ export default function ParameterBackupFolder() {
         );
     });
 
-    const displayDate = new Date(timestamp).toLocaleString();
+    const displayDate = formatBackendDate(timestamp);
 
     return (
         <div className="container">

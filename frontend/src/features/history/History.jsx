@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import BackupsTab from './BackupsTab';
 import OldQuestionsTab from './OldQuestionsTab';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 // Etichette user-friendly per i tipi di entità
 const ENTITY_LABELS = {
@@ -25,7 +26,9 @@ const SOURCE_LABELS = {
     system: { label: 'System' },
 };
 
-const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString() : '—';
+// Delega al helper centrale che corregge il timezone (i timestamp backend
+// arrivano UTC senza suffisso Z; vedi utils/dateFormat.js).
+const fmtDateTime = (iso) => formatBackendDate(iso);
 const fmtValue = (v) => {
     if (v === null || v === undefined) return <span className="muted">—</span>;
     if (v === '') return <span className="muted">(empty)</span>;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 // Accordion riusato dallo stile di BackupDetail (ripetuto per evitare di
 // dover esportare il sotto-componente da un altro file).
@@ -55,7 +56,7 @@ export default function ParameterBackupDetail() {
     if (error) return <div className="container"><div className="alert alert-error">{error}</div></div>;
     if (!sub) return null;
 
-    const displayDate = new Date(sub.submitted_at).toLocaleString();
+    const displayDate = formatBackendDate(sub.submitted_at);
     const p = sub.parameter || {};
 
     return (

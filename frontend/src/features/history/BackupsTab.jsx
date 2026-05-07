@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 const SUBTABS = {
     LANGUAGES: 'languages',
@@ -157,7 +158,7 @@ function LanguagesBackupsPanel() {
                     <tbody>
                         {!loading && folders.map((f, idx) => (
                             <tr key={idx}>
-                                <td><strong>{new Date(f.timestamp).toLocaleString()}</strong></td>
+                                <td><strong>{formatBackendDate(f.timestamp)}</strong></td>
                                 <td>{f.note || '—'}</td>
                                 <td><span style={{ background: '#e2e8f0', padding: '0.1rem 0.55rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700 }}>{f.lang_count}</span></td>
                                 <td className="small">{f.user_email}</td>
@@ -272,7 +273,7 @@ function ParametersBackupsPanel() {
                     <tbody>
                         {!loading && folders.map((f, idx) => (
                             <tr key={idx}>
-                                <td><strong>{new Date(f.timestamp).toLocaleString()}</strong></td>
+                                <td><strong>{formatBackendDate(f.timestamp)}</strong></td>
                                 <td>{f.note || '—'}</td>
                                 <td><span style={{ background: '#e2e8f0', padding: '0.1rem 0.55rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700 }}>{f.param_count}</span></td>
                                 <td className="small">{f.user_email}</td>

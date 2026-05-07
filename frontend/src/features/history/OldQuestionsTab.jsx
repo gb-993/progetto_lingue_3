@@ -1,6 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+import { formatBackendDate } from '../../utils/dateFormat';
 
 // ==========================================
 // Tab "Old questions archive" della pagina History.
@@ -145,7 +146,7 @@ export default function OldQuestionsTab() {
                                         </td>
                                         <td>
                                             <small>
-                                                {latest ? new Date(latest.archived_at).toLocaleString() : '-'}
+                                                {latest ? formatBackendDate(latest.archived_at) : '-'}
                                                 {latest && <> by <em>{latest.archived_by}</em></>}
                                             </small>
                                         </td>
@@ -163,7 +164,7 @@ export default function OldQuestionsTab() {
                                             <td></td>
                                             <td colSpan="2" style={{ fontSize: '0.85rem' }}>
                                                 <div style={{ marginBottom: '0.25rem' }}>
-                                                    <strong>{new Date(v.archived_at).toLocaleString()}</strong>
+                                                    <strong>{formatBackendDate(v.archived_at)}</strong>
                                                     {' '}— by <em>{v.archived_by}</em>
                                                 </div>
                                                 {v.archive_note && (
