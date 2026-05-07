@@ -5,7 +5,16 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import build_parser, pretty_print_expression, eval_node, _as_list
 
-router = APIRouter(prefix="/api/queries", tags=["Queries"])
+# Tutti gli endpoint sono admin-only: la pagina /queries della SPA è admin-only
+# e questi endpoint espongono dati cross-language (Q1-Q10) che non vanno
+# accessibili a utenti non admin né tantomeno al pubblico. Dichiariamo la
+# dipendenza a livello di router così non rischiamo di dimenticarla in nuovi
+# endpoint aggiunti in futuro: nessun endpoint qui dentro deve restare aperto.
+router = APIRouter(
+    prefix="/api/queries",
+    tags=["Queries"],
+    dependencies=[Depends(require_admin)],
+)
 
 # --- Helper Functions (Migrate da views.py) ---
 def _final_map_for_language(db: Session, lang_id: str) -> Dict[str, str]:

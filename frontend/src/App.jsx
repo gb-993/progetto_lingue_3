@@ -153,9 +153,15 @@ const router = createBrowserRouter([
             { path: 'admin/backup-restore', element: <AdminRoute><Layout><BackupRestore /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
-            { path: 'tablea', element: <Layout><TableA /></Layout> },
-            { path: 'tablea/:id', element: <Layout><TableA /></Layout> },
-            { path: 'queries', element: <Layout><QueriesDashboard /></Layout> },
+            // TableA e Queries sono admin-only: la sidebar le mostra solo
+            // agli admin e gli endpoint backend (/api/tablea/*, /api/queries/*)
+            // sono protetti da require_admin. Avvolgiamo anche le rotte SPA
+            // con AdminRoute per coerenza UX: un utente non admin che digiti
+            // l'URL a mano viene rimandato a /dashboard invece di vedere una
+            // pagina che farà solo errori 403 sulle proprie chiamate.
+            { path: 'tablea', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
+            { path: 'tablea/:id', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
+            { path: 'queries', element: <AdminRoute><Layout><QueriesDashboard /></Layout></AdminRoute> },
         ],
     },
 ]);

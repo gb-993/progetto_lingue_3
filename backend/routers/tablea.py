@@ -23,9 +23,17 @@ from openpyxl import Workbook
 from adjustText import adjust_text
 
 import models
-from dependencies import get_db, require_admin
+from dependencies import get_db, get_current_user, require_admin
 from services.citation import apply_excel_citation
 
+# Tutti gli endpoint di TableA sono admin-only (la pagina /tablea nella SPA è
+# riservata agli admin e i payload — matrice cross-language, export, distanze,
+# Mantel, PCA — non vanno esposti a utenti non admin né tantomeno al pubblico),
+# TRANNE `/options` che è chiamato anche da LanguageList per popolare i filtri
+# top_family/family/group e quindi richiede solo `get_current_user`.
+# Le dipendenze sono dichiarate per-view invece che a livello di router perché
+# in FastAPI le dependencies del router sono additive: non c'è modo di
+# "togliere" require_admin da una singola route.
 router = APIRouter(prefix="/api/tablea", tags=["Table A"])
 
 # --- SCHEMI PYDANTIC ---
@@ -144,8 +152,11 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
 # ENDPOINT: VISUALIZZAZIONE E TENDINE
 # ==========================================
 
+# Accessibile a tutti gli utenti loggati (vedi nota sul router): LanguageList
+# usa queste opzioni per popolare i filtri top_family/family/group anche per
+# gli utenti non admin.
 @router.get("/options")
-def get_tablea_options(db: Session = Depends(get_db)):
+def get_tablea_options(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Restituisce le opzioni univoche per popolare i filtri."""
     def distinct(col): return [r[0] for r in db.query(col).filter(col != None, col != "", col != "none").distinct().order_by(col).all()]
     return {
@@ -230,7 +241,7 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
 
 
 @router.post("/matrix")
-def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     langs, rows = _get_filtered_data(db, filters)
     lang_ids = [l.id for l in langs]
 
@@ -263,7 +274,7 @@ def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db
 # ==========================================
 
 @router.post("/export/xlsx")
-def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Export XLSX standard con gestione colonne differenziata."""
     langs, rows = _get_filtered_data(db, filters)
     wb = Workbook()
@@ -285,7 +296,7 @@ def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_d
                              headers={"Content-Disposition": f"attachment; filename=tableA_{filters.view}.xlsx"})
 
 @router.post("/export/csv")
-def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Export CSV Trasposto: righe=lingue, colonne=parametri."""
     langs, rows = _get_filtered_data(db, filters)
     buf = io.StringIO()
@@ -302,7 +313,7 @@ def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db
 # ==========================================
 
 @router.post("/export/distances")
-def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Genera le matrici di distanza tabulari in formato .txt."""
     if filters.view != "params": raise HTTPException(400, "Distances only for Parameters View")
     langs, rows = _get_filtered_data(db, filters)
@@ -327,7 +338,7 @@ def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get
                              headers={"Content-Disposition": "attachment; filename=distances_txt.zip"})
 
 @router.post("/export/geo_distances")
-def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Matrici di distanza geografica in km (porting di 11_latitude_longitude_to_distance_matrix.py).
 
     Output zip con due TSV:
@@ -379,7 +390,7 @@ def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends
     return StreamingResponse(buf, media_type="application/zip", headers=headers)
 
 @router.post("/export/dendrograms")
-def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Genera i Dendrogrammi con metodo 'average'."""
     langs, rows = _get_filtered_data(db, filters)
     lang_vectors = [[r["cells"][i] for r in rows] for i in range(len(langs))]
@@ -411,7 +422,7 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
                              headers={"Content-Disposition": "attachment; filename=dendrograms.zip"})
 
 @router.post("/export/cluster_map")
-def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db)):
+def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Mappa interattiva HTML dei cluster UPGMA (porting di 02_carta_italia.py).
 
     Pipeline (replicata da 01_plot_clusters.py + 02_carta_italia.py):
@@ -494,7 +505,7 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
     return Response(content=html, media_type="text/html", headers=headers)
 
 @router.post("/export/pca")
-def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db)):
+def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Analisi PCA via SVD manuale con etichette varianza esatte."""
     langs, rows = _get_filtered_data(db, filters)
     if not langs or len(rows) < 2: raise HTTPException(400, "Insufficient data for PCA")
@@ -658,7 +669,7 @@ def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
 
 
 @router.post("/export/mantel")
-def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db)):
+def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Mantel test su sottoinsieme di {GCD, Hamming, Jaccard[+]}.
 
     Restituisce uno zip con matrici .txt, scatterplot PNG (matplotlib) +

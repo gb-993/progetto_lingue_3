@@ -123,7 +123,17 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/questions.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/backup_restore.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('services/pdf_export.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('routers/tablea.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\('services/backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/parameter_backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/backup.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters_backup.py'\\).read\\(\\)\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\('services/backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('services/parameter_backup_service.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/backup.py'\\).read\\(\\)\\); ast.parse\\(open\\('routers/parameters_backup.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('routers/tablea.py'\\).read\\(\\)\\); print\\('OK: routers/tablea.py compila'\\)\")",
+      "Bash(curl -s -o nul -w \"GET /healthz                           -> %%{http_code}\\\\n\" http://localhost:8000/healthz)",
+      "Bash(curl -s -o nul -w \"GET /api/tablea/options \\(no auth\\)        -> %%{http_code}  \\(atteso 401\\)\\\\n\" http://localhost:8000/api/tablea/options)",
+      "Bash(curl -s -o nul -w \"POST /api/tablea/matrix \\(no auth\\)        -> %%{http_code}  \\(atteso 401\\)\\\\n\" -X POST -H \"Content-Type: application/json\" -d \"{}\" http://localhost:8000/api/tablea/matrix)",
+      "Bash(curl -s -o nul -w \"POST /api/tablea/export/xlsx \\(no auth\\)   -> %%{http_code}  \\(atteso 401\\)\\\\n\" -X POST -H \"Content-Type: application/json\" -d \"{}\" http://localhost:8000/api/tablea/export/xlsx)",
+      "Bash(findstr /R \"ADMIN_EMAIL ADMIN_PASSWORD\")",
+      "PowerShell(if \\(Test-Path c:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub\\\\.env\\) { Get-Content c:\\\\Users\\\\Gb\\\\Desktop\\\\pcm-hub\\\\.env | Where-Object { $_ -match 'ADMIN_\\(EMAIL|PASSWORD\\)|^ENV=' } } else { 'no .env' })",
+      "Bash(git stash *)",
+      "Bash(git -C c:/Users/Gb/Desktop/pcm-hub diff -- backend/routers/tablea.py)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:5173/' -UseBasicParsing; \"vite dev: $\\($r.StatusCode\\)\" } catch { \"vite dev errore: $\\($_.Exception.Message\\)\" })"
     ]
   }
 }
