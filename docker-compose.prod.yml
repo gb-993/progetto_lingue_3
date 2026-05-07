@@ -2,8 +2,9 @@
 ##
 ##   - DB non esposto sull'host (solo rete docker interna)
 ##   - backend non esposto sull'host (solo rete docker interna)
-##   - frontend buildato da un container "usa e getta" allo start dello stack
-##     (frontend_build) e servito da Caddy via volume nominato.
+##   - frontend buildato sul PC (npm run build) e committato in repo come
+##     frontend/dist/. Caddy lo serve via bind-mount diretto: niente build
+##     sulla VM (la VM piccola da 8GB / poca RAM andava in OOM su `npm ci`).
 ##   - backup nightly fatto da un sidecar (no cron host, no SSH richiesto).
 ##   - Caddy davanti: HTTPS automatico via Let's Encrypt e SPA statica
 ##   - cleaner giornaliero per liberare spazio su VM piccola (8 GB)
@@ -71,52 +72,17 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Container "usa e getta" che builda la SPA al deploy dello stack
-  # e copia frontend/dist nel volume nominato `frontend_dist`. Esce a 0.
-  # Caddy aspetta che questo finisca con successo prima di partire.
-  # Ogni "Pull and redeploy" su Portainer rifa' il git clone e ribuilda
-  # automaticamente la dist.
-  frontend_build:
-    image: node:20-alpine
-    container_name: pcm_frontend_build
-    working_dir: /build
-    volumes:
-      - ./frontend:/src:ro
-      - frontend_dist:/out
-    # Copia i sorgenti in /build (writable), installa, builda, e
-    # sposta dist/ nel volume condiviso. -E preserva i flag npm.
-    command:
-      - sh
-      - -c
-      - |
-        set -e
-        cp -r /src/. /build/
-        npm ci --no-audit --no-fund
-        npm run build
-        rm -rf /out/*
-        cp -r dist/. /out/
-        echo "[frontend_build] dist copiata in /out, esco."
-    restart: "no"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   caddy:
     image: caddy:2-alpine
     container_name: pcm_caddy
     depends_on:
-      backend:
-        condition: service_started
-      frontend_build:
-        condition: service_completed_successfully
+      - backend
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - frontend_dist:/srv/dist:ro
+      - ./frontend/dist:/srv/dist:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
@@ -213,5 +179,4 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
-  frontend_dist:
   pcm_backups:

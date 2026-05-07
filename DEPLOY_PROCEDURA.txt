@@ -15,6 +15,29 @@ Legenda:
 
 
 ==========================================================================
+PASSO 0 — BUILDARE LA SPA SUL PC E COMMITTARE LA DIST
+==========================================================================
+
+[PC] Apri PowerShell nella root del repo:
+
+   cd frontend
+   npm ci --no-audit --no-fund
+   npm run build
+   cd ..
+   git add frontend/dist
+   git commit -m "build: dist aggiornata per deploy"
+   git push
+
+La SPA viene buildata SUL PC, non sulla VM. La dist (~3 MB) e' committata
+nel repo, e Caddy in prod la serve direttamente con un bind-mount.
+Il "vecchio" container frontend_build NON c'e' piu' (la VM piccola andava
+in OOM durante npm ci).
+
+NB: ogni redeploy del codice richiede di rifare questo passo prima del
+push (vedi sezione "Per redeploy del codice" in fondo).
+
+
+==========================================================================
 PASSO 1 — SCARICARE IL BUNDLE DAL SITO VECCHIO
 ==========================================================================
 
@@ -116,21 +139,19 @@ PASSO 4 — CREARE LO STACK DI PRODUZIONE SU PORTAINER
 
    - In fondo: clicca "Deploy the stack".
    - Aspetta. La prima build dura qualche minuto: Portainer fa il
-     git clone, builda l'immagine backend, fa partire `pcm_frontend_build`
-     che lancia `npm ci && npm run build` (~30-60s), poi esce; poi
-     parte Caddy. Vedi i log live in fondo alla pagina.
+     git clone, builda l'immagine backend, poi parte Caddy che serve
+     la dist precompilata da frontend/dist/ (committata nel repo,
+     vedi PASSO 0). Vedi i log live in fondo alla pagina.
 
 Quando finisce vai su "Containers". Devi vedere:
    pcm_db                  running          (healthy)
    pcm_backend             running          (healthy)   <- ci mette ~30s
-   pcm_frontend_build      exited (0)       <- voluto, "usa e getta"
    pcm_caddy               running
    pcm_backup              running
    pcm_cleaner             running
 
-Se pcm_frontend_build mostra "exited (NN)" con NN != 0:
-   - Aprilo, "Logs", leggi l'errore (di solito npm install fallito).
-   - Risolvi (di solito: aggiorna package-lock.json sul PC, push, redeploy).
+Se Caddy mostra 404 sulla home: probabilmente hai dimenticato il
+PASSO 0 (build + commit della dist). Rifallo, push, "Pull and redeploy".
 
 
 ==========================================================================
@@ -219,9 +240,8 @@ PASSO 9 — SMOKE TEST
        primo, salva il secondo -> il secondo deve dare errore 409.
    [ ] Logout -> torna alla login.
 
-[PORTAINER] Containers: tutti "running" (tranne pcm_frontend_build che
-deve essere "exited (0)"). pcm_backend deve essere "(healthy)" entro
-~30 secondi dall'avvio.
+[PORTAINER] Containers: tutti "running". pcm_backend deve essere
+"(healthy)" entro ~30 secondi dall'avvio.
 
 
 ==========================================================================
@@ -285,10 +305,19 @@ FATTO. Cosa controllare nei giorni successivi:
 Se qualcosa rompe: Portainer -> Containers -> Logs.
    pcm_backend         -> errori app
    pcm_db              -> problemi DB
-   pcm_caddy           -> problemi HTTPS / Let's Encrypt
-   pcm_frontend_build  -> errori npm/vite (non ha buildato la SPA)
+   pcm_caddy           -> problemi HTTPS / Let's Encrypt / 404 su SPA
+                          (dist mancante o vecchia: rifai PASSO 0)
    pcm_backup          -> backup falliti
 
-Per redeploy del codice (push su GitHub fatto):
-   Portainer -> Stacks -> pcm-hub -> "Pull and redeploy".
-   Il container frontend_build rifa' la build automaticamente.
+Per redeploy del codice:
+   1) [PC] Se hai toccato il frontend, ribuilda e committa la dist:
+         cd frontend
+         npm run build
+         cd ..
+         git add frontend/dist
+         git commit -m "build: dist aggiornata"
+   2) [PC] git push
+   3) [PORTAINER] Stacks -> pcm-hub -> "Pull and redeploy".
+
+   Il backend viene ribuildato dall'immagine; Caddy ricarica la dist
+   nuova al restart del container.

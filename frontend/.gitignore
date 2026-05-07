@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+# dist NON ignorata: la SPA viene buildata sul PC (npm run build) e committata.
+# Caddy in prod la serve direttamente via bind-mount, senza buildare sulla VM.
 dist-ssr
 *.local
 
