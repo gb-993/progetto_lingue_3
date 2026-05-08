@@ -8,6 +8,8 @@ import {
 import { AuthProvider } from './context/AuthContext';
 import Layout, { SiteFooter } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
+import ErrorBoundary, { RouterErrorElement } from './components/ErrorBoundary';
+import NotFound from './components/NotFound';
 
 import PublicHome from './features/public/PublicHome';
 import HowToCite from './features/public/HowToCite';
@@ -90,6 +92,11 @@ const router = createBrowserRouter([
     {
         path: '/',
         element: <AppRoot />,
+        // errorElement: il data router (createBrowserRouter) cattura i crash
+        // dentro le sue children e li manda qui. Senza questo, React Router
+        // mostra un fallback minimal ("Unexpected Application Error!") prima
+        // ancora che l'ErrorBoundary class esterno possa intervenire.
+        errorElement: <RouterErrorElement />,
         children: [
             // Rotte pubbliche
             { index: true, element: <ConditionalLayout><PublicHome /></ConditionalLayout> },
@@ -162,10 +169,21 @@ const router = createBrowserRouter([
             { path: 'tablea', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
             { path: 'tablea/:id', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
             { path: 'queries', element: <AdminRoute><Layout><QueriesDashboard /></Layout></AdminRoute> },
+
+            // Catch-all: qualsiasi URL non riconosciuto cade qui invece del
+            // fallback minimal di React Router. Mostra una scheda PCM-style
+            // coerente con frontend/public/404.html.
+            { path: '*', element: <ConditionalLayout><NotFound /></ConditionalLayout> },
         ],
     },
 ]);
 
 export default function App() {
-    return <RouterProvider router={router} />;
+    // ErrorBoundary fuori dal RouterProvider: cattura crash JS in qualsiasi
+    // pagina/route e mostra una scheda PCM-style invece dello schermo bianco.
+    return (
+        <ErrorBoundary>
+            <RouterProvider router={router} />
+        </ErrorBoundary>
+    );
 }

@@ -54,6 +54,22 @@ hub.parametricomparison.unimore.it {
 		file_server
 	}
 
+	# Pagina di manutenzione PCM-style per errori 5xx: scatta quando il
+	# backend non e' raggiungibile (502 da reverse_proxy) o restituisce
+	# un 500/503/504. Il file e' in /srv/dist/maintenance.html (committato
+	# in frontend/dist/ via build) cosi' Caddy puo' servirlo anche se il
+	# backend e' completamente giu'. Retry-After: 60s e' un suggerimento
+	# standard per i client (browser, monitor) di riprovare a breve.
+	handle_errors {
+		@5xx expression `{err.status_code} >= 500 && {err.status_code} < 600`
+		handle @5xx {
+			root * /srv/dist
+			rewrite * /maintenance.html
+			header Retry-After "60"
+			file_server
+		}
+	}
+
 	# Header di sicurezza basilari.
 	header {
 		# Niente sniffing del Content-Type
