@@ -159,39 +159,45 @@ export default function BackupRestore() {
             <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
                 <h1>Backup Restore</h1>
                 <p className="muted">
-                    Carica un file <strong>PCM_backup_*.zip</strong> generato via{' '}
-                    <em>Languages → Download data → Export backup (.zip)</em> per ripristinare
-                    schema, metadati lingue, glossario e dati di compilazione.
+                    Upload a <strong>PCM_backup_*.zip</strong> file generated via{' '}
+                    <em>Languages → Download data → Export backup (.zip)</em> to restore
+                    schema, language metadata, glossary and compilation data.
                 </p>
             </header>
 
             <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ marginTop: 0 }}>Come ottenere il bundle</h3>
+                <h3 style={{ marginTop: 0 }}>How to get the bundle</h3>
                 <ol className="small" style={{ lineHeight: 1.7, marginTop: 0, marginBottom: '0.75rem', paddingLeft: '1.25rem' }}>
-                    <li>Apri la pagina <Link to="/languages">Languages</Link>.</li>
-                    <li>Dal pulsante <strong>Download Data ▾</strong> in alto a destra seleziona <strong>Export backup (.zip)</strong>.</li>
-                    <li>Salva il file <code>PCM_backup_*.zip</code> e ricaricalo qui sotto.</li>
+                    <li>
+                        Open the{' '}
+                        <Link to="/languages" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>
+                            Languages
+                        </Link>{' '}
+                        page.
+                    </li>
+                    <li>From the <strong>Download Data ▾</strong> button at the top right, select <strong>Export backup (.zip)</strong>.</li>
+                    <li>Save the <code>PCM_backup_*.zip</code> file and upload it below.</li>
                 </ol>
                 <details>
                     <summary className="small muted" style={{ cursor: 'pointer' }}>
-                        File contenuti nello zip (riferimento tecnico)
+                        Files contained in the zip (technical reference)
                     </summary>
                     <ul className="small" style={{ lineHeight: 1.7, marginTop: '0.5rem', marginBottom: 0 }}>
                         <li><code>schema.xlsx</code> — Motivations / Parameters / Questions / QAM</li>
-                        <li><code>languages_metadata.xlsx</code> — metadati di tutte le lingue</li>
+                        <li><code>languages_metadata.xlsx</code> — metadata for all languages</li>
                         <li><code>glossary.xlsx</code> — Word / Description</li>
-                        <li><code>languages/&lt;ID&gt;.xlsx</code> — un file per lingua con risposte, esempi, motivazioni e admin notes</li>
+                        <li><code>languages/&lt;ID&gt;.xlsx</code> — one file per language with answers, examples, motivations and admin notes</li>
                     </ul>
                 </details>
             </div>
 
             {wipe && (
                 <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #b91c1c' }}>
-                    <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Operazione distruttiva</h3>
+                    <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Destructive operation</h3>
                     <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
-                        <li>Con <code>wipe</code> attivo vengono <strong>cancellate tutte le tabelle dati</strong> prima del restore (schema, lingue, risposte, esempi, motivazioni, glossario, snapshots, change logs, tassonomia).</li>
-                        <li>Gli utenti NON vengono toccati.</li>
-                        <li>Senza wipe, il restore è un <strong>upsert</strong>: aggiorna o aggiunge le righe presenti nel bundle, ma non rimuove quelle non menzionate.</li>
+                        <li>With <code>wipe</code> enabled, <strong>all data tables are deleted</strong> before the restore (schema, languages, answers, examples, motivations, glossary, snapshots, change logs, taxonomy).</li>
+                        <li>Users are NOT affected.</li>
+                        <li>Without wipe, the restore is an <strong>upsert</strong>: it updates or adds the rows present in the bundle, but does not remove those not mentioned.</li>
                     </ul>
                 </div>
             )}
