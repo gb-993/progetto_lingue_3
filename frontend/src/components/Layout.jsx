@@ -225,8 +225,13 @@ export function SiteFooter({ role }) {
 // =============================================================================
 export default function Layout({ children }) {
     const location = useLocation();
-    const { logout: contextLogout } = useAuth();
+    const { logout: contextLogout, user } = useAuth();
     const role = localStorage.getItem('role');
+    // Solo per voci sidebar "pericolose" (Migration Import, Backup Restore).
+    // Backend riconosce super-admin via env var SUPER_ADMIN_EMAIL e lo
+    // espone in /api/me come `is_super_admin`. Senza il flag le voci
+    // restano nascoste e le rotte sono comunque protette server-side.
+    const isSuperAdmin = !!user?.is_super_admin;
 
     const [theme, setTheme] = useState(getInitialTheme);
     const [collapsed, setCollapsed] = useState(() =>
@@ -369,18 +374,25 @@ export default function Layout({ children }) {
                                                     <span className="nav-label">History & Backups</span>
                                                 </Link>
                                             </li>
-                                            <li>
-                                                <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: '#b91c1c' }}>
-                                                    <DatabaseZap size={18} className="nav-icon" />
-                                                    <span className="nav-label">Migration Import</span>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
-                                                    <Upload size={18} className="nav-icon" />
-                                                    <span className="nav-label">Backup Restore</span>
-                                                </Link>
-                                            </li>
+                                            {/* Voci super-admin: visibili solo agli admin la
+                                                cui email e' in SUPER_ADMIN_EMAIL (env backend).
+                                                Operazioni distruttive sull'intero DB. */}
+                                            {isSuperAdmin && (
+                                                <>
+                                                    <li>
+                                                        <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: '#b91c1c' }}>
+                                                            <DatabaseZap size={18} className="nav-icon" />
+                                                            <span className="nav-label">Migration Import</span>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
+                                                            <Upload size={18} className="nav-icon" />
+                                                            <span className="nav-label">Backup Restore</span>
+                                                        </Link>
+                                                    </li>
+                                                </>
+                                            )}
                                         </>
                                     )}
 

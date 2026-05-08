@@ -156,8 +156,11 @@ const router = createBrowserRouter([
 
             { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
             { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },
-            { path: 'admin/migration-import', element: <AdminRoute><Layout><MigrationImport /></Layout></AdminRoute> },
-            { path: 'admin/backup-restore', element: <AdminRoute><Layout><BackupRestore /></Layout></AdminRoute> },
+            // Rotte super-admin: oltre a essere admin, l'utente deve avere
+            // l'email in SUPER_ADMIN_EMAIL (env var backend). Operazioni
+            // distruttive sull'intero DB.
+            { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
+            { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
             // TableA e Queries sono admin-only: la sidebar le mostra solo

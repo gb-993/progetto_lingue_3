@@ -23,7 +23,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFi
 
 import models
 from database import SessionLocal
-from dependencies import require_admin
+from dependencies import require_super_admin
 from services import migration_progress
 from services.migration_import import import_migration_bundle
 from services.migration_progress import ProgressReporter
@@ -116,7 +116,7 @@ async def post_import_migration_bundle(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     wipe: bool = True,
-    current_user: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_super_admin),
 ):
     fname = (file.filename or "").lower()
     if not fname.endswith(".zip"):
@@ -144,7 +144,7 @@ async def post_import_migration_bundle(
 @router.get("/status/{job_id}")
 def get_migration_status(
     job_id: str,
-    current_user: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_super_admin),
 ):
     state = migration_progress.get_state(job_id)
     if state is None:

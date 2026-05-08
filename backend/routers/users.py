@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import models
 import auth
-from dependencies import get_db, require_admin, get_current_user
+from dependencies import get_db, require_admin, get_current_user, is_super_admin
 
 router = APIRouter(tags=["Users"])
 
@@ -171,7 +171,12 @@ def delete_account(user_id: int, db: Session = Depends(get_db), current_user: mo
 def get_my_account(current_user: models.User = Depends(get_current_user)):
     return {
         "id": current_user.id, "email": current_user.email,
-        "name": current_user.name, "surname": current_user.surname, "role": current_user.role
+        "name": current_user.name, "surname": current_user.surname, "role": current_user.role,
+        # is_super_admin: true se l'utente e' admin E la sua email e' in
+        # SUPER_ADMIN_EMAIL (env var, comma-separated). Usato dal frontend
+        # per nascondere/proteggere voci sidebar e rotte admin "pericolose"
+        # (Migration Import, Backup Restore).
+        "is_super_admin": is_super_admin(current_user),
     }
 
 @router.put("/api/me")
