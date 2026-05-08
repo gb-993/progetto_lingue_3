@@ -339,11 +339,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                         {/*
                             Layout responsive: su schermi larghi (≥ ~880px) gli esempi
                             stanno a coppie affiancati; sotto si impilano in verticale.
-                            Lo `gap` sul grid genera spaziatura simmetrica orizzontale +
-                            verticale, evitando il classico disallineamento da
-                            margin-bottom quando le card vanno a finire su due colonne.
+                            La classe `examples-grid` neutralizza la regola globale
+                            `.card + .card { margin-top }` (vedi index.css), che
+                            altrimenti farebbe scendere la 2ª card spaiandola dalla 1ª.
                         */}
-                        <div style={{
+                        <div className="examples-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
                             gap: '1rem',
