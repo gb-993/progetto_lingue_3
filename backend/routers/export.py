@@ -7,6 +7,9 @@ Endpoint:
   POST /api/admin/export/languages/zip                           -> AVVIA backup zip async, ritorna {job_id}
   GET  /api/admin/export/languages/zip/status/{job_id}           -> stato del job (phase, current, total, finished, error)
   GET  /api/admin/export/languages/zip/download/{job_id}         -> scarica il file pronto (one-shot, poi cleanup)
+  POST /api/admin/export/full-backup/zip                         -> AVVIA full backup async (lingue + extras)
+  GET  /api/admin/export/full-backup/zip/status/{job_id}         -> stato del job
+  GET  /api/admin/export/full-backup/zip/download/{job_id}       -> scarica il full backup pronto
   GET  /api/admin/export/schema/xlsx                             -> schema only (parametri/domande/motivazioni) (admin)
 """
 from __future__ import annotations
@@ -34,6 +37,7 @@ from services.excel_export import (
     build_schema_workbook,
     build_glossary_workbook,
     build_backup_zip_bytes,
+    build_full_backup_zip_bytes,
 )
 from services import export_jobs
 
@@ -226,6 +230,104 @@ def download_export(
     fname = f"PCM_backup_{_ts()}.zip"
     # Cleanup post-invio: BackgroundTasks gira DOPO che la response è stata
     # spedita, quindi il file resta integro per tutta la durata dello stream.
+    background_tasks.add_task(export_jobs.cleanup_file, path)
+    return FileResponse(
+        path=path,
+        media_type=ZIP_MIME,
+        filename=fname,
+    )
+
+
+# ============================================================================
+# 3.bis FULL BACKUP ZIP (admin only) — backup completo per disaster recovery
+#
+#    Stesso flusso async del backup standard, ma include la cartella `extras/`
+#    con site_content, submissions, parameter_submissions, archived_questions.
+#    Esporta SEMPRE tutte le lingue: la pagina di restore è il posto giusto
+#    per un "tutto il sito", non c'è motivo di filtrare per selezione qui.
+#    Gli utenti NON sono inclusi (vanno gestiti separatamente).
+# ============================================================================
+
+
+def _run_full_backup_in_background(job_id: str) -> None:
+    db = SessionLocal()
+    try:
+        languages = (
+            db.query(models.Language)
+            .order_by(models.Language.position, models.Language.id)
+            .all()
+        )
+        if not languages:
+            export_jobs.finish_error(job_id, "No language to export.")
+            return
+
+        total = len(languages)
+        export_jobs.set_phase(job_id, "building", "Building full backup…", total=total)
+
+        def on_lang(idx: int, total_count: int, lang) -> None:
+            export_jobs.tick(
+                job_id,
+                current=idx,
+                label=f"Processing {lang.id} ({idx}/{total_count})",
+            )
+
+        data = build_full_backup_zip_bytes(db, languages, on_language=on_lang)
+
+        target = export_jobs.get_target_path(job_id)
+        with open(target, "wb") as f:
+            f.write(data)
+        export_jobs.set_file_ready(job_id, target)
+    except Exception as e:
+        logger.exception("Full backup export job %s failed", job_id)
+        export_jobs.finish_error(job_id, f"Unexpected error: {e}")
+    finally:
+        db.close()
+
+
+@router.post("/admin/export/full-backup/zip")
+def start_export_full_backup_zip(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    if db.query(models.Language.id).count() == 0:
+        raise HTTPException(status_code=400, detail="No language to export.")
+
+    job_id = export_jobs.new_job()
+    background_tasks.add_task(_run_full_backup_in_background, job_id)
+    return {"job_id": job_id}
+
+
+@router.get("/admin/export/full-backup/zip/status/{job_id}")
+def get_full_backup_status(
+    job_id: str,
+    current_user: models.User = Depends(require_admin),
+):
+    state = export_jobs.get_state(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Job not found or expired")
+    return state
+
+
+@router.get("/admin/export/full-backup/zip/download/{job_id}")
+def download_full_backup(
+    job_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: models.User = Depends(require_admin),
+):
+    state = export_jobs.get_state(job_id)
+    if state is None:
+        raise HTTPException(status_code=404, detail="Job not found or expired")
+    if not state.get("finished"):
+        raise HTTPException(status_code=409, detail="Job not finished yet")
+    if state.get("error"):
+        raise HTTPException(status_code=500, detail=state["error"])
+
+    path = export_jobs.consume_file(job_id)
+    if path is None or not os.path.exists(path):
+        raise HTTPException(status_code=410, detail="File already downloaded or expired")
+
+    fname = f"PCM_full_backup_{_ts()}.zip"
     background_tasks.add_task(export_jobs.cleanup_file, path)
     return FileResponse(
         path=path,

@@ -599,10 +599,339 @@ def build_glossary_workbook(db: Session) -> Workbook:
 
 
 # ============================================================================
-# 5. BACKUP ZIP BUILDER
+# 5. EXTRAS WORKBOOKS (per il bundle "full" — vedi sezione 6 più sotto)
 # ============================================================================
 #
-# Struttura del bundle (v1, 2026-05):
+# Tabelle "satellite" non incluse nel bundle base (PCM_backup.zip): contengono
+# storico/contenuto editabile che non serve per i dati linguistici ma che è
+# utile preservare per un disaster recovery completo.
+#   - SiteContent      → testi editabili (HowToCite, About, ecc.)
+#   - Submissions      → snapshot di lingue inviate per approvazione
+#   - ParameterSubmissions → snapshot delle definizioni di parametri
+#   - ArchivedQuestions    → archivio di domande dismesse + dati collegati
+# Gli utenti NON sono inclusi: chi restora ricrea/importa users separatamente.
+
+SITE_CONTENT_HEADERS = ["Key", "Content", "Page", "Updated At", "Updated By Email"]
+
+SUBMISSIONS_HEADERS = ["ID", "Language ID", "Submitted By Email", "Submitted At", "Note"]
+SUBMISSION_ANSWERS_HEADERS = [
+    "ID", "Submission ID", "Question Code", "Response Text", "Comments",
+]
+SUBMISSION_EXAMPLES_HEADERS = [
+    "ID", "Submission ID", "Question Code",
+    "Textarea", "Transliteration", "Gloss", "Translation", "Reference",
+]
+SUBMISSION_ANSWER_MOTIVATIONS_HEADERS = [
+    "ID", "Submission ID", "Question Code", "Motivation Code", "Motivation Label",
+]
+SUBMISSION_PARAMS_HEADERS = [
+    "ID", "Submission ID", "Parameter ID",
+    "Value Orig", "Warning Orig", "Value Eval", "Warning Eval", "Evaluated At",
+]
+
+PARAMETER_SUBMISSIONS_HEADERS = [
+    "ID", "Parameter ID", "Parameter Name",
+    "Submitted By Email", "Submitted At", "Note",
+    "Short Description", "Long Description",
+    "Implicational Condition", "Description Of Implicational Condition",
+    "Is Active", "Position", "Schema", "Param Type", "Level Of Comparison",
+]
+PARAMETER_SUBMISSION_QUESTIONS_HEADERS = [
+    "ID", "Submission ID", "Question Code", "Text", "Template Type",
+    "Instruction", "Instruction YES", "Instruction NO",
+    "Example YES", "Help Info", "Is Stop Question", "Is Active",
+]
+PARAMETER_SUBMISSION_ALLOWED_MOTIVATIONS_HEADERS = [
+    "ID", "Question ID", "Motivation Code", "Motivation Label",
+]
+
+ARCHIVED_QUESTIONS_HEADERS = [
+    "ID", "Original Question ID", "Parameter ID", "Parameter Name",
+    "Text", "Template Type",
+    "Instruction", "Instruction YES", "Instruction NO",
+    "Example YES", "Help Info", "Is Stop Question", "Is Active",
+    "Archived At", "Archived By Email", "Archive Note",
+    "Answers Count", "Examples Count",
+]
+ARCHIVED_QUESTION_MOTIVATIONS_HEADERS = [
+    "ID", "Archived Question ID", "Motivation Code", "Motivation Label",
+]
+ARCHIVED_ANSWERS_HEADERS = [
+    "ID", "Archived Question ID", "Language ID", "Language Name Full",
+    "Status", "Response Text", "Comments", "Original Updated At",
+]
+ARCHIVED_EXAMPLES_HEADERS = [
+    "ID", "Archived Answer ID", "Number",
+    "Textarea", "Transliteration", "Gloss", "Translation", "Reference",
+]
+ARCHIVED_ANSWER_MOTIVATIONS_HEADERS = [
+    "ID", "Archived Answer ID", "Motivation Code", "Motivation Label",
+]
+
+
+def _user_email_map(db: Session) -> dict:
+    """{user.id: user.email} per denormalizzare gli FK utente nei file extras.
+
+    Salvare l'email invece dell'id rende il bundle indipendente dagli id
+    locali del DB sorgente: in fase di restore basta lookup-by-email, e se
+    l'utente non c'è l'FK resta NULL (tutte le colonne FK utente in queste
+    tabelle sono nullable o ON DELETE SET NULL)."""
+    return {u.id: u.email for u in db.query(models.User.id, models.User.email).all()}
+
+
+def build_site_content_workbook(db: Session) -> Workbook:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "SiteContents"
+    ws.append(SITE_CONTENT_HEADERS)
+    _bold_header_row(ws, len(SITE_CONTENT_HEADERS))
+
+    user_email = _user_email_map(db)
+    for r in db.query(models.SiteContent).order_by(models.SiteContent.key).all():
+        ws.append([
+            _xlsx_sanitize(r.key),
+            _xlsx_sanitize(r.content),
+            _xlsx_sanitize(r.page),
+            _xlsx_sanitize(r.updated_at),
+            user_email.get(r.updated_by_id, "") if r.updated_by_id else "",
+        ])
+
+    _style_table(ws, "SiteContents", len(SITE_CONTENT_HEADERS), [22, 60, 18, 18, 28])
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_submissions_workbook(db: Session) -> Workbook:
+    """5 sheet: Submissions (master) + 4 figlie con FK su Submission ID."""
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    user_email = _user_email_map(db)
+
+    ws = wb.create_sheet("Submissions")
+    ws.append(SUBMISSIONS_HEADERS)
+    _bold_header_row(ws, len(SUBMISSIONS_HEADERS))
+    for s in db.query(models.Submission).order_by(models.Submission.id).all():
+        ws.append([
+            s.id,
+            s.language_id,
+            user_email.get(s.submitted_by_id, "") if s.submitted_by_id else "",
+            _xlsx_sanitize(s.submitted_at),
+            s.note or "",
+        ])
+    _style_table(ws, "Submissions", len(SUBMISSIONS_HEADERS), [10, 14, 26, 18, 30])
+
+    ws = wb.create_sheet("SubmissionAnswers")
+    ws.append(SUBMISSION_ANSWERS_HEADERS)
+    _bold_header_row(ws, len(SUBMISSION_ANSWERS_HEADERS))
+    for sa in (
+        db.query(models.SubmissionAnswer)
+        .order_by(models.SubmissionAnswer.submission_id, models.SubmissionAnswer.id)
+        .all()
+    ):
+        ws.append([sa.id, sa.submission_id, sa.question_code, sa.response_text or "", sa.comments or ""])
+    _style_table(ws, "SubmissionAnswers", len(SUBMISSION_ANSWERS_HEADERS), [10, 14, 14, 14, 30])
+
+    ws = wb.create_sheet("SubmissionExamples")
+    ws.append(SUBMISSION_EXAMPLES_HEADERS)
+    _bold_header_row(ws, len(SUBMISSION_EXAMPLES_HEADERS))
+    for se in (
+        db.query(models.SubmissionExample)
+        .order_by(models.SubmissionExample.submission_id, models.SubmissionExample.id)
+        .all()
+    ):
+        ws.append([
+            se.id, se.submission_id, se.question_code,
+            se.textarea or "", se.transliteration or "",
+            se.gloss or "", se.translation or "", se.reference or "",
+        ])
+    _style_table(ws, "SubmissionExamples", len(SUBMISSION_EXAMPLES_HEADERS), [10, 14, 14, 36, 22, 22, 26, 24])
+
+    ws = wb.create_sheet("SubmissionAnswerMotivations")
+    ws.append(SUBMISSION_ANSWER_MOTIVATIONS_HEADERS)
+    _bold_header_row(ws, len(SUBMISSION_ANSWER_MOTIVATIONS_HEADERS))
+    for sam in (
+        db.query(models.SubmissionAnswerMotivation)
+        .order_by(models.SubmissionAnswerMotivation.submission_id, models.SubmissionAnswerMotivation.id)
+        .all()
+    ):
+        ws.append([sam.id, sam.submission_id, sam.question_code, sam.motivation_code, sam.motivation_label or ""])
+    _style_table(ws, "SubmissionAnswerMotivations", len(SUBMISSION_ANSWER_MOTIVATIONS_HEADERS), [10, 14, 14, 16, 30])
+
+    ws = wb.create_sheet("SubmissionParams")
+    ws.append(SUBMISSION_PARAMS_HEADERS)
+    _bold_header_row(ws, len(SUBMISSION_PARAMS_HEADERS))
+    for sp in (
+        db.query(models.SubmissionParam)
+        .order_by(models.SubmissionParam.submission_id, models.SubmissionParam.id)
+        .all()
+    ):
+        ws.append([
+            sp.id, sp.submission_id, sp.parameter_id,
+            sp.value_orig or "", "Yes" if sp.warning_orig else "No",
+            sp.value_eval or "", "Yes" if sp.warning_eval else "No",
+            _xlsx_sanitize(sp.evaluated_at),
+        ])
+    _style_table(ws, "SubmissionParams", len(SUBMISSION_PARAMS_HEADERS), [10, 14, 14, 12, 12, 12, 12, 18])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_parameter_submissions_workbook(db: Session) -> Workbook:
+    """3 sheet: ParameterSubmissions (master) + Questions + AllowedMotivations."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    user_email = _user_email_map(db)
+
+    ws = wb.create_sheet("ParameterSubmissions")
+    ws.append(PARAMETER_SUBMISSIONS_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_SUBMISSIONS_HEADERS))
+    for ps in db.query(models.ParameterSubmission).order_by(models.ParameterSubmission.id).all():
+        ws.append([
+            ps.id, ps.parameter_id, ps.parameter_name or "",
+            user_email.get(ps.submitted_by_id, "") if ps.submitted_by_id else "",
+            _xlsx_sanitize(ps.submitted_at), ps.note or "",
+            ps.short_description or "", ps.long_description or "",
+            ps.implicational_condition or "",
+            ps.description_of_the_implicational_condition or "",
+            "Yes" if ps.is_active else "No",
+            ps.position if ps.position is not None else "",
+            ps.schema or "", ps.param_type or "", ps.level_of_comparison or "",
+        ])
+    _style_table(ws, "ParameterSubmissions", len(PARAMETER_SUBMISSIONS_HEADERS),
+                 [8, 10, 24, 26, 18, 24, 30, 30, 22, 30, 10, 10, 14, 14, 18])
+
+    ws = wb.create_sheet("Questions")
+    ws.append(PARAMETER_SUBMISSION_QUESTIONS_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_SUBMISSION_QUESTIONS_HEADERS))
+    for psq in (
+        db.query(models.ParameterSubmissionQuestion)
+        .order_by(models.ParameterSubmissionQuestion.submission_id,
+                  models.ParameterSubmissionQuestion.id)
+        .all()
+    ):
+        ws.append([
+            psq.id, psq.submission_id, psq.question_code, psq.text or "",
+            psq.template_type or "", psq.instruction or "",
+            psq.instruction_yes or "", psq.instruction_no or "",
+            psq.example_yes or "", psq.help_info or "",
+            "Yes" if psq.is_stop_question else "No",
+            "Yes" if psq.is_active else "No",
+        ])
+    _style_table(ws, "ParamSubmissionQuestions", len(PARAMETER_SUBMISSION_QUESTIONS_HEADERS),
+                 [8, 10, 14, 36, 14, 24, 24, 24, 24, 24, 12, 10])
+
+    ws = wb.create_sheet("AllowedMotivations")
+    ws.append(PARAMETER_SUBMISSION_ALLOWED_MOTIVATIONS_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_SUBMISSION_ALLOWED_MOTIVATIONS_HEADERS))
+    for am in (
+        db.query(models.ParameterSubmissionAllowedMotivation)
+        .order_by(models.ParameterSubmissionAllowedMotivation.question_id,
+                  models.ParameterSubmissionAllowedMotivation.id)
+        .all()
+    ):
+        ws.append([am.id, am.question_id, am.motivation_code, am.motivation_label or ""])
+    _style_table(ws, "ParamSubmissionAllowedMotivations",
+                 len(PARAMETER_SUBMISSION_ALLOWED_MOTIVATIONS_HEADERS),
+                 [8, 12, 16, 30])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_archived_questions_workbook(db: Session) -> Workbook:
+    """5 sheet: ArchivedQuestions + 4 figlie/nipoti (3 livelli di gerarchia)."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    user_email = _user_email_map(db)
+
+    ws = wb.create_sheet("ArchivedQuestions")
+    ws.append(ARCHIVED_QUESTIONS_HEADERS)
+    _bold_header_row(ws, len(ARCHIVED_QUESTIONS_HEADERS))
+    for aq in db.query(models.ArchivedQuestion).order_by(models.ArchivedQuestion.id).all():
+        ws.append([
+            aq.id, aq.original_question_id, aq.parameter_id, aq.parameter_name or "",
+            aq.text or "", aq.template_type or "",
+            aq.instruction or "", aq.instruction_yes or "", aq.instruction_no or "",
+            aq.example_yes or "", aq.help_info or "",
+            "Yes" if aq.is_stop_question else "No",
+            "Yes" if aq.is_active else "No",
+            _xlsx_sanitize(aq.archived_at),
+            user_email.get(aq.archived_by_id, "") if aq.archived_by_id else "",
+            aq.archive_note or "",
+            aq.answers_count or 0, aq.examples_count or 0,
+        ])
+    _style_table(ws, "ArchivedQuestions", len(ARCHIVED_QUESTIONS_HEADERS),
+                 [8, 14, 10, 24, 36, 14, 24, 24, 24, 24, 24, 12, 10, 18, 26, 30, 10, 10])
+
+    ws = wb.create_sheet("ArchivedQuestionMotivations")
+    ws.append(ARCHIVED_QUESTION_MOTIVATIONS_HEADERS)
+    _bold_header_row(ws, len(ARCHIVED_QUESTION_MOTIVATIONS_HEADERS))
+    for aqm in (
+        db.query(models.ArchivedQuestionMotivation)
+        .order_by(models.ArchivedQuestionMotivation.archived_question_id,
+                  models.ArchivedQuestionMotivation.id)
+        .all()
+    ):
+        ws.append([aqm.id, aqm.archived_question_id, aqm.motivation_code, aqm.motivation_label or ""])
+    _style_table(ws, "ArchivedQuestionMotivations", len(ARCHIVED_QUESTION_MOTIVATIONS_HEADERS),
+                 [8, 14, 16, 30])
+
+    ws = wb.create_sheet("ArchivedAnswers")
+    ws.append(ARCHIVED_ANSWERS_HEADERS)
+    _bold_header_row(ws, len(ARCHIVED_ANSWERS_HEADERS))
+    for aa in (
+        db.query(models.ArchivedAnswer)
+        .order_by(models.ArchivedAnswer.archived_question_id, models.ArchivedAnswer.id)
+        .all()
+    ):
+        ws.append([
+            aa.id, aa.archived_question_id, aa.language_id, aa.language_name_full or "",
+            aa.status or "", aa.response_text or "", aa.comments or "",
+            _xlsx_sanitize(aa.original_updated_at),
+        ])
+    _style_table(ws, "ArchivedAnswers", len(ARCHIVED_ANSWERS_HEADERS),
+                 [8, 14, 12, 22, 14, 14, 30, 18])
+
+    ws = wb.create_sheet("ArchivedExamples")
+    ws.append(ARCHIVED_EXAMPLES_HEADERS)
+    _bold_header_row(ws, len(ARCHIVED_EXAMPLES_HEADERS))
+    for ae in (
+        db.query(models.ArchivedExample)
+        .order_by(models.ArchivedExample.archived_answer_id, models.ArchivedExample.id)
+        .all()
+    ):
+        ws.append([
+            ae.id, ae.archived_answer_id, ae.number or "",
+            ae.textarea or "", ae.transliteration or "",
+            ae.gloss or "", ae.translation or "", ae.reference or "",
+        ])
+    _style_table(ws, "ArchivedExamples", len(ARCHIVED_EXAMPLES_HEADERS),
+                 [8, 14, 10, 36, 22, 22, 26, 24])
+
+    ws = wb.create_sheet("ArchivedAnswerMotivations")
+    ws.append(ARCHIVED_ANSWER_MOTIVATIONS_HEADERS)
+    _bold_header_row(ws, len(ARCHIVED_ANSWER_MOTIVATIONS_HEADERS))
+    for aam in (
+        db.query(models.ArchivedAnswerMotivation)
+        .order_by(models.ArchivedAnswerMotivation.archived_answer_id,
+                  models.ArchivedAnswerMotivation.id)
+        .all()
+    ):
+        ws.append([aam.id, aam.archived_answer_id, aam.motivation_code, aam.motivation_label or ""])
+    _style_table(ws, "ArchivedAnswerMotivations", len(ARCHIVED_ANSWER_MOTIVATIONS_HEADERS),
+                 [8, 14, 16, 30])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+# ============================================================================
+# 6. BACKUP ZIP BUILDER
+# ============================================================================
+#
+# Bundle base (`PCM_backup.zip`, prodotto da `build_backup_zip_bytes`):
 #
 #     PCM_backup_<ts>.zip
 #     ├── schema.xlsx              (4 sheet schema globale)
@@ -612,8 +941,15 @@ def build_glossary_workbook(db: Session) -> Workbook:
 #         ├── <ID>.xlsx            (Database_model esteso + Answers + Examples + Admin Notes)
 #         └── ...
 #
-# Pensato come metodo di backup/restore: l'import totale (Fase 5) riconosce
-# questa struttura e ripristina lo stato del DB.
+# Bundle full (`PCM_full_backup.zip`, prodotto da `build_full_backup_zip_bytes`):
+# stesso contenuto del bundle base + cartella `extras/` con:
+#   ├── extras/site_content.xlsx
+#   ├── extras/submissions.xlsx
+#   ├── extras/parameter_submissions.xlsx
+#   └── extras/archived_questions.xlsx
+#
+# Il restore (services/backup_restore.py) riconosce entrambi i formati: se la
+# cartella extras/ è assente processa solo i file base (compat. piena).
 # ============================================================================
 
 BACKUP_BUNDLE_VERSION = 1
@@ -625,13 +961,40 @@ def _wb_to_bytes(wb: Workbook) -> bytes:
     return buf.getvalue()
 
 
+def _write_base_bundle(
+    zf: zipfile.ZipFile,
+    db: Session,
+    languages: list,
+    on_language=None,
+) -> None:
+    """Scrive nel zip i file del bundle base (schema + metadata + glossary +
+    languages/). Riusato sia da build_backup_zip_bytes sia dal builder full."""
+    zf.writestr("schema.xlsx", _wb_to_bytes(build_schema_workbook(db)))
+    zf.writestr(
+        "languages_metadata.xlsx",
+        _wb_to_bytes(build_language_list_workbook(db, languages)),
+    )
+    zf.writestr("glossary.xlsx", _wb_to_bytes(build_glossary_workbook(db)))
+
+    total = len(languages)
+    for idx, lang in enumerate(languages, start=1):
+        if on_language is not None:
+            try:
+                on_language(idx, total, lang)
+            except Exception:
+                # Mai bloccare la generazione del backup per un errore di reporting
+                pass
+        wb = build_language_workbook(db, lang, is_admin=True)
+        zf.writestr(f"languages/{lang.id}.xlsx", _wb_to_bytes(wb))
+
+
 def build_backup_zip_bytes(
     db: Session,
     languages: Iterable[models.Language],
     *,
     on_language=None,
 ) -> bytes:
-    """Costruisce il bundle backup completo per la selezione di `languages` data.
+    """Costruisce il bundle backup base per la selezione di `languages` data.
 
     Restituisce i bytes dello zip (NON streaming). Per file grandi conviene
     generarlo in background e servirlo da una tmp directory: vedi Fase 4
@@ -643,22 +1006,28 @@ def build_backup_zip_bytes(
     languages = list(languages)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("schema.xlsx", _wb_to_bytes(build_schema_workbook(db)))
-        zf.writestr(
-            "languages_metadata.xlsx",
-            _wb_to_bytes(build_language_list_workbook(db, languages)),
-        )
-        zf.writestr("glossary.xlsx", _wb_to_bytes(build_glossary_workbook(db)))
+        _write_base_bundle(zf, db, languages, on_language=on_language)
+    return buf.getvalue()
 
-        total = len(languages)
-        for idx, lang in enumerate(languages, start=1):
-            if on_language is not None:
-                try:
-                    on_language(idx, total, lang)
-                except Exception:
-                    # Mai bloccare la generazione del backup per un errore di reporting
-                    pass
-            wb = build_language_workbook(db, lang, is_admin=True)
-            zf.writestr(f"languages/{lang.id}.xlsx", _wb_to_bytes(wb))
 
+def build_full_backup_zip_bytes(
+    db: Session,
+    languages: Iterable[models.Language],
+    *,
+    on_language=None,
+) -> bytes:
+    """Bundle full: bundle base + cartella `extras/` con site_content,
+    submissions, parameter_submissions, archived_questions.
+
+    Stessa firma di `build_backup_zip_bytes` per facilità di sostituzione.
+    Gli utenti NON sono inclusi (scelta deliberata: vanno gestiti con un
+    flusso dedicato — pg_dump o reimport manuale)."""
+    languages = list(languages)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        _write_base_bundle(zf, db, languages, on_language=on_language)
+        zf.writestr("extras/site_content.xlsx", _wb_to_bytes(build_site_content_workbook(db)))
+        zf.writestr("extras/submissions.xlsx", _wb_to_bytes(build_submissions_workbook(db)))
+        zf.writestr("extras/parameter_submissions.xlsx", _wb_to_bytes(build_parameter_submissions_workbook(db)))
+        zf.writestr("extras/archived_questions.xlsx", _wb_to_bytes(build_archived_questions_workbook(db)))
     return buf.getvalue()
