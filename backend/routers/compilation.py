@@ -230,7 +230,13 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     }
 
     for p in parameters:
-        active_questions = [q for q in p.questions if q.is_active]
+        # Ordine deterministico: prima le question regolari per id, poi le
+        # stop-question per id. Coerente con la pagina debug admin (vedi sotto)
+        # e indipendente dall'ordine fisico delle righe in Postgres.
+        active_questions = sorted(
+            (q for q in p.questions if q.is_active),
+            key=lambda x: (x.is_stop_question, x.id),
+        )
         total_q = len(active_questions)
         # 'unsure' non conta come risposta completata: il parametro resta colorato
         # come "vuoto" anche dopo il save, esattamente come una selezione vuota.
