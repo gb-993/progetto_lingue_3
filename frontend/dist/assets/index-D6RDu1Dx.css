@@ -713,7 +713,7 @@ aside.card.sidebar a:hover{ text-decoration:underline }
 /* Container che dispongono .card affiancate in orizzontale: la spaziatura
    è data dal `gap` del grid, quindi annulliamo il margin-top fra siblings
    per evitare che la 2ª (e successive) card scendano disallineate. */
-:is(.page-grid, .taxonomy-columns) > .card + .card{ margin-top:0 }
+:is(.page-grid, .taxonomy-columns, .examples-grid) > .card + .card{ margin-top:0 }
 .card h2{ font-size:var(--fs-4); margin:.25rem 0 var(--sp-3) }
 .card h3{ font-size:var(--fs-3); margin:.25rem 0 var(--sp-3) }
 
