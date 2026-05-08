@@ -156,8 +156,10 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
     };
 
     // --- IMPORT ESEMPI (server-side search) ---
-    // Niente più download massivo: si chiama /examples/search con il testo digitato.
-    // Il backend ordina per priorità (stessa domanda → stessa lingua → resto) e limita a 50.
+    // Ricerca sempre ristretta alla lingua corrente: gli esempi delle altre
+    // lingue non sono utili per la compilazione. Nessun limite frontend → il
+    // backend restituisce tutti gli esempi della lingua, filtrati lato server
+    // anche su translation/gloss (campi non presenti nel label).
     const debounceRef = useRef(null);
 
     const fetchExamples = useCallback(async (q) => {
@@ -166,7 +168,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 params: {
                     q: q || '',
                     language_id: currentLangId,
-                    limit: 50,
                 },
             });
             return (res.data || []).map(formatExampleOption);

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from time_utils import utc_now
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_
 import models
 from database import SessionLocal
 from dependencies import get_db, get_current_user, require_admin
@@ -92,26 +92,25 @@ class ParameterBlockSavePayload(BaseModel):
 def search_examples(
     q: str = "",
     language_id: Optional[str] = None,
-    limit: int = 50,
+    limit: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
     """
-    Ricerca paginata di esempi per il selettore di import della pagina di compilazione.
+    Ricerca esempi per il selettore di import della pagina di compilazione.
 
-    Comportamento del filtro per lingua:
-      - q vuota + language_id presente → SOLO esempi della stessa lingua. Senza una
-        query mirata gli esempi delle altre lingue non sono utili (un esempio
-        linguistico non si ripete tra lingue diverse), quindi il default è ristretto.
-      - q valorizzata → ricerca in tutto il DB, con gli esempi della stessa lingua
-        ordinati per primi.
+    Filtro per lingua:
+      - language_id presente → ricerca SEMPRE ristretta a quella lingua, sia con
+        q vuota sia con q valorizzata. Un esempio linguistico non si ripete tra
+        lingue diverse, quindi gli esempi di altre lingue sarebbero rumore.
+      - language_id assente → ricerca globale (caso non usato dal frontend, ma
+        supportato; qui il limit di 200 fa da safety net per evitare payload enormi).
 
     Filtri:
       - q: full-text ILIKE su textarea/translation/gloss (case-insensitive)
-      - limit: clampato a [1, 200]; default 50
+      - limit: se language_id è presente, nessun limite di default (mostra tutti
+        gli esempi della lingua). Se language_id è assente, clamp a [1, 200].
     """
-    limit = max(1, min(int(limit or 50), 200))
-
     base = db.query(
         models.Example.id,
         models.Example.textarea,
@@ -131,6 +130,9 @@ def search_examples(
         models.Example.textarea != "",
     )
 
+    if language_id:
+        base = base.filter(models.Answer.language_id == language_id)
+
     q = (q or "").strip()
     if q:
         like = f"%{q}%"
@@ -139,15 +141,17 @@ def search_examples(
             models.Example.translation.ilike(like),
             models.Example.gloss.ilike(like),
         ))
-    elif language_id:
-        base = base.filter(models.Answer.language_id == language_id)
 
-    order_cols = []
-    if q and language_id:
-        order_cols.append(case((models.Answer.language_id == language_id, 0), else_=1))
-    order_cols.extend([models.Language.name_full, models.Example.id])
+    base = base.order_by(models.Language.name_full, models.Example.id)
 
-    rows = base.order_by(*order_cols).limit(limit).all()
+    if language_id:
+        if limit is not None:
+            base = base.limit(max(1, int(limit)))
+    else:
+        effective_limit = max(1, min(int(limit or 50), 200))
+        base = base.limit(effective_limit)
+
+    rows = base.all()
 
     return [{
         "id": r.id,
