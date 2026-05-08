@@ -570,7 +570,7 @@ export default function TableA() {
                     <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(440px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
                         <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Mantel test</h3>
                         <p className="muted small" style={{ marginTop: 0 }}>
-                            Choose two distance matrices.
+                            Choose two or three distance matrices.
                         </p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '1rem 0' }}>
