@@ -342,7 +342,7 @@ export default function LanguageData() {
             {isAdmin && isLocked && (
                 <div className="admin-override-banner">
                     <strong>Admin override:</strong> you are editing a language in <code>{status}</code> state.
-                    Your changes are saved immediately and the status does not change automatically.
+                    Your changes are saved immediately but the status does not change automatically.
                 </div>
             )}
 
