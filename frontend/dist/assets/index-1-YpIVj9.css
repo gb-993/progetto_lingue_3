@@ -1757,9 +1757,26 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
-  padding: 0.25rem 0.2rem;
+  padding: 0.4rem 0.2rem;
   border-radius: var(--radius-sm);
   background: var(--surface-alt);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+}
+.status-cell:hover {
+  background: var(--surface);
+  border-color: var(--brand);
+}
+.status-cell:active {
+  transform: scale(0.97);
+}
+.status-cell.is-active {
+  background: rgba(59, 130, 246, 0.10);
+  border-color: #3b82f6;
 }
 .status-num {
   font-size: 1.1rem;

@@ -134,17 +134,7 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
                             key={c.key}
                             type="button"
                             onClick={() => toggle(c.key)}
-                            className="status-cell"
-                            style={{
-                                background: isActive ? 'rgba(59,130,246,0.08)' : 'transparent',
-                                border: isActive ? '1px solid #3b82f6' : '1px solid transparent',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                padding: '0.4rem',
-                                font: 'inherit',
-                                color: 'inherit',
-                                textAlign: 'center',
-                            }}
+                            className={`status-cell${isActive ? ' is-active' : ''}`}
                             title={`Show ${c.label.toLowerCase()} languages`}
                         >
                             <div className="status-num" style={{ color: c.color }}>
