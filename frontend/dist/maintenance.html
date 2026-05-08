@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>503 - Service Unavailable | PCM Hub</title>
+  <link rel="icon" href="/favicon.svg">
+  <meta name="robots" content="noindex">
+  <style>
+    /* Tokens (light + dark via prefers-color-scheme) - tenuti inline cosi'
+       la pagina renderizza anche se l'app/CSS bundle non sono raggiungibili. */
+    :root {
+      --brand:#d14124; --brand-700:#a8341a;
+      --text:#15181c; --text-muted:#565b61;
+      --bg:#f1f3f5; --surface:#fff; --surface-2:#e6eaee;
+      --border:#d0d4d9; --ok:#117a3c; --bad:#b00020;
+      --shadow: 0 1px 2px rgba(15,23,42,.06), 0 4px 14px rgba(15,23,42,.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text:#eceef2; --text-muted:#a3aab5;
+        --bg:#14171c; --surface:#1d2027; --surface-2:#262a32;
+        --border:#3a3f4b; --ok:#4ade80; --bad:#ff7a85;
+        --brand:#e9573b; --brand-700:#c0411f;
+        --shadow: 0 1px 2px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.45);
+        color-scheme: dark;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin:0; min-height:100dvh;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      color:var(--text); background:var(--bg);
+      display:flex; flex-direction:column; align-items:center; padding:3rem 1.5rem;
+    }
+    header.page { max-width:760px; width:100%; margin-bottom:1.25rem; }
+    header.page h1 { margin:0; font-size:1.05rem; font-weight:500; color:var(--text-muted); letter-spacing:.01em; }
+    header.page h1 strong { color:var(--text); font-weight:700; }
+    main.card {
+      max-width:760px; width:100%;
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      box-shadow:var(--shadow); padding:1.5rem;
+    }
+    .q-head {
+      border-left:3px solid var(--brand); padding-left:.85rem;
+      display:flex; flex-direction:column; gap:.25rem; margin-bottom:1.5rem;
+    }
+    .q-id-row {
+      display:flex; align-items:baseline; gap:.6rem; flex-wrap:wrap;
+    }
+    .q-id { color:var(--brand); font-size:1.1rem; font-weight:700; }
+    .q-error-desc { color:var(--brand); font-size:.95rem; font-weight:600; }
+    .q-text { font-size:1.05rem; font-weight:600; line-height:1.45; }
+    .info-row {
+      display:grid; grid-template-columns:9.5rem 1fr; column-gap:1rem;
+      align-items:start; padding:.6rem 0;
+    }
+    .info-row__label {
+      font-size:.75rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:.05em; color:var(--text-muted); padding-top:.4rem;
+    }
+    @media (max-width: 540px) {
+      .info-row { grid-template-columns:1fr; row-gap:.4rem; }
+      .info-row__label { padding-top:0; }
+    }
+    select.answer {
+      padding:.6rem; width:100%; max-width:300px;
+      border:1px solid var(--border); border-radius:4px;
+      background:var(--surface); color:var(--text);
+      font:inherit; font-size:1rem;
+    }
+    .motivations {
+      display:flex; flex-direction:column; gap:.5rem;
+      background:var(--surface-2); padding:1rem; border-radius:6px;
+    }
+    .motivations label { display:flex; gap:.5rem; align-items:center; cursor:default; }
+    .motivations input { cursor:default; accent-color: var(--brand); }
+    .actions {
+      margin-top:2rem; padding:.85rem 1rem;
+      border:1px solid var(--border); border-radius:12px;
+      background:var(--surface);
+      display:flex; flex-direction:column; gap:.6rem;
+      width:fit-content; max-width:100%; margin-left:auto;
+    }
+    .action-row {
+      display:flex; align-items:center; justify-content:flex-end;
+      gap:.75rem; flex-wrap:wrap;
+    }
+    .btn {
+      min-width:180px; padding:.6rem 1rem;
+      border-radius:10px; border:1px solid var(--border);
+      background:var(--surface-2); color:var(--text);
+      font:inherit; font-size:.95rem; font-weight:600;
+      cursor:pointer; transition: transform .12s ease, background-color .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .btn--ok { background:#16a34a; border-color:#15803d; color:#fff; }
+    .btn--ok:hover { background:#15803d; }
+    .btn--bad { background:var(--brand); border-color:color-mix(in oklab, var(--brand) 75%, black); color:#fff; }
+    .btn--bad:hover { background:var(--brand-700); }
+    footer.page {
+      max-width:760px; width:100%; margin-top:1rem;
+      color:var(--text-muted); font-size:.85rem; text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <header class="page">
+    <h1><strong>PCM Hub</strong> &middot; service temporarily unavailable</h1>
+  </header>
+
+  <main class="card" role="main" aria-labelledby="q-id">
+    <div class="q-head">
+      <div class="q-id-row">
+        <span class="q-id" id="q-id">ERR_500</span>
+        <span class="q-error-desc">Service temporarily unavailable</span>
+      </div>
+      <div class="q-text">Does this website show the page you requested?</div>
+    </div>
+
+    <div class="info-row">
+      <label class="info-row__label" for="answer">Answer</label>
+      <div class="info-row__content">
+        <select id="answer" class="answer" disabled aria-disabled="true">
+          <option>NO</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-row__label">Motivations</div>
+      <div class="info-row__content">
+        <div class="motivations" role="group" aria-label="Motivations">
+          <label><input type="checkbox" checked disabled> <strong>Server temporarily unavailable</strong></label>
+          <label><input type="checkbox" checked disabled> <strong>Maintenance in progress</strong></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions" aria-label="Actions">
+      <div class="action-row">
+        <span>Issue likely to resolve quickly?</span>
+        <button class="btn btn--ok" type="button" onclick="location.reload()">Confident -&gt; Reload</button>
+      </div>
+      <div class="action-row">
+        <span>Could take a while?</span>
+        <button class="btn btn--bad" type="button" onclick="exitTab()">Unsure -&gt; Exit</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page">
+    The site is temporarily down for maintenance. Please try again in a few minutes.
+  </footer>
+
+  <script>
+    // window.close() is blocked by most browsers if the tab wasn't opened by JS.
+    // Fall back to history.back() (typically the page the user came from), or
+    // about:blank when there is no history (i.e. the user typed the URL).
+    function exitTab() {
+      try { window.close(); } catch (_) {}
+      setTimeout(function () {
+        if (window.closed) return;
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = 'about:blank';
+      }, 150);
+    }
+  </script>
+</body>
+</html>
