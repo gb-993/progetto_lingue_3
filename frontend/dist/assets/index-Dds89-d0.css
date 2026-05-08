@@ -148,7 +148,13 @@ a:hover { color: var(--link-hover); }
 }
 :root[data-theme="dark"] .muted,
 :root[data-theme="dark"] .site-title .site-subtitle,
-:root[data-theme="dark"] .breadcrumb { color: var(--text-muted); }
+/* Breadcrumb in dark: scavalca la regola globale `:root[data-theme="dark"] a`
+   sopra (specificita' 0,1,2) cosi' i link del breadcrumb tornano a ereditare
+   il colore del parent .breadcrumb (--brand su entrambi i temi) e non
+   diventano peach (--link). Anche l'hover non cambia colore: solo la
+   decoration. */
+:root[data-theme="dark"] .breadcrumb a,
+:root[data-theme="dark"] .breadcrumb a:hover { color: inherit; }
 :root[data-theme="dark"] .badge {
   background: var(--surface-2);
   color: var(--text);
@@ -253,7 +259,12 @@ a:hover{text-decoration:underline}
   position: sticky;
   top: 0;
   align-self: start;
-  min-height: 100vh;
+  /* height (non min-height) + overflow-y abilita lo scroll INTERNO della
+     sidebar quando le voci eccedono il viewport. Senza overflow-y la
+     sidebar cresceva oltre lo schermo e le ultime voci finivano sotto la
+     fold senza essere raggiungibili. */
+  height: 100vh;
+  overflow-y: auto;
   padding: var(--sp-6) var(--sp-5);
   border-right: 1px solid var(--border);
   background: var(--surface);
@@ -616,7 +627,10 @@ a:hover{text-decoration:underline}
 
 .breadcrumb {
   margin-top: .5rem;
-  color: var(--text-muted);
+  /* Brand su entrambi i temi: var(--brand) cambia automaticamente fra
+     #d14124 (light) e #e9573b (dark). Tutti i figli (link, separatori
+     "/", current page) ereditano questo colore. */
+  color: var(--brand);
 }
 
 .breadcrumb ol {

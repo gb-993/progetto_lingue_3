@@ -166,13 +166,23 @@ export default function BackupRestore() {
             </header>
 
             <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ marginTop: 0 }}>Bundle accettato</h3>
-                <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
-                    <li><code>schema.xlsx</code> — Motivations / Parameters / Questions / QAM</li>
-                    <li><code>languages_metadata.xlsx</code> — metadati di tutte le lingue</li>
-                    <li><code>glossary.xlsx</code> — Word / Description</li>
-                    <li><code>languages/&lt;ID&gt;.xlsx</code> — un file per lingua con risposte, esempi, motivazioni e admin notes</li>
-                </ul>
+                <h3 style={{ marginTop: 0 }}>Come ottenere il bundle</h3>
+                <ol className="small" style={{ lineHeight: 1.7, marginTop: 0, marginBottom: '0.75rem', paddingLeft: '1.25rem' }}>
+                    <li>Apri la pagina <Link to="/languages">Languages</Link>.</li>
+                    <li>Dal pulsante <strong>Download Data ▾</strong> in alto a destra seleziona <strong>Export backup (.zip)</strong>.</li>
+                    <li>Salva il file <code>PCM_backup_*.zip</code> e ricaricalo qui sotto.</li>
+                </ol>
+                <details>
+                    <summary className="small muted" style={{ cursor: 'pointer' }}>
+                        File contenuti nello zip (riferimento tecnico)
+                    </summary>
+                    <ul className="small" style={{ lineHeight: 1.7, marginTop: '0.5rem', marginBottom: 0 }}>
+                        <li><code>schema.xlsx</code> — Motivations / Parameters / Questions / QAM</li>
+                        <li><code>languages_metadata.xlsx</code> — metadati di tutte le lingue</li>
+                        <li><code>glossary.xlsx</code> — Word / Description</li>
+                        <li><code>languages/&lt;ID&gt;.xlsx</code> — un file per lingua con risposte, esempi, motivazioni e admin notes</li>
+                    </ul>
+                </details>
             </div>
 
             {wipe && (
