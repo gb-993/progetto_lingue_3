@@ -389,9 +389,10 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
                 db.add(models.AnswerMotivation(answer_id=answer.id, motivation_id=mid))
 
         db.query(models.Example).filter(models.Example.answer_id == answer.id).delete()
-        # Esempi salvati anche per 'unsure': sono il vincolo principale a cui
-        # si aggancia tutto il flusso "incerto ma documentato".
-        if normalized_response in ("yes", "unsure"):
+        # Esempi salvabili per yes/no/unsure: yes/unsure li richiedono (≥2,
+        # validato sopra), per 'no' sono facoltativi ma vanno comunque
+        # persistiti se il linguista li fornisce a supporto della risposta.
+        if normalized_response in ("yes", "no", "unsure"):
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
                     db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))

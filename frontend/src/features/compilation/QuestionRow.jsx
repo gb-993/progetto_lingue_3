@@ -324,10 +324,13 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* BLOCCO YES/UNSURE: Esempi (la validazione "≥2 esempi" vale per entrambi) */}
-            {(value.response_text === 'yes' || value.response_text === 'unsure') && (
+            {/* BLOCCO Esempi: visibile per yes/no/unsure. La validazione "≥2 esempi"
+                vale solo per yes/unsure; per 'no' sono facoltativi (zero o più). */}
+            {(value.response_text === 'yes' || value.response_text === 'no' || value.response_text === 'unsure') && (
                 <div className="info-row" style={{ marginTop: '1.5rem' }}>
-                    <div className="info-row__label">Examples</div>
+                    <div className="info-row__label">
+                        Examples{value.response_text === 'no' && ' (optional)'}
+                    </div>
                     <div className="info-row__content">
 
                         {localError && <div className="alert alert-warning" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
