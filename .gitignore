@@ -42,3 +42,5 @@ logs/
 # Gli screenshot del manuale restano locali per non appesantirli: se in futuro
 # servono nel sito, togli anche la riga docs/img/.
 docs/img/
+
+BUILD_NOTES.txt

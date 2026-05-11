@@ -13,6 +13,7 @@ bcrypt
 pandas
 numpy
 scipy
+scikit-learn
 matplotlib
 openpyxl
 adjustText

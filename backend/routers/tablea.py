@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import squareform
 from scipy.stats import pearsonr, spearmanr, kendalltau
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from collections import Counter
 import plotly.express as px
 from openpyxl import Workbook
@@ -506,26 +508,25 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
 
 @router.post("/export/pca")
 def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Analisi PCA via SVD manuale con etichette varianza esatte."""
+    """Analisi PCA via sklearn.decomposition.PCA, allineata a pca1.py."""
     langs, rows = _get_filtered_data(db, filters)
     if not langs or len(rows) < 2: raise HTTPException(400, "Insufficient data for PCA")
 
     # Conversione numerica: + -> 1.0, altrimenti 0.0
     data = np.array([[1.0 if r["cells"][i] == "+" else 0.0 for r in rows] for i in range(len(langs))])
 
-    # Rimuove varianza zero e standardizza
+    # Rimuove colonne a varianza zero
     data = data[:, np.var(data, axis=0) > 0]
     if data.shape[1] < 2: raise HTTPException(400, "Insufficient variance for PCA")
-    data_std = (data - np.mean(data, axis=0)) / np.std(data, axis=0)
 
-    # SVD manuale
-    U, S, Vt = np.linalg.svd(data_std, full_matrices=False)
-    f1, f2 = (U * S)[:, 0], (U * S)[:, 1]
+    # Standardizzazione e PCA via sklearn
+    scaler = StandardScaler()
+    data_std = scaler.fit_transform(data)
+    pca = PCA(n_components=2)
+    scores = pca.fit_transform(data_std)
 
-    # Calcolo % varianza spiegata
-    exp_var = (S ** 2) / (data_std.shape[0] - 1)
-    total_v = np.sum(exp_var)
-    v1_pct, v2_pct = (exp_var[0]/total_v)*100, (exp_var[1]/total_v)*100
+    f1, f2 = scores[:, 0], scores[:, 1]
+    v1_pct, v2_pct = pca.explained_variance_ratio_[0] * 100, pca.explained_variance_ratio_[1] * 100
 
     plt.figure(figsize=(12, 8))
     plt.scatter(f1, f2, c='black', s=10, alpha=0.75)

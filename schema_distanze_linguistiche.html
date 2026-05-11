@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Distanze linguistiche — schema riassuntivo</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --text: #2a2a2a;
+    --muted: #6b6b6b;
+    --accent: #335c81;
+    --accent-light: #e9eef4;
+    --border: #d8d5cf;
+    --code-bg: #f1efea;
+    --note-bg: #eef5ee;
+    --note-border: #6a9a6a;
+    --warn-bg: #fff4e0;
+    --warn-border: #d49a3a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Charter", "Georgia", "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 50px 50px 70px 50px;
+  }
+  h1, h2, h3 {
+    font-family: "Helvetica Neue", "Inter", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.25;
+  }
+  h1 {
+    font-size: 1.9em;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+  }
+  .subtitle {
+    font-family: "Helvetica Neue", system-ui, sans-serif;
+    font-size: 1em;
+    color: var(--muted);
+    margin-bottom: 40px;
+  }
+  h2 {
+    font-size: 1.35em;
+    font-weight: 600;
+    margin-top: 44px;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  p { margin: 0 0 12px 0; }
+  ul { margin: 0 0 14px 0; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: "JetBrains Mono", "Consolas", "Menlo", monospace;
+    font-size: 0.85em;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 22px 0;
+    font-size: 0.9em;
+    font-family: "Helvetica Neue", "Inter", system-ui, sans-serif;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--accent-light);
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #fafaf7; }
+  .callout {
+    padding: 14px 18px;
+    border-radius: 5px;
+    margin: 16px 0 20px 0;
+    border-left: 4px solid;
+    font-size: 0.96em;
+  }
+  .callout.note {
+    background: var(--note-bg);
+    border-color: var(--note-border);
+  }
+  .callout.warn {
+    background: var(--warn-bg);
+    border-color: var(--warn-border);
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .pill {
+    display: inline-block;
+    font-family: "Helvetica Neue", system-ui, sans-serif;
+    font-size: 0.78em;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .pill.warn {
+    background: var(--warn-bg);
+    color: #8a5e1f;
+  }
+  .pill.ok {
+    background: #e3f1e1;
+    color: #2f6b3c;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Distanze linguistiche — schema riassuntivo</h1>
+
+<h2>1. Gli script in <code>script/</code></h2>
+
+<p>Nella cartella <code>script/</code> sono presenti due famiglie di script per il clustering linguistico, di provenienza diversa:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Famiglia</th>
+      <th>Script</th>
+      <th>Fase</th>
+      <th>Cosa fa</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="2"><strong>Ceolin</strong></td>
+      <td><code>script/jaccard.py</code></td>
+      <td>1</td>
+      <td>Legge una tabella di simboli <code>+</code>/<code>-</code> e produce una matrice di distanze Jaccard <code>jaccard+.txt</code></td>
+    </tr>
+    <tr>
+      <td><code>script/dendrogram.py</code></td>
+      <td>2</td>
+      <td>Carica una matrice TSV e disegna il dendrogramma (UPGMA via <code>scipy</code>)</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><strong>UNIMORE / Motta</strong></td>
+      <td><code>script/preprocessing.py</code></td>
+      <td>0</td>
+      <td>Converte simboli in 0/1 e riempie i mancanti via <strong>KNN imputation</strong> (usa Jaccard di Ceolin per trovare i vicini)</td>
+    </tr>
+    <tr>
+      <td><code>script/01_plot_clusters.py</code></td>
+      <td>1</td>
+      <td>Costruisce dendrogramma con <code>AgglomerativeClustering(metric="hamming")</code> di sklearn su dati densi 0/1, taglia a <code>0.56 × max altezza</code>, produce <code>clusters.txt</code></td>
+    </tr>
+    <tr>
+      <td><code>script/02_carta_italia.py</code></td>
+      <td>2</td>
+      <td>Plotta i cluster come punti colorati su una mappa shapefile</td>
+    </tr>
+    <tr>
+      <td>PCA</td>
+      <td><code>script/pca1.py</code></td>
+      <td>—</td>
+      <td>PCA via <code>sklearn.decomposition.PCA</code></td>
+    </tr>
+  </tbody>
+</table>
+
+
+<h2>2. Cosa esegue davvero il sito</h2>
+
+<p>Quando l'utente preme un pulsante in TableA, il backend chiama una propria funzione che <strong>replica</strong> uno o più script. La mappa endpoint → script è questa:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pulsante TableA</th>
+      <th>Funzione backend</th>
+      <th>Replica</th>
+      <th>Fedele all'originale?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Export matrici Hamming/Jaccard</td>
+      <td><code>_hamming_core</code> / <code>_jaccard_core</code></td>
+      <td><code>jaccard.py</code> (Ceolin)</td>
+      <td>Sì, fedele</td>
+    </tr>
+    <tr>
+      <td>Dendrogrammi</td>
+      <td><code>export_dendrograms_png</code></td>
+      <td><code>dendrogram.py</code> (Ceolin)</td>
+      <td>Sì, fedele (cambia solo colore di default)</td>
+    </tr>
+    <tr>
+      <td>Cluster Map</td>
+      <td><code>export_cluster_map</code></td>
+      <td><code>01_plot_clusters.py</code> + <code>02_carta_italia.py</code> (UNIMORE)</td>
+      <td><strong>No, modificato</strong> (vedi §4)</td>
+    </tr>
+    <tr>
+      <td>Mantel test</td>
+      <td><code>export_mantel_zip</code></td>
+      <td><code>21_plot_mantel_test_…</code></td>
+      <td>Sì, fedele (più completo: 3 indici di correlazione)</td>
+    </tr>
+    <tr>
+      <td>PCA</td>
+      <td><code>export_pca_png</code></td>
+      <td><code>pca1.py</code></td>
+      <td>Sì, fedele (migliorato con bug-fix)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Le funzioni <code>_hamming_core</code> e <code>_jaccard_core</code> sono definite <strong>una volta sola</strong> in <code>tablea.py</code> e usate da <strong>tutti</strong> gli endpoint sopra.</p>
+
+<h2>3. Le metriche del sito vs le metriche "standard"</h2>
+
+<p>Le funzioni <code>_hamming_core</code> e <code>_jaccard_core</code> del sito <strong>non sono</strong> quelle classiche di sklearn: sono varianti "Ceolin-style" che operano direttamente sui simboli <code>+</code>/<code>-</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Aspetto</th>
+      <th>Hamming sklearn (standard)</th>
+      <th><code>_hamming_core</code> del sito</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Input</td>
+      <td>Vettori 0/1 densi (no mancanti)</td>
+      <td>Simboli <code>+</code>, <code>-</code>, <code>0</code>, <code>?</code>, vuoti</td>
+    </tr>
+    <tr>
+      <td>Formula</td>
+      <td>(# posizioni diverse) / lunghezza totale</td>
+      <td>differenze / (identità + differenze)</td>
+    </tr>
+    <tr>
+      <td>Gestione mancanti</td>
+      <td>Richiede pre-imputazione (KNN)</td>
+      <td>Ignora colonna per colonna</td>
+    </tr>
+    <tr>
+      <td>Lunghezza effettiva del confronto</td>
+      <td>Sempre la stessa</td>
+      <td><strong>Variabile</strong> da coppia a coppia</td>
+    </tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr>
+      <th>Aspetto</th>
+      <th>Jaccard classica</th>
+      <th><code>_jaccard_core</code> del sito</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Simmetria fra <code>+</code> e <code>-</code></td>
+      <td>Asimmetrica per definizione</td>
+      <td>Asimmetrica: solo <code>+/+</code> conta come identità</td>
+    </tr>
+    <tr>
+      <td>Parametro <code>identity</code></td>
+      <td>Implicito (<code>+</code>)</td>
+      <td>Esplicito, default <code>"+"</code> — il nome dei file è <code>jaccard[+]</code></td>
+    </tr>
+    <tr>
+      <td>Coerenza col file originale di Ceolin</td>
+      <td>—</td>
+      <td>Identica a <code>script/jaccard.py</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>4. Punti di confusione</h2>
+
+<h3>a) Cluster Map ≠ script UNIMORE originale</h3>
+
+<div class="callout warn">
+<p>Il pulsante "Cluster Map" <strong>non riproduce fedelmente</strong> <code>01_plot_clusters.py</code>. Sono cambiati due ingredienti chiave:</p>
+<ul>
+  <li><strong>Metrica</strong>: lo script originale usa <code>metric="hamming"</code> di sklearn su 0/1 densi. Il sito usa <code>_hamming_core</code> o <code>_jaccard_core</code> (la versione di Ceolin).</li>
+  <li><strong>KNN imputation</strong>: lo script originale dipende dal passaggio <code>preprocessing.py</code> che riempie i mancanti. Il sito <strong>salta</strong> questo step e gestisce i mancanti ignorandoli colonna per colonna.</li>
+</ul>
+<p>Conseguenza: la cluster map del sito è un risultato <em>simile ma diverso</em> da quello pubblicato dal gruppo UNIMORE. Chi vuole replicare risultati pubblicati deve girare gli script da terminale.</p>
+</div>
+
+<h3>b) La soglia 0.56 è ereditata senza modifiche</h3>
+
+<p>Va sottolineato che il valore <strong>0.56 è stato calibrato dal gruppo UNIMORE sul loro specifico dataset</strong> e nel sito è stato <strong>replicato così com'è</strong>, senza ricalibrazione per i diversi subset di lingue selezionabili dai filtri di TableA.</p>
+
+<p><strong>Alterantiva 1:</strong> rendere la soglia <em>interattiva</em>. Nel modal della Cluster Map mostrare il dendrogramma con una linea orizzontale trascinabile (o uno slider sul numero di cluster K), aggiornare l'anteprima dei cluster in tempo reale e generare la mappa solo al click finale. In questo modo il taglio diventa una scelta consapevole del linguista sul dataset specifico, e non un numero magico ereditato da un'altra pipeline.</p>
+<p><strong>Alternativa 2:</strong> rimuovere del tutto il taglio. Invece di scegliere una soglia (fissa o interattiva), si potrebbe togliere completamente la derivazione dei cluster dal dendrogramma. La Cluster Map smetterebbe di colorare i punti per appartenenza al cluster e diventerebbe semplicemente una mappa delle lingue, lasciando l'analisi dei raggruppamenti al solo dendrogramma (che è una visualizzazione di per sé completa). I pro e contro:</p>
+
+<ul>
+  <li><strong>Pro — elimina il numero magico:</strong> non si eredita più una soglia arbitraria (0.56).</li>
+  <li><strong>Pro — onestà metodologica:</strong> il dendrogramma mostra <em>tutta</em> la struttura gerarchica delle distanze; estrarne K cluster netti è sempre una semplificazione arbitraria. Rimuovere il taglio significa non nascondere questa arbitrarietà dietro un'immagine "pulita".</li>
+  <li><strong>Contro — la Cluster Map perde il suo scopo principale:</strong> una mappa senza cluster colorati è semplicemente una mappa di punti georeferenziati. </li>
+  <li><strong>Contro — scarica il lavoro sull'utente:</strong> per ottenere comunque dei cluster colorati l'utente dovrebbe leggere il dendrogramma a occhio, scegliere mentalmente un livello e mappare le lingue. È esattamente ciò che oggi il taglio automatico evita.</li>
+</ul>
+
+
+
+<h3>c) Stesso nome "Hamming", significati diversi</h3>
+
+<p>La parola "Hamming" nel sito si riferisce a <code>_hamming_core</code>, che <strong>non</strong> è la Hamming classica. Un linguista che cerca su Wikipedia "distanza di Hamming" trova la formula <em>standard</em> (differenze sul totale), non quella del sito. Stesso vale per "Jaccard": il sito usa <code>jaccard[+]</code>, una variante asimmetrica.</p>
+
+<h3>d) PCA — SVD manuale vs sklearn</h3>
+
+<p>Risolto un bug sulle percentuali mostrate nelle etichette degli assi.</p>
+
+<p>Conseguenze pratiche:</p>
+
+<ul>
+  <li>I punti del scatter restano nelle stesse posizioni.</li>
+  <li>Le percentuali sugli assi ora sono <strong>vere percentuali di varianza spiegata</strong> e quindi diverse — e corrette — rispetto ai grafici generati prima del fix.</li>
+  <li>I risultati sono identici e riproducibili rispetto a <code>pca1.py</code>.</li>
+</ul>
+
+<h2>5. Cosa NON viene usato</h2>
+
+<ul>
+  <li><strong>K-means</strong> — mai. Tutto il clustering è gerarchico UPGMA.</li>
+  <li><strong>KNN imputation</strong> dentro al sito — mai. I mancanti sono sempre ignorati colonna per colonna.</li>
+  <li><strong>Hamming standard sklearn</strong> dentro al sito — mai esposta. Vive solo in <code>script/01_plot_clusters.py</code>, da eseguire offline.</li>
+</ul>
+
+</div>
+</body>
+</html>

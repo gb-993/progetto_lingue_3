@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Distanze geografiche — schema riassuntivo</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --text: #2a2a2a;
+    --muted: #6b6b6b;
+    --accent: #335c81;
+    --accent-light: #e9eef4;
+    --border: #d8d5cf;
+    --code-bg: #f1efea;
+    --note-bg: #eef5ee;
+    --note-border: #6a9a6a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Charter", "Georgia", "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 50px 50px 70px 50px;
+  }
+  h1, h2, h3 {
+    font-family: "Helvetica Neue", "Inter", "Segoe UI", system-ui, sans-serif;
+    line-height: 1.25;
+  }
+  h1 {
+    font-size: 1.9em;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+  }
+  .subtitle {
+    font-family: "Helvetica Neue", system-ui, sans-serif;
+    font-size: 1em;
+    color: var(--muted);
+    margin-bottom: 40px;
+  }
+  h2 {
+    font-size: 1.35em;
+    font-weight: 600;
+    margin-top: 44px;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  p { margin: 0 0 12px 0; }
+  ul { margin: 0 0 14px 0; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: "JetBrains Mono", "Consolas", "Menlo", monospace;
+    font-size: 0.85em;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 22px 0;
+    font-size: 0.9em;
+    font-family: "Helvetica Neue", "Inter", system-ui, sans-serif;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--accent-light);
+    font-weight: 600;
+  }
+  tr:nth-child(even) td { background: #fafaf7; }
+  .callout {
+    padding: 14px 18px;
+    border-radius: 5px;
+    margin: 16px 0 20px 0;
+    border-left: 4px solid var(--note-border);
+    background: var(--note-bg);
+    font-size: 0.96em;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .pill {
+    display: inline-block;
+    font-family: "Helvetica Neue", system-ui, sans-serif;
+    font-size: 0.78em;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Distanze geografiche — schema riassuntivo</h1>
+<div class="subtitle">Versione sintetica: dove vengono usate nel sito, in cosa differiscono, cosa fa il Mantel test.</div>
+
+<h2>1. Le tre invocazioni nel sito</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Dove</th>
+      <th>Algoritmo usato</th>
+      <th>Esposizione</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>LanguageList → "Export GCD distances (.txt)"</td>
+      <td><strong>Impl. 1</strong> (GCD Ceolin, miglia nautiche)</td>
+      <td>File TXT scaricabile</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>TableA → "Geographic distances km (.txt zip)"</td>
+      <td><strong>Impl. 2</strong> (GCD UNIMORE, km) + <strong>Impl. 3</strong> (Vincenty WGS-84, km)</td>
+      <td>Zip con due file TXT</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>TableA → <strong>Mantel test</strong></td>
+      <td><strong>Impl. 1</strong> di nuovo (GCD Ceolin, miglia nautiche)</td>
+      <td>Nessun file dedicato — input interno</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Nel terzo caso la matrice geografica viene costruita al volo e non viene salvata: i suoi valori appaiono <strong>indirettamente</strong> nei risultati di correlazione (<code>mantel_results.csv</code>) e negli scatterplot dello zip Mantel.</p>
+
+<h2>2. Impl. 1 vs Impl. 2</h2>
+
+<p>Pur essendo entrambe GCD sferiche con la stessa formula (legge dei coseni), differiscono in 4 punti:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Aspetto</th>
+      <th>Impl. 1 (Ceolin)</th>
+      <th>Impl. 2 (UNIMORE)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Unità di misura</td>
+      <td>Miglia nautiche</td>
+      <td>Chilometri</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Raggio terrestre implicito <span class="pill">cambia il numero</span></td>
+      <td>~6366.71 km (convenzione "1° = 60 NM")</td>
+      <td>6371.0088 km (standard <code>geopy</code>)</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Sicurezza numerica su <code>acos</code></td>
+      <td><code>acos(round(cos_val, 5))</code></td>
+      <td><code>acos(max(-1, min(1, cos_val)))</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Origine del codice</td>
+      <td>Porting da <code>gcd.py</code> (Ceolin, repo Boundaries)</td>
+      <td>Porting da <code>geopy.distance.great_circle</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Le righe 1, 3 e 4 sono differenze "di forma": cambiano unità, codice, gestione degli errori di virgola mobile, ma non il valore matematico.</p>
+
+<p>La riga 2 è invece una differenza "di sostanza": i due raggi differiscono dello ~0.068%. Quindi convertendo un valore di Impl. 1 in km (× 1.852) <strong>non</strong> si ottiene esattamente Impl. 2 — c'è uno scarto di circa 0.6 km su 885 km.</p>
+
+<div class="callout">
+<p><strong>Esempio Milano–Palermo:</strong> Impl. 1 → 478.3 NM → convertito = 885.81 km. Impl. 2 → 886.41 km. Scarto: ~0.07%, trascurabile per usi linguistici e irrilevante per il Mantel test (la correlazione è invariante per costanti moltiplicative).</p>
+</div>
+
+<h2>3. Mantel test</h2>
+
+<p>Confronta due matrici di distanze (es. geografica vs grammaticale) e dice quanto <strong>variano insieme</strong>, cella per cella.</p>
+
+<ul>
+  <li>Il sito calcola tre correlazioni in un colpo solo: <strong>Pearson</strong>, <strong>Spearman</strong>, <strong>Kendall</strong>. Tutte e tre finiscono in <code>mantel_results.csv</code> dello zip Mantel.</li>
+  <li>Non c'è un menu per scegliere: il linguista guarda le tre righe nel CSV e fa riferimento a quella più adatta al proprio scopo.</li>
+  <li>Significatività: <strong>permutation test</strong> con 999 permutazioni (seed = 42). P-value &lt; 0.05 → correlazione reale, non casuale.</li>
+</ul>
+
+<h3>Cosa NON viene usato qui</h3>
+
+<p>Nel Mantel test <strong>non</strong> compaiono né dendrogrammi né k-means. È solo confronto cella-per-cella fra due matrici + test statistico. Dendrogrammi e k-means vivono in altre parti di TableA (clustering linguistico), separati da questa analisi.</p>
+
+<h2>4. Significato dei tre indici di correlazione</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Indice</th>
+      <th>Cosa misura</th>
+      <th>Quando preferirlo</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Pearson</strong></td>
+      <td>Correlazione lineare fra i valori</td>
+      <td>Quando ci si aspetta una relazione "a linea retta" fra le due matrici</td>
+    </tr>
+    <tr>
+      <td><strong>Spearman</strong></td>
+      <td>Correlazione fra i ranghi</td>
+      <td>Robusta a relazioni monotone non lineari</td>
+    </tr>
+    <tr>
+      <td><strong>Kendall</strong></td>
+      <td>Concordanza fra coppie di valori</td>
+      <td>Più conservativa, robusta con pochi dati</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Tutti e tre vanno da −1 (anti-correlazione perfetta) a +1 (correlazione perfetta), con 0 = indipendenza.</p>
+
+</div>
+</body>
+</html>
