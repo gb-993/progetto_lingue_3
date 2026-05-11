@@ -8,6 +8,7 @@
 (ancora non so esattamente cosa sarà visualizzabile per questi utenti)
 
 ## DASHBOARD
+- [ ] Ripristinare l'hover sulla mappa. In questa mappa, rispetto a quella della pagina languages, manca la famiglia Tai-Kadai
 
 ## HOW TO CITE
 
