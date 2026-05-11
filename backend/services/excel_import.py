@@ -273,8 +273,9 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Colonna 'Code' mancante"))
         return
 
-    # Pre-load tutte le motivations per code
-    by_code = {m.code: m for m in db.query(models.Motivation).all()}
+    # Pre-load tutte le motivations per code (chiave normalizzata in upper-case
+    # per match case-insensitive sul file Excel; il code DB resta canonico).
+    by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -290,13 +291,14 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        existing = by_code.get(code)
+        code_key = code.upper()
+        existing = by_code.get(code_key)
         label = _str(_get(row, hmap, "Label"))
 
         if not existing:
             if not create_missing:
                 summary.errors += 1
-                failed_codes.add(code)
+                failed_codes.add(code_key)
                 report.errors.append(ImportError(
                     sheet="Motivations", row=ridx, column="Code", value=code,
                     reason=f"Motivation '{code}' does not exist in the DB. Create it via the UI before importing."
@@ -307,17 +309,17 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                 m = models.Motivation(code=code, label=label or "")
                 db.add(m)
                 db.flush()
-                by_code[code] = m
+                by_code[code_key] = m
 
             ok, err = _safe_apply(db, apply_create)
             if ok:
                 summary.inserted += 1
-                record_version(db, by_code[code], operation="create",
+                record_version(db, by_code[code_key], operation="create",
                                source="backup_restore", user_id=user_id,
                                note="Backup restore")
             else:
                 summary.errors += 1
-                failed_codes.add(code)
+                failed_codes.add(code_key)
                 report.errors.append(ImportError(
                     sheet="Motivations", row=ridx, value=code, reason=err
                 ))
@@ -333,7 +335,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                            user_id=user_id, note="Import Excel")
         else:
             summary.errors += 1
-            failed_codes.add(code)
+            failed_codes.add(code_key)
             report.errors.append(ImportError(
                 sheet="Motivations", row=ridx, value=code, reason=err
             ))
@@ -368,7 +370,9 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Missing 'ID' column"))
         return
 
-    by_id = {p.id: p for p in db.query(models.ParameterDef).all()}
+    # Chiave normalizzata upper-case per match case-insensitive sul file Excel;
+    # l'ID DB resta canonico.
+    by_id = {p.id.upper(): p for p in db.query(models.ParameterDef).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -384,7 +388,8 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        existing = by_id.get(pid)
+        pid_key = pid.upper()
+        existing = by_id.get(pid_key)
 
         # Validazione condition (se presente). La facciamo prima del branch
         # create-vs-update così si applica anche al nuovo parametro.
@@ -394,7 +399,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 validate_expression(cond_raw)
             except ParseException as e:
                 summary.errors += 1
-                failed_ids.add(pid)
+                failed_ids.add(pid_key)
                 report.errors.append(ImportError(
                     sheet="Parameters", row=ridx,
                     column="Implicational Condition", value=cond_raw,
@@ -406,7 +411,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
         if existing is None:
             if not create_missing:
                 summary.errors += 1
-                failed_ids.add(pid)
+                failed_ids.add(pid_key)
                 report.errors.append(ImportError(
                     sheet="Parameters", row=ridx, column="ID", value=pid,
                     reason=f"Parameter '{pid}' does not exist in the DB. Create it via the UI before importing."
@@ -427,17 +432,17 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 p = models.ParameterDef(**kwargs)
                 db.add(p)
                 db.flush()
-                by_id[pid] = p
+                by_id[pid_key] = p
 
             ok, err = _safe_apply(db, apply_create)
             if ok:
                 summary.inserted += 1
-                record_version(db, by_id[pid], operation="create",
+                record_version(db, by_id[pid_key], operation="create",
                                source="backup_restore", user_id=user_id,
                                note="Backup restore")
             else:
                 summary.errors += 1
-                failed_ids.add(pid)
+                failed_ids.add(pid_key)
                 report.errors.append(ImportError(
                     sheet="Parameters", row=ridx, value=pid, reason=err
                 ))
@@ -466,7 +471,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
         ok, err = _safe_apply(db, apply)
         if not ok:
             summary.errors += 1
-            failed_ids.add(pid)
+            failed_ids.add(pid_key)
             report.errors.append(ImportError(
                 sheet="Parameters", row=ridx, value=pid, reason=err
             ))
@@ -485,7 +490,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
 
         if diff_parts:
             log = models.ParameterChangeLog(
-                parameter_id=pid, user_id=user_id,
+                parameter_id=existing.id, user_id=user_id,
                 change_note=f"[Excel import] Updated: {', '.join(diff_parts)}"
             )
             db.add(log)
@@ -525,8 +530,10 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Missing 'ID' column"))
         return
 
-    by_id = {q.id: q for q in db.query(models.Question).all()}
-    valid_param_ids = {p.id for p in db.query(models.ParameterDef.id).all()}
+    # Chiavi normalizzate upper-case per match case-insensitive sul file Excel;
+    # gli ID DB restano canonici e vengono usati per le FK.
+    by_id = {q.id.upper(): q for q in db.query(models.Question).all()}
+    param_id_by_upper = {p.id.upper(): p.id for p in db.query(models.ParameterDef.id).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -542,14 +549,18 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        existing = by_id.get(qid)
+        qid_key = qid.upper()
+        existing = by_id.get(qid_key)
         new_param_id = _str(_get(row, hmap, "Parameter ID"))
+        new_param_id_key = new_param_id.upper() if new_param_id else ""
+        # Risolvi l'ID canonico del parametro (case-insensitive); None se non esiste.
+        canonical_new_param_id = param_id_by_upper.get(new_param_id_key) if new_param_id else None
 
         # CREATE branch (solo se create_missing=True e domanda non esiste)
         if existing is None:
             if not create_missing:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="ID", value=qid,
                     reason=f"Question '{qid}' does not exist in the DB. Create it via the UI before importing."
@@ -557,15 +568,15 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                 continue
             if not new_param_id:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=qid,
                     reason="Empty Parameter ID for new question"
                 ))
                 continue
-            if new_param_id not in valid_param_ids:
+            if canonical_new_param_id is None:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
                     reason=f"Parameter '{new_param_id}' does not exist"
@@ -577,7 +588,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
 
             def apply_create():
                 kwargs = {
-                    "id": qid, "parameter_id": new_param_id,
+                    "id": qid, "parameter_id": canonical_new_param_id,
                     "is_stop_question": new_stop, "is_active": new_active,
                 }
                 for col_name, attr_name, parser in QUESTION_FIELDS:
@@ -585,35 +596,36 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                 q = models.Question(**kwargs)
                 db.add(q)
                 db.flush()
-                by_id[qid] = q
+                by_id[qid_key] = q
 
             ok, err = _safe_apply(db, apply_create)
             if ok:
                 summary.inserted += 1
-                record_version(db, by_id[qid], operation="create",
+                record_version(db, by_id[qid_key], operation="create",
                                source="backup_restore", user_id=user_id,
                                note="Backup restore")
             else:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, value=qid, reason=err
                 ))
             continue
 
-        if new_param_id and new_param_id != existing.parameter_id:
-            # Cambio parent: verifica che esista e non sia in lista falliti
-            if new_param_id in failed_param_ids:
+        # Cambio parent? Confronto case-insensitive contro l'ID corrente del param.
+        parent_changing = bool(new_param_id) and new_param_id_key != existing.parameter_id.upper()
+        if parent_changing:
+            if new_param_id_key in failed_param_ids:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
                     reason=f"Parameter '{new_param_id}' failed during import (upstream error)"
                 ))
                 continue
-            if new_param_id not in valid_param_ids:
+            if canonical_new_param_id is None:
                 summary.errors += 1
-                failed_question_ids.add(qid)
+                failed_question_ids.add(qid_key)
                 report.errors.append(ImportError(
                     sheet="Questions", row=ridx, column="Parameter ID", value=new_param_id,
                     reason=f"Parameter '{new_param_id}' does not exist"
@@ -629,8 +641,8 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
         new_active = _bool_yn(_get(row, hmap, "Is Active"))
 
         def apply():
-            if new_param_id and new_param_id != existing.parameter_id:
-                existing.parameter_id = new_param_id
+            if parent_changing and canonical_new_param_id is not None:
+                existing.parameter_id = canonical_new_param_id
             for col_name, attr_name, parser in QUESTION_FIELDS:
                 setattr(existing, attr_name, parser(_get(row, hmap, col_name)))
             existing.is_stop_question = new_stop
@@ -639,7 +651,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
         ok, err = _safe_apply(db, apply)
         if not ok:
             summary.errors += 1
-            failed_question_ids.add(qid)
+            failed_question_ids.add(qid_key)
             report.errors.append(ImportError(
                 sheet="Questions", row=ridx, value=qid, reason=err
             ))
@@ -689,8 +701,10 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
         ))
         return
 
-    by_qid = {q.id: q for q in db.query(models.Question).all()}
-    by_code = {m.code: m for m in db.query(models.Motivation).all()}
+    # Chiavi normalizzate upper-case per match case-insensitive sul file Excel;
+    # gli ID DB restano canonici e vengono usati per le FK.
+    by_qid = {q.id.upper(): q for q in db.query(models.Question).all()}
+    by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
 
     # Strategia: per ogni question_id presente nel file, cancello i link esistenti
     # e li ri-creo dal file. Questo evita di accumulare link orfani.
@@ -713,7 +727,10 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        if qid in failed_question_ids:
+        qid_key = qid.upper()
+        code_key = code.upper()
+
+        if qid_key in failed_question_ids:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
@@ -721,7 +738,8 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
                 reason=f"Question '{qid}' failed during import (upstream error)"
             ))
             continue
-        if qid not in by_qid:
+        question_db = by_qid.get(qid_key)
+        if question_db is None:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
@@ -730,7 +748,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        if code in failed_motivation_codes:
+        if code_key in failed_motivation_codes:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
@@ -738,7 +756,8 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
                 reason=f"Motivation '{code}' failed during import (upstream error)"
             ))
             continue
-        if code not in by_code:
+        motivation_db = by_code.get(code_key)
+        if motivation_db is None:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
@@ -747,8 +766,8 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        questions_seen.add(qid)
-        pairs_to_create.append((qid, by_code[code].id))
+        questions_seen.add(question_db.id)
+        pairs_to_create.append((question_db.id, motivation_db.id))
 
     # Replace dei link per le sole question viste nel file
     if questions_seen:
@@ -850,10 +869,12 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
     ).update({"admin_note": None}, synchronize_session=False)
     db.flush()
 
-    # 3. Pre-load di tutte le question + motivations per id e per code
-    valid_qids = {q.id for q in db.query(models.Question.id).all()}
-    mot_by_code = {m.code: m for m in db.query(models.Motivation).all()}
-    valid_param_ids = {p.id for p in db.query(models.ParameterDef.id).all()}
+    # 3. Pre-load di tutte le question + motivations per id e per code.
+    # Chiavi normalizzate upper-case per match case-insensitive sul file Excel;
+    # gli ID DB restano canonici (servono come FK su Answer.question_id ecc.).
+    q_id_by_upper = {q.id.upper(): q.id for q in db.query(models.Question.id).all()}
+    mot_by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
+    param_id_by_upper = {p.id.upper(): p.id for p in db.query(models.ParameterDef.id).all()}
 
     # Admin notes da applicare a fine import. Una riga per parametro.
     # Se la stessa Admin_Note compare su più question dello stesso parametro
@@ -873,20 +894,24 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        if qid in failed_question_ids:
+        qid_key = qid.upper()
+        if qid_key in failed_question_ids:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Question_ID", value=qid,
                 reason=f"Question '{qid}' failed during import (upstream error)"
             ))
             continue
-        if qid not in valid_qids:
+        canonical_qid = q_id_by_upper.get(qid_key)
+        if canonical_qid is None:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Question_ID", value=qid,
                 reason=f"Question '{qid}' does not exist"
             ))
             continue
+        # Da qui in poi usa l'ID canonico DB per la FK Answer.question_id.
+        qid = canonical_qid
 
         raw_ans = _str(_get(row, hmap, "Language_Answer")).upper()
         if raw_ans in ("YES", "Y"):
@@ -924,7 +949,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 code = token.strip()
                 if not code:
                     continue
-                m = mot_by_code.get(code)
+                m = mot_by_code.get(code.upper())
                 if m is None:
                     report.errors.append(ImportError(
                         sheet=COMPILATION_SHEET, row=ridx, column="Motivations", value=code,
@@ -934,11 +959,14 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 mot_codes_to_apply.append(m.id)
 
         # Admin_Note: associata al parametro, non alla question. Accumula a
-        # fine loop per applicarla una volta sola per parametro.
+        # fine loop per applicarla una volta sola per parametro (usando l'ID
+        # canonico DB, così la chiave del dict resta consistente anche se il
+        # file scrive il Parameter_Label con casing diverso).
         note_cell = _str(_get(row, hmap, "Admin_Note"))
         param_label = _str(_get(row, hmap, "Parameter_Label"))
-        if note_cell and param_label and param_label in valid_param_ids:
-            admin_notes_by_pid[param_label] = note_cell
+        canonical_pid = param_id_by_upper.get(param_label.upper()) if param_label else None
+        if note_cell and canonical_pid is not None:
+            admin_notes_by_pid[canonical_pid] = note_cell
 
         # Crea Answer + Examples + AnswerMotivations
         def apply(mot_ids=mot_codes_to_apply):
