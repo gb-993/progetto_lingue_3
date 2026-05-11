@@ -169,7 +169,7 @@ def search_examples(
 # --- ENDPOINT: LETTURA DATI COMPILAZIONE ---
 @router.get("/{lang_id}/compilation")
 def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     parameters = (
@@ -315,7 +315,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     # stessa lingua. L'optimistic check sotto resta come barriera primaria
     # (e dà 409 con UX chiara), questo lock chiude la finestra di TOCTOU
     # tra il check e l'UPDATE delle Answer. Coerente con dag_eval / param_consolidate.
-    language = db.query(models.Language).with_for_update().filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).with_for_update().filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     _ensure_can_modify(language, current_user)
 
@@ -452,7 +452,7 @@ def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     SOLO l'utente assegnato può inviare. Gli admin non submittano (passano direttamente
     da approve/reject sulle lingue già in waiting_for_approval).
     """
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     if current_user.role == "admin":
@@ -474,7 +474,7 @@ def approve_language(lang_id: str, db: Session = Depends(get_db), current_user: 
     """
     waiting_for_approval -> approved. Solo admin.
     """
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "waiting_for_approval":
         raise HTTPException(status_code=409, detail=f"Cannot approve: current status '{language.status}'.")
@@ -491,7 +491,7 @@ def reject_language(lang_id: str, payload: RejectPayload, db: Session = Depends(
     """
     waiting_for_approval -> rejected (con nota opzionale). Solo admin.
     """
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "waiting_for_approval":
         raise HTTPException(status_code=409, detail=f"Cannot reject: current status '{language.status}'.")
@@ -508,7 +508,7 @@ def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     """
     rejected -> pending. Utente assegnato o admin.
     """
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     if current_user.role != "admin" and language.assigned_user_id != current_user.id:
@@ -534,7 +534,7 @@ def admin_force_approve_language(
     current_user: models.User = Depends(require_admin),
 ):
     """Admin: porta la lingua ad 'approved' da qualsiasi stato. Esegue il DAG in background."""
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "approved"
@@ -553,7 +553,7 @@ def admin_force_reject_language(
     current_user: models.User = Depends(require_admin),
 ):
     """Admin: porta la lingua a 'rejected' da qualsiasi stato. Nota opzionale."""
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "rejected"
@@ -570,7 +570,7 @@ def admin_force_pending_language(
     current_user: models.User = Depends(require_admin),
 ):
     """Admin: porta la lingua a 'pending' da qualsiasi stato (rimette in compilazione)."""
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "pending"
@@ -586,7 +586,7 @@ def admin_force_waiting_language(
     current_user: models.User = Depends(require_admin),
 ):
     """Admin: porta la lingua a 'waiting_for_approval' da qualsiasi stato."""
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     language.status = "waiting_for_approval"
@@ -598,7 +598,7 @@ def admin_force_waiting_language(
 
 @router.get("/{lang_id}/debug")
 def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     # 1. Recupera parametri attivi e relative domande
@@ -684,7 +684,7 @@ def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: 
     (DAG implicazionale) per tutti i parametri attivi della lingua.
     Non tocca lo status della lingua né delle answer.
     """
-    language = db.query(models.Language).filter(func.lower(models.Language.id) == lang_id.lower()).first()
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     active_params = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
