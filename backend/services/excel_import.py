@@ -1159,11 +1159,27 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
         status_raw = _str(_get(row, hmap, "Status")).lower()
         status = status_raw if status_raw in _LANGUAGE_VALID_STATUSES else "pending"
 
+        top_str = _str(_get(row, hmap, "Top-level family")) or ""
+        fam_str = _str(_get(row, hmap, "Family")) or ""
+        grp_str = _str(_get(row, hmap, "Group")) or ""
+
+        # Reverse lookup stringa→FK, stesso pattern di resolve_taxonomy in
+        # languages.py. Niente forward-propagation: la riga Excel è
+        # source-of-truth per le stringhe, non riscriviamo "Family" usando
+        # il nome del parent del Group. Se il nome non matcha nessuna entità
+        # in /taxonomy l'FK resta NULL e la stringa appare in "unnormalized".
+        top_obj = db.query(models.TopFamily).filter(models.TopFamily.name == top_str).first() if top_str else None
+        fam_obj = db.query(models.Family).filter(models.Family.name == fam_str).first() if fam_str else None
+        grp_obj = db.query(models.Group).filter(models.Group.name == grp_str).first() if grp_str else None
+
         fields = {
             "name_full": name,
-            "top_level_family": _str(_get(row, hmap, "Top-level family")) or "",
-            "family": _str(_get(row, hmap, "Family")) or "",
-            "grp": _str(_get(row, hmap, "Group")) or "",
+            "top_level_family": top_str,
+            "family": fam_str,
+            "grp": grp_str,
+            "top_family_id": top_obj.id if top_obj else None,
+            "family_id": fam_obj.id if fam_obj else None,
+            "group_id": grp_obj.id if grp_obj else None,
             "isocode": _str(_get(row, hmap, "ISO code")) or "",
             "glottocode": _str(_get(row, hmap, "Glottocode")) or "",
             "location": _str(_get(row, hmap, "Location")) or "",

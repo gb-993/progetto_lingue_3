@@ -57,6 +57,9 @@ def ensure_assigned_user_exists(user_id: Optional[int], db: Session):
 def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
     """
     Risolve la gerarchia top → family → group:
+    - se arriva una stringa senza FK (es. da import Excel/migration o edit
+      manuale), prova a risolvere l'FK cercando l'entità con lo stesso nome
+      (case-sensitive, coerente con il vincolo unique sui dizionari)
     - se passi group_id, deduce family_id e top_family_id dai parent
     - se passi family_id, deduce top_family_id dal parent
     - sincronizza i campi stringa (top_level_family, family, grp) con i nomi delle entità
@@ -68,6 +71,24 @@ def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
     top_str = item.top_level_family or ""
     fam_str = item.family or ""
     grp_str = item.grp or ""
+
+    # Reverse lookup: stringa → FK quando la stringa è popolata e l'FK no.
+    # Se la stringa non corrisponde a nessuna entità lasciamo l'FK a None: lo
+    # stato "stringa unnormalized" resta lecito ed è visibile in /taxonomy.
+    # Il forward propagation sotto può comunque sovrascrivere l'FK appena
+    # trovato (es. group → family) per garantire la consistenza gerarchica.
+    if grp_id is None and grp_str:
+        g = db.query(models.Group).filter(models.Group.name == grp_str).first()
+        if g:
+            grp_id = g.id
+    if fam_id is None and fam_str:
+        f = db.query(models.Family).filter(models.Family.name == fam_str).first()
+        if f:
+            fam_id = f.id
+    if top_id is None and top_str:
+        t = db.query(models.TopFamily).filter(models.TopFamily.name == top_str).first()
+        if t:
+            top_id = t.id
 
     if grp_id is not None:
         g = db.get(models.Group, grp_id)
