@@ -8,6 +8,7 @@ import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
+import Overlay from 'ol/Overlay';
 import { fromLonLat } from 'ol/proj';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
@@ -26,6 +27,7 @@ function dimHsl(cssColor, alpha) {
 export default function PublicHome() {
     const [loading, setLoading] = useState(true);
     const mapRef = useRef(null);
+    const tooltipRef = useRef(null);
     const mapInstance = useRef(null);
     const vectorSourceRef = useRef(null);
 
@@ -80,6 +82,38 @@ export default function PublicHome() {
                             center: fromLonLat([12, 42]),
                             zoom: 3,
                         }),
+                    });
+
+                    // Tooltip su hover del marker (nome lingua) + cursore pointer.
+                    // OL Overlay sposta l'elemento dentro il viewport della
+                    // mappa, quindi tooltipRef serve solo come hook iniziale.
+                    const tooltipOverlay = new Overlay({
+                        element: tooltipRef.current,
+                        offset: [10, 0],
+                        positioning: 'bottom-left',
+                        stopEvent: false,
+                    });
+                    mapInstance.current.addOverlay(tooltipOverlay);
+
+                    mapInstance.current.on('pointermove', (evt) => {
+                        const map = mapInstance.current;
+                        if (!map || !tooltipRef.current) return;
+                        const tip = tooltipRef.current;
+                        if (evt.dragging) {
+                            tip.style.display = 'none';
+                            return;
+                        }
+                        const feature = map.forEachFeatureAtPixel(evt.pixel, f => f);
+                        const target = map.getTargetElement();
+                        if (feature) {
+                            tip.innerText = feature.get('name') || '';
+                            tip.style.display = 'block';
+                            tooltipOverlay.setPosition(evt.coordinate);
+                            if (target) target.style.cursor = 'pointer';
+                        } else {
+                            tip.style.display = 'none';
+                            if (target) target.style.cursor = '';
+                        }
                     });
                 }
                 setLoading(false);
@@ -140,6 +174,24 @@ export default function PublicHome() {
                         </div>
                     )}
                 </div>
+                <div
+                    ref={tooltipRef}
+                    style={{
+                        display: 'none',
+                        position: 'absolute',
+                        background: 'var(--surface)',
+                        color: 'var(--text)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        padding: '0.25rem 0.55rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                        zIndex: 100,
+                    }}
+                />
                 {familyColors.length > 0 && (
                     <div style={{
                         padding: '0.55rem 0.75rem',
