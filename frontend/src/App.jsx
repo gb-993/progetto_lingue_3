@@ -3,9 +3,10 @@ import {
     createBrowserRouter,
     RouterProvider,
     Outlet,
+    Navigate,
     useLocation,
 } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout, { SiteFooter } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 import ErrorBoundary, { RouterErrorElement } from './components/ErrorBoundary';
@@ -88,6 +89,16 @@ function ConditionalLayout({ children }) {
     );
 }
 
+// La rotta `/` mostra PublicHome (landing pubblica con hero "Welcome" e bottone
+// Login). Per un utente autenticato non ha senso: vedrebbe sidebar + Logout
+// insieme al bottone Login della landing. Redirigiamo a /dashboard. La mappa
+// pubblica resta comunque accessibile agli admin tramite Languages.
+function HomeRoute() {
+    const { user } = useAuth();
+    if (user) return <Navigate to="/dashboard" replace />;
+    return <ConditionalLayout><PublicHome /></ConditionalLayout>;
+}
+
 const router = createBrowserRouter([
     {
         path: '/',
@@ -99,7 +110,7 @@ const router = createBrowserRouter([
         errorElement: <RouterErrorElement />,
         children: [
             // Rotte pubbliche
-            { index: true, element: <ConditionalLayout><PublicHome /></ConditionalLayout> },
+            { index: true, element: <HomeRoute /> },
             { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
             { path: 'login', element: <Login /> },
 

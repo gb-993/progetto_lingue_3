@@ -30,6 +30,8 @@ export const AuthProvider = ({ children }) => {
     // accessed before declared".
     const logout = (redirectTo = '/login') => {
         localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('name');
         setUser(null);
         window.location.href = redirectTo;
     };
