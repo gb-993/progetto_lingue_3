@@ -89,6 +89,39 @@ class ImportReport:
 SCHEMA_SHEETS = ("Motivations", "Parameters", "Questions", "QuestionAllowedMotivations")
 COMPILATION_SHEET = "Database_model"
 
+# Ordine di processing (rispetta le dipendenze: Questions→Parameters,
+# QAM→Questions+Motivations, Database_model→Questions).
+SUPPORTED_SHEET_TYPES = (
+    "Motivations",
+    "Parameters",
+    "Questions",
+    "QuestionAllowedMotivations",
+    "Languages",
+    "Glossary",
+    COMPILATION_SHEET,
+)
+
+# Signature di header per ciascun tipo di sheet. Usate solo come fallback
+# quando il nome della tab non matcha (es. tab lasciate come "Sheet1"/"Foglio1"
+# dopo copia-incolla). Le signature sono set di colonne che DEVONO essere tutte
+# presenti nella riga 1; sono scelte per essere distintive e non collidere fra
+# tipi diversi.
+SHEET_SIGNATURES: Dict[str, Set[str]] = {
+    # 4 colonne tutte specifiche, zero collisioni possibili
+    COMPILATION_SHEET: {"Language", "Parameter_Label", "Question_ID", "Language_Answer"},
+    # "Code" da solo non appare in nessun altro sheet (QAM usa "Motivation Code")
+    "Motivations": {"Code"},
+    # "Schema" è esclusivo di Parameters (distingue da Questions che ha "ID"+"Text")
+    "Parameters": {"ID", "Schema"},
+    # "Parameter ID" distingue da Parameters; "Text" da Motivations
+    "Questions": {"ID", "Parameter ID", "Text"},
+    "QuestionAllowedMotivations": {"Question ID", "Motivation Code"},
+    # "ISO code" evita collisione con sheet generici che hanno "ID"+"Name"
+    "Languages": {"ID", "Name", "ISO code"},
+    # "Word" non appare in nessun altro sheet
+    "Glossary": {"Word", "Description"},
+}
+
 
 def _str(v: Any) -> str:
     """Cella → stringa trim. None/vuoto → ''."""
@@ -120,6 +153,55 @@ def _get(row: Tuple, header_map: Dict[str, int], col_name: str) -> Any:
     if idx is None or idx >= len(row):
         return None
     return row[idx]
+
+
+# ============================================================================
+# Sheet detection: nome esatto + fallback per header signature
+# ============================================================================
+
+def _detect_sheet_type(ws: Worksheet) -> Optional[str]:
+    """Identifica il tipo di sheet leggendo la riga 1 (header).
+    Ritorna il primo tipo la cui SHEET_SIGNATURES è interamente contenuta
+    nelle colonne presenti. None se nessun match. I confronti sono
+    case-sensitive: gli utenti devono scrivere gli header esatti."""
+    try:
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+    except StopIteration:
+        return None
+    headers = {_str(h) for h in header_row if _str(h)}
+    if not headers:
+        return None
+    for sheet_type in SUPPORTED_SHEET_TYPES:
+        signature = SHEET_SIGNATURES.get(sheet_type)
+        if signature and signature.issubset(headers):
+            return sheet_type
+    return None
+
+
+def _resolve_sheets(wb) -> Dict[str, Worksheet]:
+    """Mappa tipo→worksheet da processare.
+
+    Priorità:
+      1. Match per **nome esatto** della tab (comportamento storico, sempre
+         vince).
+      2. Fallback per **header signature** sulle tab rimanenti — utile per
+         file in cui la tab è rimasta "Sheet1"/"Foglio1" o ha il nome della
+         lingua. Se più tab anonime matchano lo stesso tipo, vince la prima
+         in ordine di workbook.
+    """
+    resolved: Dict[str, Worksheet] = {}
+    for sheet_type in SUPPORTED_SHEET_TYPES:
+        if sheet_type in wb.sheetnames:
+            resolved[sheet_type] = wb[sheet_type]
+
+    for ws in wb.worksheets:
+        if ws.title in SUPPORTED_SHEET_TYPES:
+            continue  # tab presa per nome esatto (anche se non era resolved)
+        detected = _detect_sheet_type(ws)
+        if detected and detected not in resolved:
+            resolved[detected] = ws
+
+    return resolved
 
 
 # ============================================================================
@@ -159,69 +241,44 @@ def import_excel(
     failed_parameter_ids: Set[str] = set()
     failed_question_ids: Set[str] = set()
 
-    if "Motivations" in wb.sheetnames:
-        _import_motivations(db, wb["Motivations"], report, failed_motivation_codes,
-                            user_id=current_user_id, create_missing=create_missing)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet="Motivations", row=0, reason=f"Commit fallito: {e}"))
+    # Risoluzione tab: nome esatto + fallback per header signature.
+    sheets = _resolve_sheets(wb)
 
-    if "Parameters" in wb.sheetnames:
-        _import_parameters(db, wb["Parameters"], report, current_user_id, failed_parameter_ids,
-                           create_missing=create_missing)
+    def _run(sheet_type: str, fn) -> None:
+        ws = sheets.get(sheet_type)
+        if ws is None:
+            return
+        fn(ws)
         try:
             db.commit()
         except Exception as e:
             db.rollback()
-            report.errors.append(ImportError(sheet="Parameters", row=0, reason=f"Commit fallito: {e}"))
+            report.errors.append(ImportError(sheet=sheet_type, row=0, reason=f"Commit fallito: {e}"))
 
-    if "Questions" in wb.sheetnames:
-        _import_questions(db, wb["Questions"], report, current_user_id,
-                          failed_parameter_ids, failed_question_ids,
-                          create_missing=create_missing)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet="Questions", row=0, reason=f"Commit fallito: {e}"))
+    _run("Motivations", lambda ws: _import_motivations(
+        db, ws, report, failed_motivation_codes,
+        user_id=current_user_id, create_missing=create_missing))
 
-    if "QuestionAllowedMotivations" in wb.sheetnames:
-        _import_qam(db, wb["QuestionAllowedMotivations"], report,
-                    failed_motivation_codes, failed_question_ids)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet="QuestionAllowedMotivations", row=0, reason=f"Commit fallito: {e}"))
+    _run("Parameters", lambda ws: _import_parameters(
+        db, ws, report, current_user_id, failed_parameter_ids,
+        create_missing=create_missing))
+
+    _run("Questions", lambda ws: _import_questions(
+        db, ws, report, current_user_id,
+        failed_parameter_ids, failed_question_ids,
+        create_missing=create_missing))
+
+    _run("QuestionAllowedMotivations", lambda ws: _import_qam(
+        db, ws, report, failed_motivation_codes, failed_question_ids))
 
     # "Languages" e "Glossary" sono presenti nei file del backup-zip
     # (languages_metadata.xlsx, glossary.xlsx). Li gestiamo qui così l'import
     # totale può semplicemente alimentare ogni xlsx del bundle a import_excel.
-    if "Languages" in wb.sheetnames:
-        _import_languages_metadata(db, wb["Languages"], report)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet="Languages", row=0, reason=f"Commit fallito: {e}"))
+    _run("Languages", lambda ws: _import_languages_metadata(db, ws, report))
+    _run("Glossary", lambda ws: _import_glossary(db, ws, report))
 
-    if "Glossary" in wb.sheetnames:
-        _import_glossary(db, wb["Glossary"], report)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet="Glossary", row=0, reason=f"Commit fallito: {e}"))
-
-    if COMPILATION_SHEET in wb.sheetnames:
-        _import_compilation(db, wb[COMPILATION_SHEET], report, failed_question_ids)
-        try:
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            report.errors.append(ImportError(sheet=COMPILATION_SHEET, row=0, reason=f"Commit fallito: {e}"))
+    _run(COMPILATION_SHEET, lambda ws: _import_compilation(
+        db, ws, report, failed_question_ids))
 
     return report
 
