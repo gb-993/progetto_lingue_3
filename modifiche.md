@@ -13,6 +13,8 @@
 ## HOW TO CITE
 
 ## LISTA LINGUE
+- [ ] Rendere gli ID delle lingue modificabili
+- [ ] Quando si duplica una lingua poter scegliere l'id anziché venga aggiunto automaticamente "2"
 
 ## LINGUE DATA
 - [ ] Nel foglio database model aggiungerei anche la colonna delle traslitterazioni
