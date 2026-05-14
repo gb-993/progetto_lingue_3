@@ -1,6 +1,7 @@
 # RIEPILOGO MODIFICHE
 - [ ] Roberto Romano per problemi con mail, password e https
 - [ ] Servizi informatici per espandere disco della vm a 20 GB
+- [ ] Fare in modo che tutti gli output del sito abbiano il footer (per i _miei_ script: pca, dendrogramma, mantel va benissimo quello in basso che hai messo per il GitHub di Gaia)
 
 ## LANDING PAGE
 
