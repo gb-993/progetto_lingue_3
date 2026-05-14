@@ -14,6 +14,7 @@
 ## HOW TO CITE
 
 ## LISTA LINGUE
+- [ ] Eliminazione lingue (vedi email per dettagli)
 - [ ] Rendere gli ID delle lingue modificabili
 - [ ] Quando si duplica una lingua poter scegliere l'id anziché venga aggiunto automaticamente "2"
 
@@ -47,5 +48,6 @@
 ## ACCOUNTS
 
 ## INSTRUCTIONS
+- [ ] Aggiungere pdf documentazione online
 
 ## GLOSSARIO
