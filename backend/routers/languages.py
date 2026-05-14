@@ -275,7 +275,7 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
         raise HTTPException(status_code=400, detail="Could not update the language (duplicate ID or invalid data).")
 
 
-@router.get("/api/admin/languages/{id}")
+@router.delete("/admin/languages/{id}")
 def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
