@@ -48,4 +48,12 @@ BUILD_NOTES.txt
 # ---- Note operative locali (non documentazione pubblica) ----
 # Modifiche suggerite all'informativa privacy / ToU, da girare al team
 # legale Unimore. Restano fuori dal repo perche' sono note di lavoro.
-modifiche_suggerite.txt
+# Wildcard sull'estensione cosi' copre .txt, .html, eventuali .pdf/.docx
+# generati a partire dallo stesso documento.
+modifiche_suggerite.*
+
+# ---- Storage locale documenti legali (solo dev) ----
+# In dev il backend scrive qui i PDF caricati dalla UI admin (Legal
+# Documents). Sono file di test, non devono finire in git: in prod
+# vivono in un volume Docker dedicato (legal_archive in compose).
+backend/legal_documents_local/
