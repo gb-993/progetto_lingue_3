@@ -479,6 +479,11 @@ a:hover{text-decoration:underline}
 .auth-actions{
   margin-top: 1.25rem;
 }
+.auth-secondary{
+  margin-top: 1rem;
+  text-align: center;
+  font-size: .9rem;
+}
 .dashboard-copy{
   margin-top: .35rem;
 }
