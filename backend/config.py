@@ -107,3 +107,28 @@ CORS_ORIGINS = env_list("CORS_ORIGINS", _default_cors)
 # istanza o dal container docker), e dover ricordarsi di aggiungerle a mano
 # è una rottura. In prod questo regex resta None: vale solo la whitelist.
 CORS_ORIGIN_REGEX = None if IS_PROD else r"http://(localhost|127\.0\.0\.1)(:\d+)?"
+
+
+# ---------------------- SMTP ----------------------
+# Configurazione del server SMTP per l'invio di mail transazionali
+# (reset password, welcome, notifiche admin). Stessa filosofia di
+# SECRET_KEY/ADMIN_*: in dev sono opzionali (se manca SMTP_HOST il
+# servizio email diventa un no-op che logga e ritorna), in prod sono
+# obbligatorie e l'app non parte senza.
+SMTP_HOST = env("SMTP_HOST")
+SMTP_PORT = env_int("SMTP_PORT", 587)
+SMTP_USER = env("SMTP_USER")
+SMTP_PASSWORD = env("SMTP_PASSWORD")
+# Se SMTP_FROM non e' impostato ripieghiamo su SMTP_USER: nel caso
+# Gmail/Workspace il From deve coincidere col mittente autenticato.
+SMTP_FROM = env("SMTP_FROM") or SMTP_USER
+
+if IS_PROD and not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and SMTP_FROM):
+    raise RuntimeError(
+        "SMTP_HOST, SMTP_USER, SMTP_PASSWORD e SMTP_FROM sono obbligatorie "
+        "in produzione. Impostale come variabili d'ambiente prima del deploy."
+    )
+
+# Flag derivato: True se possiamo davvero inviare mail. Usato dal servizio
+# email per decidere se contattare il server o diventare un no-op silenzioso.
+SMTP_ENABLED = bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD and SMTP_FROM)

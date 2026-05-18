@@ -37,7 +37,8 @@ from routers import (auth,
                      migration,
                      backup_restore,
                      recompute,
-                     archived_questions)
+                     archived_questions,
+                     email)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -111,3 +112,4 @@ app.include_router(migration.router)
 app.include_router(backup_restore.router)
 app.include_router(recompute.router)
 app.include_router(archived_questions.router)
+app.include_router(email.router)
