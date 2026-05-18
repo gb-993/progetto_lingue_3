@@ -484,6 +484,13 @@ a:hover{text-decoration:underline}
   text-align: center;
   font-size: .9rem;
 }
+.auth-secondary a{
+  color: var(--brand);
+  text-decoration: none;
+}
+.auth-secondary a:hover{
+  text-decoration: underline;
+}
 .dashboard-copy{
   margin-top: .35rem;
 }
