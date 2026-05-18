@@ -45,7 +45,7 @@ docs/img/
 
 BUILD_NOTES.txt
 
-# ---- Reminder/note operative locali ----
-# Contengono richieste pendenti al DPO sull'informativa privacy:
-# restano fuori dal repo perche' sono note interne, non documentazione pubblica.
-PRIVACY_TODO_DPO.md
+# ---- Note operative locali (non documentazione pubblica) ----
+# Modifiche suggerite all'informativa privacy / ToU, da girare al team
+# legale Unimore. Restano fuori dal repo perche' sono note di lavoro.
+modifiche_suggerite.txt
