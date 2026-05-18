@@ -15,6 +15,8 @@ import NotFound from './components/NotFound';
 import PublicHome from './features/public/PublicHome';
 import HowToCite from './features/public/HowToCite';
 import Login from './features/auth/Login';
+import ForgotPassword from './features/auth/ForgotPassword';
+import ResetPassword from './features/auth/ResetPassword';
 import Dashboard from './features/dashboard/Dashboard';
 
 import LanguageList from './features/languages/LanguageList';
@@ -113,6 +115,8 @@ const router = createBrowserRouter([
             { index: true, element: <HomeRoute /> },
             { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
             { path: 'login', element: <Login /> },
+            { path: 'forgot-password', element: <ForgotPassword /> },
+            { path: 'reset-password', element: <ResetPassword /> },
 
             // Rotta protetta generica
             { path: 'dashboard', element: <Layout><Dashboard /></Layout> },

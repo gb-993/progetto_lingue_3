@@ -25,6 +25,34 @@ class User(Base):
 
     assigned_languages = relationship("Language", back_populates="assigned_user")
 
+
+class PasswordResetToken(Base):
+    """Token monouso per il flusso 'password dimenticata'.
+
+    Memorizziamo SOLO l'hash sha256 del token, non il token in chiaro:
+    se qualcuno facesse dump del DB non potrebbe riutilizzare i token.
+    Il token in chiaro vive solo nel link inviato per email all'utente
+    (e nel momento della generazione, in memoria).
+
+    Manteniamo storico: una volta consumato o scaduto, il record resta
+    in tabella per audit (quante richieste reset fa un utente, in che
+    finestra temporale, ecc.). Un cleanup periodico dei record vecchi
+    si puo' aggiungere in futuro come job batch.
+    """
+    __tablename__ = "password_reset_tokens"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    # sha256 del token in clear -> stringa hex lunga 64 caratteri.
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime, nullable=True)
+    # IP del client che ha richiesto il reset (audit / spot bruteforce).
+    request_ip = Column(String(45), nullable=True)
+
+    user = relationship("User")
+
+
 # ==========================================
 # 2. LINGUE (Languages)
 # ==========================================

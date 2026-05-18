@@ -1,3 +1,4 @@
+import logging
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,7 +6,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import models
 import auth
+from config import SITE_URL
 from dependencies import get_db, require_admin, get_current_user, is_super_admin
+from services.email_service import send_email
+
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Users"])
 
@@ -101,7 +107,7 @@ def get_single_account(user_id: int, db: Session = Depends(get_db), current_user
 
 @router.post("/api/admin/accounts", status_code=status.HTTP_201_CREATED)
 def create_account(data: AccountCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Crea un nuovo utente (Admin o User)"""
+    """Crea un nuovo utente (Admin o User) e gli invia la welcome email."""
     _validate_email(data.email)
     if db.query(models.User).filter(models.User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
@@ -117,7 +123,44 @@ def create_account(data: AccountCreate, db: Session = Depends(get_db), current_u
     )
     db.add(new_user)
     db.commit()
+
+    # Welcome email: best-effort. Se SMTP e' giu' o non configurato la
+    # creazione dell'account NON va in errore (l'admin può comunicare
+    # le credenziali off-band). send_email() gia' logga internamente.
+    _send_welcome_email(
+        to=data.email.lower(),
+        name=data.name or "",
+        password=data.password,
+    )
+
     return {"detail": "Account successfully created."}
+
+
+def _send_welcome_email(to: str, name: str, password: str) -> None:
+    """Manda la mail di benvenuto col link al sito e le credenziali iniziali.
+
+    La password viene inviata in chiaro: e' quella appena scelta dall'admin
+    nel form 'Crea account', l'utente dovrebbe cambiarla al primo login da
+    /me. Trade-off accettato per non cambiare il flusso esistente (admin
+    sceglie la password al posto dell'utente). Per il flusso 'manda link
+    imposta password' useremo l'infrastruttura del reset password.
+    """
+    salutation = f"Ciao {name.strip()}," if name and name.strip() else "Ciao,"
+    body_text = (
+        f"{salutation}\n\n"
+        f"il tuo account su PCM-Hub e' stato creato.\n\n"
+        f"Sito: {SITE_URL}\n"
+        f"Email: {to}\n"
+        f"Password provvisoria: {password}\n\n"
+        f"Ti consigliamo di accedere e cambiare la password dal menu "
+        f"'Il mio account' al primo login.\n\n"
+        f"-- PCM-Hub"
+    )
+    send_email(
+        to=to,
+        subject="Benvenuto su PCM-Hub",
+        body_text=body_text,
+    )
 
 @router.put("/api/admin/accounts/{user_id}/languages")
 def assign_languages(user_id: int, data: LanguageAssign, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):

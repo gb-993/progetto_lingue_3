@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
 import { useAuth } from '../../context/AuthContext';
 
@@ -50,6 +50,9 @@ export default function Login() {
                         <button type="submit" className="btn btn--primary fit">Log in</button>
                     </div>
                 </form>
+                <div className="auth-secondary">
+                    <Link to="/forgot-password">Password dimenticata?</Link>
+                </div>
             </section>
         </div>
     );

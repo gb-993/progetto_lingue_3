@@ -109,6 +109,21 @@ CORS_ORIGINS = env_list("CORS_ORIGINS", _default_cors)
 CORS_ORIGIN_REGEX = None if IS_PROD else r"http://(localhost|127\.0\.0\.1)(:\d+)?"
 
 
+# ---------------------- Site URL ----------------------
+# URL pubblico del sito, usato per costruire i link che finiscono nelle
+# mail (welcome, reset password, ...). In prod obbligatorio: senza, i
+# link nelle mail sarebbero rotti.
+SITE_URL = (env("SITE_URL", "") or "").rstrip("/")
+if IS_PROD and not SITE_URL:
+    raise RuntimeError(
+        "SITE_URL non impostata. In produzione e' obbligatoria: "
+        "es. https://hub.parametricomparison.unimore.it"
+    )
+if not SITE_URL:
+    # Fallback dev: l'utente raggiunge il sito su Vite a 5173.
+    SITE_URL = "http://localhost:5173"
+
+
 # ---------------------- SMTP ----------------------
 # Configurazione del server SMTP per l'invio di mail transazionali
 # (reset password, welcome, notifiche admin). Stessa filosofia di
