@@ -147,3 +147,44 @@ if IS_PROD and not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and SMTP_FROM):
 # Flag derivato: True se possiamo davvero inviare mail. Usato dal servizio
 # email per decidere se contattare il server o diventare un no-op silenzioso.
 SMTP_ENABLED = bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD and SMTP_FROM)
+
+
+# ---------------------- Documenti legali ----------------------
+# Clausole vessatorie ex art. 1341 c.c. dei Terms of Use. Quando un admin
+# carica una nuova versione del documento (vedi router admin legal_documents)
+# la lista viene COPIATA come snapshot nella riga di `legal_documents`,
+# cosi' resta congelata per quella versione anche se in futuro il default
+# cambia. Le versioni gia' accettate dagli utenti non vengono mai toccate.
+#
+# Identificazione interna basata sull'art. 1341 c.c., NON ancora confermata
+# da ufficio legale Unimore (vedi PRIVACY_TODO_DPO.md, sez. 4). Se la
+# conferma cambia la lista, modifica qui sotto e fai redeploy.
+#
+# - Sez. 7  : Limitation of Liability
+# - Sez. 8  : Account Suspension or Termination
+# - Sez. 9.2: License Grant (licenza perpetua sui dati caricati)
+# - Sez. 11 : Amendments (modifica unilaterale)
+#
+# Documenti senza clausole vessatorie (es. Privacy Notice) non compaiono
+# in questo dict: il loro snapshot in legal_documents.vexatious_clauses
+# resta NULL e nel modal frontend la seconda checkbox non viene mostrata.
+VEXATIOUS_CLAUSES_DEFAULT: dict[str, list[str]] = {
+    "terms_of_use": ["7", "8", "9.2", "11"],
+}
+
+# Cartella su filesystem dove vengono salvati i PDF caricati dall'admin
+# (versioni storiche di ToU e Privacy Notice). In produzione punta a un
+# volume Docker condiviso tra backend e Caddy, cosi' i file scritti dal
+# backend sono subito serviti da Caddy sotto /legal-docs/* (vedi Caddyfile
+# e docker-compose.prod.yml).
+#
+# In dev fallback a una cartella locale: i PDF caricati in dev NON sono
+# automaticamente serviti da Vite, ma e' sufficiente per testare il flusso
+# di upload e la scrittura su DB.
+LEGAL_DOCUMENTS_DIR = env("LEGAL_DOCUMENTS_DIR", "/srv/legal_documents" if IS_PROD else "./legal_documents_local")
+
+# URL pubblico sotto cui Caddy serve i file di LEGAL_DOCUMENTS_DIR.
+# Costruito sommando SITE_URL e questo prefisso, es:
+#   https://hub.parametricomparison.unimore.it/legal-docs/Terms_of_use_v1.0_2026-05-18.pdf
+# Deve coincidere con l'handle in Caddyfile.
+LEGAL_DOCUMENTS_URL_PREFIX = "/legal-docs"

@@ -21,3 +21,4 @@ pyparsing
 fpdf2
 plotly
 slowapi
+pypdf

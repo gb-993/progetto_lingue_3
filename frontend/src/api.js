@@ -24,7 +24,16 @@ api.interceptors.request.use((config) => {
 // richiedono già un token valido in localStorage.
 const PUBLIC_PATHS = ['/', '/how-to-cite', '/login'];
 
-// Gestione centralizzata degli errori (es. token scaduto).
+// Callback opzionale registrata dall'AuthContext per essere notificato quando
+// il backend risponde 403 con `required_acceptance: true` (utente non in regola
+// con i consensi GDPR/ToU correnti). Setter esposto sotto come funzione pura.
+// L'AuthContext la imposta al mount e la usa per scatenare la apertura del
+// modal di accettazione documenti.
+let onRequiredAcceptance = null;
+export const setOnRequiredAcceptance = (cb) => { onRequiredAcceptance = cb; };
+
+// Gestione centralizzata degli errori (token scaduto, consensi mancanti).
+//
 // Strategia 401:
 //   - rimuoviamo SEMPRE il token: se il backend dice 401, qualunque cosa
 //     ci sia in localStorage è inutile e può solo creare confusione nei
@@ -33,6 +42,15 @@ const PUBLIC_PATHS = ['/', '/how-to-cite', '/login'];
 //     pubblica. Da PublicHome/HowToCite/Login l'utente sta legittimamente
 //     navigando senza login, e sbatterlo su /login solo perché un token
 //     stale ha generato un 401 sarebbe un'esperienza pessima.
+//
+// Strategia 403 con required_acceptance:
+//   - il backend (consent_enforcement middleware) restituisce 403 con
+//     `{detail: "...", required_acceptance: true}` quando l'utente loggato
+//     non ha ancora accettato la versione corrente dei documenti legali.
+//   - notifichiamo l'AuthContext che ricarica la lista required e mostra
+//     il modal. La promise originale viene comunque rigettata: il chiamante
+//     vedrà fallire la sua richiesta (es. un POST di save), ma a quel punto
+//     il modal e' davanti e l'utente non puo' fare altro che accettare.
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -42,6 +60,13 @@ api.interceptors.response.use(
             if (!PUBLIC_PATHS.includes(path)) {
                 window.location.href = '/login';
             }
+        }
+        if (
+            error.response?.status === 403
+            && error.response?.data?.required_acceptance === true
+            && typeof onRequiredAcceptance === 'function'
+        ) {
+            onRequiredAcceptance();
         }
         return Promise.reject(error);
     }

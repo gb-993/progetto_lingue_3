@@ -4,6 +4,7 @@ import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
     DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
+    FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,6 +38,7 @@ const PATH_LABELS = {
     'backups': 'History & Backups',
     'migration-import': 'Migration Import',
     'backup-restore': 'Backup Restore',
+    'legal-documents': 'Legal Documents',
     'import-excel': 'Import Excel',
     'edit-content': 'Edit content',
     'submissions': 'Submissions',
@@ -389,6 +391,12 @@ export default function Layout({ children }) {
                                                         <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
                                                             <Upload size={18} className="nav-icon" />
                                                             <span className="nav-label">Backup Restore</span>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link className={`btn ${isCurrent('/admin/legal-documents')}`} to="/admin/legal-documents" title="Legal Documents">
+                                                            <FileText size={18} className="nav-icon" />
+                                                            <span className="nav-label">Legal Documents</span>
                                                         </Link>
                                                     </li>
                                                 </>

@@ -46,6 +46,15 @@ hub.parametricomparison.unimore.it {
 		reverse_proxy backend:8000
 	}
 
+	# PDF dei documenti legali (ToU, Privacy Notice) caricati dall'admin via UI.
+	# Il backend li scrive nel volume `legal_archive` (vedi compose), montato
+	# qui in /srv/legal_documents (read-only). I file sono per natura pubblici
+	# (un contratto e' conoscibile da chi lo sottoscrive), quindi nessuna auth.
+	handle_path /legal-docs/* {
+		root * /srv/legal_documents
+		file_server
+	}
+
 	# Tutto il resto: SPA React. try_files con fallback a index.html
 	# permette il deep-linking (/parameters/SPK, ecc.) senza 404.
 	handle {
@@ -70,11 +79,50 @@ hub.parametricomparison.unimore.it {
 		}
 	}
 
-	# Header di sicurezza basilari.
+	# Header di sicurezza.
+	#
+	# Documentazione delle scelte (utile per il prossimo che mette mano qui):
+	#
+	# - HSTS: dice al browser "questo sito va sempre in HTTPS, anche se l'utente
+	#   digita http://". max-age=1 anno (valore standard). includeSubDomains
+	#   propaga la regola ai sottodomini del dominio servito. NON aggiungiamo
+	#   `preload`: e' quasi irreversibile (va inviato a hstspreload.org e poi i
+	#   browser lo ricordano per anni anche se rimosso). Aggiungilo solo dopo
+	#   essere certi che TUTTI i sottodomini supporteranno per sempre HTTPS.
+	#
+	# - CSP (Content-Security-Policy): elenca cosa il browser puo' caricare ed
+	#   eseguire. Mitiga XSS: anche se un attaccante riesce a iniettare HTML,
+	#   il browser rifiuta di caricare script o connettersi a domini non in
+	#   lista. Trade-off attuali:
+	#     * 'unsafe-inline' su script: necessario per lo script di bootstrap
+	#       del tema in index.html. In futuro si puo' migrare a nonce o a un
+	#       file esterno con hash sha256-... e rimuovere 'unsafe-inline'.
+	#     * 'unsafe-inline' su style: necessario perche' React usa molti
+	#       `style={{...}}` inline in Layout/PublicHome/ecc. Rimuoverlo
+	#       richiederebbe estrarre tutti gli inline style in CSS classes.
+	#     * img-src include *.openstreetmap.org (tile della mappa pubblica)
+	#       e licensebuttons.net (badge CC nel footer).
+	#     * connect-src 'self' basta perche' tutte le chiamate XHR/fetch
+	#       vanno al backend stesso dominio via Caddy.
+	#     * frame-ancestors 'none' equivale a X-Frame-Options DENY (sotto)
+	#       ma e' lo standard moderno; teniamo entrambi per browser vecchi.
+	#
+	# - Permissions-Policy: nega esplicitamente API browser che NON usiamo
+	#   (geolocation, microfono, camera, ...). Se un domani un componente
+	#   le richiede, vanno tolte dalla blocklist.
 	header {
+		# Forza HTTPS per 1 anno + sottodomini.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+		# Whitelist di cosa il browser puo' caricare/eseguire.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://licensebuttons.net; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+		# Disabilita API browser che non usiamo (microfono, camera, GPS, ...).
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+
 		# Niente sniffing del Content-Type
 		X-Content-Type-Options nosniff
-		# Anti-clickjacking
+		# Anti-clickjacking (compat browser vecchi; equivalente di frame-ancestors 'none')
 		X-Frame-Options DENY
 		# Referrer policy moderata
 		Referrer-Policy strict-origin-when-cross-origin

@@ -10,4 +10,19 @@ export default defineConfig({
   build: {
     cssMinify: false,
   },
+  server: {
+    // In dev non c'e' Caddy davanti, quindi le rotte non-SPA come
+    // /legal-docs/* (PDF dei documenti legali caricati via UI admin)
+    // restano scoperte: il browser le chiederebbe a Vite (5173) e
+    // riceverebbe 404. Proxie a backend (8000), che ha un endpoint
+    // dedicato che serve i file da LEGAL_DOCUMENTS_DIR. In prod questo
+    // proxy non e' attivo (npm run build non lo legge) e Caddy intercetta
+    // /legal-docs/* PRIMA del backend, servendo direttamente dal volume.
+    proxy: {
+      '/legal-docs': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+    },
+  },
 })

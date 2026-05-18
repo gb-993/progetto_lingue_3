@@ -54,6 +54,141 @@ class PasswordResetToken(Base):
 
 
 # ==========================================
+# 1.bis DOCUMENTI LEGALI E TRACCIAMENTO ACCETTAZIONI (GDPR + art. 1341 c.c.)
+#
+# Due tabelle accoppiate:
+#
+#   - `legal_documents`: archivio immutabile di TUTTE le versioni dei
+#     documenti legali (Terms of Use, Privacy Notice). Una sola riga per
+#     (type, version). La versione "viva" e' marcata da `is_current=true`;
+#     le versioni precedenti restano nella tabella per tracciare le
+#     accettazioni storiche degli utenti.
+#
+#   - `consents`: una riga per ogni evento di accettazione di un documento
+#     da parte di un utente. FK a `legal_documents.id` (non a un type/version
+#     come stringhe, cosi' non puo' esistere un consenso "fantasma" che
+#     punta a un documento non in archivio).
+#
+# Vedi PRIVACY_TODO_DPO.md (file locale, gitignored) per il razionale
+# legale e la conferma DPO sulle clausole vessatorie.
+# ==========================================
+class LegalDocument(Base):
+    """Versione storica di un documento legale (Terms of Use o Privacy Notice).
+
+    Vincolo logico: per ogni `type`, una sola riga puo' avere `is_current=True`.
+    Garantito a livello DB da un partial unique index (vedi migrazione).
+    Quando si carica una nuova versione, il flag sulla vecchia viene messo
+    a False nella stessa transazione (vedi router admin).
+
+    `vexatious_clauses` e' un array JSON di stringhe che elenca le sezioni
+    del documento da sottoporre a specifica approvazione ai sensi dell'art.
+    1341 c.c. (es. ["7", "8", "9.2", "11"]). La sorgente di verita' viene
+    da `config.VEXATIOUS_CLAUSES_DEFAULT`: l'upload admin la copia qui,
+    cosi' resta congelata per quella specifica versione anche se in futuro
+    il default cambia.
+    """
+    __tablename__ = "legal_documents"
+    id = Column(Integer, primary_key=True)
+    # "terms_of_use" | "privacy_notice". Enum stringa coerente con gli altri
+    # enum del progetto (vedi User.role, Language.status, ecc.).
+    type = Column(
+        Enum("terms_of_use", "privacy_notice", name="legal_document_type"),
+        nullable=False,
+    )
+    # Es. "v1.0", "v1.1", "v2.0". Estratta automaticamente dal testo del PDF
+    # (header/footer "version X.Y, Month DD YYYY"); l'admin non la digita.
+    version = Column(String(20), nullable=False)
+    # Path relativo alla cartella servita da Caddy (es.
+    # "docs/archive/Terms_of_use_v1.0_2026-05-18.pdf"). I file vivono in
+    # frontend/public/docs/archive/ — pubblicamente scaricabili, perche'
+    # i documenti legali sono per natura conoscibili da chi li sottoscrive.
+    file_path = Column(String(500), nullable=False)
+    # sha256 hex del file PDF (64 caratteri). Impronta digitale: protegge da
+    # modifiche "silenziose" del PDF senza bump di versione (es. fix refuso
+    # senza nuovo numero). In giudizio: prova che il file accettato e'
+    # esattamente quello in archivio.
+    sha256 = Column(String(64), nullable=False)
+    published_at = Column(DateTime, default=utc_now, nullable=False)
+    # True solo sull'ultima versione di ciascun `type`. Usato per: a) il
+    # check "l'utente deve ancora accettare questa versione?", b) la pagina
+    # admin per mostrare la versione corrente.
+    is_current = Column(Boolean, default=True, nullable=False)
+    # Snapshot delle clausole vessatorie congelato al momento dell'upload.
+    # Es. ["7", "8", "9.2", "11"]. Null per documenti che non ne hanno
+    # (es. Privacy Notice). Vedi `config.VEXATIOUS_CLAUSES_DEFAULT`.
+    vexatious_clauses = Column(JSON, nullable=True)
+    # Note libere dell'admin (opzionale). Es. "fix refuso sez. 7".
+    note = Column(Text, nullable=True)
+
+    consents = relationship("Consent", back_populates="legal_document")
+
+    __table_args__ = (
+        UniqueConstraint("type", "version", name="uq_legal_documents_type_version"),
+    )
+
+
+class Consent(Base):
+    """Evento di accettazione di un documento legale da parte di un utente.
+
+    Una riga per (user, legal_document). Se l'utente accetta sia ToU che
+    Privacy Notice nello stesso modal, si scrivono DUE righe distinte con
+    lo stesso timestamp.
+
+    `vexatious_clauses_approved`: True se l'utente ha spuntato la seconda
+    checkbox del modal (art. 1341 c.c.). Per documenti senza clausole
+    vessatorie (es. Privacy Notice) il campo resta False e nel modal la
+    seconda checkbox non appare proprio.
+
+    `revoked_at`: null finche' il consenso e' attivo. Valorizzato se in
+    futuro implementiamo recesso/cancellazione account: lo storico resta,
+    ma il flag "currently valid?" e' computato da `revoked_at IS NULL`.
+    """
+    __tablename__ = "consents"
+    id = Column(Integer, primary_key=True)
+    # SET NULL on delete: se cancello un utente (GDPR right to be forgotten),
+    # la riga in consents resta come prova storica ma perde il link verso
+    # l'utente. Se serve audit con identita' anche dopo cancellazione, in
+    # futuro si puo' aggiungere user_email_snapshot.
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
+    # RESTRICT on delete: un documento legale NON deve mai essere cancellato
+    # se ci sono accettazioni che lo referenziano (perderemmo la prova del
+    # contenuto accettato). In pratica i legal_documents non vengono mai
+    # cancellati: si sostituisce solo il flag is_current.
+    legal_document_id = Column(
+        Integer, ForeignKey("legal_documents.id", ondelete="RESTRICT"),
+        nullable=False, index=True,
+    )
+    accepted_at = Column(DateTime, default=utc_now, nullable=False)
+    # IP del client al momento dell'accettazione. IPv6 max 45 char (stesso
+    # pattern di PasswordResetToken.request_ip). In chiaro: l'utente ha
+    # accettato di vedere questo dato (lo dichiariamo nell'informativa).
+    ip_address = Column(String(45), nullable=True)
+    # User agent del browser. Text (non String) perche' alcuni UA superano
+    # facilmente i 255 caratteri (browser mobile, embedded webview, ecc.).
+    user_agent = Column(Text, nullable=True)
+    # Contesto in cui l'accettazione e' avvenuta. Valori previsti:
+    #   - "first_login_modal": utente al primo login, accetta per la prima volta
+    #   - "version_update_modal": utente che aveva gia' accettato una versione
+    #     precedente, ora accetta una nuova versione
+    #   - "admin_bootstrap": riservato a flussi di sistema (oggi inutilizzato)
+    method = Column(String(50), nullable=False)
+    # True se l'utente ha spuntato la seconda checkbox del modal (approvazione
+    # specifica ex art. 1341 c.c.). False per documenti senza clausole vessatorie.
+    vexatious_clauses_approved = Column(Boolean, default=False, nullable=False)
+    # Null finche' il consenso e' attivo.
+    revoked_at = Column(DateTime, nullable=True)
+    # Motivo della revoca (opzionale, libero). Es. "account deleted",
+    # "user withdrew", "superseded by newer version".
+    revocation_reason = Column(String(100), nullable=True)
+
+    user = relationship("User")
+    legal_document = relationship("LegalDocument", back_populates="consents")
+
+
+# ==========================================
 # 2. LINGUE (Languages)
 # ==========================================
 class Language(Base):

@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout, { SiteFooter } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 import ErrorBoundary, { RouterErrorElement } from './components/ErrorBoundary';
+import LegalConsentsModal from './components/LegalConsentsModal';
 import NotFound from './components/NotFound';
 
 import PublicHome from './features/public/PublicHome';
@@ -48,6 +49,7 @@ import EditSiteContent from './features/public/EditSiteContent';
 import TableA from './features/tablea/TableA';
 import QueriesDashboard from "./features/queries/QueriesDashboard.jsx";
 import ImportExcel from './features/admin/ImportExcel';
+import LegalDocuments from './features/admin/LegalDocuments';
 import MigrationImport from './features/admin/MigrationImport';
 import BackupRestore from './features/admin/BackupRestore';
 import History from './features/history/History';
@@ -67,11 +69,17 @@ function ScrollToTop() {
 // Root element del Data Router: AuthProvider deve restare DENTRO il
 // RouterProvider (cioè qui dentro l'Outlet) perché alcuni hook usati da
 // AuthProvider o dai suoi consumer assumono il context del router.
+//
+// LegalConsentsModal e' montato qui (al livello piu' alto sotto AuthProvider)
+// cosi' galleggia sopra qualunque pagina: e' bloccante per definizione, non
+// deve essere sotto la sidebar/topbar. Si nasconde da solo quando l'utente
+// e' in regola (vedi requiredConsents in AuthContext).
 function AppRoot() {
     return (
         <AuthProvider>
             <ScrollToTop />
             <Outlet />
+            <LegalConsentsModal />
         </AuthProvider>
     );
 }
@@ -176,6 +184,9 @@ const router = createBrowserRouter([
             // distruttive sull'intero DB.
             { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
             { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
+            // Gestione versioni documenti legali (ToU, Privacy Notice). Super-admin
+            // perche' una pubblicazione errata forza tutti gli utenti a ri-accettare.
+            { path: 'admin/legal-documents', element: <AdminRoute requireSuperAdmin><Layout><LegalDocuments /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
             // TableA e Queries sono admin-only: la sidebar le mostra solo

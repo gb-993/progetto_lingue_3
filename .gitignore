@@ -44,3 +44,8 @@ logs/
 docs/img/
 
 BUILD_NOTES.txt
+
+# ---- Reminder/note operative locali ----
+# Contengono richieste pendenti al DPO sull'informativa privacy:
+# restano fuori dal repo perche' sono note interne, non documentazione pubblica.
+PRIVACY_TODO_DPO.md

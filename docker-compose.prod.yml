@@ -53,9 +53,18 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM}
+      # Cartella dove il backend scrive i PDF dei documenti legali (ToU,
+      # Privacy Notice) caricati dall'admin. Coincide col mount di
+      # `legal_archive` qui sotto e con il path che Caddy serve sotto
+      # /legal-docs/* (vedi Caddyfile).
+      LEGAL_DOCUMENTS_DIR: /srv/legal_documents
       TZ: UTC
     expose:
       - "8000"
+    volumes:
+      # Volume condiviso con Caddy. Il backend scrive qui i PDF; Caddy li
+      # serve sotto /legal-docs/* (read-only dalla sua parte).
+      - legal_archive:/srv/legal_documents
     # Applica le migrazioni alembic PRIMA di uvicorn. Senza questo, il
     # lifespan di FastAPI (bootstrap_first_admin) crasha al primo avvio
     # perche' la tabella users non esiste ancora -> backend in restart loop.
@@ -94,6 +103,10 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # Volume condiviso col backend: stessa cartella in cui il backend
+      # scrive i PDF caricati dall'admin. Read-only dal lato di Caddy:
+      # Caddy serve i file ma non li puo' modificare.
+      - legal_archive:/srv/legal_documents:ro
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -102,9 +115,35 @@ services:
         max-file: "3"
 
   # Sidecar di backup. Una volta al giorno fa pg_dump del DB di prod
-  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=3 dump
-  # (3 giorni di rolling window). Recupero: console Portainer del
-  # container pcm_backup -> `cat /backups/<file>.dump | base64`.
+  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=7 dump
+  # (7 giorni di rolling window).
+  #
+  # CIFRATURA AT-REST (age, https://age-encryption.org):
+  #   I dump vengono cifrati con la chiave pubblica `BACKUP_AGE_RECIPIENT`
+  #   (formato `age1...`). Solo chi possiede la chiave privata corrispondente
+  #   (mai presente sul server!) puo' decifrarli. Anche se la VM viene
+  #   compromessa, i .dump.age restano illeggibili senza la chiave privata.
+  #
+  #   Setup iniziale (una tantum):
+  #     1) Sul PC dell'admin generare la keypair:
+  #          docker run --rm alpine sh -c 'apk add --no-cache age >/dev/null && age-keygen'
+  #        Output: una public key `age1...` (da mettere in Portainer come
+  #        `BACKUP_AGE_RECIPIENT`) e una private key `AGE-SECRET-KEY-...`
+  #        (da salvare in luogo sicuro: password manager, NON sul server).
+  #     2) In Portainer: aggiungere stack env var `BACKUP_AGE_RECIPIENT=age1...`
+  #     3) Redeploy dello stack.
+  #
+  #   Se `BACKUP_AGE_RECIPIENT` NON e' impostato il sidecar continua a fare
+  #   dump IN CHIARO (backward compat) e logga un WARNING ad ogni ciclo.
+  #   Va impostato il prima possibile.
+  #
+  # Recupero:
+  #   - file in chiaro (legacy):  cat /backups/<file>.dump | base64
+  #   - file cifrato:             cat /backups/<file>.dump.age | base64
+  #     poi sul PC dell'admin:
+  #       base64 -d > file.dump.age
+  #       age -d -i path/to/private_key.txt file.dump.age > file.dump
+  #       pg_restore -d <db_target> file.dump
   backup:
     image: postgres:16-alpine
     depends_on:
@@ -115,7 +154,10 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
-      KEEP: "3"
+      KEEP: "7"
+      # Public key age (`age1...`) per cifrare i dump. Opzionale per
+      # backward compat: se vuoto, fallback a dump in chiaro + warning.
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       TZ: UTC
     volumes:
       - pcm_backups:/backups
@@ -125,6 +167,13 @@ services:
       - |
         set -eu
         echo "[backup] avviato. KEEP=$$KEEP, dest=/backups"
+        # Installa age (cifratura backup) se non c'e' gia'. Idempotente:
+        # alla seconda iterazione del while sotto e' un no-op veloce, ma
+        # dopo un riavvio container la cache apk viene persa e va rifatta.
+        if ! command -v age >/dev/null 2>&1; then
+          echo "[backup] installazione age in corso..."
+          apk add --no-cache age >/dev/null
+        fi
         # Aspetta che il DB sia su prima del primo dump.
         until pg_isready -q; do
           echo "[backup] DB non pronto, attendo 5s..."
@@ -132,18 +181,38 @@ services:
         done
         while true; do
           ts=$$(date -u +%Y%m%d-%H%M%S)
-          out="/backups/pcm-$$ts.dump"
-          tmp="$$out.partial"
-          echo "[backup] $$(date -Iseconds) inizio dump -> $$out"
-          if pg_dump -F c -f "$$tmp"; then
-            mv "$$tmp" "$$out"
-            echo "[backup] $$(date -Iseconds) dump ok ($$(stat -c%s "$$out") bytes)"
+          if [ -n "$${BACKUP_AGE_RECIPIENT:-}" ]; then
+            # Dump cifrato. pg_dump scrive su stdout, age cifra al volo
+            # senza materializzare il chiaro su disco.
+            out="/backups/pcm-$$ts.dump.age"
+            tmp="$$out.partial"
+            echo "[backup] $$(date -Iseconds) inizio dump cifrato -> $$out"
+            if pg_dump -F c | age -r "$$BACKUP_AGE_RECIPIENT" -o "$$tmp"; then
+              mv "$$tmp" "$$out"
+              echo "[backup] $$(date -Iseconds) dump cifrato ok ($$(stat -c%s "$$out") bytes)"
+            else
+              rm -f "$$tmp"
+              echo "[backup] $$(date -Iseconds) DUMP CIFRATO FALLITO"
+            fi
           else
-            rm -f "$$tmp"
-            echo "[backup] $$(date -Iseconds) DUMP FALLITO"
+            # Fallback in chiaro: warning rumoroso ad ogni ciclo per
+            # ricordare all'admin di configurare BACKUP_AGE_RECIPIENT.
+            out="/backups/pcm-$$ts.dump"
+            tmp="$$out.partial"
+            echo "[backup] WARNING: BACKUP_AGE_RECIPIENT non impostato -> dump in chiaro"
+            echo "[backup] $$(date -Iseconds) inizio dump -> $$out"
+            if pg_dump -F c -f "$$tmp"; then
+              mv "$$tmp" "$$out"
+              echo "[backup] $$(date -Iseconds) dump ok ($$(stat -c%s "$$out") bytes)"
+            else
+              rm -f "$$tmp"
+              echo "[backup] $$(date -Iseconds) DUMP FALLITO"
+            fi
           fi
-          # Ritenzione: tieni gli ultimi KEEP file *.dump, cancella il resto.
-          ls -1t /backups/*.dump 2>/dev/null | tail -n +$$((KEEP+1)) | xargs -r rm -f
+          # Ritenzione: tieni gli ultimi KEEP file di backup, cancella il resto.
+          # Includiamo sia .dump (in chiaro legacy) che .dump.age (cifrati) cosi'
+          # la transizione cifrato/non-cifrato non lascia residui dei vecchi.
+          ls -1t /backups/pcm-*.dump /backups/pcm-*.dump.age 2>/dev/null | tail -n +$$((KEEP+1)) | xargs -r rm -f
           echo "[backup] $$(date -Iseconds) prossimo dump tra 24h"
           sleep 86400
         done
@@ -166,3 +235,7 @@ volumes:
   caddy_data:
   caddy_config:
   pcm_backups:
+  # Cartella dei PDF dei documenti legali (ToU, Privacy Notice) caricati
+  # dall'admin via UI. Condivisa fra backend (scrittura) e caddy (lettura,
+  # serve i file sotto /legal-docs/*). Persistente sui redeploy.
+  legal_archive:
