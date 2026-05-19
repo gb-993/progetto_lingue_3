@@ -482,3 +482,104 @@ def test_roundtrip_preserves_admin_note(db_session):
         language_id="ITA", parameter_id="FGM"
     ).one()
     assert s.admin_note == "Nota admin di prova\ncon a capo"
+
+
+# ============================================================================
+# UNSURE: l'export scrive UNSURE in Database_model.Language_Answer; l'import
+# deve riconoscerlo come response_text="unsure" (e accettare anche U / ?).
+# Test in coppia con il regression test in test_language_pdf che verifica il
+# lato export.
+# ============================================================================
+
+def test_database_model_unsure_uppercase_imports_as_unsure(db_session):
+    """'UNSURE' (formato canonico dell'export attuale) -> response_text='unsure'."""
+    lang, user = _seed_full(db_session)
+    wb = Workbook(); wb.remove(wb.active)
+    ws = wb.create_sheet("Database_model")
+    from services.excel_export import DATABASE_MODEL_HEADERS
+    ws.append(DATABASE_MODEL_HEADERS)
+    ws.append([
+        "Italiano", "FGM", "FGM_01",
+        "UNSURE", "uncertain comment", "", "", "", "", "", "",
+    ])
+
+    report = import_excel(db_session, _wb_to_bytes(wb), user.id)
+    db_session.commit()
+
+    a = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_01"
+    ).one()
+    assert a.response_text == "unsure"
+    assert a.comments == "uncertain comment"
+    assert not any("UNSURE" in (e.value or "") for e in report.errors), \
+        f"UNSURE non deve essere segnalata come invalida: {report.errors}"
+
+
+def test_database_model_unsure_short_forms_also_accepted(db_session):
+    """Varianti 'U' e '?' (utile se l'utente compila a mano)."""
+    lang, user = _seed_full(db_session)
+
+    # Variante 'U' su FGM_01
+    wb = Workbook(); wb.remove(wb.active)
+    ws = wb.create_sheet("Database_model")
+    from services.excel_export import DATABASE_MODEL_HEADERS
+    ws.append(DATABASE_MODEL_HEADERS)
+    ws.append(["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", ""])
+    ws.append(["Italiano", "FGM", "FGM_02", "?", "", "", "", "", "", "", ""])
+
+    report = import_excel(db_session, _wb_to_bytes(wb), user.id)
+    db_session.commit()
+    assert report.errors == [], f"Errori inattesi: {report.errors}"
+
+    by_qid = {
+        a.question_id: a
+        for a in db_session.query(models.Answer).filter_by(language_id="ITA").all()
+    }
+    assert by_qid["FGM_01"].response_text == "unsure"
+    assert by_qid["FGM_02"].response_text == "unsure"
+
+
+def test_roundtrip_preserves_unsure_response(db_session):
+    """Lingua con risposta unsure -> export workbook -> import -> unsure preservata.
+
+    E' il test critico contro la regression introdotta dal fix di export:
+    senza il branch UNSURE in excel_import, questo test farebbe errore.
+    """
+    lang, user = _seed_full(db_session)
+
+    # Cambio FGM_01 da yes a unsure
+    a_existing = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_01"
+    ).one()
+    a_existing.response_text = "unsure"
+    db_session.commit()
+
+    # Roundtrip
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    file_bytes = _wb_to_bytes(wb)
+    report = import_excel(db_session, file_bytes, user.id)
+    db_session.commit()
+
+    assert report.errors == [], f"Nessun errore atteso nel roundtrip: {report.errors}"
+    a_after = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_01"
+    ).one()
+    assert a_after.response_text == "unsure", \
+        "Roundtrip ha perso/alterato la risposta 'unsure'"
+
+
+def test_database_model_invalid_answer_error_message_mentions_unsure(db_session):
+    """Il messaggio d'errore deve enumerare anche UNSURE tra i valori validi,
+    cosi' il linguista che apre il report capisce che 'unsure' e' supportato."""
+    lang, user = _seed_full(db_session)
+    wb = Workbook(); wb.remove(wb.active)
+    ws = wb.create_sheet("Database_model")
+    from services.excel_export import DATABASE_MODEL_HEADERS
+    ws.append(DATABASE_MODEL_HEADERS)
+    ws.append(["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", ""])
+
+    report = import_excel(db_session, _wb_to_bytes(wb), user.id)
+    db_session.commit()
+    err = next((e for e in report.errors if (e.value or "").upper() == "MAYBE"), None)
+    assert err is not None
+    assert "UNSURE" in (err.reason or "")

@@ -7,6 +7,7 @@ import {
     FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
 const SIDEBAR_COLLAPSED_KEY = 'pcm-sidebar-collapsed';
@@ -136,6 +137,27 @@ export function SiteFooter({ role }) {
         : role === 'public' ? 'Public View'
         : 'User Access';
 
+    // Versioni correnti di ToU e Privacy Notice (caricate via UI admin).
+    // I link "Privacy Policy" / "Disclaimer" puntano sempre all'ultima
+    // versione pubblicata invece di un PDF statico hardcoded. L'endpoint
+    // /api/legal-documents/current e' pubblico (no auth) e whitelistato
+    // nel consent enforcement, quindi funziona anche per visitatori non
+    // loggati e per utenti loggati ma non ancora in regola con i consensi.
+    //
+    // Fallback ai PDF in /docs/ (versione "v1.0" hardcoded in frontend/public)
+    // se il backend non risponde o non ha ancora nessuna versione corrente:
+    // meglio un link a un PDF vecchio che un link rotto.
+    const [legalUrls, setLegalUrls] = useState({});
+    useEffect(() => {
+        let active = true;
+        api.get('/api/legal-documents/current')
+            .then(res => { if (active) setLegalUrls(res.data || {}); })
+            .catch(() => { /* lascia legalUrls = {} -> fallback statico */ });
+        return () => { active = false; };
+    }, []);
+    const privacyUrl = legalUrls.privacy_notice?.public_url || '/docs/Informativa%20WebAPP_revDPO.pdf';
+    const termsUrl = legalUrls.terms_of_use?.public_url || '/docs/Terms_of_use_CG.pdf';
+
     return (
         <footer className="site-footer" role="contentinfo">
             <div className="footer-container">
@@ -172,12 +194,12 @@ export function SiteFooter({ role }) {
                         <h4>Resources</h4>
                         <ul className="footer-links">
                             <li>
-                                <a href="/docs/Informativa%20WebAPP_revDPO.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
+                                <a href={privacyUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
                                     Privacy Policy
                                 </a>
                             </li>
                             <li>
-                                <a href="/docs/Terms_of_use_CG.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
+                                <a href={termsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text)', textDecoration: 'underline' }}>
                                     Disclaimer
                                 </a>
                             </li>
@@ -376,6 +398,12 @@ export default function Layout({ children }) {
                                                     <span className="nav-label">History & Backups</span>
                                                 </Link>
                                             </li>
+                                            <li>
+                                                <Link className={`btn ${isCurrent('/admin/legal-documents')}`} to="/admin/legal-documents" title="Legal Documents">
+                                                    <FileText size={18} className="nav-icon" />
+                                                    <span className="nav-label">Legal Documents</span>
+                                                </Link>
+                                            </li>
                                             {/* Voci super-admin: visibili solo agli admin la
                                                 cui email e' in SUPER_ADMIN_EMAIL (env backend).
                                                 Operazioni distruttive sull'intero DB. */}
@@ -391,12 +419,6 @@ export default function Layout({ children }) {
                                                         <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
                                                             <Upload size={18} className="nav-icon" />
                                                             <span className="nav-label">Backup Restore</span>
-                                                        </Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link className={`btn ${isCurrent('/admin/legal-documents')}`} to="/admin/legal-documents" title="Legal Documents">
-                                                            <FileText size={18} className="nav-icon" />
-                                                            <span className="nav-label">Legal Documents</span>
                                                         </Link>
                                                     </li>
                                                 </>

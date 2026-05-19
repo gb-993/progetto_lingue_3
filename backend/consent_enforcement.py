@@ -50,6 +50,11 @@ CONSENT_BYPASS_PREFIXES: tuple[str, ...] = (
     "/api/me",
     "/api/consents/",
     "/api/public/",
+    # Endpoint pubblico delle versioni correnti dei documenti legali.
+    # Usato dal footer del sito anche da utenti loggati ma non ancora in
+    # regola con i consensi (vedi public_router in routers/legal_documents).
+    # Solo questo prefix: /api/admin/legal-documents/* resta protetto.
+    "/api/legal-documents/",
     "/healthz",
     "/docs",
     "/redoc",

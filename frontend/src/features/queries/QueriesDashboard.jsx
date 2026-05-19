@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import {
     GitBranch, Globe, HelpCircle, GitCompare, ThumbsUp, ThumbsDown,
-    MessageSquare, PanelLeftClose, PanelLeftOpen,
+    MessageSquare, MinusCircle, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import Select from 'react-select';
 import api from '../../api';
@@ -21,6 +21,7 @@ const QUERY_TABS = [
     { id: 'q7', label: 'Comparable parameters (per pair of languages)',            Icon: GitCompare },
     { id: 'q8', label: 'Question with answer YES (per language)',                  Icon: ThumbsUp },
     { id: 'q9', label: 'Question with answer NO (per language)',                   Icon: ThumbsDown },
+    { id: 'q11', label: 'Question without an answer (per language)',               Icon: MinusCircle },
     { id: 'q10', label: 'Show answers and examples (per question)',                Icon: MessageSquare },
 ];
 
@@ -125,7 +126,7 @@ export default function QueriesDashboard() {
         setLangIdB('');
 
         const needsParam = ['q1', 'q2', 'q3'].includes(tabId);
-        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9'].includes(tabId);
+        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q11'].includes(tabId);
         const needsLangB = tabId === 'q7';
         const needsQuestion = tabId === 'q10';
         if (needsLangB) return;                  // langIdB appena resettato
@@ -172,6 +173,7 @@ export default function QueriesDashboard() {
             else if (tab === 'q7') res = await api.get(`/api/queries/q7?lang_a=${langId}&lang_b=${langIdB}`);
             else if (tab === 'q8') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=yes`);
             else if (tab === 'q9') res = await api.get(`/api/queries/q89?lang_id=${langId}&response_text=no`);
+            else if (tab === 'q11') res = await api.get(`/api/queries/q11?lang_id=${langId}`);
             else if (tab === 'q10') res = await api.get(`/api/queries/by-question?q_id=${encodeURIComponent(questionId)}`);
 
             setResults(res.data);
@@ -185,7 +187,7 @@ export default function QueriesDashboard() {
 
     const renderForm = () => {
         const needsParam = ['q1', 'q2', 'q3'].includes(activeTab);
-        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9'].includes(activeTab);
+        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q11'].includes(activeTab);
         const needsLangB = ['q7'].includes(activeTab);
         const needsQuestion = activeTab === 'q10';
 
@@ -505,8 +507,8 @@ export default function QueriesDashboard() {
                                 <ByQuestionTable result={results} />
                             )}
 
-                            {/* Q8, Q9: Questions with YES / NO */}
-                            {['q8', 'q9'].includes(activeTab) && (
+                            {/* Q8, Q9, Q11: Questions with YES / NO / unanswered */}
+                            {['q8', 'q9', 'q11'].includes(activeTab) && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}><Link to={`/languages/${results.language.id}/data`}>{results.language.id} — {results.language.name}</Link></h3>
                                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -522,9 +524,11 @@ export default function QueriesDashboard() {
                                                 <tr key={ans.q_id}>
                                                     <td style={{
                                                         textAlign: 'center', fontWeight: 'bold',
-                                                        color: activeTab === 'q8' ? '#28a745' : '#dc3545'
+                                                        color: activeTab === 'q8' ? '#28a745'
+                                                            : activeTab === 'q9' ? '#dc3545'
+                                                            : 'var(--text-muted, #888)',
                                                     }}>
-                                                        {activeTab === 'q8' ? 'YES' : 'NO'}
+                                                        {activeTab === 'q8' ? 'YES' : activeTab === 'q9' ? 'NO' : '—'}
                                                     </td>
                                                     <td>
                                                         <Link to={`/languages/${results.language.id}/data#p-${ans.p_id}`}>
@@ -534,10 +538,20 @@ export default function QueriesDashboard() {
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {results.answers.length === 0 && <tr><td colSpan="2" className="muted text-center">No answers found</td></tr>}
+                                            {results.answers.length === 0 && (
+                                                <tr><td colSpan="2" className="muted text-center">
+                                                    {activeTab === 'q11' ? 'No unanswered questions: every active question of every active parameter has an answer.' : 'No answers found'}
+                                                </td></tr>
+                                            )}
                                             </tbody>
                                         </table>
                                     </div>
+                                    {activeTab === 'q11' && (
+                                        <div className="small muted" style={{ marginTop: '0.5rem', fontStyle: 'italic' }}>
+                                            Inactive questions and questions belonging to inactive parameters are not shown.
+                                            Answers marked as “unsure” count as given and are not listed here either.
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

@@ -473,3 +473,39 @@ def query_89_answers(lang_id: str, response_text: str, db: Session = Depends(get
     # Ordina per p_id (approssimazione ordinamento parametro)
     res.sort(key=lambda x: x["p_id"])
     return {"language": {"id": lang.id, "name": lang.name_full}, "answers": res}
+
+
+# --- Q11: Questions WITHOUT an answer (per language) ---
+# "Senza risposta" = nessuna risposta data per quella combinazione (lingua,
+# question), nel senso piu' largo: o non esiste proprio una riga in `answers`
+# oppure esiste con `response_text IS NULL`. Le risposte 'unsure' SONO
+# considerate date, quindi le loro question non rientrano qui.
+#
+# Filtri di scope: solo question attive di parametri attivi (le inattive non
+# sono di interesse per il linguista, vedi nota discreta in UI).
+@router.get("/q11")
+def query_11_unanswered(lang_id: str, db: Session = Depends(get_db)):
+    lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
+    if not lang:
+        raise HTTPException(404, "Language not found")
+
+    active_questions = db.query(models.Question).join(models.ParameterDef).filter(
+        models.Question.is_active == True,
+        models.ParameterDef.is_active == True,
+    ).all()
+
+    answered_qids = {
+        row[0] for row in db.query(models.Answer.question_id).filter(
+            models.Answer.language_id == lang_id,
+            models.Answer.response_text.isnot(None),
+        ).all()
+    }
+
+    unanswered = [q for q in active_questions if q.id not in answered_qids]
+
+    res = [
+        {"q_id": q.id, "text": q.text, "p_id": q.parameter_id}
+        for q in unanswered
+    ]
+    res.sort(key=lambda x: x["p_id"])
+    return {"language": {"id": lang.id, "name": lang.name_full}, "answers": res}

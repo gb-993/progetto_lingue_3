@@ -1,6 +1,17 @@
-"""Router admin per la gestione dei documenti legali.
+"""Router per la gestione dei documenti legali.
 
-Endpoint:
+Espone due router:
+
+* `router` (prefix `/api/admin/legal-documents`): operazioni di gestione
+  riservate agli admin (lista versioni, preview, pubblicazione di una nuova
+  versione).
+* `public_router` (prefix `/api/legal-documents`): endpoint pubblici (no
+  auth) che permettono al frontend — anche a visitatori non loggati — di
+  scoprire l'URL della versione corrente di ciascun documento. Usato dal
+  footer del sito per linkare sempre l'ultima versione pubblicata invece
+  di un PDF statico in `frontend/public/docs/`.
+
+Endpoint admin:
 
   - GET  /api/admin/legal-documents
         Lista TUTTE le versioni di TUTTI i documenti (current + storiche),
@@ -18,9 +29,17 @@ Endpoint:
         file su filesystem (LEGAL_DOCUMENTS_DIR), inserisce la riga in DB
         con is_current=True, scolora la precedente versione corrente.
 
-Permessi: tutti gli endpoint richiedono `require_super_admin`. La pubblicazione
-di un documento legale e' un'operazione delicata: blinda l'accesso al
-super-admin (stessa filosofia di Migration Import e Backup Restore).
+Endpoint pubblici:
+
+  - GET /api/legal-documents/current
+        Mappa `{type: {version, public_url, published_at}}` con le versioni
+        correnti di tutti i documenti legali. Niente auth: il footer del
+        sito lo chiama anche da pagine pubbliche.
+
+Permessi: gli endpoint admin richiedono `require_admin`. La pubblicazione
+e' delicata ma deve restare accessibile a tutti gli admin (la sidebar e
+la UI sono coerenti). Gli endpoint pubblici non richiedono auth e sono
+whitelistati nel consent enforcement middleware.
 """
 from __future__ import annotations
 
@@ -31,7 +50,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from sqlalchemy.orm import Session
 
 import models
-from dependencies import get_db, require_super_admin
+from dependencies import get_db, require_admin
 from services.legal_document_service import (
     build_public_url,
     extract_metadata,
@@ -43,6 +62,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/admin/legal-documents",
+    tags=["LegalDocuments"],
+)
+
+# Router pubblico: niente auth, niente consent enforcement. Usato dal
+# footer del frontend (anche per visitatori sloggati) per ottenere l'URL
+# del PDF corrente di Terms of Use / Privacy Notice. Vedi whitelist in
+# consent_enforcement.CONSENT_BYPASS_PREFIXES.
+public_router = APIRouter(
+    prefix="/api/legal-documents",
     tags=["LegalDocuments"],
 )
 
@@ -76,7 +104,7 @@ def _serialize(doc: models.LegalDocument) -> dict:
 @router.get("")
 def list_all(
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(require_super_admin),
+    _admin: models.User = Depends(require_admin),
 ):
     """Lista completa di tutte le versioni di tutti i documenti.
 
@@ -101,7 +129,7 @@ def list_all(
 async def preview_upload(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _admin: models.User = Depends(require_super_admin),
+    _admin: models.User = Depends(require_admin),
 ):
     """Estrae i metadati dal PDF e mostra il riepilogo prima del salvataggio.
 
@@ -170,7 +198,7 @@ async def publish(
     file: UploadFile = File(...),
     note: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    admin: models.User = Depends(require_super_admin),
+    admin: models.User = Depends(require_admin),
 ):
     """Pubblica una nuova versione di documento legale.
 
@@ -204,3 +232,44 @@ async def publish(
         publisher_user_agent=request.headers.get("user-agent"),
     )
     return _serialize(new_doc)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/legal-documents/current  (PUBLIC, no auth)
+# ---------------------------------------------------------------------------
+@public_router.get("/current")
+def get_current_documents(db: Session = Depends(get_db)):
+    """Versioni correnti di tutti i documenti legali — endpoint pubblico.
+
+    Niente auth: il footer del sito (anche per visitatori non loggati)
+    chiama questa rotta all'avvio per scoprire l'URL del PDF da linkare.
+    Cosi' i link "Privacy Policy" / "Disclaimer" puntano sempre all'ultima
+    versione caricata via UI admin, non a un PDF statico hardcoded.
+
+    Risposta:
+      {
+        "terms_of_use": {
+          "version": "v1.0",
+          "public_url": "https://hub.../legal-docs/Terms_of_use_v1.0_...pdf",
+          "published_at": "2026-05-18T12:00:00Z"
+        },
+        "privacy_notice": { ... }
+      }
+
+    Se per un type non c'e' nessun documento current (es. al primo deploy
+    prima del primo upload), la chiave manca dalla risposta. Il footer deve
+    gestire l'assenza con un fallback (es. nascondere il link).
+    """
+    docs = (
+        db.query(models.LegalDocument)
+        .filter(models.LegalDocument.is_current == True)  # noqa: E712
+        .all()
+    )
+    return {
+        d.type: {
+            "version": d.version,
+            "public_url": build_public_url(d.file_path),
+            "published_at": d.published_at.isoformat() if d.published_at else None,
+        }
+        for d in docs
+    }

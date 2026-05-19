@@ -61,6 +61,11 @@ class _ParamChangelogReport(_CitationFooterReport):
     HEADER_TITLE = "Parameter Change History"
 
 
+class _LanguageReport(_CitationFooterReport):
+    """Report parametric data di una singola lingua: cover + scheda per parametro."""
+    HEADER_TITLE = "Language Parametric Data Report"
+
+
 def _register_fonts(pdf: FPDF) -> None:
     d = _font_dir()
     pdf.add_font(FONT_FAMILY, "", os.path.join(d, "DejaVuSans.ttf"))
@@ -510,3 +515,320 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
             row.cell(log.change_note or "")
 
     return bytes(pdf.output())
+
+
+# ============================================================================
+# LANGUAGE PARAMETRIC DATA PDF
+#
+# Layout A (scelto in fase di design): una cover con metadati della lingua,
+# poi una scheda per ogni parametro attivo (page break dopo ogni parametro).
+# Ogni scheda elenca tutte le question attive del parametro, con risposta
+# colorata, eventuali commenti, motivazioni ed esempi. I parametri senza
+# nessuna risposta data appaiono comunque, con "Not answered" su ogni q.
+# Le question/parametri disattivati sono esclusi.
+#
+# Footer identico al PDF parametri (citazione PCM_Hub + numero pagina) via
+# `_LanguageReport`, sottoclasse di `_CitationFooterReport`.
+# ============================================================================
+
+_ANSWER_LABELS = {"yes": "YES", "no": "NO", "unsure": "UNSURE"}
+_ANSWER_COLORS = {
+    "yes": (21, 128, 61),     # green (allineato al frontend)
+    "no": (185, 28, 28),      # red
+    "unsure": (161, 98, 7),   # orange
+}
+_NOT_ANSWERED_COLOR = (130, 134, 140)  # grigio chiaro
+
+
+def _example_sort_key_pdf(ex):
+    """Stesso ordering di excel_export._example_sort_key (numerico se possibile)."""
+    try:
+        return (0, int(ex.number or "0"), ex.id or 0)
+    except (ValueError, TypeError):
+        return (1, str(ex.number or ""), ex.id or 0)
+
+
+def build_language_pdf(db, lang) -> bytes:
+    """Render del PDF parametric data per una singola lingua.
+
+    Pre-carica tutti i dati necessari (parametri/question attivi, answer per
+    lingua, esempi, motivazioni, valori parametri, admin notes) e poi rende
+    una pagina per parametro.
+
+    Args:
+        db: SQLAlchemy Session.
+        lang: models.Language instance.
+
+    Returns:
+        PDF bytes pronti per essere streamati al client.
+    """
+    # Import locale per evitare cicli (gli altri builder PDF non importano models).
+    import models
+
+    # ---------- pre-load ----------
+    params = (
+        db.query(models.ParameterDef)
+        .filter(models.ParameterDef.is_active == True)
+        .order_by(models.ParameterDef.position, models.ParameterDef.id)
+        .all()
+    )
+
+    questions_by_param: dict[str, list[Any]] = {}
+    for q in (
+        db.query(models.Question)
+        .filter(models.Question.is_active == True)
+        .order_by(models.Question.parameter_id, models.Question.id)
+        .all()
+    ):
+        questions_by_param.setdefault(q.parameter_id, []).append(q)
+
+    answers = (
+        db.query(models.Answer)
+        .filter(models.Answer.language_id == lang.id)
+        .all()
+    )
+    answers_by_qid = {a.question_id: a for a in answers}
+
+    examples_by_qid: dict[str, list[Any]] = {}
+    for a in answers:
+        if a.examples:
+            examples_by_qid[a.question_id] = sorted(
+                list(a.examples), key=_example_sort_key_pdf,
+            )
+
+    mot_by_id = {m.id: m for m in db.query(models.Motivation).all()}
+
+    notes_by_pid = {
+        s.parameter_id: (s.admin_note or "")
+        for s in db.query(models.LanguageParameterStatus)
+        .filter(models.LanguageParameterStatus.language_id == lang.id)
+        .all()
+        if s.admin_note
+    }
+
+    lps = (
+        db.query(models.LanguageParameter)
+        .filter(models.LanguageParameter.language_id == lang.id)
+        .all()
+    )
+    value_orig_by_pid = {lp.parameter_id: (lp.value_orig or "") for lp in lps}
+    value_eval_by_pid: dict[str, str] = {}
+    for lp in lps:
+        if lp.eval and lp.eval.value_eval:
+            value_eval_by_pid[lp.parameter_id] = lp.eval.value_eval
+
+    # ---------- PDF setup ----------
+    pdf = _LanguageReport()
+    _register_fonts(pdf)
+    pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)
+    pdf.add_page()
+
+    # ---------- COVER ----------
+    pdf.set_font(FONT_FAMILY, style="B", size=20)
+    pdf.set_text_color(27, 29, 32)
+    pdf.cell(pdf.get_string_width("Language: "), 12, "Language: ", ln=False)
+    pdf.set_text_color(209, 65, 36)
+    pdf.cell(0, 12, str(lang.name_full or lang.id), ln=True)
+
+    pdf.set_font(FONT_FAMILY, size=12)
+    pdf.set_text_color(97, 101, 107)
+    pdf.cell(0, 7, f"ID: {lang.id}", ln=True)
+    pdf.ln(4)
+
+    pdf.set_font(FONT_FAMILY, style="B", size=12)
+    pdf.set_fill_color(241, 242, 244)
+    pdf.set_text_color(209, 65, 36)
+    pdf.cell(0, 10, "  Language information", ln=True, fill=True)
+    pdf.ln(2)
+
+    def meta_row(label: str, value) -> None:
+        # Stesso pattern di `line()` nel PDF parametri: pdf.write su una riga,
+        # poi ln(). Evita gli errori "no horizontal space" che si verificano
+        # accodando cell(w)+multi_cell(0) ripetutamente.
+        if value in (None, ""):
+            return
+        pdf.set_x(pdf.l_margin)
+        pdf.set_font(FONT_FAMILY, style="B", size=10)
+        pdf.set_text_color(97, 101, 107)
+        pdf.write(7, f"  {label} ")
+        pdf.set_font(FONT_FAMILY, size=10)
+        pdf.set_text_color(27, 29, 32)
+        pdf.write(7, str(value))
+        pdf.ln(8)
+
+    meta_row("Top-level family:", lang.top_level_family)
+    meta_row("Family:", lang.family)
+    meta_row("Group:", lang.grp)
+    meta_row("Glottocode:", lang.glottocode)
+    meta_row("ISO code:", lang.isocode)
+    meta_row("Location:", lang.location)
+    coords = ""
+    if lang.latitude is not None and lang.longitude is not None:
+        coords = f"{float(lang.latitude):.4f}, {float(lang.longitude):.4f}"
+    meta_row("Coordinates (lat, lng):", coords)
+    meta_row("Historical:", "Yes" if lang.historical_language else "No")
+    meta_row("Status:", (lang.status or "pending").replace("_", " ").title())
+    meta_row("Supervisor:", lang.supervisor)
+    meta_row("Informant:", lang.informant)
+    meta_row("Source:", lang.source)
+
+    pdf.ln(4)
+    pdf.set_font(FONT_FAMILY, size=10)
+    pdf.set_text_color(97, 101, 107)
+    pdf.cell(0, 6, f"Generated on {utc_now().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
+    pdf.cell(0, 6, f"Active parameters in this report: {len(params)}", ln=True)
+
+    # ---------- ONE PAGE PER PARAMETER ----------
+    for p in params:
+        pdf.add_page()
+        _render_parameter_card(
+            pdf, p, questions_by_param.get(p.id, []),
+            answers_by_qid, examples_by_qid, mot_by_id,
+            notes_by_pid.get(p.id, ""),
+            value_eval_by_pid.get(p.id) or value_orig_by_pid.get(p.id) or "",
+        )
+
+    return bytes(pdf.output())
+
+
+def _render_parameter_card(
+    pdf, p, questions, answers_by_qid, examples_by_qid, mot_by_id,
+    admin_note: str, final_value: str,
+) -> None:
+    """Render della scheda di un singolo parametro: banner + value + admin
+    note + tutte le question. Il chiamante e' responsabile del page break."""
+    # Banner parametro
+    pdf.set_font(FONT_FAMILY, style="B", size=14)
+    pdf.set_fill_color(241, 242, 244)
+    pdf.set_text_color(209, 65, 36)
+    pdf.cell(0, 12, f"  Parameter {p.id} - {p.name or ''}", ln=True, fill=True)
+    pdf.ln(2)
+
+    # Valore consolidato (eval, fallback orig)
+    pdf.set_font(FONT_FAMILY, style="B", size=11)
+    pdf.set_text_color(97, 101, 107)
+    pdf.cell(pdf.get_string_width("Value: "), 8, "Value: ", ln=False)
+    if final_value:
+        pdf.set_text_color(27, 29, 32)
+        pdf.cell(0, 8, str(final_value), ln=True)
+    else:
+        pdf.set_text_color(*_NOT_ANSWERED_COLOR)
+        pdf.cell(0, 8, "Not computed yet", ln=True)
+
+    if admin_note:
+        pdf.ln(1)
+        pdf.set_font(FONT_FAMILY, style="B", size=10)
+        pdf.set_text_color(97, 101, 107)
+        pdf.cell(0, 6, "Admin note:", ln=True)
+        pdf.set_font(FONT_FAMILY, size=10)
+        pdf.set_text_color(27, 29, 32)
+        pdf.multi_cell(0, 5, admin_note)
+
+    pdf.ln(3)
+
+    if not questions:
+        pdf.set_font(FONT_FAMILY, style="I", size=10)
+        pdf.set_text_color(97, 101, 107)
+        pdf.cell(0, 6, "No active questions linked to this parameter.", ln=True)
+        return
+
+    for q in questions:
+        _render_question_block(
+            pdf, q, answers_by_qid.get(q.id),
+            examples_by_qid.get(q.id, []), mot_by_id,
+        )
+
+
+def _render_question_block(pdf, q, answer, examples, mot_by_id) -> None:
+    q_type = "  (Stop Question)" if q.is_stop_question else ""
+
+    # Riga ID question con fondo grigio chiaro
+    pdf.set_font(FONT_FAMILY, style="B", size=11)
+    pdf.set_text_color(27, 29, 32)
+    pdf.set_fill_color(248, 249, 250)
+    pdf.cell(0, 8, f"  Q {q.id}{q_type}", ln=True, fill=True)
+    pdf.ln(1)
+
+    # Testo della question
+    pdf.set_font(FONT_FAMILY, size=10)
+    pdf.set_text_color(27, 29, 32)
+    pdf.set_x(pdf.l_margin + 4)
+    pdf.multi_cell(0, 5, q.text or "")
+    pdf.ln(1)
+
+    # Answer colorata
+    pdf.set_x(pdf.l_margin + 4)
+    pdf.set_font(FONT_FAMILY, style="B", size=10)
+    pdf.set_text_color(97, 101, 107)
+    pdf.cell(pdf.get_string_width("Answer: "), 6, "Answer: ", ln=False)
+
+    pdf.set_font(FONT_FAMILY, style="B", size=10)
+    rt = answer.response_text if answer else None
+    if rt in _ANSWER_LABELS:
+        pdf.set_text_color(*_ANSWER_COLORS[rt])
+        pdf.cell(0, 6, _ANSWER_LABELS[rt], ln=True)
+    else:
+        pdf.set_text_color(*_NOT_ANSWERED_COLOR)
+        pdf.cell(0, 6, "Not answered", ln=True)
+
+    # Comments
+    if answer and answer.comments:
+        pdf.set_x(pdf.l_margin + 4)
+        pdf.set_font(FONT_FAMILY, style="B", size=10)
+        pdf.set_text_color(97, 101, 107)
+        pdf.cell(pdf.get_string_width("Comments: "), 6, "Comments: ", ln=False)
+        pdf.set_font(FONT_FAMILY, size=10)
+        pdf.set_text_color(27, 29, 32)
+        pdf.multi_cell(0, 5, answer.comments)
+
+    # Motivations
+    if answer:
+        mot_labels = []
+        for am in answer.answer_motivations:
+            m = mot_by_id.get(am.motivation_id)
+            if m:
+                mot_labels.append(m.label or m.code or "")
+        mot_labels = [lbl for lbl in mot_labels if lbl]
+        if mot_labels:
+            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_font(FONT_FAMILY, style="B", size=10)
+            pdf.set_text_color(97, 101, 107)
+            pdf.cell(pdf.get_string_width("Motivations: "), 6, "Motivations: ", ln=False)
+            pdf.set_font(FONT_FAMILY, size=10)
+            pdf.set_text_color(27, 29, 32)
+            pdf.multi_cell(0, 5, "; ".join(mot_labels))
+
+    # Examples (numerati, glossing su righe separate)
+    if examples:
+        pdf.set_x(pdf.l_margin + 4)
+        pdf.set_font(FONT_FAMILY, style="B", size=10)
+        pdf.set_text_color(97, 101, 107)
+        pdf.cell(0, 6, "Examples:", ln=True)
+        for i, ex in enumerate(examples, start=1):
+            num = ex.number or str(i)
+            pdf.set_x(pdf.l_margin + 8)
+            pdf.set_font(FONT_FAMILY, size=10)
+            pdf.set_text_color(27, 29, 32)
+            pdf.multi_cell(0, 5, f"{num}. {ex.textarea or ''}")
+            if ex.transliteration:
+                pdf.set_x(pdf.l_margin + 12)
+                pdf.set_font(FONT_FAMILY, style="I", size=9)
+                pdf.set_text_color(97, 101, 107)
+                pdf.multi_cell(0, 5, ex.transliteration)
+            if ex.gloss:
+                pdf.set_x(pdf.l_margin + 12)
+                pdf.set_font(FONT_FAMILY, size=9)
+                pdf.set_text_color(97, 101, 107)
+                pdf.multi_cell(0, 5, ex.gloss)
+            if ex.translation:
+                pdf.set_x(pdf.l_margin + 12)
+                pdf.set_font(FONT_FAMILY, size=10)
+                pdf.set_text_color(27, 29, 32)
+                pdf.multi_cell(0, 5, f"'{ex.translation}'")
+            if ex.reference:
+                pdf.set_x(pdf.l_margin + 12)
+                pdf.set_font(FONT_FAMILY, style="I", size=9)
+                pdf.set_text_color(97, 101, 107)
+                pdf.multi_cell(0, 5, f"[{ex.reference}]")
+
+    pdf.ln(3)

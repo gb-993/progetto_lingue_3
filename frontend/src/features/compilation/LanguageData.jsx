@@ -189,29 +189,7 @@ export default function LanguageData() {
                     <h2 style={{ margin: 0 }}>
                         {language.name_full} <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em' }}>({language.id})</span>
                     </h2>
-                    <button
-                        type="button"
-                        className="btn btn--small"
-                        onClick={async () => {
-                            try {
-                                const res = await api.get(`/api/export/language/${language.id}/xlsx`, { responseType: 'blob' });
-                                const cd = res.headers['content-disposition'] || '';
-                                const m = cd.match(/filename="?([^";]+)"?/);
-                                const filename = m ? m[1] : `PCM_${language.id}.xlsx`;
-                                const blob = new Blob([res.data]);
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url; a.download = filename;
-                                document.body.appendChild(a); a.click(); a.remove();
-                                URL.revokeObjectURL(url);
-                            } catch {
-                                alert("Error during export.");
-                            }
-                        }}
-                        title={isAdmin ? "Export Database_model + Examples + Answers + Admin Notes" : "Export the examples of this language"}
-                    >
-                        {isAdmin ? 'Export parametric data (.xlsx)' : 'Export examples (.xlsx)'}
-                    </button>
+                    <ExportParametricButton languageId={language.id} isAdmin={isAdmin} />
                 </div>
 
                 <LanguageMetaGrid language={language} isAdmin={isAdmin} />
@@ -488,5 +466,130 @@ function LanguageMetaGrid({ language, isAdmin }) {
                 {isAdmin && <MetaRow label="Assigned to" value={assigned} />}
             </div>
         </div>
+    );
+}
+
+
+// Bottone export "Parametric data":
+//   - Admin: dropdown con Excel (.xlsx) + PDF (.pdf)
+//   - User assegnato: bottone semplice "Export examples (.xlsx)" (il backend
+//     restituisce comunque solo lo sheet Examples per i non-admin)
+function ExportParametricButton({ languageId, isAdmin }) {
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const ref = useRef(null);
+
+    // Chiusura su click fuori dropdown
+    useEffect(() => {
+        if (!open) return;
+        const onDocClick = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [open]);
+
+    const download = async (format) => {
+        setBusy(true);
+        try {
+            const res = await api.get(
+                `/api/export/language/${languageId}/${format}`,
+                { responseType: 'blob' }
+            );
+            const cd = res.headers['content-disposition'] || '';
+            const m = cd.match(/filename="?([^";]+)"?/);
+            const fallback = format === 'pdf'
+                ? `PCM_${languageId}.pdf`
+                : `PCM_${languageId}.xlsx`;
+            const filename = m ? m[1] : fallback;
+            const blob = new Blob([res.data]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        } catch {
+            alert("Error during export.");
+        } finally {
+            setBusy(false);
+            setOpen(false);
+        }
+    };
+
+    // Non-admin: bottone Excel diretto (il PDF e' admin-only)
+    if (!isAdmin) {
+        return (
+            <button
+                type="button"
+                className="btn btn--small"
+                onClick={() => download('xlsx')}
+                disabled={busy}
+                title="Export the examples of this language"
+            >
+                {busy ? 'Exporting…' : 'Export examples (.xlsx)'}
+            </button>
+        );
+    }
+
+    // Admin: dropdown
+    return (
+        <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+                type="button"
+                className="btn btn--small"
+                onClick={() => setOpen(o => !o)}
+                disabled={busy}
+                title="Export Database_model + Examples + Answers + Admin Notes"
+                aria-haspopup="menu"
+                aria-expanded={open}
+            >
+                {busy ? 'Exporting…' : 'Export parametric data ▾'}
+            </button>
+            {open && (
+                <div
+                    role="menu"
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        right: 0,
+                        minWidth: 220,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                        zIndex: 50,
+                        overflow: 'hidden',
+                    }}
+                >
+                    <DropdownItem onClick={() => download('xlsx')}>Excel (.xlsx)</DropdownItem>
+                    <DropdownItem onClick={() => download('pdf')}>PDF (.pdf)</DropdownItem>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DropdownItem({ onClick, children }) {
+    return (
+        <button
+            type="button"
+            role="menuitem"
+            onClick={onClick}
+            style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: '0.55rem 0.9rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
+            {children}
+        </button>
     );
 }

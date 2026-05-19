@@ -184,9 +184,12 @@ const router = createBrowserRouter([
             // distruttive sull'intero DB.
             { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
             { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
-            // Gestione versioni documenti legali (ToU, Privacy Notice). Super-admin
-            // perche' una pubblicazione errata forza tutti gli utenti a ri-accettare.
-            { path: 'admin/legal-documents', element: <AdminRoute requireSuperAdmin><Layout><LegalDocuments /></Layout></AdminRoute> },
+            // Gestione versioni documenti legali (ToU, Privacy Notice).
+            // Accessibile a tutti gli admin: la pubblicazione e' un'operazione
+            // amministrativa normale, e il backend (require_admin) la limita
+            // comunque al ruolo admin. Non super-admin: gli admin co-gestori
+            // del sito devono poter aggiornare ToU/Privacy autonomamente.
+            { path: 'admin/legal-documents', element: <AdminRoute><Layout><LegalDocuments /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
             // TableA e Queries sono admin-only: la sidebar le mostra solo

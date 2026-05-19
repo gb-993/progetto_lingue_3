@@ -39,6 +39,7 @@ from services.excel_export import (
     build_backup_zip_bytes,
     build_full_backup_zip_bytes,
 )
+from services.pdf_export import build_language_pdf
 from services import export_jobs
 
 
@@ -88,6 +89,33 @@ def export_single_language(
     wb = build_language_workbook(db, lang, is_admin=is_admin)
     suffix = "full" if is_admin else "examples"
     return _xlsx_response(wb, f"PCM_{lang.id}_{suffix}_{_ts()}.xlsx")
+
+
+@router.get("/export/language/{lang_id}/pdf")
+def export_single_language_pdf(
+    lang_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """PDF parametric data della lingua (admin only).
+
+    A differenza dell'export Excel — che ha una variante 'examples-only' per
+    gli utenti assegnati alla lingua — il PDF e' un report aggregato di
+    risposte/parametri/note: ha senso solo per admin. Layout: cover con
+    metadati lingua, poi una scheda per ogni parametro attivo (page break
+    dopo ogni parametro).
+    """
+    lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
+    if not lang:
+        raise HTTPException(status_code=404, detail="Language not found")
+
+    pdf_bytes = build_language_pdf(db, lang)
+    filename = f"PCM_{lang.id}_parametric_data_{_ts()}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ============================================================================
