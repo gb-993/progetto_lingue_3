@@ -236,8 +236,19 @@ class Language(Base):
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=True)
 
     assigned_user = relationship("User", back_populates="assigned_languages")
-    answers = relationship("Answer", back_populates="language")
-    aliases = relationship("LanguageAlias", back_populates="language", cascade="all, delete-orphan")
+    # passive_deletes=True: alla cancellazione della Language l'ORM NON emette
+    # UPDATE nullify ne' DELETE individuali sulle answers/aliases — si fida
+    # del cascade DB (ON DELETE CASCADE definito sulle FK figlie). Senza
+    # questo, SQLAlchemy proverebbe a settare answers.language_id=NULL prima
+    # del delete, violando la constraint NOT NULL.
+    answers = relationship(
+        "Answer", back_populates="language",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
+    aliases = relationship(
+        "LanguageAlias", back_populates="language",
+        cascade="all, delete-orphan", passive_deletes=True,
+    )
 
 
 class LanguageAlias(Base):
@@ -349,7 +360,7 @@ class LanguageParameterStatus(Base):
     # `language_id` è leftmost della UniqueConstraint sotto: già indicizzato.
     # `parameter_id` invece serve un indice esplicito per query "tutti i record
     # di questo parametro" (es. consolidate, dashboard cross-language).
-    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"), nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
@@ -383,7 +394,7 @@ class Answer(Base):
     # `language_id` leftmost della UniqueConstraint -> già indicizzato.
     # `question_id` ha bisogno di un indice esplicito per query "tutte le
     # risposte a questa domanda" (export, history, consolidate cross-language).
-    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"), nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     question_id = Column(String(40), ForeignKey("questions.id"), nullable=False, index=True)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
@@ -401,7 +412,7 @@ class Answer(Base):
 class Example(Base):
     __tablename__ = "examples"
     id = Column(Integer, primary_key=True)
-    answer_id = Column(Integer, ForeignKey("answers.id"), nullable=False)
+    answer_id = Column(Integer, ForeignKey("answers.id", ondelete="CASCADE"), nullable=False)
     number = Column(String(10), default="")
     textarea = Column(Text, nullable=True)
     transliteration = Column(Text, nullable=True)
@@ -455,7 +466,7 @@ class ParameterChangeLog(Base):
 class LanguageParameter(Base):
     __tablename__ = "language_parameters"
     id = Column(Integer, primary_key=True)
-    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"))
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"))
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"))
     value_orig = Column(Enum("+", "-", "0", "?", name="param_values_orig"), nullable=True)
     warning_orig = Column(Boolean, default=False)
@@ -466,7 +477,7 @@ class LanguageParameter(Base):
 class LanguageParameterEval(Base):
     __tablename__ = "language_parameter_evals"
     id = Column(Integer, primary_key=True)
-    language_parameter_id = Column(Integer, ForeignKey("language_parameters.id"), unique=True)
+    language_parameter_id = Column(Integer, ForeignKey("language_parameters.id", ondelete="CASCADE"), unique=True)
     value_eval = Column(Enum("+", "-", "0", "?", name="param_values_eval"), nullable=True)
     warning_eval = Column(Boolean, default=False)
     language_parameter = relationship("LanguageParameter", back_populates="eval")

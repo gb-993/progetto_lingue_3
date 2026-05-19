@@ -350,16 +350,39 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
 
 @router.delete("/admin/languages/{id}")
 def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Eliminazione "vera" della lingua: rimuove la riga e, per ON DELETE
+    CASCADE a livello DB, tutte le righe figlie/nipote nelle tabelle
+    operative (answers, examples, answer_motivations, language_parameters,
+    language_parameter_evals, language_parameter_statuses, submissions e
+    le loro children, language_aliases).
+
+    NON viene toccato lo storico immutabile:
+      - `entity_versions` (History): la timeline della lingua resta visibile;
+        prima di cancellare registriamo una nuova entry operation=delete.
+      - `archived_answers`: snapshot di question buttate via, language_id
+        denormalizzato senza FK.
+      - `motivations` (dizionario globale) e altre tabelle non FK.
+    """
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Language not found")
 
+    # Snapshot prima del delete: la History conserva il record di quando e
+    # da chi e' stata cancellata e in che stato si trovava al momento.
+    record_version(
+        db, db_item, operation="delete", source="manual",
+        user_id=current_user.id,
+    )
+
     db.delete(db_item)
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Could not delete the language: related records exist")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Could not delete the language: {getattr(e, 'orig', e)}",
+        )
     return {"detail": "Language deleted successfully"}
 
 

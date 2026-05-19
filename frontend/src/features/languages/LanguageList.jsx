@@ -116,6 +116,39 @@ export default function LanguageList() {
         }
     };
 
+    // Eliminazione "vera" della lingua: rimuove la riga e in cascata tutti i
+    // dati operativi (risposte, parametri, backup, alias). Il dizionario
+    // Motivations e gli archivi storici non vengono toccati. Doppia conferma:
+    // l'admin deve digitare esattamente l'id della lingua per procedere.
+    const onDelete = async (lang) => {
+        const typed = window.prompt(
+            `PERMANENTLY DELETE language "${lang.name_full}" (${lang.id})?\n\n` +
+            `THIS WILL DELETE:\n` +
+            `  • All answers, examples and answer-motivation links of this language\n` +
+            `  • All parameter values, evaluations and "is_unsure" / admin-note statuses\n` +
+            `  • All saved backups (Submissions) of this language and their contents\n` +
+            `  • All historical ID aliases of this language\n\n` +
+            `WHAT WILL NOT BE DELETED:\n` +
+            `  • History audit log (a "delete" event will be added there)\n` +
+            `  • The global Motivations dictionary (shared with other languages)\n` +
+            `  • Archived answers (from removed questions) referring to this id\n\n` +
+            `To confirm, type the language ID exactly: ${lang.id}`
+        );
+        if (typed === null) return;
+        if (typed.trim() !== lang.id) {
+            alert(`Confirmation does not match.\nExpected: "${lang.id}"\nGot: "${typed.trim()}"\nDeletion aborted.`);
+            return;
+        }
+        try {
+            await api.delete(`/api/admin/languages/${encodeURIComponent(lang.id)}`);
+            await reloadLanguages();
+            alert(`Language "${lang.name_full}" (${lang.id}) deleted.`);
+        } catch (err) {
+            const detail = err?.response?.data?.detail || 'Could not delete the language.';
+            alert(detail);
+        }
+    };
+
     const handleFilter = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
@@ -781,8 +814,16 @@ export default function LanguageList() {
                                                     Duplicate
                                                 </button>
                                                 <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
-                                                                                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
-
+                                                <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn--danger"
+                                                    style={{ color: 'red' }}
+                                                    onClick={() => onDelete(lang)}
+                                                    title="Permanently delete this language and all its operative data"
+                                                >
+                                                    Delete
+                                                </button>
                                             </>
                                         )}
                                     </div>
