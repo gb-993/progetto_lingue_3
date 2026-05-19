@@ -22,6 +22,10 @@ export default function LanguageForm() {
     const [users, setUsers] = useState([]);
     const [taxonomy, setTaxonomy] = useState({ top_families: [], orphan_families: [], orphan_groups: [] });
     const [error, setError] = useState('');
+    // ID caricato all'apertura del form: serve a sapere se l'utente sta
+    // rinominando l'identificatore (il backend ha ON UPDATE CASCADE sulle
+    // FK, ma non sui dati storici come archived_answers / entity_versions).
+    const [originalId, setOriginalId] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -44,6 +48,7 @@ export default function LanguageForm() {
                         family_id: langRes.data.family_id ?? '',
                         group_id: langRes.data.group_id ?? '',
                     });
+                    setOriginalId(langRes.data.id || '');
                 }
             } catch (err) {
                 setError('Could not load the data.');
@@ -205,13 +210,22 @@ export default function LanguageForm() {
                     <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>Language ID (e.g. eng)</label>
-                            <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: '0.5rem'}} />
+                            <input type="text" name="id" value={formData.id} onChange={handleChange} required maxLength={10} style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>Position (order)</label>
                             <input type="number" name="position" value={formData.position} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
                         </div>
                     </div>
+
+                    {isEditMode && formData.id !== originalId && (
+                        <div className="alert alert-warning" style={{ marginTop: '-0.25rem', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}>
+                            <strong>Renaming language ID from <code>{originalId}</code> to <code>{formData.id}</code>.</strong>{' '}
+                            All answers, parameter values, parameter statuses and backups linked to this language will be re-pointed automatically.{' '}
+                            The old ID <code>{originalId}</code> is kept as a historical alias, so future backup restores and Excel imports referencing it will still match this language.{' '}
+                            Older history entries and archived questions will continue to reference the old ID (they are immutable historical snapshots).
+                        </div>
+                    )}
 
                     <div>
                         <label style={{display: 'block', fontWeight: 'bold'}}>Full name</label>

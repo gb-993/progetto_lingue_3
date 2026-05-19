@@ -48,6 +48,7 @@ from openpyxl import load_workbook
 from sqlalchemy.orm import Session
 
 import models
+from services.language_alias import resolve_language
 from services.excel_import import import_excel, ImportReport
 from services.migration_progress import ProgressReporter, NULL_PROGRESS
 from services.dag_eval import run_dag_for_language
@@ -381,8 +382,19 @@ def _restore_submissions(
         old_id = d.get("ID")
         if old_id is None:
             continue
+        # Risoluzione del Language ID dal file: prima cerca l'id corrente,
+        # poi gli alias storici (lingua rinominata dopo l'export). Se non
+        # trovato, segnala l'errore e salta la submission.
+        file_lang_id = d.get("Language ID") or ""
+        resolved = resolve_language(db, file_lang_id)
+        if resolved.language is None:
+            report.errors.append({
+                "_file": name, "_row_id": int(old_id),
+                "reason": f"Language '{file_lang_id}' not found (no current id, no historical alias).",
+            })
+            continue
         s = models.Submission(
-            language_id=d.get("Language ID") or "",
+            language_id=resolved.language.id,
             submitted_by_id=user_id_by_email.get(d.get("Submitted By Email")) if d.get("Submitted By Email") else None,
             submitted_at=d.get("Submitted At"),
             note=d.get("Note") or "",

@@ -237,6 +237,33 @@ class Language(Base):
 
     assigned_user = relationship("User", back_populates="assigned_languages")
     answers = relationship("Answer", back_populates="language")
+    aliases = relationship("LanguageAlias", back_populates="language", cascade="all, delete-orphan")
+
+
+class LanguageAlias(Base):
+    """Storico degli id passati di una Language.
+
+    Ogni volta che `Language.id` viene rinominato (via PUT admin), il vecchio
+    id viene salvato qui. Il restore di backup e l'import Excel usano questa
+    tabella come fallback quando non trovano la lingua per id corrente:
+    cercano per `old_id` e, se trovato, lavorano sulla lingua puntata.
+
+    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due lingue diverse
+    (l'incoerenza renderebbe ambigui restore e import). Il vincolo viene
+    presidiato anche a livello applicativo nel PUT.
+    """
+    __tablename__ = "language_aliases"
+    id = Column(Integer, primary_key=True)
+    language_id = Column(
+        String(10),
+        ForeignKey("languages.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    old_id = Column(String(10), nullable=False, unique=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    language = relationship("Language", back_populates="aliases")
 
 
 # ==========================================
@@ -322,7 +349,7 @@ class LanguageParameterStatus(Base):
     # `language_id` è leftmost della UniqueConstraint sotto: già indicizzato.
     # `parameter_id` invece serve un indice esplicito per query "tutti i record
     # di questo parametro" (es. consolidate, dashboard cross-language).
-    language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"), nullable=False)
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
@@ -356,7 +383,7 @@ class Answer(Base):
     # `language_id` leftmost della UniqueConstraint -> già indicizzato.
     # `question_id` ha bisogno di un indice esplicito per query "tutte le
     # risposte a questa domanda" (export, history, consolidate cross-language).
-    language_id = Column(String(10), ForeignKey("languages.id"), nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"), nullable=False)
     question_id = Column(String(40), ForeignKey("questions.id"), nullable=False, index=True)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
@@ -428,7 +455,7 @@ class ParameterChangeLog(Base):
 class LanguageParameter(Base):
     __tablename__ = "language_parameters"
     id = Column(Integer, primary_key=True)
-    language_id = Column(String(10), ForeignKey("languages.id"))
+    language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE"))
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id"))
     value_orig = Column(Enum("+", "-", "0", "?", name="param_values_orig"), nullable=True)
     warning_orig = Column(Boolean, default=False)
@@ -465,7 +492,7 @@ class SiteContent(Base):
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, index=True)
-    language_id = Column(String(10), ForeignKey("languages.id", ondelete="CASCADE"), nullable=False)
+    language_id = Column(String(10), ForeignKey("languages.id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     submitted_at = Column(DateTime, default=utc_now, index=True)
     note = Column(Text, default="")

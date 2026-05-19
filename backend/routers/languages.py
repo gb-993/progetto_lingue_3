@@ -244,7 +244,71 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
     ensure_assigned_user_exists(item.assigned_user_id, db)
     tax = resolve_taxonomy(item, db)
 
-    db_item.id = item.id
+    # Gestione rename dell'id: il DB ha ON UPDATE CASCADE su tutte le FK verso
+    # languages.id (answers, language_parameters, language_parameter_statuses,
+    # submissions), quindi i record collegati vengono aggiornati nella stessa
+    # transazione. Le tabelle storiche con language_id denormalizzato senza FK
+    # (archived_answers, entity_versions) NON seguono: per design conservano
+    # il valore al momento dell'archiviazione/log.
+    new_id = (item.id or "").strip()
+    if not new_id:
+        raise HTTPException(status_code=422, detail="Language ID cannot be empty.")
+    if len(new_id) > ID_MAX_LEN:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Language ID exceeds the {ID_MAX_LEN}-character limit.",
+        )
+    rename_note = None
+    old_id = db_item.id
+    if new_id != old_id:
+        existing = db.query(models.Language.id).filter(models.Language.id == new_id).first()
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Language ID '{new_id}' is already in use.",
+            )
+        # Il nuovo id non puo' collidere con un alias di un'altra lingua,
+        # altrimenti il resolver di restore/import diventerebbe ambiguo.
+        conflicting_alias = (
+            db.query(models.LanguageAlias)
+            .filter(
+                models.LanguageAlias.old_id == new_id,
+                models.LanguageAlias.language_id != old_id,
+            )
+            .first()
+        )
+        if conflicting_alias:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Language ID '{new_id}' is already used as a historical alias "
+                    f"of language '{conflicting_alias.language_id}'."
+                ),
+            )
+
+        # Se il nuovo id era un alias di QUESTA stessa lingua (rename A->B->A),
+        # rimuovi quell'alias adesso: tra poco l'id ridiventa "corrente", non
+        # piu' "storico".
+        db.query(models.LanguageAlias).filter(
+            models.LanguageAlias.old_id == new_id,
+            models.LanguageAlias.language_id == old_id,
+        ).delete(synchronize_session=False)
+        # Applica il rename PRIMA di registrare l'alias: cosi' la riga in
+        # language_aliases punta direttamente al nuovo id ed evitiamo
+        # dipendenze sull'ordine di flush della cascade SQLAlchemy.
+        db_item.id = new_id
+        db.flush()
+        existing_alias = (
+            db.query(models.LanguageAlias)
+            .filter(models.LanguageAlias.old_id == old_id)
+            .first()
+        )
+        if existing_alias is None:
+            db.add(models.LanguageAlias(language_id=new_id, old_id=old_id))
+
+        rename_note = f"Renamed from {old_id} to {new_id}"
+    else:
+        db_item.id = new_id
     db_item.name_full = item.name_full
     db_item.position = item.position
     db_item.family = tax["family"]
@@ -267,12 +331,21 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
     try:
         db.commit()
         db.refresh(db_item)
-        record_version(db, db_item, operation="update", source="manual", user_id=current_user.id)
+        record_version(
+            db, db_item, operation="update", source="manual",
+            user_id=current_user.id, note=rename_note,
+        )
         db.commit()
         return db_item
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="Could not update the language (duplicate ID or invalid data).")
+        # Conserva il messaggio originario del DB nel detail: aiuta a
+        # diagnosticare violazioni di unique/FK quando capitano (sennò
+        # tutti i 400 risultano indistinguibili).
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not update the language: {getattr(e, 'orig', e)}",
+        )
 
 
 @router.delete("/admin/languages/{id}")

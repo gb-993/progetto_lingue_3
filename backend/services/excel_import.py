@@ -33,6 +33,7 @@ from sqlalchemy.exc import IntegrityError, DataError
 import models
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
+from services.language_alias import resolve_language
 
 
 # ============================================================================
@@ -1192,7 +1193,19 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
             "status": status,
         }
 
-        existing = db.query(models.Language).filter(models.Language.id == lid).first()
+        # Lookup con fallback su alias storici: se l'id del file non
+        # corrisponde a una lingua corrente, prova a riconoscerlo come
+        # vecchio id di una lingua rinominata via UI admin. In quel caso
+        # aggiorna i campi della lingua esistente senza toccarne l'id.
+        resolved = resolve_language(db, lid, file_glottocode=fields["glottocode"])
+        if resolved.glottocode_mismatch:
+            summary.errors += 1
+            report.errors.append(ImportError(
+                sheet="Languages", row=ridx, value=lid,
+                reason=resolved.glottocode_mismatch,
+            ))
+            continue
+        existing = resolved.language
 
         def apply():
             if existing is None:
@@ -1203,6 +1216,9 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
                 lang = models.Language(id=lid, position=pos, **fields)
                 db.add(lang)
             else:
+                # NB: non tocchiamo `existing.id`. Se il match e' via alias
+                # l'id corrente (post-rename) e' quello giusto, non quello
+                # del file. Aggiorniamo solo i campi metadata.
                 for k, v in fields.items():
                     setattr(existing, k, v)
 
