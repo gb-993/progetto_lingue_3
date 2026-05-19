@@ -220,7 +220,7 @@ export function SiteFooter({ role }) {
                             DHisGram - Syntax out of Africa. Deep history through human grammars.
                         </p>
                         <a
-                            href="http://www.parametricomparison.unimore.it/site/home.html"
+                            href="http://www.parametricomparison.unimore.it"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="footer-btn"
