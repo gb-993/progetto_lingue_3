@@ -272,6 +272,50 @@ export default function ParameterForm() {
         }
     };
 
+    // --- QUICK-FILL ANSWERS ---
+    // Pre-popola tutte le risposte assenti del parametro: 'yes' alle stop
+    // questions, 'no' alle altre, su TUTTE le lingue. Non sovrascrive le
+    // risposte gia' date. Dopo il fill il backend lancia un recompute del
+    // parametro in background.
+    const [quickFilling, setQuickFilling] = useState(false);
+    const handleQuickFill = async () => {
+        if (!isEditMode || !id) return;
+        const activeQs = questions.filter(q => q.is_active);
+        const activeStop = activeQs.filter(q => q.is_stop_question).length;
+        const activeNormal = activeQs.length - activeStop;
+        if (activeQs.length === 0) {
+            alert('No active questions in this parameter. Nothing to fill.');
+            return;
+        }
+        const ok = window.confirm(
+            `Quick-fill blank answers for parameter "${id}"?\n\n` +
+            `This will create answers ONLY where they are still missing:\n` +
+            `  • YES on ${activeStop} stop question(s)\n` +
+            `  • NO on ${activeNormal} normal question(s)\n` +
+            `for every language that does not already have an answer.\n\n` +
+            `Existing answers are NEVER overwritten.\n\n` +
+            `After the fill, parameter values will be recomputed in background ` +
+            `for every language.`
+        );
+        if (!ok) return;
+        setQuickFilling(true);
+        try {
+            const res = await api.post(`/api/admin/parameters/${id}/quick-fill-answers`);
+            const d = res.data || {};
+            alert(
+                `Quick-fill complete.\n\n` +
+                `Created: ${d.created} answer(s)\n` +
+                `Skipped (already answered): ${d.skipped_existing}\n` +
+                `Languages touched: ${d.languages_touched}\n\n` +
+                `Recompute started in background.`
+            );
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Could not quick-fill answers.');
+        } finally {
+            setQuickFilling(false);
+        }
+    };
+
     // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
     const handleToggleQuestionActive = async (questionId, currentStatus) => {
         const actionText = currentStatus ? 'deactivate' : 'reactivate';
@@ -673,6 +717,34 @@ export default function ParameterForm() {
                                 ) : (
                                     <div style={{ ...qRowStyle, justifyContent: 'center' }}><span className="muted">No stop questions</span></div>
                                 )}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            marginTop: '1.5rem',
+                            padding: '0.85rem 1rem',
+                            background: 'var(--surface-2, #f8fafc)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div style={{ flex: '1 1 320px' }}>
+                                    <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Quick-fill blank answers</strong>
+                                    <span className="small muted">
+                                        Set <code>YES</code> on every stop question and <code>NO</code> on every normal question,
+                                        for all languages that do not already have an answer.
+                                        Existing answers are never overwritten.
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleQuickFill}
+                                    disabled={quickFilling || !formData.is_active}
+                                    className="btn"
+                                    title={!formData.is_active ? "Parameter is deactivated" : "Pre-populate every missing answer for this parameter"}
+                                >
+                                    {quickFilling ? 'Filling…' : 'Quick-fill blank answers'}
+                                </button>
                             </div>
                         </div>
 

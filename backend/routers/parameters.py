@@ -423,6 +423,113 @@ def reactivate_parameter(id: str, background_tasks: BackgroundTasks, db: Session
     return {"detail": "Parameter successfully reactivated."}
 
 
+# --- ENDPOINT QUICK-FILL ANSWERS ---
+# Caso d'uso: appena creato un parametro nuovo l'admin vuole pre-popolare
+# tutte le risposte "vuote" con il default piu' frequente (no = caso assente)
+# per evitare di compilare a mano ogni lingua. Le stop questions ricevono
+# "yes" (= "procedi") perche' una stop a "no" bloccherebbe il parametro per
+# la lingua, l'opposto dell'intento "pigrizia".
+#
+# Comportamento (intenzionalmente non distruttivo):
+#   - tocca solo le combinazioni (lingua, domanda attiva) SENZA Answer esistente
+#   - non sovrascrive mai risposte gia' date
+#   - parametro disattivato -> 409 (non ha senso pre-fillare)
+#   - una EntityVersion aggregata in History
+#   - recompute del parametro per tutte le lingue in background
+@router.post("/{id}/quick-fill-answers")
+def quick_fill_parameter_answers(
+    id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    param = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not param:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+    if not param.is_active:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot quick-fill: parameter is deactivated. Reactivate it first.",
+        )
+
+    active_questions = [q for q in param.questions if q.is_active]
+    if not active_questions:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot quick-fill: parameter has no active questions.",
+        )
+
+    languages = db.query(models.Language).all()
+    if not languages:
+        return {
+            "created": 0, "skipped_existing": 0,
+            "languages_touched": 0, "recompute_started": False,
+        }
+
+    # Pre-carica le risposte esistenti per (questo set di question, qualunque lingua)
+    # con UNA query: O(Q*L) Python loops vs O(Q*L) queries DB. Per parametri
+    # tipici (Q < 20, L < 500) restiamo dentro qualche migliaio di righe.
+    q_ids = [q.id for q in active_questions]
+    existing = db.query(models.Answer.language_id, models.Answer.question_id).filter(
+        models.Answer.question_id.in_(q_ids)
+    ).all()
+    existing_set = {(lid, qid) for lid, qid in existing}
+
+    created = 0
+    skipped_existing = 0
+    languages_touched: set[str] = set()
+    for lang in languages:
+        for q in active_questions:
+            if (lang.id, q.id) in existing_set:
+                skipped_existing += 1
+                continue
+            default = "yes" if q.is_stop_question else "no"
+            db.add(models.Answer(
+                language_id=lang.id,
+                question_id=q.id,
+                response_text=default,
+                status="pending",
+                comments="",
+            ))
+            created += 1
+            languages_touched.add(lang.id)
+
+    # Una sola entry aggregata in History: la granularita' per ogni answer
+    # creerebbe migliaia di entry inutili nella timeline del parametro.
+    note = (
+        f"Quick-fill: created {created} answers "
+        f"({len([q for q in active_questions if q.is_stop_question])} stop->yes, "
+        f"{len([q for q in active_questions if not q.is_stop_question])} normal->no) "
+        f"across {len(languages_touched)} language(s); "
+        f"skipped {skipped_existing} already-answered combinations."
+    )
+    record_version(
+        db, param, operation="update", source="manual",
+        user_id=current_user.id, note=note,
+    )
+
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not quick-fill answers: {getattr(e, 'orig', e)}",
+        )
+
+    # Le nuove answers cambiano value_orig dei parametri (e i loro figli nel DAG):
+    # stesso pattern di reactivate, ricalcoliamo per tutte le lingue in background
+    # cosi' l'admin non aspetta. Le lingue non toccate sono no-op nel consolidate.
+    background_tasks.add_task(recompute_parameter_for_all_languages, id)
+
+    return {
+        "created": created,
+        "skipped_existing": skipped_existing,
+        "languages_touched": len(languages_touched),
+        "recompute_started": True,
+    }
+
+
 # --- ENDPOINT PER LA VALIDAZIONE SINTASSI IN TEMPO REALE ---
 class ConditionCheck(BaseModel):
     condition: str

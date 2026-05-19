@@ -1,9 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+import { searchMatches } from '../../utils/search';
 
 export default function TableA() {
     const [view, setView] = useState('params'); // 'params' o 'questions'
+
+    // Ricerca testuale client-side (free-text). Affina i risultati gia'
+    // restituiti dal backend filtrando matrixData.rows in memoria — stesso
+    // pattern delle liste Parameters/Questions/Languages.
+    const [search, setSearch] = useState('');
 
     // Stato per le opzioni delle tendine
     const [options, setOptions] = useState({
@@ -76,8 +82,11 @@ export default function TableA() {
 
     // Ricarica la matrice quando cambia la view (Params <-> Questions)
     useEffect(() => {
-        // Reset delle righe selezionate quando si cambia vista
+        // Reset delle righe selezionate e della search testuale al cambio
+        // view: i campi cercabili (ID/name/extra) cambiano semantica e una
+        // search "FGM" attiva nella nuova view risulterebbe spesso vuota.
         setSelectedRows([]);
+        setSearch('');
         fetchMatrix();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
@@ -87,6 +96,38 @@ export default function TableA() {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
+
+    // Righe filtrate dalla search testuale: si applica DOPO i filtri server.
+    // Cerca su id / name / extra di row.item (parameter_id, name, condition
+    // per view='params'; question_id, text, parameter_name per 'questions').
+    const filteredRows = useMemo(
+        () => matrixData.rows.filter(r => searchMatches(r.item, search)),
+        [matrixData.rows, search]
+    );
+
+    // IDs che il backend deve usare per gli export.
+    // Logica (allineata al pattern di LanguageList — "scarico cio' che vedo"):
+    //   - se l'utente ha checkboxato manualmente: intersezione tra le sue
+    //     selezioni e le righe visibili dopo la search (la search "stringe"
+    //     l'intent)
+    //   - se NON ha checkboxato e la search e' attiva: tutte le righe visibili
+    //   - se NON ha checkboxato e la search e' vuota: array vuoto, che il
+    //     backend interpreta come "nessun filtro per id" -> esporta tutto
+    //     secondo i soli filtri server (comportamento storico preservato)
+    const effective_ids = useMemo(() => {
+        const visibleSet = new Set(filteredRows.map(r => r.item.id));
+        if (selectedRows.length > 0) {
+            return selectedRows.filter(id => visibleSet.has(id));
+        }
+        return search.trim() ? Array.from(visibleSet) : [];
+    }, [selectedRows, filteredRows, search]);
+
+    // True quando l'utente ha un intent di filtro (selezione manuale o search)
+    // ma il risultato e' zero righe: in quel caso disabilitiamo i bottoni di
+    // download per evitare che il backend caschi nel ramo "selected_ids vuoto
+    // = nessun filtro" ed esporti tutta la matrice non desiderata.
+    const hasFilterIntent = selectedRows.length > 0 || search.trim() !== '';
+    const wouldExportNothing = hasFilterIntent && effective_ids.length === 0;
 
     // Gestione checkbox lingue
     const handleLangCheckbox = (id) => {
@@ -102,10 +143,13 @@ export default function TableA() {
         );
     };
 
+    // Master checkbox + Select All: agiscono sulle righe ATTUALMENTE visibili
+    // (post-search). Sennò "Select All" con search attiva selezionerebbe anche
+    // righe non visibili — confusionario.
     const handleMasterCheckbox = (e) => {
         const isChecked = e.target.checked;
         if (isChecked) {
-            setSelectedRows(matrixData.rows.map(r => r.item.id));
+            setSelectedRows(filteredRows.map(r => r.item.id));
         } else {
             setSelectedRows([]);
         }
@@ -119,6 +163,7 @@ export default function TableA() {
         });
         setSelectedLangs([]);
         setSelectedRows([]);
+        setSearch('');
         // fetchMatrix verrà chiamato manualmente se l'utente clicca "Apply"
     };
 
@@ -127,7 +172,7 @@ export default function TableA() {
     // ==========================================
     const handleDownload = async (endpoint, filename, mimeType) => {
         try {
-            const payload = { view, ...filters, f_lang_specific: selectedLangs, selected_ids: selectedRows };
+            const payload = { view, ...filters, f_lang_specific: selectedLangs, selected_ids: effective_ids };
             const response = await api.post(`/api/tablea/export/${endpoint}`, payload, { responseType: 'blob' });
 
             const skippedHeader = response.headers['x-skipped-languages'];
@@ -164,7 +209,7 @@ export default function TableA() {
             const payload = {
                 view, ...filters,
                 f_lang_specific: selectedLangs,
-                selected_ids: selectedRows,
+                selected_ids: effective_ids,
                 include_gcd: mantelOpts.gcd,
                 include_hamming: mantelOpts.hamming,
                 include_jaccard: mantelOpts.jaccard,
@@ -221,7 +266,7 @@ export default function TableA() {
             const payload = {
                 view, ...filters,
                 f_lang_specific: selectedLangs,
-                selected_ids: selectedRows,
+                selected_ids: effective_ids,
                 distance: clusterMapOpts.distance,
                 threshold_coeff: coeff,
             };
@@ -425,8 +470,12 @@ export default function TableA() {
                         <button
                             type="button"
                             className="btn"
-                            style={{ background: '#333', color: 'white' }}
+                            style={{ background: '#333', color: 'white', opacity: wouldExportNothing ? 0.55 : 1, cursor: wouldExportNothing ? 'not-allowed' : 'pointer' }}
                             onClick={() => setDownloadOpen(o => !o)}
+                            disabled={wouldExportNothing}
+                            title={wouldExportNothing
+                                ? "Nothing to export: your selection / search returns 0 rows. Clear the search or change selection."
+                                : ""}
                             aria-haspopup="menu"
                             aria-expanded={downloadOpen}
                         >
@@ -473,9 +522,39 @@ export default function TableA() {
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)' }}>
-                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(matrixData.rows.map(r => r.item.id))}>Select All</button>
-                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', marginLeft: '0.5rem' }} onClick={() => setSelectedRows([])}>Deselect All</button>
+                <div style={{
+                    padding: '1rem',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                }}>
+                    <input
+                        type="search"
+                        placeholder={view === 'params'
+                            ? "Search every field (ID, name, conditions)..."
+                            : "Search every field (Q.ID, text, parameter)..."}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{
+                            flex: '1 1 260px',
+                            minWidth: '220px',
+                            padding: '0.45rem 0.6rem',
+                            fontSize: '0.85rem',
+                            border: '1px solid var(--border)',
+                            borderRadius: '4px',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                        }}
+                    />
+                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(filteredRows.map(r => r.item.id))}>Select All</button>
+                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows([])}>Deselect All</button>
+                    <span className="small muted" style={{ marginLeft: 'auto' }}>
+                        {search
+                            ? `Showing ${filteredRows.length} of ${matrixData.rows.length} rows`
+                            : `${matrixData.rows.length} rows`}
+                    </span>
                 </div>
 
                 <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
@@ -483,12 +562,16 @@ export default function TableA() {
                         <div style={{ padding: '3rem', textAlign: 'center' }}>Loading data...</div>
                     ) : matrixData.rows.length === 0 ? (
                         <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No data matches the selected filters.</div>
+                    ) : filteredRows.length === 0 ? (
+                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            No rows match the search "{search}". Clear the search box to see all {matrixData.rows.length} rows.
+                        </div>
                     ) : (
                         <table className="table table--freeze" style={{ margin: 0, whiteSpace: 'nowrap' }}>
                             <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--surface-2)' }}>
                             <tr>
                                 <th style={{ width: '45px', textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 11, borderRight: '1px solid var(--border)' }}>
-                                    <input type="checkbox" onChange={handleMasterCheckbox} checked={selectedRows.length > 0 && selectedRows.length === matrixData.rows.length} />
+                                    <input type="checkbox" onChange={handleMasterCheckbox} checked={filteredRows.length > 0 && filteredRows.every(r => selectedRows.includes(r.item.id))} />
                                 </th>
                                 <th style={{ position: 'sticky', left: '45px', background: 'var(--surface-2)', zIndex: 11, minWidth: '80px', borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'ID' : 'Q.ID'}
@@ -505,7 +588,7 @@ export default function TableA() {
                             </tr>
                             </thead>
                             <tbody>
-                            {matrixData.rows.map(row => (
+                            {filteredRows.map(row => (
                                 <tr key={row.item.id} style={{ borderBottom: '1px solid #eee' }}>
                                     <td style={{ textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 5, borderRight: '1px solid var(--border)' }}>
                                         <input
