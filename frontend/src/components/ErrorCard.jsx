@@ -1,40 +1,26 @@
 import { useEffect } from 'react';
 
-const labelStyle = {
-    fontSize: '0.75rem',
-    fontWeight: 800,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: 'var(--text-muted)',
-    paddingTop: '0.4rem',
-};
-
-const rowStyle = {
-    display: 'grid',
-    gridTemplateColumns: '9.5rem 1fr',
-    columnGap: '1rem',
-    alignItems: 'start',
-    padding: '0.6rem 0',
-};
-
-// Scheda PCM-style condivisa fra ErrorBoundary (crash JS) e NotFound (404 SPA).
-// Le pagine statiche frontend/public/maintenance.html e 404.html replicano
+// Scheda PCM-style condivisa fra le pagine di errore React (NotFound 404 e
+// ErrorBoundary crash JS). Layout "hero": icona tonda brand + titolo grande
+// + frase muted + 1 bottone primario + 1 ghost link.
+//
+// Le pagine statiche frontend/public/404.html e maintenance.html replicano
 // lo stesso layout in HTML+CSS inline perche' devono renderizzare anche
-// quando il bundle React non e' raggiungibile.
+// quando il bundle React non e' raggiungibile (network down, build rotta,
+// service worker che serve un fallback). Tenerle allineate.
 export default function ErrorCard({
-    code,
+    icon,
+    title,
     description,
-    question,
-    motivations = [],
     primaryAction,
-    secondaryAction,
-    footerText,
+    ghostLink,
+    pageTitle,
 }) {
     useEffect(() => {
         const prev = document.title;
-        document.title = `${code} - ${description} | PCM Hub`;
+        document.title = `${pageTitle || title} | PCM Hub`;
         return () => { document.title = prev; };
-    }, [code, description]);
+    }, [pageTitle, title]);
 
     return (
         <main
@@ -47,171 +33,118 @@ export default function ErrorCard({
                 background: 'var(--bg)',
             }}
         >
-            <header style={{ maxWidth: '760px', width: '100%', marginBottom: '1.25rem' }}>
-                <h1 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '0.01em' }}>
-                    <strong style={{ color: 'var(--text)', fontWeight: 700 }}>PCM Hub</strong>
-                    {' · '}{description.toLowerCase()}
-                </h1>
+            <header
+                style={{
+                    maxWidth: '920px',
+                    width: '100%',
+                    marginBottom: '2rem',
+                    fontSize: '0.95rem',
+                    color: 'var(--text-muted)',
+                    letterSpacing: '0.01em',
+                    textAlign: 'center',
+                }}
+            >
+                <strong style={{ color: 'var(--text)', fontWeight: 700 }}>PCM Hub</strong>
             </header>
 
             <section
-                className="card"
                 style={{
-                    maxWidth: '760px',
+                    maxWidth: '560px',
                     width: '100%',
-                    padding: '1.5rem',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    boxShadow: 'var(--shadow)',
+                    textAlign: 'center',
+                    margin: 'auto 0',
                 }}
             >
                 <div
+                    aria-hidden="true"
                     style={{
-                        borderLeft: '3px solid var(--brand)',
-                        paddingLeft: '0.85rem',
+                        width: '96px',
+                        height: '96px',
+                        margin: '0 auto 1.5rem',
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.25rem',
-                        marginBottom: '1.5rem',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'color-mix(in oklab, var(--brand) 15%, transparent)',
+                        borderRadius: '50%',
+                        color: 'var(--brand)',
                     }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <span style={{ color: 'var(--brand)', fontSize: '1.1rem', fontWeight: 700 }}>{code}</span>
-                        <span style={{ color: 'var(--brand)', fontSize: '0.95rem', fontWeight: 600 }}>{description}</span>
-                    </div>
-                    <div style={{ fontSize: '1.05rem', fontWeight: 600, lineHeight: 1.45 }}>{question}</div>
+                    {icon}
                 </div>
 
-                <div style={rowStyle}>
-                    <div style={labelStyle}>Answer</div>
-                    <div>
-                        <select
-                            disabled
-                            value="NO"
-                            onChange={() => {}}
-                            style={{
-                                padding: '0.6rem',
-                                width: '100%',
-                                maxWidth: '300px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--border)',
-                                background: 'var(--surface)',
-                                color: 'var(--text)',
-                                font: 'inherit',
-                                fontSize: '1rem',
-                            }}
-                        >
-                            <option value="NO">NO</option>
-                        </select>
-                    </div>
-                </div>
+                <h1
+                    style={{
+                        margin: '0 0 0.75rem',
+                        fontSize: '2.5rem',
+                        fontWeight: 700,
+                        lineHeight: 1.1,
+                        color: 'var(--text)',
+                    }}
+                >
+                    {title}
+                </h1>
 
-                {motivations.length > 0 && (
-                    <div style={rowStyle}>
-                        <div style={labelStyle}>Motivations</div>
-                        <div>
-                            <div
-                                style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '0.5rem',
-                                    background: 'var(--surface-2)',
-                                    padding: '1rem',
-                                    borderRadius: '6px',
-                                }}
-                            >
-                                {motivations.map((m, i) => (
-                                    <label key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                        <input type="checkbox" checked disabled readOnly style={{ accentColor: 'var(--brand)' }} />
-                                        <strong>{m}</strong>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <p
+                    style={{
+                        margin: '0 auto 2.25rem',
+                        maxWidth: '420px',
+                        color: 'var(--text-muted)',
+                        fontSize: '1.1rem',
+                        lineHeight: 1.55,
+                    }}
+                >
+                    {description}
+                </p>
 
-                {(primaryAction || secondaryAction) && (
-                    <div
+                {primaryAction && (
+                    <button
+                        type="button"
+                        onClick={primaryAction.onClick}
                         style={{
-                            marginTop: '2rem',
-                            padding: '0.85rem 1rem',
-                            border: '1px solid var(--border)',
-                            borderRadius: '12px',
-                            background: 'var(--surface)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.6rem',
-                            width: 'fit-content',
-                            maxWidth: '100%',
-                            marginLeft: 'auto',
+                            display: 'inline-block',
+                            padding: '0.9rem 2rem',
+                            background: 'var(--brand)',
+                            color: '#fff',
+                            border: '1px solid color-mix(in oklab, var(--brand) 75%, black)',
+                            borderRadius: '10px',
+                            font: 'inherit',
+                            fontSize: '1.05rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
                         }}
                     >
-                        {primaryAction && (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                <span>{primaryAction.context}</span>
-                                <button
-                                    type="button"
-                                    onClick={primaryAction.onClick}
-                                    style={{
-                                        minWidth: '180px',
-                                        padding: '0.6rem 1rem',
-                                        borderRadius: '10px',
-                                        border: '1px solid #15803d',
-                                        background: '#16a34a',
-                                        color: '#fff',
-                                        font: 'inherit',
-                                        fontSize: '0.95rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {primaryAction.label}
-                                </button>
-                            </div>
-                        )}
-                        {secondaryAction && (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                <span>{secondaryAction.context}</span>
-                                <button
-                                    type="button"
-                                    onClick={secondaryAction.onClick}
-                                    style={{
-                                        minWidth: '180px',
-                                        padding: '0.6rem 1rem',
-                                        borderRadius: '10px',
-                                        border: '1px solid color-mix(in oklab, var(--brand) 75%, black)',
-                                        background: 'var(--brand)',
-                                        color: '#fff',
-                                        font: 'inherit',
-                                        fontSize: '0.95rem',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    {secondaryAction.label}
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                        {primaryAction.label}
+                    </button>
+                )}
+
+                {ghostLink && (
+                    <button
+                        type="button"
+                        onClick={ghostLink.onClick}
+                        style={{
+                            display: 'block',
+                            margin: '1.25rem auto 0',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'var(--text-muted)',
+                            font: 'inherit',
+                            fontSize: '0.9rem',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = 'var(--brand)';
+                            e.currentTarget.style.textDecoration = 'underline';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--text-muted)';
+                            e.currentTarget.style.textDecoration = 'none';
+                        }}
+                    >
+                        {ghostLink.label}
+                    </button>
                 )}
             </section>
-
-            {footerText && (
-                <footer
-                    style={{
-                        maxWidth: '760px',
-                        width: '100%',
-                        marginTop: '1rem',
-                        color: 'var(--text-muted)',
-                        fontSize: '0.85rem',
-                        textAlign: 'center',
-                    }}
-                >
-                    {footerText}
-                </footer>
-            )}
         </main>
     );
 }

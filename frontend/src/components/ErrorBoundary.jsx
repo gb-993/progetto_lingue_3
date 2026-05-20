@@ -5,24 +5,33 @@ import ErrorCard from './ErrorCard';
 function ErrorFallback() {
     return (
         <ErrorCard
-            code="ERR_JSx"
-            description="Unexpected error"
-            question="Does this website show the page you requested?"
-            motivations={[
-                'Internal client error',
-                'Component failed to render',
-            ]}
+            pageTitle="Something went wrong"
+            icon={
+                <svg
+                    viewBox="0 0 24 24"
+                    width="48"
+                    height="48"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+            }
+            title="Something went wrong"
+            description="An unexpected error occurred while loading this page. Reloading usually fixes it."
             primaryAction={{
-                context: 'Looks like a temporary glitch?',
-                label: 'Confident -> Reload',
+                label: 'Reload page',
                 onClick: () => { window.location.reload(); },
             }}
-            secondaryAction={{
-                context: 'Get back to safe ground.',
-                label: 'Unsure -> Home',
+            ghostLink={{
+                label: 'or go to the home page',
                 onClick: () => { window.location.href = '/'; },
             }}
-            footerText="An unexpected error occurred while rendering the page."
         />
     );
 }
