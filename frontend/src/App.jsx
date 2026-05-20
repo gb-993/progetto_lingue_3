@@ -39,6 +39,7 @@ import AccountCreate from './features/accounts/AccountCreate';
 import AccountAssign from './features/accounts/AccountAssign';
 import MotivationList from './features/motivations/MotivationList.jsx';
 import Instructions from './features/instructions/Instructions';
+import Manual from './features/manual/Manual';
 
 import BackupFolder from './features/backups/BackupFolder';
 import BackupDetail from './features/backups/BackupDetail';
@@ -137,6 +138,7 @@ const router = createBrowserRouter([
             { path: 'languages', element: <Layout><LanguageList /></Layout> },
             { path: 'languages/:id/data', element: <Layout><LanguageData /></Layout> },
             { path: 'instructions', element: <Layout><Instructions /></Layout> },
+            { path: 'manual', element: <Layout><Manual /></Layout> },
 
             // ROTTE ESCLUSIVE ADMIN
             { path: 'languages/add', element: <AdminRoute><Layout><LanguageForm /></Layout></AdminRoute> },

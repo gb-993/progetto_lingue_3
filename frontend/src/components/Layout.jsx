@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
     DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
-    FileText,
+    FileText, BookMarked,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
@@ -26,6 +26,7 @@ const PATH_LABELS = {
     'dashboard': 'Dashboard',
     'languages': 'Languages',
     'instructions': 'Instructions',
+    'manual': 'Manual',
     'glossary': 'Glossary',
     'how-to-cite': 'How to cite',
     'me': 'My Account',
@@ -431,6 +432,12 @@ export default function Layout({ children }) {
                                         <Link className={`btn ${isCurrent('/instructions')}`} to="/instructions" title="Instructions">
                                             <BookOpen size={18} className="nav-icon" />
                                             <span className="nav-label">Instructions</span>
+                                        </Link>
+                                    </li>
+                                    <li>
+                                        <Link className={`btn ${isCurrent('/manual')}`} to="/manual" title="Manual">
+                                            <BookMarked size={18} className="nav-icon" />
+                                            <span className="nav-label">Manual</span>
                                         </Link>
                                     </li>
                                     <li>
