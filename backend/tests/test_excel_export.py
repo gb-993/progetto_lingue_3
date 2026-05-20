@@ -60,6 +60,7 @@ _EXPECTED_DATABASE_MODEL_HEADERS = [
     "Language_Answer",
     "Language_Comments",
     "Language_Examples",
+    "Language_Example_Transliteration",
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
@@ -96,7 +97,7 @@ def test_answers_headers_match_legacy():
 
 
 def test_database_model_headers_count():
-    assert len(DATABASE_MODEL_HEADERS) == 11
+    assert len(DATABASE_MODEL_HEADERS) == 12
 
 
 def test_examples_headers_count():
@@ -232,6 +233,7 @@ def test_database_model_sheet_examples_concatenation(db_session):
     for row in ws.iter_rows(min_row=2, values_only=True):
         if row[h["Question_ID"]] == "FGM_01":
             assert row[h["Language_Examples"]] == "Esempio uno\nEsempio due\nEsempio tre"
+            assert row[h["Language_Example_Transliteration"]] == "trans-1\ntrans-2\ntrans-3"
             assert row[h["Language_Example_Gloss"]] == "gloss-1\ngloss-2\ngloss-3"
             assert row[h["Language_Example_Translation"]] == "translation-1\ntranslation-2\ntranslation-3"
             assert row[h["Language_References"]] == "ref-1\nref-2\nref-3"

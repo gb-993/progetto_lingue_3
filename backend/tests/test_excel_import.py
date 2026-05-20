@@ -228,27 +228,27 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
     ws.append(DATABASE_MODEL_HEADERS)
-    # Layout colonne (11): Language, Parameter_Label, Question_ID,
+    # Layout colonne (12): Language, Parameter_Label, Question_ID,
     # Language_Answer, Language_Comments, Language_Examples,
-    # Language_Example_Gloss, Language_Example_Translation, Language_References,
-    # Motivations, Admin_Note
+    # Language_Example_Transliteration, Language_Example_Gloss,
+    # Language_Example_Translation, Language_References, Motivations, Admin_Note
     # riga valida
     ws.append([
         "Italiano", "FGM", "FGM_01",
         "YES", "new comment",
         "Esempio nuovo 1\nEsempio nuovo 2",
-        "g1\ng2", "t1\nt2", "r1\nr2",
+        "tr1\ntr2", "g1\ng2", "t1\nt2", "r1\nr2",
         "", "",
     ])
     # riga valida (FGM_02 = no, no esempi)
     ws.append([
         "Italiano", "FGM", "FGM_02",
-        "NO", "", "", "", "", "", "", "",
+        "NO", "", "", "", "", "", "", "", "",
     ])
     # riga errata (FGM_99 inesistente)
     ws.append([
         "Italiano", "FGM", "FGM_99",
-        "YES", "should fail", "ex", "g", "t", "r", "", "",
+        "YES", "should fail", "ex", "tl", "g", "t", "r", "", "",
     ])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
@@ -266,6 +266,10 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
     assert len(fgm01_ans.examples) == 2
     texts = sorted(ex.textarea for ex in fgm01_ans.examples)
     assert texts == ["Esempio nuovo 1", "Esempio nuovo 2"]
+    # Traslitterazione importata e allineata per posizione agli esempi
+    by_num = {ex.number: ex for ex in fgm01_ans.examples}
+    assert by_num["1"].transliteration == "tr1"
+    assert by_num["2"].transliteration == "tr2"
     # Comment aggiornato
     assert fgm01_ans.comments == "new comment"
 
@@ -286,7 +290,7 @@ def test_database_model_invalid_answer_value_skipped(db_session):
     ws.append(DATABASE_MODEL_HEADERS)
     ws.append([
         "Italiano", "FGM", "FGM_01",
-        "MAYBE", "", "", "", "", "", "", "",
+        "MAYBE", "", "", "", "", "", "", "", "",
     ])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
@@ -306,7 +310,7 @@ def test_database_model_unknown_language(db_session):
     ws.append(DATABASE_MODEL_HEADERS)
     ws.append([
         "Klingon", "FGM", "FGM_01",
-        "YES", "", "", "", "", "", "", "",
+        "YES", "", "", "", "", "", "", "", "",
     ])
 
     # le risposte ITA esistenti devono restare invariate
@@ -500,7 +504,7 @@ def test_database_model_unsure_uppercase_imports_as_unsure(db_session):
     ws.append(DATABASE_MODEL_HEADERS)
     ws.append([
         "Italiano", "FGM", "FGM_01",
-        "UNSURE", "uncertain comment", "", "", "", "", "", "",
+        "UNSURE", "uncertain comment", "", "", "", "", "", "", "",
     ])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
@@ -524,8 +528,8 @@ def test_database_model_unsure_short_forms_also_accepted(db_session):
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
     ws.append(DATABASE_MODEL_HEADERS)
-    ws.append(["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", ""])
-    ws.append(["Italiano", "FGM", "FGM_02", "?", "", "", "", "", "", "", ""])
+    ws.append(["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", "", ""])
+    ws.append(["Italiano", "FGM", "FGM_02", "?", "", "", "", "", "", "", "", ""])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()
@@ -576,7 +580,7 @@ def test_database_model_invalid_answer_error_message_mentions_unsure(db_session)
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
     ws.append(DATABASE_MODEL_HEADERS)
-    ws.append(["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", ""])
+    ws.append(["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", "", ""])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()

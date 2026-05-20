@@ -996,6 +996,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
 
         # Esempi multilinea
         ex_texts = _split_lines(_get(row, hmap, "Language_Examples"))
+        translit_lines = _split_lines(_get(row, hmap, "Language_Example_Transliteration"))
         gloss_lines = _split_lines(_get(row, hmap, "Language_Example_Gloss"))
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
@@ -1042,6 +1043,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
 
             for i, txt in enumerate(ex_texts):
                 if not txt and not (
+                    (translit_lines[i] if i < len(translit_lines) else "") or
                     (gloss_lines[i] if i < len(gloss_lines) else "") or
                     (transl_lines[i] if i < len(transl_lines) else "") or
                     (ref_lines[i] if i < len(ref_lines) else "")
@@ -1051,6 +1053,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                     answer_id=answer.id,
                     number=str(i + 1),
                     textarea=txt or None,
+                    transliteration=(translit_lines[i] if i < len(translit_lines) else None) or None,
                     gloss=(gloss_lines[i] if i < len(gloss_lines) else None) or None,
                     translation=(transl_lines[i] if i < len(transl_lines) else None) or None,
                     reference=(ref_lines[i] if i < len(ref_lines) else None) or None,

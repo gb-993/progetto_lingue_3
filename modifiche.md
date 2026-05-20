@@ -19,10 +19,10 @@
 - [x] Quando si duplica una lingua poter scegliere l'id anziché venga aggiunto automaticamente "2"
 
 ## LINGUE DATA
-- [ ] Nel foglio database model aggiungerei anche la colonna delle traslitterazioni
+- [x] Nel foglio database model aggiungerei anche la colonna delle traslitterazioni
 - [ ] Ridurrei ancora le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc, anche solo a una riga
 - [ ] Spostare group sotto a subfamily nelle info in alto
-- [ ] Nella pagina Database_model dell'excel gli esempi di una question vengono inseriti tutti in una cella e mi dicono che quando la lingua viene importata di nuovo da quel file gli esempi compaiono tutti in una sola cella
+- [x] Nella pagina Database_model dell'excel gli esempi di una question vengono inseriti tutti in una cella e mi dicono che quando la lingua viene importata di nuovo da quel file gli esempi compaiono tutti in una sola cella
 
 ## DEBUG PARAMETRI
 - [x] Fare in modo che se una condizione implicazione è falsa il parametro vada a 0 indipendentemente dalle risposte che sono state date alle sue question. Ora se c’è un’incongruenza tra tra questions e stop-questions giustamente la rileva, mette il warning e lo propaga, mentre vorrebbero che siccome tanto il parametro deve andare a 0 ci fosse un warning “arancione” solo sulle answers/initial value, ma questo non bloccasse lo 0 e i parametri che dipendono da quello

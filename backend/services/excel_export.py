@@ -42,6 +42,7 @@ DATABASE_MODEL_HEADERS = [
     "Language_Answer",
     "Language_Comments",
     "Language_Examples",
+    "Language_Example_Transliteration",
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
@@ -298,6 +299,7 @@ def build_language_workbook(
 
             ex_list = examples_by_qid.get(q.id, [])
             cell_examples = "\n".join((ex.textarea or "") for ex in ex_list) if ex_list else ""
+            cell_translit = "\n".join((ex.transliteration or "") for ex in ex_list) if ex_list else ""
             cell_gloss = "\n".join((ex.gloss or "") for ex in ex_list) if ex_list else ""
             cell_transl = "\n".join((ex.translation or "") for ex in ex_list) if ex_list else ""
             cell_refs = "\n".join((ex.reference or "") for ex in ex_list) if ex_list else ""
@@ -309,6 +311,7 @@ def build_language_workbook(
                 lang_answer,
                 lang_comments,
                 cell_examples,
+                cell_translit,
                 cell_gloss,
                 cell_transl,
                 cell_refs,
@@ -318,7 +321,7 @@ def build_language_workbook(
 
     _style_table(
         ws_db, "DatabaseModel", len(DATABASE_MODEL_HEADERS),
-        [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 30],
+        [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 22, 30],
     )
 
     # Le colonne testuali contengono valori multilinea (esempi/gloss/traduzioni/
@@ -327,8 +330,9 @@ def build_language_workbook(
     # edita il file non vede i separatori tra esempi e rischia di unirli, e
     # all'import gli esempi finiscono in un'unica Example. Attiviamo wrap + top.
     _MULTILINE_COLS = (
-        "Language_Comments", "Language_Examples", "Language_Example_Gloss",
-        "Language_Example_Translation", "Language_References", "Admin_Note",
+        "Language_Comments", "Language_Examples", "Language_Example_Transliteration",
+        "Language_Example_Gloss", "Language_Example_Translation",
+        "Language_References", "Admin_Note",
     )
     _wrap_top = Alignment(wrap_text=True, vertical="top")
     _col_idx = {name: i + 1 for i, name in enumerate(DATABASE_MODEL_HEADERS)}

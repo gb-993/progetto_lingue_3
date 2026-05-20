@@ -39,8 +39,8 @@ def test_migration_import_yes_no_still_work(db_session):
     """Sanity: la logica esistente per YES/NO non e' stata rotta dal fix UNSURE."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
-        ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", ""],
-        ["Italiano", "FGM", "FGM_02", "NO", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_02", "NO", "", "", "", "", "", "", "", ""],
     ])
 
     report = MigrationReport()
@@ -60,7 +60,7 @@ def test_migration_import_unsure_uppercase(db_session):
     """'UNSURE' (canonico, prodotto dall'export attuale) -> response_text='unsure'."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
-        ["Italiano", "FGM", "FGM_01", "UNSURE", "uncertain", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_01", "UNSURE", "uncertain", "", "", "", "", "", "", ""],
     ])
 
     report = MigrationReport()
@@ -79,8 +79,8 @@ def test_migration_import_unsure_short_forms(db_session):
     """Varianti corte 'U' e '?' (utile per compilazione manuale)."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
-        ["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", ""],
-        ["Italiano", "FGM", "FGM_02", "?", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_02", "?", "", "", "", "", "", "", "", ""],
     ])
 
     report = MigrationReport()
@@ -101,10 +101,10 @@ def test_migration_import_mixed_responses_no_regression(db_session):
     importato correttamente, senza errori."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
-        ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", ""],
-        ["Italiano", "FGM", "FGM_02", "NO", "", "", "", "", "", "", ""],
-        ["Italiano", "FGM", "FGM_03", "UNSURE", "", "", "", "", "", "", ""],
-        ["Italiano", "FGM", "FGM_04", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_02", "NO", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_03", "UNSURE", "", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_04", "", "", "", "", "", "", "", "", ""],
     ])
 
     report = MigrationReport()
@@ -129,7 +129,7 @@ def test_migration_import_invalid_value_still_reports_error_with_unsure_in_messa
     che 'unsure' e' un'opzione legittima)."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
-        ["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", ""],
+        ["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", "", ""],
     ])
 
     report = MigrationReport()
