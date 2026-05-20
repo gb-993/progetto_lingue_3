@@ -390,9 +390,15 @@ def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: 
 # DUPLICATE LANGUAGE
 # Copia integrale della lingua con tutte le risposte, esempi, motivazioni
 # e i parametri/eval. Non copia: Submissions (storico) ed EntityVersion (audit).
-# Il nuovo ID e il nuovo nome ottengono un suffisso numerico progressivo a
+# L'admin puo' scegliere l'ID (e il nome) della copia; se non li passa, il
+# nuovo ID e il nuovo nome ottengono un suffisso numerico progressivo a
 # partire da 2 (es. "It"/"Italian" -> "It2"/"Italian2").
 # ==========================================
+class DuplicateLanguageRequest(BaseModel):
+    new_id: Optional[str] = None
+    new_name: Optional[str] = None
+
+
 def _strip_trailing_digits(s: str) -> str:
     return re.sub(r"\d+$", "", s or "")
 
@@ -411,6 +417,7 @@ def _next_duplicate_suffix(db: Session, base_id: str) -> int:
 @router.post("/admin/languages/{id}/duplicate", status_code=status.HTTP_201_CREATED)
 def duplicate_admin_language(
     id: str,
+    body: Optional[DuplicateLanguageRequest] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
@@ -421,15 +428,51 @@ def duplicate_admin_language(
     base_id = _strip_trailing_digits(src.id) or src.id
     base_name = _strip_trailing_digits(src.name_full) or src.name_full
 
-    n = _next_duplicate_suffix(db, base_id)
-    new_id = f"{base_id}{n}"
-    new_name = f"{base_name}{n}"
+    requested_id = (body.new_id if body else None) or ""
+    requested_id = requested_id.strip()
+    requested_name = (body.new_name if body else None) or ""
+    requested_name = requested_name.strip()
 
-    if len(new_id) > ID_MAX_LEN:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Generated id '{new_id}' exceeds {ID_MAX_LEN} characters; rename the source language first.",
+    if requested_id:
+        # ID scelto dall'admin: stesse validazioni del rename.
+        new_id = requested_id
+        if len(new_id) > ID_MAX_LEN:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Language ID exceeds the {ID_MAX_LEN}-character limit.",
+            )
+        if db.query(models.Language.id).filter(models.Language.id == new_id).first():
+            raise HTTPException(
+                status_code=409,
+                detail=f"Language ID '{new_id}' is already in use.",
+            )
+        # Una lingua nuova non puo' riusare un id che e' alias storico di
+        # un'altra lingua, altrimenti restore/import diventerebbero ambigui.
+        conflicting_alias = (
+            db.query(models.LanguageAlias)
+            .filter(models.LanguageAlias.old_id == new_id)
+            .first()
         )
+        if conflicting_alias:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Language ID '{new_id}' is already used as a historical alias "
+                    f"of language '{conflicting_alias.language_id}'."
+                ),
+            )
+        new_name = requested_name or base_name
+    else:
+        # Default automatico: suffisso numerico progressivo a partire da 2.
+        n = _next_duplicate_suffix(db, base_id)
+        new_id = f"{base_id}{n}"
+        new_name = requested_name or f"{base_name}{n}"
+
+        if len(new_id) > ID_MAX_LEN:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Generated id '{new_id}' exceeds {ID_MAX_LEN} characters; rename the source language first.",
+            )
 
     max_pos = db.query(models.Language.position).order_by(models.Language.position.desc()).first()
     new_position = (max_pos[0] if max_pos else 0) + 1

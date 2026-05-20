@@ -101,13 +101,36 @@ export default function LanguageList() {
     }, []);
 
     const onDuplicate = async (lang) => {
-        const ok = window.confirm(
-            `Duplicate "${lang.name_full}" (${lang.id}) with all answers, examples and parameters?\n\n` +
-            `A new language will be created with a numeric suffix appended to id and name.`
+        // Default suggerito: id/nome senza cifre finali + "2" (stessa logica
+        // del fallback automatico lato server). L'admin puo' sovrascriverlo.
+        const baseId = (lang.id || '').replace(/\d+$/, '') || lang.id;
+        const baseName = (lang.name_full || '').replace(/\d+$/, '') || lang.name_full;
+
+        const newId = window.prompt(
+            `Duplicate "${lang.name_full}" (${lang.id}) with all answers, examples and parameters.\n\n` +
+            `Choose the ID for the new language (max 10 characters).\n` +
+            `You can edit the suggested value below or keep it as is:`,
+            `${baseId}2`
         );
-        if (!ok) return;
+        if (newId === null) return; // annullato
+        const trimmedId = newId.trim();
+        if (!trimmedId) {
+            alert('The new language ID cannot be empty.');
+            return;
+        }
+
+        const newName = window.prompt(
+            `Choose the name for the new language.\n` +
+            `You can edit the suggested value below or keep it as is:`,
+            `${baseName}2`
+        );
+        if (newName === null) return; // annullato
+
         try {
-            const res = await api.post(`/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`);
+            const res = await api.post(
+                `/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`,
+                { new_id: trimmedId, new_name: newName.trim() || undefined }
+            );
             await reloadLanguages();
             alert(`Created "${res.data.name_full}" (${res.data.id}).`);
         } catch (err) {

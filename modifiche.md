@@ -1,7 +1,7 @@
 # RIEPILOGO MODIFICHE
-- [ ] Roberto Romano per problemi con mail, password e https
+- [x] Roberto Romano per problemi con mail, password e https
 - [ ] Servizi informatici per espandere disco della vm a 20 GB
-- [ ] Fare in modo che tutti gli output del sito abbiano il footer (per i _miei_ script: pca, dendrogramma, mantel va benissimo quello in basso che hai messo per il GitHub di Gaia)
+- [x] Fare in modo che tutti gli output del sito abbiano il footer (per i _miei_ script: pca, dendrogramma, mantel va benissimo quello in basso che hai messo per il GitHub di Gaia)
 
 ## LANDING PAGE
 
@@ -9,14 +9,14 @@
 (ancora non so esattamente cosa sarà visualizzabile per questi utenti)
 
 ## DASHBOARD
-- [ ] Ripristinare l'hover sulla mappa
+- [x] Ripristinare l'hover sulla mappa
 
 ## HOW TO CITE
 
 ## LISTA LINGUE
-- [ ] Eliminazione lingue (vedi email per dettagli)
-- [ ] Rendere gli ID delle lingue modificabili
-- [ ] Quando si duplica una lingua poter scegliere l'id anziché venga aggiunto automaticamente "2"
+- [x] Eliminazione lingue (vedi email per dettagli)
+- [x] Rendere gli ID delle lingue modificabili
+- [x] Quando si duplica una lingua poter scegliere l'id anziché venga aggiunto automaticamente "2"
 
 ## LINGUE DATA
 - [ ] Nel foglio database model aggiungerei anche la colonna delle traslitterazioni
