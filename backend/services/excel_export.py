@@ -18,7 +18,7 @@ import io
 import zipfile
 
 from openpyxl import Workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from sqlalchemy.orm import Session
@@ -320,6 +320,21 @@ def build_language_workbook(
         ws_db, "DatabaseModel", len(DATABASE_MODEL_HEADERS),
         [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 30],
     )
+
+    # Le colonne testuali contengono valori multilinea (esempi/gloss/traduzioni/
+    # riferimenti impilati con "\n", commenti e note). Senza "testo a capo" Excel
+    # mostra tutto su una riga sola e i ritorni a capo restano invisibili: chi
+    # edita il file non vede i separatori tra esempi e rischia di unirli, e
+    # all'import gli esempi finiscono in un'unica Example. Attiviamo wrap + top.
+    _MULTILINE_COLS = (
+        "Language_Comments", "Language_Examples", "Language_Example_Gloss",
+        "Language_Example_Translation", "Language_References", "Admin_Note",
+    )
+    _wrap_top = Alignment(wrap_text=True, vertical="top")
+    _col_idx = {name: i + 1 for i, name in enumerate(DATABASE_MODEL_HEADERS)}
+    for r in range(2, ws_db.max_row + 1):
+        for col_name in _MULTILINE_COLS:
+            ws_db.cell(row=r, column=_col_idx[col_name]).alignment = _wrap_top
 
     # === Sheet Answers (admin) ===
     ws_ans = wb.create_sheet("Answers", 1)
