@@ -22,6 +22,7 @@ e propagato ovunque.
 """
 from __future__ import annotations
 
+import html as _html
 from datetime import datetime
 from typing import Optional
 
@@ -163,3 +164,63 @@ def render_pdf_citation_footer(pdf, font_family: str) -> None:
     pdf.set_font(font_family, style="I", size=8)
     pdf.set_text_color(97, 101, 107)
     pdf.cell(0, 5, f"Page {pdf.page_no()}", align="C")
+
+
+# ----------------------------------------------------------------------------
+# Testo semplice (CSV / TSV / TXT)
+# ----------------------------------------------------------------------------
+
+def build_citation_comment(prefix: str = "# ", when: Optional[datetime] = None) -> str:
+    """
+    Citazione come blocco di righe-commento, da anteporre a file di testo
+    (CSV/TSV/TXT). Ogni riga è prefissata (default ``# ``) e il blocco termina
+    con una newline, così basta concatenarlo davanti al contenuto.
+
+    Esempio (prefix di default)::
+
+        # Downloaded from:
+        # Guardiano, Cristina, ... Gaia Sorge (eds). 2026. The PCM_Hub (version 1, Accessed on 20/05/2026)
+    """
+    text = build_citation_text(when)
+    return "".join(f"{prefix}{line}\n" for line in text.split("\n"))
+
+
+# ----------------------------------------------------------------------------
+# HTML (pagine plotly autonome)
+# ----------------------------------------------------------------------------
+
+def render_html_citation_footer(when: Optional[datetime] = None) -> str:
+    """Snippet HTML con la citazione, da iniettare in fondo a una pagina."""
+    text = _html.escape(build_citation_text(when)).replace("\n", "<br>")
+    return (
+        '<footer style="font-family:Arial,Helvetica,sans-serif;font-size:11px;'
+        'color:#787878;text-align:center;padding:12px 8px;border-top:1px solid '
+        f'#dadde2;margin-top:8px">{text}</footer>'
+    )
+
+
+def inject_html_citation(html_str: str, when: Optional[datetime] = None) -> str:
+    """Inserisce il footer di citazione prima di ``</body>`` (fallback: in coda)."""
+    footer = render_html_citation_footer(when)
+    if "</body>" in html_str:
+        return html_str.replace("</body>", footer + "</body>", 1)
+    return html_str + footer
+
+
+# ----------------------------------------------------------------------------
+# Immagini matplotlib (PNG)
+# ----------------------------------------------------------------------------
+
+def apply_matplotlib_citation(fig, when: Optional[datetime] = None) -> None:
+    """
+    Scrive la citazione come caption in fondo a una figura matplotlib.
+
+    Va chiamata DOPO ``tight_layout()`` e prima di ``savefig``. Si appoggia a
+    ``bbox_inches="tight"`` nel savefig per includere la caption senza
+    tagliarla. Lascia spazio in basso riducendo il margine inferiore degli assi.
+    """
+    fig.subplots_adjust(bottom=0.15)
+    fig.text(
+        0.5, 0.01, build_citation_text(when),
+        ha="center", va="bottom", fontsize=7, color="#787878", wrap=True,
+    )

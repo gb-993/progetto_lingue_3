@@ -26,7 +26,12 @@ from adjustText import adjust_text
 
 import models
 from dependencies import get_db, get_current_user, require_admin
-from services.citation import apply_excel_citation
+from services.citation import (
+    apply_excel_citation,
+    apply_matplotlib_citation,
+    build_citation_comment,
+    inject_html_citation,
+)
 
 # Tutti gli endpoint di TableA sono admin-only (la pagina /tablea nella SPA è
 # riservata agli admin e i payload — matrice cross-language, export, distanze,
@@ -302,6 +307,7 @@ def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db
     """Export CSV Trasposto: righe=lingue, colonne=parametri."""
     langs, rows = _get_filtered_data(db, filters)
     buf = io.StringIO()
+    buf.write(build_citation_comment())
     writer = csv.writer(buf)
     writer.writerow(["Language"] + [r["id"] for r in rows])
     for i, l in enumerate(langs):
@@ -333,7 +339,7 @@ def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get
                     d = func(lang_vectors[i], lang_vectors[j])
                     row_vals.append(str(d))
                 out += "\t".join(row_vals) + "\n"
-            zf.writestr(f"{name}.txt", out)
+            zf.writestr(f"{name}.txt", build_citation_comment() + out)
 
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
@@ -407,12 +413,13 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
             dist_matrix = [[func(v1, v2) for v2 in lang_vectors] for v1 in lang_vectors]
             linkage_matrix = linkage(squareform(dist_matrix), method='average')
 
-            plt.figure(figsize=(12, 8))
+            fig = plt.figure(figsize=(12, 8))
             dendrogram(linkage_matrix, labels=labels, orientation='top', distance_sort='descending', show_leaf_counts=True, color_threshold=0, above_threshold_color='black')
             plt.title(title)
             plt.xlabel("Languages")
             plt.ylabel("Distance")
             plt.tight_layout()
+            apply_matplotlib_citation(fig)
 
             img_buf = io.BytesIO()
             plt.savefig(img_buf, format='png', dpi=300, bbox_inches="tight")
@@ -500,7 +507,7 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
     fig.update_layout(margin=dict(r=10, t=60, l=10, b=10), height=720,
                       legend=dict(title="Cluster"))
 
-    html = fig.to_html(include_plotlyjs="cdn")
+    html = inject_html_citation(fig.to_html(include_plotlyjs="cdn"))
     headers = {"Content-Disposition": "attachment; filename=cluster_map.html"}
     if skipped:
         headers["X-Skipped-Languages"] = ",".join(skipped)
@@ -528,7 +535,7 @@ def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), 
     f1, f2 = scores[:, 0], scores[:, 1]
     v1_pct, v2_pct = pca.explained_variance_ratio_[0] * 100, pca.explained_variance_ratio_[1] * 100
 
-    plt.figure(figsize=(12, 8))
+    fig = plt.figure(figsize=(12, 8))
     plt.scatter(f1, f2, c='black', s=10, alpha=0.75)
     texts = [plt.text(x, y, l.id, fontsize=9) for x, y, l in zip(f1, f2, langs)]
     adjust_text(texts, arrowprops=dict(arrowstyle='-', color='gray', lw=0.5))
@@ -538,6 +545,7 @@ def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), 
     plt.ylabel(f'F2 ({v2_pct:.2f}%)')
     plt.axhline(0, color='gray', lw=0.5); plt.axvline(0, color='gray', lw=0.5)
     plt.tight_layout()
+    apply_matplotlib_citation(fig)
 
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=300, bbox_inches="tight")
@@ -628,11 +636,14 @@ def _vincenty_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _matrix_to_tsv(ids: List[str], mat: np.ndarray) -> str:
-    """Serializza una matrice quadrata in TSV con header come gcd.py / distance.py."""
+    """Serializza una matrice quadrata in TSV con header come gcd.py / distance.py.
+
+    Il blocco è preceduto dalla citazione di attribuzione (righe-commento ``#``).
+    """
     lines = ["Language\t" + "\t".join(ids)]
     for i, id1 in enumerate(ids):
         lines.append(id1 + "\t" + "\t".join(str(mat[i, j]) for j in range(len(ids))))
-    return "\n".join(lines) + "\n"
+    return build_citation_comment() + "\n".join(lines) + "\n"
 
 
 _CORR_FUNCS = {
@@ -763,6 +774,7 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
             plt.scatter(v1, v2, s=10, alpha=0.75)
             plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.75)
             plt.xlabel(n1); plt.ylabel(n2)
+            apply_matplotlib_citation(fig)
             png_buf = io.BytesIO()
             plt.savefig(png_buf, format='png', dpi=300, bbox_inches='tight')
             plt.close(fig)
@@ -774,9 +786,10 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
                                 labels={"x": n1, "y": n2})
             fig_pl.update_traces(marker=dict(size=10, opacity=0.75))
             zf.writestr(f"{n1}-{n2}_mantel_scatterplot_interactive.html",
-                        fig_pl.to_html(include_plotlyjs="cdn"))
+                        inject_html_citation(fig_pl.to_html(include_plotlyjs="cdn")))
 
-        zf.writestr("mantel_results.csv", pd.DataFrame(results).to_csv(index=False))
+        zf.writestr("mantel_results.csv",
+                    build_citation_comment() + pd.DataFrame(results).to_csv(index=False))
 
         if skipped:
             zf.writestr(

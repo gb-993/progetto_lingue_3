@@ -40,6 +40,7 @@ from services.excel_export import (
     build_full_backup_zip_bytes,
 )
 from services.pdf_export import build_language_pdf
+from services.citation import build_citation_comment
 from services import export_jobs
 
 
@@ -413,7 +414,7 @@ def export_languages_gcd(
             row.append(str(_gcd_nautical_miles(coords[i][0], coords[i][1],
                                                coords[j][0], coords[j][1])))
         lines.append("\t".join(row))
-    content = "\n".join(lines) + "\n"
+    content = build_citation_comment() + "\n".join(lines) + "\n"
 
     headers = {"Content-Disposition": f'attachment; filename="gcd_{_ts()}.txt"'}
     if skipped:
