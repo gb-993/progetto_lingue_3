@@ -448,20 +448,22 @@ function LanguageMetaGrid({ language, isAdmin }) {
             rowGap: '0.8rem',
             alignItems: 'start',
         }}>
+            {/* Colonna sinistra: classificazione linguistica + identificatori.
+                Colonna destra: geografia + persone + provenienza. */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Top-level family" value={language.top_level_family} />
                 <MetaRow label="Subfamily" value={language.family} />
+                <MetaRow label="Group" value={language.grp} />
                 <MetaRow label="Historical" value={language.historical_language ? 'Yes' : 'No'} />
                 <MetaRow label="ISO code" value={language.isocode} />
                 <MetaRow label="Glottocode" value={language.glottocode} />
-                <MetaRow label="Location" value={language.location} />
-                <MetaRow label="Latitude" value={fmtCoord(language.latitude)} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <MetaRow label="Location" value={language.location} />
+                <MetaRow label="Latitude" value={fmtCoord(language.latitude)} />
                 <MetaRow label="Longitude" value={fmtCoord(language.longitude)} />
                 <MetaRow label="Supervisor" value={language.supervisor} />
                 <MetaRow label="Informant" value={language.informant} />
-                <MetaRow label="Group" value={language.grp} />
                 <MetaRow label="Source" value={language.source} />
                 {isAdmin && <MetaRow label="Assigned to" value={assigned} />}
             </div>
