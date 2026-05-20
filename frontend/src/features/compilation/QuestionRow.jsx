@@ -374,19 +374,19 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
                                         <div>
                                             <label className="small">Example text</label>
-                                            <textarea rows="1" value={ex.textarea || ''} onChange={e => handleExampleChange(ex.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                            <textarea rows="1" value={ex.textarea || ''} onChange={e => handleExampleChange(ex.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Transliteration</label>
-                                            <textarea rows="1" value={ex.transliteration || ''} onChange={e => handleExampleChange(ex.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                            <textarea rows="1" value={ex.transliteration || ''} onChange={e => handleExampleChange(ex.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Gloss</label>
-                                            <textarea rows="1" value={ex.gloss || ''} onChange={e => handleExampleChange(ex.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                            <textarea rows="1" value={ex.gloss || ''} onChange={e => handleExampleChange(ex.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">English Translation</label>
-                                            <textarea rows="1" value={ex.translation || ''} onChange={e => handleExampleChange(ex.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical' }} />
+                                            <textarea rows="1" value={ex.translation || ''} onChange={e => handleExampleChange(ex.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Reference</label>

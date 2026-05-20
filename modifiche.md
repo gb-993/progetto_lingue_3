@@ -20,7 +20,7 @@
 
 ## LINGUE DATA
 - [x] Nel foglio database model aggiungerei anche la colonna delle traslitterazioni
-- [ ] Ridurrei ancora le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc, anche solo a una riga
+- [x] Ridurrei ancora le dimensioni di default delle celle in cui sono inseriti esempi, glosse, ecc, anche solo a una riga
 - [ ] Spostare group sotto a subfamily nelle info in alto
 - [x] Nella pagina Database_model dell'excel gli esempi di una question vengono inseriti tutti in una cella e mi dicono che quando la lingua viene importata di nuovo da quel file gli esempi compaiono tutti in una sola cella
 
