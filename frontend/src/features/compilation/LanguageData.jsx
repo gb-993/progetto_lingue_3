@@ -427,7 +427,7 @@ function MetaRow({ label, value }) {
                 color: 'var(--text-muted)',
                 textAlign: 'right',
             }}>{label}</span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1.4 }}>
+            <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1.4, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                 {display}
             </span>
         </div>

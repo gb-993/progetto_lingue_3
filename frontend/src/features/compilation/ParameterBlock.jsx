@@ -158,7 +158,7 @@ export default function ParameterBlock({
             <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                 {parameter.id} — {parameter.name}
             </h3>
-            <p className="muted">{parameter.short_description}</p>
+            <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{parameter.short_description}</p>
 
             {isAdmin && (
                 <div style={{
