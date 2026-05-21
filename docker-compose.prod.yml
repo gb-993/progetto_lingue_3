@@ -235,7 +235,12 @@ services:
   #       * immagini "dangling" = i layer orfani che ogni rebuild di backend/
   #         caddy lascia indietro (la vecchia immagine perde il tag) -> e' la
   #         causa principale di disco che si riempie nel tempo
-  #       * build cache piu' vecchia di 7 giorni (until=168h)
+  #       * build cache ORFANA (layer non piu' referenziati da nessuna
+  #         immagine). NON usa `--filter until=` ne' `-a`: cosi' pota subito
+  #         la cache orfana (anche recente) ma TIENE quella ancora in uso
+  #         (es. il pesante layer `pip install` del backend) -> i redeploy
+  #         con requirements invariati restano veloci. Senza questo, su una
+  #         VM piccola la build cache orfana arrivava a >1GB in pochi giorni.
   #
   # Gira una volta al giorno e aspetta 1h all'avvio, cosi' non parte mai a
   # ridosso di un redeploy. Anche se girasse durante un redeploy, prunando
@@ -259,8 +264,8 @@ services:
         while true; do
           echo "[cleaner] $$(date -Iseconds) prune immagini dangling..."
           docker image prune -f || echo "[cleaner] image prune fallito (ignoro)"
-          echo "[cleaner] $$(date -Iseconds) prune build cache piu' vecchia di 7 giorni..."
-          docker builder prune -f --filter until=168h || echo "[cleaner] builder prune fallito (ignoro)"
+          echo "[cleaner] $$(date -Iseconds) prune build cache orfana (NON quella in uso)..."
+          docker builder prune -f || echo "[cleaner] builder prune fallito (ignoro)"
           echo "[cleaner] $$(date -Iseconds) fatto. Prossimo giro tra 24h."
           sleep 86400
         done
