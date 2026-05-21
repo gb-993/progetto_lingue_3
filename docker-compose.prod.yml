@@ -258,7 +258,7 @@ services:
       - -c
       - |
         set -eu
-        echo "[cleaner] avviato (solo immagini dangling + build cache > 7gg; mai container/volumi)"
+        echo "[cleaner] avviato (solo immagini dangling + build cache orfana; mai container/volumi). Primo giro tra 1h."
         # Attesa iniziale: evita di girare appena dopo un redeploy.
         sleep 3600
         while true; do
