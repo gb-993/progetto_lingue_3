@@ -25,9 +25,8 @@ const MANUALS = [
             'Full guide covering everything: data entry for linguists plus all the ' +
             'admin-only features (parameters, questions, accounts, backups, exports…).',
         files: {
-            // Phase 2: drop the rewritten PDFs and flip `available` to true.
-            en: { available: false, file: '/docs/PCM-Hub_manual_complete_en.pdf' },
-            it: { available: false, file: '/docs/PCM-Hub_manuale_completo_it.pdf' },
+            en: { available: true, file: '/docs/PCM-Hub_manual_complete_en.pdf' },
+            it: { available: true, file: '/docs/PCM-Hub_manuale_completo_it.pdf' },
         },
     },
     {
@@ -39,8 +38,8 @@ const MANUALS = [
             'Streamlined guide for the people who compile languages, without the ' +
             'administration sections.',
         files: {
-            en: { available: false, file: '/docs/PCM-Hub_manual_user_en.pdf' },
-            it: { available: false, file: '/docs/PCM-Hub_manuale_utente_it.pdf' },
+            en: { available: true, file: '/docs/PCM-Hub_manual_user_en.pdf' },
+            it: { available: true, file: '/docs/PCM-Hub_manuale_utente_it.pdf' },
         },
     },
 ];

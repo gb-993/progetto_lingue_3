@@ -14,7 +14,7 @@ Practical guide to using the **PCM-Hub** website (`hub.parametricomparison.unimo
 2. [Logging in](#2-logging-in)
 3. [Getting around: sidebar, topbar, breadcrumb](#3-getting-around-sidebar-topbar-breadcrumb)
 4. [The Dashboard](#4-the-dashboard)
-5. [Shared pages: Glossary, Instructions, How to cite, My Account](#5-shared-pages)
+5. [Shared pages: Glossary, Instructions, How to cite, Manual, My Account](#5-shared-pages)
 6. [The Languages page](#6-the-languages-page)
 7. [Compiling a language (linguist or admin)](#7-compiling-a-language)
 8. [ADMIN ONLY — Parameters](#8-admin-only--parameters)
@@ -24,7 +24,7 @@ Practical guide to using the **PCM-Hub** website (`hub.parametricomparison.unimo
 12. [ADMIN ONLY — Accounts](#12-admin-only--accounts)
 13. [ADMIN ONLY — Table A](#13-admin-only--table-a)
 14. [ADMIN ONLY — Filters (Queries Q1–Q10)](#14-admin-only--filters-queries-q1q10)
-15. [ADMIN ONLY — History & Backups, Migration, Backup Restore, Import Excel, Recompute](#15-admin-only--history-backups-import-recompute)
+15. [ADMIN ONLY — History & Backups, Migration, Backup Restore, Import Excel, Recompute, Legal Documents](#15-admin-only--history-backups-import-recompute)
 16. [Common errors and what to do](#16-common-errors-and-what-to-do)
 17. [Quick interface glossary](#17-quick-interface-glossary)
 
@@ -71,6 +71,12 @@ On your first login **we recommend changing your password**: top-right click **M
 
 ---
 
+### Accepting the Terms of Use and Privacy Notice
+
+The first time you log in — and again whenever a new version of the legal documents is published — a modal pops up asking you to **review and accept the Terms of Use and the Privacy Notice** (with a separate checkbox for the "vexatious clauses", where the law requires it). Until you tick the box(es) and click **Accept**, the only alternative is **Logout**: acceptance is mandatory to use the site. The documents are linked inside the modal so you can read them before accepting.
+
+---
+
 ### Changing the password
 
 From the **My Account** page you have two blocks:
@@ -82,7 +88,9 @@ From the **My Account** page you have two blocks:
 
 ### Forgot the password?
 
-For now **email reset is not yet active** (it requires the SMTP integration from Unimore IT services). In the meantime: contact an administrator, who can reassign you a temporary password by creating a new account or intervening from the panel.
+**Email reset is now active.** On the login page click **Forgot password?** → enter your account email → you'll receive an email with a reset link (valid for 30 minutes). Open it, set a new password, and log in. For privacy, if the address isn't registered the site replies the same way ("if the address exists you'll receive an email"), so it never reveals which addresses exist.
+
+If the email doesn't arrive (check your spam folder) or the link has expired, request a new one or contact an administrator.
 
 ---
 
@@ -120,10 +128,14 @@ All the main pages. The visible items depend on your role:
 | Filters | — | ✓ |
 | Accounts | — | ✓ |
 | History & Backups | — | ✓ |
-| Migration Import | — | ✓ (red = dangerous) |
-| Backup Restore | — | ✓ |
+| Legal Documents | — | ✓ |
+| Migration Import | — | super-admin only (red = dangerous) |
+| Backup Restore | — | super-admin only |
 | Instructions | ✓ | ✓ |
+| Manual | ✓ | ✓ |
 | Glossary | ✓ | ✓ |
+
+> **Super-admin**: two destructive tools — **Migration Import** and **Backup Restore** — are reserved for administrators flagged as *super-admin*. A normal admin doesn't see these two items at all.
 
 The **button at the top of the sidebar** collapses/expands it (useful to gain horizontal space, especially in TableA). The preference is remembered.
 
@@ -133,7 +145,7 @@ The **button at the top of the sidebar** collapses/expands it (useful to gain ho
 
 - **Breadcrumb** on the left: shows the page path (e.g. `Dashboard / Languages / Italian / Data`). Items in **blue** are clickable; items in **grey** are informational only (e.g. dynamic IDs).
 - **MyAccount** on the right: shortcut to the profile page.
-- **Theme toggle (Light/Dark)**: switches the visual theme. The preference is remembered too.
+- **Theme switch (Light/Dark)**: switches the visual theme. The preference is remembered too.
 - **Logout**: ends the session and brings you back to the public home.
 
 ---
@@ -204,7 +216,7 @@ Editable HTML document (powered by TinyMCE) with the compilation guidelines. The
 - specific instructions for **linguistic glosses** with a symbol table (ACC, NOM, GEN, etc.);
 - glossing examples.
 
-Admin only: **Edit** button at top right → WYSIWYG editor with formatting, tables, raw HTML. **Save** persists the document for everyone.
+Admin only: **Edit** button at top right → a visual editor (you see the result as you type) with formatting, tables, and raw HTML if needed. **Save** persists the document for everyone.
 
 ---
 
@@ -234,11 +246,17 @@ Admin only: **Edit** button opens the TinyMCE editor for the citation text.
 
 ---
 
+### Manual (`/manual`)
+
+The page where you download the PDF manuals of PCM-Hub. The list adapts to your role: linguists see the **User manual**, administrators see the **Complete manual** (linguists + administrators), each in **English and Italian**. Every entry has a download button — or a "coming soon" label until that PDF has been published.
+
+---
+
 ## 6. The Languages page
 
 The list of all the languages in the project. **Above** the table there is an **interactive map** (OpenStreetMap) with a pin for each georeferenced language.
 
-### Filters (sticky at the top)
+### Filters (they stay at the top)
 
 ![Languages page toolbar with filters and action buttons](img/manuale/languages-toolbar.png)
 
@@ -253,11 +271,11 @@ To the right of the filters: counter "X of Y languages", and the buttons:
 - **Clear exclusions** (appears if you've manually excluded languages).
 - **Download Data ▾** (admin): opens a menu to export data for the **currently filtered, non-excluded** languages:
     - **Export language metadata (.xlsx)** — ID, name, family, coordinates, etc.
-    - **Export backup (.zip)** — full bundle with all answers and examples for the selected languages (async job: a toast at the bottom-right shows progress).
+    - **Export backup (.zip)** — full bundle with all answers and examples for the selected languages (this runs in the background: a small notification box at the bottom-right shows progress).
     - **Map (.png)** — the current map as an image.
     - **Geographic distances (.txt)** — GCD km matrix between the selected languages.
 - **+ Full Languages Backup** (admin): creates a DB-side snapshot of **all** languages (asks for an optional note). You'll find it later under History & Backups → Full backups.
-- **Recompute final values** (admin): re-runs the implicational DAG for **all** languages. Async job with progress bar. Use after important changes to implicational conditions, or after an import.
+- **Recompute final values** (admin): re-runs the implicational DAG for **all** languages. It runs in the background, with a progress bar. Use after important changes to implicational conditions, or after an import.
 - **Import from Excel** (admin): structured import page.
 - **Add Language** (admin): create a new language manually.
 
@@ -267,13 +285,14 @@ To the right of the filters: counter "X of Y languages", and the buttons:
 
 ![Languages table: main columns and per-row action buttons](img/manuale/languages-table.png)
 
-- **Left checkbox**: toggle "include / exclude" of the language from the effective set (map, distances, exports). Ticking the header excludes/includes all visible languages.
+- **Left checkbox**: includes / excludes the language from the effective set (map, distances, exports). Ticking the box in the header row excludes/includes all visible languages at once.
 - **ID, Name, Status, Top family, Subfamily, Group**.
 - **Actions**:
     - **Data**: opens the compilation page (regular users and admins).
-    - **Duplicate** (admin): duplicates the language with all answers and examples (useful as a template).
+    - **Duplicate** (admin): duplicates the language with all answers and examples (useful as a template). The copy is created with a derived ID that you can change afterwards from **Edit**.
     - **Debug** (admin): opens a page showing `init`/`final` values of every parameter for the language, with the option to **Apply implicational condition(s)** (re-runs the DAG on this single language).
-    - **Edit** (admin): edits the language metadata (name, coordinates, family, etc.).
+    - **Edit** (admin): edits the language metadata (name, coordinates, family, etc.). The **ID itself can be renamed** here: when you change it, the old ID is kept as a *historical alias*, so future backup restores and Excel imports that reference the old ID still match this language.
+    - **Delete** (admin): permanently removes the language. A safety prompt asks you to **type the exact language ID** to confirm. It deletes all of the language's operative data (answers, examples, motivation links, parameter values, its own saved backups and historical ID aliases). It does **not** touch the History audit log (a "delete" event is recorded there), the shared Motivations dictionary, or archived answers from removed questions.
 
 ---
 
@@ -344,7 +363,7 @@ When you click a square you see:
 - header with **ID and name** of the parameter, plus a `short_description`;
 - (admin only) collapsible **Admin notes** area where the admin can write a free-text note for this (language, parameter) pair. The note is not visible to Users and is not exported.
 - **one card per question** in the parameter;
-- at the bottom-right a **floating ("sticky") toolbar** with two save buttons: **Confident → Next** (green) and **Unsure → Next** (red). See below.
+- at the bottom-right a **floating toolbar** (it stays in view as you scroll) with two save buttons: **Confident → Next** (green) and **Unsure → Next** (red). See below.
 
 ---
 
@@ -380,7 +399,7 @@ Useful buttons:
 - **+ Add another example**: adds a fresh empty card for a new example.
 - **Remove**: deletes an example.
 - **Copy**: copies the example to the **internal clipboard** (see below).
-- **+ Import example from another answer...**: server-side search through examples already written for other questions/languages. Find the example (by text / translation / gloss), click it, and it gets **copied as a new example** in this question. **The imported example is an independent copy**: you can edit it freely without affecting the original.
+- **+ Import example from another answer...**: a search through the examples already written for other questions/languages. Find the example (by text / translation / gloss), click it, and it gets **copied as a new example** in this question. **The imported example is an independent copy**: you can edit it freely without affecting the original.
 
 ⚠ **Important rule**: if you answer YES or UNSURE, you **must** provide **at least 2 non-empty examples**. If you try to save with fewer than 2, the system blocks the save with a warning and **highlights** the offending card in red. Same constraint applies to UNSURE.
 
@@ -405,7 +424,7 @@ Handy utility to avoid retyping the same example in multiple questions of the sa
 
 ### Saving a parameter block
 
-At the bottom-right of the current block you see a **floating (sticky) toolbar** with two buttons:
+At the bottom-right of the current block you see a **floating toolbar** (it stays in view as you scroll) with two buttons:
 
 | Button | When to use it |
 |---|---|
@@ -481,12 +500,12 @@ Click the **Edit** button on a row → edit page with:
 - **Long description** (shown in PDFs);
 - **Implicational condition**: string with syntax like `+SPK & -DEM` (see §8.1);
 - **Description of the implicational condition**: textual description;
-- **Active**: active/inactive toggle (an inactive parameter is not offered for compilation and does not show in TableA);
+- **Active**: active/inactive switch (an inactive parameter is not offered for compilation and does not show in TableA);
 - **Change note** (mandatory): why are you making this change. Goes to History.
 
 To the left of the form you also see:
 
-- the list of the parameter's **questions** with reorder drag & drop, and the option to open the question edit drawer directly from here;
+- the list of the parameter's **questions** with reorder drag & drop, and the option to open the question edit panel directly from here;
 - the history of **change notes** (ParameterChangeLog) with author and date.
 
 ---
@@ -583,7 +602,7 @@ Each motivation has:
 
 ### Edits
 
-Standard CRUD. Motivations are never fully "deleted": if used by some answer, their snapshot stays in the archive.
+Standard add / edit / delete. Motivations are never fully "deleted": if used by some answer, their snapshot stays in the archive.
 
 Motivations are **linked to questions** from the [Questions](#9-admin-only--questions) page (field **Allowed motivations**), not from here.
 
@@ -605,7 +624,7 @@ Top Family (e.g. Indo-European)
 
 Drag & drop across levels to reorder. Click a name to edit, "+" to add a child, trash to delete.
 
-⚠ The three strings `top_level_family`, `family`, `grp` on Languages are **denormalized**: they're copied from the taxonomy at language save time. Editing the taxonomy **does not** automatically rename the strings on existing languages — you have to reopen and re-save the language to propagate the change.
+⚠ The three strings `top_level_family`, `family`, `grp` on Languages are a **stored copy**: they're copied from the taxonomy when the language is saved. Editing the taxonomy **does not** automatically rename the strings on existing languages — you have to reopen and re-save the language to propagate the change.
 
 ---
 
@@ -665,7 +684,7 @@ Page: **Sidebar > Table A** (`/tablea`).
 - **Params** (default): rows = parameters.
 - **Questions**: rows = individual questions.
 
-Toggle at the top.
+Switch at the top.
 
 ---
 
@@ -676,6 +695,12 @@ Toggle at the top.
 - **Questions**: template, stop question (visible only in Questions mode).
 
 After choosing filters, click **Apply** (or equivalent) to recompute the matrix.
+
+---
+
+### Search
+
+Above the matrix there is a **text search** box that filters the visible rows (parameters or questions) instantly as you type, on top of the filters you applied above. Handy to jump to a specific parameter/question ID or label without changing the active filters. Clearing the box — or switching between Params and Questions mode — resets the search.
 
 ---
 
@@ -698,7 +723,7 @@ Beyond filters, **each table row** has a checkbox: lets you further restrict the
 - **PCA (.png)** — principal components analysis.
 - **Mantel test (.zip)** — modal with three checkboxes (GCD, Hamming, Jaccard) to choose which matrices to correlate. Output: correlation tables + plots.
 
-⚠ Distances and clusters are meaningful only on sufficiently large and homogeneous sets. Languages without coordinates are excluded from geographic distances and the export's `X-Skipped-Languages` header lists them.
+⚠ Distances and clusters are meaningful only on sufficiently large and homogeneous sets. Languages without coordinates are excluded from geographic distances, and the export reports which ones were skipped.
 
 ---
 
@@ -732,6 +757,8 @@ It's the **DAG debug view**: pick a language and a neutralized parameter, and yo
 - whether the condition is satisfied or not;
 - the list of linguist Answers that contributed to each ref's `value_orig`.
 
+Each `ref` is also tagged with its **state**. A special **"NO ANSWERS"** tag marks the refs that have *no contributing answers at all*, so you can tell apart "neutralized because the ref is genuinely `−`/`0`" from "we simply don't have data on that ref yet".
+
 Useful to understand **why** a particular parameter is not being compared in a particular language.
 
 ---
@@ -758,7 +785,7 @@ Table of **all changes** to *non-Answer* entities in the system: `parameter`, `q
 
 Available filters: **Entity type** (dropdown), **Entity ID** (e.g. `FGM`, `FGM_01`), **Operation** (create / update / delete), **Source** (manual = panel edit, excel_import = arrived from an Excel import, system = generated by the app), **User** (who did it), **From / To** (date range), **Text search** (searches the ID or note). The **Reset** button clears all filters, **Apply filters** re-runs the query.
 
-Click **Open** on a row (or the row itself) → a **side drawer** opens with the **before/after diff**: for each modified field, the old value in red on the left and the new in green on the right, plus a collapsible full snapshot at the bottom.
+Click **Open** on a row (or the row itself) → a **side panel** slides in with a **before/after comparison**: for each modified field, the old value in red on the left and the new in green on the right, plus a collapsible full snapshot at the bottom.
 
 #### "Answer changes" tab
 
@@ -766,13 +793,13 @@ Click **Open** on a row (or the row itself) → a **side drawer** opens with the
 
 The "Answer-focused" version of the same table. Every time a linguist (or admin) clicks **Confident → Next** or **Unsure → Next** in a parameter block, a row appears here for every touched answer. Designed to answer "when did user X put YES on question FGM_Qb for Italian?" or "who changed the French answer for parameter SPK on day Y?".
 
-Same experience as the other tab: filters, table, click a row → drawer with diff. The split exists only because Answers change much more frequently than other entities (every block save) and mixing them with parameters/questions would make the "Change history" tab unreadable.
+Same experience as the other tab: filters, table, click a row → side panel with the comparison. The split exists only because Answers change much more frequently than other entities (every block save) and mixing them with parameters/questions would make the "Change history" tab unreadable.
 
 #### "Full backups (languages & parameters)" tab
 
 ![Full backups tab: Languages / Parameters sub-tabs, "Create global languages backup" card with optional Note and "+ Create languages backup now" button, and table of saved backups](img/manuale/history-backups.png)
 
-List of **complete snapshots** of the system, grouped by timestamp. Sub-tabs **Languages** or **Parameters** (toggle at the top), selecting two different snapshot types:
+List of **complete snapshots** of the system, grouped by date and time. Sub-tabs **Languages** or **Parameters** (switch at the top), selecting two different snapshot types:
 
 - **Language backups** are created from [Languages → + Full Languages Backup](#6-the-languages-page) and contain all languages with answers and examples at the moment of capture.
 - **Parameter backups** are created from [Parameters → + Full Parameters Backup](#8-admin-only--parameters) and contain the state of all parameters (definitions, implicational conditions, descriptions) at capture time.
@@ -791,11 +818,11 @@ Useful when you have to demonstrate to a reviewer "the original linguistic data 
 
 ---
 
-### Migration Import (`/admin/migration-import`) — dangerous
+### Migration Import (`/admin/migration-import`) — super-admin only, dangerous
 
 ![Restore Database (Migration Import) page: red "Destructive operation" warning that with `wipe` enabled all data tables are deleted, and "Expected bundle content" block with the ZIP file structure](img/manuale/migration.png)
 
-⚠ Item shown in **red** in the sidebar because it can **wipe the database**.
+⚠ Visible **only to super-admins**, and shown in **red** in the sidebar because it can **wipe the database**.
 
 Used to import the **legacy site's ZIP bundle** (Django legacy) during go-live. Typical procedure (see `DEPLOY_PROCEDURA.txt`):
 
@@ -808,11 +835,11 @@ Used to import the **legacy site's ZIP bundle** (Django legacy) during go-live. 
 
 After import the admin password is **reset to `ADMIN_PASSWORD`** from the Portainer env vars (change the password **after** the import, not before).
 
-Validation: 200MB cap on the ZIP, anti-zip-bomb, path-traversal checks on file names.
+Validation: the ZIP is capped at 200 MB and goes through safety checks on its size and on the names of the files inside it.
 
 ---
 
-### Backup Restore (`/admin/backup-restore`)
+### Backup Restore (`/admin/backup-restore`) — super-admin only
 
 ![Backup Restore page: description of accepted bundle, "Backup ZIP file" file picker, "Wipe data tables before restore" checkbox, Start restore and "← Need Migration Import instead?" buttons](img/manuale/backup-restore.png)
 
@@ -824,7 +851,7 @@ Restore of a **ZIP bundle exported** from [Languages → Download Data → Expor
 
 ![Import from Excel page: Strategy block (Schema strict update / Database_model full replace / Cascading errors), File picker for Excel file, Start Import and Cancel buttons](img/manuale/import-excel.png)
 
-Structured Excel import. 50 MB cap on the file. The sheet must follow the round-trip format ([documentation_en.md](documentation_en.md) §10.4).
+Structured Excel import. 50 MB cap on the file. The sheet must follow the same format produced by the Excel export ([documentation_en.md](documentation_en.md) §10.4).
 
 ---
 
@@ -838,7 +865,20 @@ Re-runs the **implicational DAG** for **all** languages in the system. Use:
 - after a bulk import;
 - if you suspect some `value_eval` is stale.
 
-It's an async job (can take minutes on large datasets). Toast at the bottom-right shows progress. When done: "Recompute complete" message, or "Recompute completed with N error(s) over M language(s). See server logs for details" if some language has problems.
+It runs in the background (it can take a few minutes on large datasets). A small notification box at the bottom-right shows progress. When done: "Recompute complete" message, or "Recompute completed with N error(s) over M language(s). See server logs for details" if some language has problems.
+
+---
+
+### Legal Documents (`/admin/legal-documents`)
+
+Where an admin manages the versions of the **Terms of Use** and the **Privacy Notice**. Uploading a new PDF for a document type publishes it as the **current** version for everyone — and triggers, on their next login, the acceptance modal described in §2.
+
+The page has:
+
+- two **upload** cards, one per document type (Terms of Use, Privacy Notice);
+- an **All versions** table listing every version with its **Type**, **Version**, **Published** date, **Status** (current / superseded) and a link to the **File**.
+
+Older versions are kept (never overwritten), so the record of "who accepted which version" stays intact.
 
 ---
 
@@ -858,7 +898,7 @@ Another user (usually an admin) modified the same block while you were working o
 
 ### "Wrong email or password"
 
-Wrong credentials. If you don't remember: contact an admin (email reset is not yet active).
+Wrong credentials. If you don't remember the password, use **Forgot password?** on the login page to receive a reset link by email.
 
 ### "Too Many Requests" at login
 
@@ -889,7 +929,7 @@ Token expired (30 min of inactivity). Log in again.
 
 ### I changed the taxonomy but languages still show the old names
 
-The `top_family`/`family`/`group` strings on languages are denormalized. Reopen each affected language and Save (even without changing anything) to propagate the new names. To do this in bulk: use Excel export/import.
+The `top_family`/`family`/`group` strings on languages are a stored copy taken from the taxonomy. Reopen each affected language and Save (even without changing anything) to propagate the new names. To do this in bulk: use Excel export/import.
 
 ---
 
@@ -906,6 +946,7 @@ The `top_family`/`family`/`group` strings on languages are denormalized. Reopen 
 | **Approved / Rejected / Pending / Waiting** | the 4 states of a language |
 | **Admin override** | the purple banner reminding the admin they're editing a locked language |
 | **Force status** | the admin dropdown to override a language's status bypassing the workflow |
+| **Super-admin** | an administrator with extra privileges — the only role that can access Migration Import and Backup Restore |
 | **Implicational DAG** | the parameter dependency graph (`+SPK & -DEM`) deciding whether a value should be neutralized |
 | **value_orig vs value_eval** | `orig` = aggregated from the linguist's answers; `eval` = `orig` post-DAG (can be `0` if neutralized) |
 | **Comparable** | a parameter is "comparable" between two languages if both have a non-null `value_eval` |

@@ -14,7 +14,7 @@ Guida pratica all'uso del sito **PCM-Hub** (`hub.parametricomparison.unimore.it`
 2. [Accedere al sito](#2-accedere-al-sito)
 3. [Orientarsi: sidebar, topbar, breadcrumb](#3-orientarsi-sidebar-topbar-breadcrumb)
 4. [La Dashboard](#4-la-dashboard)
-5. [Pagine condivise: Glossary, Instructions, How to cite, My Account](#5-pagine-condivise)
+5. [Pagine condivise: Glossary, Instructions, How to cite, Manual, My Account](#5-pagine-condivise)
 6. [La pagina Languages](#6-la-pagina-languages)
 7. [Compilare una lingua (linguista o admin)](#7-compilare-una-lingua)
 8. [SOLO ADMIN — Parameters](#8-solo-admin--parameters)
@@ -24,7 +24,7 @@ Guida pratica all'uso del sito **PCM-Hub** (`hub.parametricomparison.unimore.it`
 12. [SOLO ADMIN — Accounts](#12-solo-admin--accounts)
 13. [SOLO ADMIN — Table A](#13-solo-admin--table-a)
 14. [SOLO ADMIN — Filters (Queries Q1–Q10)](#14-solo-admin--filters-queries-q1q10)
-15. [SOLO ADMIN — History & Backups, Migration, Backup Restore, Import Excel, Recompute](#15-solo-admin--history-backups-import-recompute)
+15. [SOLO ADMIN — History & Backups, Migration, Backup Restore, Import Excel, Recompute, Legal Documents](#15-solo-admin--history-backups-import-recompute)
 16. [Errori comuni e cosa fare](#16-errori-comuni-e-cosa-fare)
 17. [Glossario rapido di interfaccia](#17-glossario-rapido-di-interfaccia)
 
@@ -71,6 +71,12 @@ Al primo login **ti consigliamo di cambiare la password**: in alto a destra clic
 
 ---
 
+### Accettare Terms of Use e Privacy Notice
+
+Al primo accesso — e di nuovo ogni volta che viene pubblicata una nuova versione dei documenti legali — compare un modale che ti chiede di **leggere e accettare i Terms of Use e la Privacy Notice** (con una checkbox separata per le "clausole vessatorie", dove la legge lo richiede). Finché non spunti la/e casella/e e clicchi **Accept**, l'unica alternativa è **Logout**: l'accettazione è obbligatoria per usare il sito. I documenti sono linkati dentro il modale così puoi leggerli prima di accettare.
+
+---
+
 ### Cambiare password
 
 Dalla pagina **My Account** trovi due blocchi:
@@ -82,7 +88,9 @@ Dalla pagina **My Account** trovi due blocchi:
 
 ### Dimenticato la password?
 
-Al momento il **reset via email non è ancora attivo** (ci vorrà l'integrazione SMTP dei servizi informatici Unimore). Nel frattempo: contatta un amministratore, che può riassegnarti una password temporanea creando un nuovo account o intervenendo dal pannello.
+**Il reset via email è ora attivo.** Nella pagina di login clicca **Forgot password?** → inserisci l'email del tuo account → ricevi una mail con un link di reset (valido 30 minuti). Aprila, imposta una nuova password e accedi. Per privacy, se l'indirizzo non è registrato il sito risponde comunque allo stesso modo ("se l'indirizzo esiste riceverai una mail"), così non rivela mai quali indirizzi esistono.
+
+Se la mail non arriva (controlla lo spam) o il link è scaduto, richiedine uno nuovo o contatta un amministratore.
 
 ---
 
@@ -120,10 +128,14 @@ Tutte le pagine principali. Le voci che vedi dipendono dal tuo ruolo:
 | Filters | — | ✓ |
 | Accounts | — | ✓ |
 | History & Backups | — | ✓ |
-| Migration Import | — | ✓ (danger zone) |
-| Backup Restore | — | ✓ |
+| Legal Documents | — | ✓ |
+| Migration Import | — | solo super-admin (danger zone) |
+| Backup Restore | — | solo super-admin |
 | Instructions | ✓ | ✓ |
+| Manual | ✓ | ✓ |
 | Glossary | ✓ | ✓ |
+
+> **Super-admin**: due strumenti distruttivi — **Migration Import** e **Backup Restore** — sono riservati agli amministratori con il flag *super-admin*. Un admin normale non vede affatto queste due voci.
 
 Il **bottone in alto della sidebar** la collassa/espande (utile per recuperare spazio orizzontale, soprattutto in TableA). La preferenza viene ricordata.
 
@@ -133,7 +145,7 @@ Il **bottone in alto della sidebar** la collassa/espande (utile per recuperare s
 
 - **Breadcrumb** a sinistra: mostra il percorso della pagina (es. `Dashboard / Languages / Italiano / Data`). Le voci cliccabili in **azzurro** sono navigabili; quelle in **grigio** sono solo informative (es. ID dinamici).
 - **MyAccount** a destra: shortcut alla pagina del profilo.
-- **Toggle tema (Light/Dark)**: cambia il tema visivo. Anche questa preferenza è ricordata.
+- **Interruttore tema (Light/Dark)**: cambia il tema visivo. Anche questa preferenza è ricordata.
 - **Logout**: termina la sessione e ti riporta alla home pubblica.
 
 ---
@@ -204,7 +216,7 @@ Documento HTML editabile (powered by TinyMCE) con le linee guida per la compilaz
 - istruzioni specifiche per le **glosse linguistiche** con tabella dei simboli (ACC, NOM, GEN, ecc.);
 - esempi di glossing.
 
-Solo admin: pulsante **Edit** in alto a destra → editor WYSIWYG con formattazione, tabelle, codice HTML raw. **Save** persiste il documento per tutti.
+Solo admin: pulsante **Edit** in alto a destra → un editor visuale (vedi il risultato mentre scrivi) con formattazione, tabelle e, se serve, codice HTML. **Save** persiste il documento per tutti.
 
 ---
 
@@ -234,11 +246,17 @@ Solo admin: pulsante **Edit** che apre l'editor TinyMCE per modificare il testo 
 
 ---
 
+### Manual (`/manual`)
+
+La pagina da cui scarichi i manuali PDF del PCM-Hub. L'elenco si adatta al tuo ruolo: i linguisti vedono il **Manuale utente**, gli amministratori il **Manuale completo** (linguisti + amministratori), ciascuno in **italiano e inglese**. Ogni voce ha un pulsante di download — o un'etichetta "coming soon" finché quel PDF non è stato pubblicato.
+
+---
+
 ## 6. La pagina Languages
 
 L'elenco di tutte le lingue del progetto. **Sopra** alla tabella c'è una **mappa interattiva** (OpenStreetMap) con un pin per ogni lingua georeferenziata.
 
-### Filtri (sticky in alto)
+### Filtri (restano in alto)
 
 ![Toolbar della pagina Languages con filtri e pulsanti di azione](img/manuale/languages-toolbar.png)
 
@@ -253,11 +271,11 @@ A destra dei filtri: contatore "X di Y lingue", e i pulsanti:
 - **Clear exclusions** (compare se hai escluso lingue manualmente).
 - **Download Data ▾** (admin): apre un menù per esportare i dati delle lingue **attualmente filtrate e non escluse**:
     - **Export language metadata (.xlsx)** — ID, nome, famiglia, coordinate, ecc.
-    - **Export backup (.zip)** — bundle completo con tutte le risposte e gli esempi delle lingue selezionate (job asincrono: appare un toast in basso a destra che mostra il progresso).
+    - **Export backup (.zip)** — bundle completo con tutte le risposte e gli esempi delle lingue selezionate (l'operazione gira in background: appare un piccolo avviso in basso a destra che mostra il progresso).
     - **Map (.png)** — la mappa attuale come immagine.
     - **Geographic distances (.txt)** — matrice GCD in km tra le lingue selezionate.
 - **+ Full Languages Backup** (admin): crea uno snapshot in DB di **tutte** le lingue (richiede una nota opzionale). Lo trovi poi in History & Backups → Full backups.
-- **Recompute final values** (admin): rilancia il DAG implicazionale per **tutte** le lingue. Job asincrono con barra di progresso. Da usare dopo aver modificato condizioni implicazionali importanti, o dopo un import.
+- **Recompute final values** (admin): rilancia il DAG implicazionale per **tutte** le lingue. Gira in background, con una barra di progresso. Da usare dopo aver modificato condizioni implicazionali importanti, o dopo un import.
 - **Import from Excel** (admin): pagina di import strutturato.
 - **Add Language** (admin): crea una nuova lingua a mano.
 
@@ -267,13 +285,14 @@ A destra dei filtri: contatore "X di Y lingue", e i pulsanti:
 
 ![Tabella delle lingue: colonne principali e pulsanti azione per ogni riga](img/manuale/languages-table.png)
 
-- **Checkbox a sinistra**: toggle "include / esclude" la lingua dal set effettivo (mappa, distanze, export). Spuntando l'header tutte le lingue visibili vengono escluse/incluse insieme.
+- **Checkbox a sinistra**: include / esclude la lingua dal set effettivo (mappa, distanze, export). Spuntando la casella nella riga di intestazione, tutte le lingue visibili vengono escluse/incluse insieme.
 - **ID, Name, Status, Top family, Subfamily, Group**.
 - **Actions**:
     - **Data**: apre la pagina di compilazione (utenti normali e admin).
-    - **Duplicate** (admin): duplica la lingua con tutte le risposte e gli esempi (utile come template).
+    - **Duplicate** (admin): duplica la lingua con tutte le risposte e gli esempi (utile come template). La copia nasce con un ID derivato che puoi poi cambiare da **Edit**.
     - **Debug** (admin): apre una pagina che mostra valori `init`/`final` di ogni parametro per la lingua, con possibilità di **Apply implicational condition(s)** (rilancia DAG sulla singola lingua).
-    - **Edit** (admin): modifica i metadati della lingua (nome, coordinate, family, ecc.).
+    - **Edit** (admin): modifica i metadati della lingua (nome, coordinate, family, ecc.). Qui si può **rinominare anche l'ID**: quando lo cambi, il vecchio ID viene conservato come *alias storico*, così i futuri restore di backup e import Excel che citano il vecchio ID continuano a corrispondere a questa lingua.
+    - **Delete** (admin): rimuove definitivamente la lingua. Un prompt di sicurezza ti chiede di **digitare l'ID esatto** per confermare. Cancella tutti i dati operativi della lingua (risposte, esempi, link alle motivations, valori dei parametri, i suoi backup salvati e gli alias storici dell'ID). **Non** tocca lo History audit log (vi viene registrato un evento "delete"), il dizionario condiviso delle Motivations, né le risposte archiviate da domande rimosse.
 
 ---
 
@@ -344,7 +363,7 @@ Quando clicchi su un quadratino vedi:
 - intestazione con **ID e nome** del parametro, più una `short_description`;
 - (solo admin) area collassabile **Admin notes** dove l'admin può scrivere una nota libera per questa coppia (lingua, parametro). La nota non è visibile agli User e non viene esportata.
 - **una card per ogni domanda** del parametro;
-- in basso a destra una **toolbar fluttuante** ("sticky") con due pulsanti di salvataggio: **Confident → Next** (verde) e **Unsure → Next** (rosso). Vedi sotto.
+- in basso a destra una **toolbar fluttuante** (resta in vista mentre scorri) con due pulsanti di salvataggio: **Confident → Next** (verde) e **Unsure → Next** (rosso). Vedi sotto.
 
 ---
 
@@ -380,7 +399,7 @@ Pulsanti utili:
 - **+ Add another example**: aggiunge una card vuota per un nuovo esempio.
 - **Remove**: cancella un esempio.
 - **Copy**: copia l'esempio nella **clipboard interna del sito** (vedi sotto).
-- **+ Import example from another answer...**: ricerca server-side nel database degli esempi già scritti per altre domande/lingue. Trova l'esempio cercato (per testo / traduzione / gloss), cliccalo, e viene **copiato come nuovo esempio** in questa domanda. **L'esempio importato è una copia indipendente**: puoi modificarlo liberamente senza toccare l'originale.
+- **+ Import example from another answer...**: una ricerca tra gli esempi già scritti per altre domande/lingue. Trova l'esempio cercato (per testo / traduzione / gloss), cliccalo, e viene **copiato come nuovo esempio** in questa domanda. **L'esempio importato è una copia indipendente**: puoi modificarlo liberamente senza toccare l'originale.
 
 ⚠ **Regola importante**: se rispondi YES o UNSURE, **devi** fornire **almeno 2 esempi non vuoti**. Se provi a salvare con meno di 2, il sistema blocca il save mostrando un avviso e **evidenziando in rosso** la card incriminata. Stesso vincolo vale per UNSURE.
 
@@ -405,7 +424,7 @@ Pratica utility per non riscrivere a mano lo stesso esempio in più domande dell
 
 ### Salvare un blocco parametro
 
-In basso a destra del blocco corrente vedi una **toolbar fluttuante** (sticky) con due pulsanti:
+In basso a destra del blocco corrente vedi una **toolbar fluttuante** (resta in vista mentre scorri) con due pulsanti:
 
 | Pulsante | Quando usarlo |
 |---|---|
@@ -481,12 +500,12 @@ Click sul pulsante **Edit** della riga → pagina di edit con:
 - **Long description** (mostrata in PDF);
 - **Implicational condition**: stringa con sintassi tipo `+SPK & -DEM` (vedi §8.1);
 - **Description of the implicational condition**: descrizione testuale;
-- **Active**: toggle attivo/disattivo (un parametro disattivo non è proposto in compilazione né compare in TableA);
+- **Active**: interruttore attivo/disattivo (un parametro disattivo non è proposto in compilazione né compare in TableA);
 - **Change note** (obbligatorio): perché stai facendo questa modifica. Va in History.
 
 A sinistra del form vedi anche:
 
-- la lista delle **domande del parametro** con drag & drop di riordino, e la possibilità di aprire il drawer di edit di una domanda direttamente da qui;
+- la lista delle **domande del parametro** con drag & drop di riordino, e la possibilità di aprire il pannello di modifica di una domanda direttamente da qui;
 - la cronologia delle **change notes** (ParameterChangeLog) con autore e data.
 
 ---
@@ -583,7 +602,7 @@ Ogni motivation ha:
 
 ### Modifiche
 
-CRUD standard. Le motivations non si "cancellano" mai del tutto: se sono state usate da qualche risposta, il loro snapshot resta nell'archivio.
+Aggiunta / modifica / cancellazione standard. Le motivations non si "cancellano" mai del tutto: se sono state usate da qualche risposta, il loro snapshot resta nell'archivio.
 
 Le motivations vengono **collegate alle domande** dalla pagina [Questions](#9-solo-admin--questions) (campo **Allowed motivations**), non da qui.
 
@@ -605,7 +624,7 @@ Top Family (es. Indo-European)
 
 Drag & drop tra livelli per riordinare. Click su un nome per editarlo, "+" per aggiungere un figlio, cestino per cancellare.
 
-⚠ Le tre stringhe `top_level_family`, `family`, `grp` sulle Languages sono **denormalizzate**: vengono ricopiate dal taxonomy al save di una lingua. Modificare il taxonomy **non** rinomina automaticamente le stringhe sulle lingue esistenti — ti tocca riaprire e risalvare la lingua per propagare il cambio.
+⚠ Le tre stringhe `top_level_family`, `family`, `grp` sulle Languages sono una **copia salvata**: vengono ricopiate dal taxonomy quando si salva una lingua. Modificare il taxonomy **non** rinomina automaticamente le stringhe sulle lingue esistenti — ti tocca riaprire e risalvare la lingua per propagare il cambio.
 
 ---
 
@@ -665,7 +684,7 @@ La **TableA** è la matrice fondamentale del progetto: **una lingua per colonna,
 - **Params** (default): righe = parametri.
 - **Questions**: righe = singole domande.
 
-Toggle in alto.
+Interruttore in alto.
 
 ---
 
@@ -676,6 +695,12 @@ Toggle in alto.
 - **Domande**: template, stop question (visibili solo in modalità Questions).
 
 Dopo aver scelto i filtri, clicca **Apply** (o equivalente) per ricalcolare la matrice.
+
+---
+
+### Search
+
+Sopra la matrice c'è una casella di **ricerca testuale** che filtra le righe visibili (parametri o domande) all'istante mentre digiti, in aggiunta ai filtri che hai applicato sopra. Comoda per saltare a un ID o a un'etichetta di parametro/domanda senza toccare i filtri attivi. Svuotando la casella — o passando tra modalità Params e Questions — la ricerca si azzera.
 
 ---
 
@@ -698,7 +723,7 @@ Dropdown **Download / Analysis ▾** in alto:
 - **PCA (.png)** — analisi delle componenti principali.
 - **Mantel test (.zip)** — modale con tre checkbox (GCD, Hamming, Jaccard) per scegliere quali matrici correlare. Output: tabelle di correlazione + grafici.
 
-⚠ Le distanze e i cluster sono significativi solo su set sufficientemente grandi e omogenei. Le lingue senza coordinate vengono escluse dalle distanze geografiche e l'header `X-Skipped-Languages` dell'export elenca quali.
+⚠ Le distanze e i cluster sono significativi solo su set sufficientemente grandi e omogenei. Le lingue senza coordinate vengono escluse dalle distanze geografiche, e l'export segnala quali sono state saltate.
 
 ---
 
@@ -732,6 +757,8 @@ Pagina: **Sidebar > Filters** (`/queries`).
 - se la condizione è soddisfatta o no;
 - la lista delle Answer del linguista che hanno contribuito al `value_orig` di ogni ref.
 
+Ogni `ref` è inoltre etichettato con il suo **stato**. Un'etichetta speciale **"NO ANSWERS"** segnala i ref che *non hanno alcuna risposta che vi contribuisce*, così distingui "neutralizzato perché il ref è davvero `−`/`0`" da "semplicemente non abbiamo ancora dati su quel ref".
+
 Utile per capire **perché** un certo parametro non viene confrontato in una certa lingua.
 
 ---
@@ -758,7 +785,7 @@ Tabella di **tutte le modifiche** alle entità *non-Answer* del sistema: `parame
 
 Filtri disponibili: **Entity type** (tendina), **Entity ID** (es. `FGM`, `FGM_01`), **Operation** (create / update / delete), **Source** (manual = modifica dal pannello, excel_import = arrivata da un import Excel, system = generata dall'app), **User** (chi l'ha fatta), **From / To** (intervallo di date), **Text search** (cerca nell'ID o nella note). I pulsanti **Reset** azzera tutti i filtri, **Apply filters** rilancia la query.
 
-Click sul pulsante **Open** di una riga (o sulla riga stessa) → si apre un **drawer laterale** con il **diff prima/dopo**: per ogni campo modificato, il valore vecchio in rosso a sinistra e quello nuovo in verde a destra, più uno snapshot completo collassabile in fondo.
+Click sul pulsante **Open** di una riga (o sulla riga stessa) → si apre un **pannello laterale** con il **confronto prima/dopo**: per ogni campo modificato, il valore vecchio in rosso a sinistra e quello nuovo in verde a destra, più uno snapshot completo collassabile in fondo.
 
 #### Tab "Answer changes"
 
@@ -766,13 +793,13 @@ Click sul pulsante **Open** di una riga (o sulla riga stessa) → si apre un **d
 
 Versione "focalizzata sulle Answer" della stessa tabella. Ogni volta che un linguista (o un admin) clicca **Confident → Next** o **Unsure → Next** in un blocco parametro, qui compare una riga per ogni risposta toccata. Pensata per rispondere a "quando l'utente X ha messo YES alla domanda FGM_Qb per la lingua Italian?" o "chi ha cambiato la risposta della lingua francese per il parametro SPK il giorno tot?".
 
-Stessa esperienza dell'altra tab: filtri, tabella, click su una riga → drawer con diff. La separazione esiste solo perché le Answer cambiano molto più spesso delle altre entità (ogni save di un blocco) e mescolarle con i parametri/domande renderebbe la tab "Change history" illeggibile.
+Stessa esperienza dell'altra tab: filtri, tabella, click su una riga → pannello laterale con il confronto. La separazione esiste solo perché le Answer cambiano molto più spesso delle altre entità (ogni save di un blocco) e mescolarle con i parametri/domande renderebbe la tab "Change history" illeggibile.
 
 #### Tab "Full backups (languages & parameters)"
 
 ![Tab Full backups: sotto-tab Languages / Parameters, card "Create global languages backup" con Note opzionale e pulsante "+ Create languages backup now", e tabella dei backup salvati](img/manuale/history-backups.png)
 
-Lista degli **snapshot completi** del sistema, raggruppati per timestamp. Sotto-tab **Languages** o **Parameters** (toggle in alto), che selezionano due tipi diversi di snapshot:
+Lista degli **snapshot completi** del sistema, raggruppati per data e ora. Sotto-tab **Languages** o **Parameters** (interruttore in alto), che selezionano due tipi diversi di snapshot:
 
 - I **backup languages** sono creati da [Languages → + Full Languages Backup](#6-la-pagina-languages) e contengono tutte le lingue con risposte ed esempi al momento dello scatto.
 - I **backup parameters** sono creati da [Parameters → + Full Parameters Backup](#8-solo-admin--parameters) e contengono lo stato di tutti i parametri (definizioni, condizioni implicazionali, descrizioni) al momento dello scatto.
@@ -791,11 +818,11 @@ Utile per chi deve dimostrare a un revisore "i dati linguistici originali esisto
 
 ---
 
-### Migration Import (`/admin/migration-import`) — pericoloso
+### Migration Import (`/admin/migration-import`) — solo super-admin, pericoloso
 
 ![Pagina Restore Database (Migration Import): box rosso "Operazione distruttiva" con l'avviso che con `wipe` attivo cancella tutte le tabelle dati, e blocco "Contenuto atteso del bundle" con la struttura del file ZIP](img/manuale/migration.png)
 
-⚠ Voce in **rosso** nella sidebar perché può **cancellare il database**.
+⚠ Visibile **solo ai super-admin**, e mostrata in **rosso** nella sidebar perché può **cancellare il database**.
 
 Serve a importare il **bundle ZIP del sito vecchio** (Django legacy) durante il go-live. Procedura tipica (vedi `DEPLOY_PROCEDURA.txt`):
 
@@ -808,11 +835,11 @@ Serve a importare il **bundle ZIP del sito vecchio** (Django legacy) durante il 
 
 A fine import la password admin viene **riportata al valore di `ADMIN_PASSWORD`** delle env di Portainer (cambiala dopo l'import, non prima).
 
-Validazione: cap 200MB sullo ZIP, anti-zip-bomb e check path-traversal sui nomi dei file.
+Validazione: lo ZIP è limitato a 200 MB e passa controlli di sicurezza sulla dimensione e sui nomi dei file al suo interno.
 
 ---
 
-### Backup Restore (`/admin/backup-restore`)
+### Backup Restore (`/admin/backup-restore`) — solo super-admin
 
 ![Pagina Backup Restore: descrizione del bundle accettato, file picker "Backup ZIP file", checkbox "Wipe data tables before restore", pulsanti Start restore e "← Need Migration Import instead?"](img/manuale/backup-restore.png)
 
@@ -824,7 +851,7 @@ Restore di un **bundle ZIP esportato** da [Languages → Download Data → Expor
 
 ![Pagina Import from Excel: blocco Strategy (Schema strict update / Database_model full replace / Cascading errors), file picker File Excel, pulsanti Start Import e Cancel](img/manuale/import-excel.png)
 
-Import strutturato da Excel. Cap 50 MB sul file. Il foglio deve seguire il formato del round-trip ([documentation_it.md](documentation_it.md) §10.4).
+Import strutturato da Excel. Cap 50 MB sul file. Il foglio deve seguire lo stesso formato prodotto dall'export Excel ([documentation_it.md](documentation_it.md) §10.4).
 
 ---
 
@@ -838,7 +865,20 @@ Rilancia il **DAG implicazionale** per **tutte** le lingue del sistema. Da usare
 - dopo un import bulk;
 - se sospetti che qualche `value_eval` sia stale.
 
-È un job asincrono (può richiedere minuti su dataset grossi). Toast in basso a destra mostra il progresso. Quando finisce: messaggio "Recompute complete" o "Recompute completed with N error(s) over M language(s). See server logs for details" se qualche lingua ha problemi.
+Gira in background (può richiedere qualche minuto su dataset grossi). Un piccolo avviso in basso a destra mostra il progresso. Quando finisce: messaggio "Recompute complete" o "Recompute completed with N error(s) over M language(s). See server logs for details" se qualche lingua ha problemi.
+
+---
+
+### Legal Documents (`/admin/legal-documents`)
+
+Dove un admin gestisce le versioni dei **Terms of Use** e della **Privacy Notice**. Caricando un nuovo PDF per un tipo di documento, questo viene pubblicato come versione **corrente** per tutti — e fa scattare, al login successivo, il modale di accettazione descritto in §2.
+
+La pagina ha:
+
+- due card di **upload**, una per tipo di documento (Terms of Use, Privacy Notice);
+- una tabella **All versions** che elenca ogni versione con **Type**, **Version**, data di **Published**, **Status** (corrente / superata) e un link al **File**.
+
+Le versioni precedenti vengono conservate (mai sovrascritte), così resta intatta la tracciabilità di "chi ha accettato quale versione".
 
 ---
 
@@ -858,7 +898,7 @@ Un altro utente (di solito un admin) ha modificato lo stesso blocco mentre lavor
 
 ### "Wrong email or password"
 
-Le credenziali sono errate. Se non ricordi: contatta un admin (il reset via email non è ancora attivo).
+Le credenziali sono errate. Se non ricordi la password, usa **Forgot password?** nella pagina di login per ricevere un link di reset via email.
 
 ### "Too Many Requests" al login
 
@@ -889,7 +929,7 @@ Token scaduto (30 min di inattività). Fai login di nuovo.
 
 ### Ho cambiato il taxonomy ma le lingue mostrano ancora i vecchi nomi
 
-Le stringhe `top_family`/`family`/`group` sulle lingue sono denormalizzate. Riapri ogni lingua interessata e fai un Save (anche senza cambiare nulla) per propagare i nuovi nomi. Per fare questo in massa: usa l'export Excel, modifica e ri-importa.
+Le stringhe `top_family`/`family`/`group` sulle lingue sono una copia salvata presa dal taxonomy. Riapri ogni lingua interessata e fai un Save (anche senza cambiare nulla) per propagare i nuovi nomi. Per fare questo in massa: usa l'export Excel, modifica e ri-importa.
 
 ---
 
@@ -906,6 +946,7 @@ Le stringhe `top_family`/`family`/`group` sulle lingue sono denormalizzate. Riap
 | **Approved / Rejected / Pending / Waiting** | i 4 stati di una lingua |
 | **Admin override** | il banner viola che ricorda all'admin che sta editando una lingua bloccata |
 | **Force status** | il dropdown admin per forzare lo stato di una lingua bypassando il workflow |
+| **Super-admin** | un amministratore con privilegi extra — l'unico che può accedere a Migration Import e Backup Restore |
 | **DAG implicazionale** | il grafo di dipendenze tra parametri (`+SPK & -DEM`) che decide se un valore va neutralizzato |
 | **value_orig vs value_eval** | `orig` = aggregato dalle risposte del linguista; `eval` = `orig` post-DAG (può essere `0` se neutralizzato) |
 | **Comparable** | un parametro è "comparable" tra due lingue se entrambe hanno un `value_eval` non nullo |
