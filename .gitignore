@@ -37,6 +37,13 @@ Thumbs.db
 *.log
 logs/
 
+# ---- Tooling locale del manuale (NON committare) ----
+# tools/manual/ contiene gli script di generazione manuali (build.mjs,
+# screenshots.mjs) e screenshots.mjs ha credenziali admin in chiaro nel
+# blocco CONFIG. Nel repo finiscono SOLO i 4 PDF finali (frontend/public/docs/),
+# mai il tooling che li produce.
+tools/
+
 # ---- Documentazione ----
 # I markdown sono ora committati per essere serviti da GitHub Pages (MkDocs).
 # Gli screenshot del manuale restano locali per non appesantirli: se in futuro
