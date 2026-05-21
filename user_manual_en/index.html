@@ -2554,7 +2554,7 @@
 <p>If the email doesn't arrive (check your spam folder) or the link has expired, request a new one or contact an administrator.</p>
 <hr />
 <h3 id="session-expired">Session expired<a class="headerlink" href="#session-expired" title="Link a questa sezione">&para;</a></h3>
-<p>The access token lasts <strong>30 minutes of inactivity</strong>. After that, protected pages will automatically send you back to the login. Nothing is broken, just log in again.</p>
+<p>The session stays valid for a long time, so in day-to-day use you won't be logged out. If it does expire, protected pages automatically send you back to the login. Nothing is broken — just log in again.</p>
 <hr />
 <h3 id="failed-login-limit">Failed-login limit<a class="headerlink" href="#failed-login-limit" title="Link a questa sezione">&para;</a></h3>
 <p>For security: <strong>after 5 failed login attempts from the same connection within 1 minute</strong>, the system replies with a "Too Many Requests" error for a few seconds. Wait a moment and retry.</p>
@@ -3290,7 +3290,7 @@
 <li>You're an admin: admins don't submit (they go directly through approve/reject).</li>
 </ul>
 <h3 id="the-site-logged-me-out-unexpectedly">The site logged me out unexpectedly<a class="headerlink" href="#the-site-logged-me-out-unexpectedly" title="Link a questa sezione">&para;</a></h3>
-<p>Token expired (30 min of inactivity). Log in again.</p>
+<p>Your session expired. Just log in again. (Sessions are long-lived, so this happens rarely.)</p>
 <h3 id="i-changed-the-taxonomy-but-languages-still-show-the-old-names">I changed the taxonomy but languages still show the old names<a class="headerlink" href="#i-changed-the-taxonomy-but-languages-still-show-the-old-names" title="Link a questa sezione">&para;</a></h3>
 <p>The <code>top_family</code>/<code>family</code>/<code>group</code> strings on languages are a stored copy taken from the taxonomy. Reopen each affected language and Save (even without changing anything) to propagate the new names. To do this in bulk: use Excel export/import.</p>
 <hr />
