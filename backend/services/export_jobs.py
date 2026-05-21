@@ -11,14 +11,18 @@ error) e aggiunge:
 Storage in-memory: adeguato per single-process (uvicorn --workers=1, default in
 dev/staging). In produzione multi-worker servirebbe Redis/DB condiviso.
 
-Cleanup: i file orfani (job mai scaricato) restano fino al purge TTL del job in
-`migration_progress` (1h). Per non lasciarli in /tmp anche dopo il purge,
-chiamiamo cleanup_file() in `finish_error`. Nel caso "successo + non scaricato",
-il file vivrà finché qualcuno non avvia un nuovo job_id che gestisca il cleanup
-periodico — accettabile su singolo box.
+Cleanup: tre livelli, così EXPORT_DIR non cresce mai senza limite (un ZIP non
+ripulito può saturare il disco della VM):
+  - download riuscito  -> cleanup_file() via BackgroundTasks dopo la response
+  - job in errore      -> cleanup_file() in `finish_error`
+  - "successo + non scaricato" (il caso insidioso): il file resta orfano perché
+    nessuno dei due rami sopra scatta. Lo intercetta `cleanup_stale_files()`,
+    invocata da `new_job()`: a ogni nuovo export rimuove gli ZIP più vecchi di
+    ORPHAN_TTL_SECONDS (oltre il TTL del job non sono più scaricabili).
 """
 from __future__ import annotations
 import os
+import time
 import threading
 import tempfile
 from typing import Optional
@@ -32,9 +36,47 @@ _FILES: dict[str, str] = {}  # job_id -> path al file zip pronto
 EXPORT_DIR = os.path.join(tempfile.gettempdir(), "pcm_exports")
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
+# TTL oltre il quale un file di export è considerato orfano e va rimosso.
+# Lo stato del job viene purgato da migration_progress dopo 1h: oltre quella
+# soglia il file non è più scaricabile (il download endpoint risponde 404),
+# quindi è solo spazzatura su disco. 2h dà margine a un download lento in corso.
+ORPHAN_TTL_SECONDS = 2 * 60 * 60
+
+
+def cleanup_stale_files(max_age_seconds: int = ORPHAN_TTL_SECONDS) -> int:
+    """Rimuove dagli export i file più vecchi di `max_age_seconds`.
+
+    Serve a evitare che gli ZIP "generati ma mai scaricati" si accumulino in
+    EXPORT_DIR all'infinito (cleanup_file scatta solo al download o su errore):
+    senza questo, /tmp/pcm_exports cresce e può saturare il disco della VM.
+    Best-effort e idempotente: ignora errori OS. Ritorna il numero di file
+    rimossi. Filtra per mtime, quindi non tocca un file appena creato da un job
+    in corso (età ~0)."""
+    now = time.time()
+    removed = 0
+    try:
+        entries = os.listdir(EXPORT_DIR)
+    except OSError:
+        return 0
+    for name in entries:
+        path = os.path.join(EXPORT_DIR, name)
+        try:
+            if not os.path.isfile(path):
+                continue
+            if now - os.path.getmtime(path) >= max_age_seconds:
+                os.remove(path)
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
 
 def new_job() -> str:
-    """Crea un job_id (riusa migration_progress.new_job)."""
+    """Crea un job_id (riusa migration_progress.new_job).
+
+    Ne approfittiamo per spazzare via gli ZIP di export orfani: ogni nuovo
+    export tiene così pulito EXPORT_DIR senza bisogno di un cron dedicato."""
+    cleanup_stale_files()
     return migration_progress.new_job()
 
 

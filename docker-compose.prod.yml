@@ -114,9 +114,9 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Sidecar di backup. Una volta al giorno fa pg_dump del DB di prod
-  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=7 dump
-  # (7 giorni di rolling window).
+  # Sidecar di backup. Una volta a settimana fa pg_dump del DB di prod
+  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=3 dump
+  # (3 settimane di rolling window) per contenere l'uso di disco sulla VM.
   #
   # CIFRATURA AT-REST (age, https://age-encryption.org):
   #   I dump vengono cifrati con la chiave pubblica `BACKUP_AGE_RECIPIENT`
@@ -154,7 +154,7 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
-      KEEP: "7"
+      KEEP: "3"
       # Public key age (`age1...`) per cifrare i dump. Opzionale per
       # backward compat: se vuoto, fallback a dump in chiaro + warning.
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
@@ -213,8 +213,8 @@ services:
           # Includiamo sia .dump (in chiaro legacy) che .dump.age (cifrati) cosi'
           # la transizione cifrato/non-cifrato non lascia residui dei vecchi.
           ls -1t /backups/pcm-*.dump /backups/pcm-*.dump.age 2>/dev/null | tail -n +$$((KEEP+1)) | xargs -r rm -f
-          echo "[backup] $$(date -Iseconds) prossimo dump tra 24h"
-          sleep 86400
+          echo "[backup] $$(date -Iseconds) prossimo dump tra 7 giorni"
+          sleep 604800
         done
     restart: unless-stopped
     logging:
@@ -223,12 +223,52 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # cleaner: RIMOSSO. Faceva `docker container prune -f` ogni 24h
-  # (e una volta all'avvio): cancellava container appena creati ma
-  # non ancora startati durante un redeploy, dando errore "No such
-  # container: <hash>". Stesso problema riscontrato dal team del
-  # progetto vecchio (vedi progetto_lingua_2/compose.yml). La pulizia
-  # immagini/cache va fatta a mano via SSH se serve.
+  # cleaner: versione "tranquilla". Il vecchio cleaner fu rimosso perché
+  # faceva `docker container prune -f` (anche all'avvio) e cancellava
+  # container appena creati ma non ancora startati durante un redeploy
+  # -> "No such container: <hash>". Questo invece e' volutamente conservativo:
+  #
+  #   - NON tocca MAI i container  -> nessun rischio durante i redeploy
+  #   - NON tocca MAI i volumi     -> i dati (postgres, caddy, backup, legal)
+  #                                   vivono nei volumi nominati e restano intatti
+  #   - rimuove SOLO:
+  #       * immagini "dangling" = i layer orfani che ogni rebuild di backend/
+  #         caddy lascia indietro (la vecchia immagine perde il tag) -> e' la
+  #         causa principale di disco che si riempie nel tempo
+  #       * build cache piu' vecchia di 7 giorni (until=168h)
+  #
+  # Gira una volta al giorno e aspetta 1h all'avvio, cosi' non parte mai a
+  # ridosso di un redeploy. Anche se girasse durante un redeploy, prunando
+  # solo immagini/cache (mai container) non puo' rompere nulla.
+  #
+  # Richiede il socket Docker montato (stessa fiducia di Portainer). Read-only
+  # sul socket non basta per prune, serve accesso in scrittura.
+  cleaner:
+    image: docker:cli
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        echo "[cleaner] avviato (solo immagini dangling + build cache > 7gg; mai container/volumi)"
+        # Attesa iniziale: evita di girare appena dopo un redeploy.
+        sleep 3600
+        while true; do
+          echo "[cleaner] $$(date -Iseconds) prune immagini dangling..."
+          docker image prune -f || echo "[cleaner] image prune fallito (ignoro)"
+          echo "[cleaner] $$(date -Iseconds) prune build cache piu' vecchia di 7 giorni..."
+          docker builder prune -f --filter until=168h || echo "[cleaner] builder prune fallito (ignoro)"
+          echo "[cleaner] $$(date -Iseconds) fatto. Prossimo giro tra 24h."
+          sleep 86400
+        done
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
