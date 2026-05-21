@@ -29,10 +29,12 @@ site
 tools
 *.md
 
-# PDF (manuali, doc legali): Caddy serve i PDF legali dal volume a runtime,
-# non dall'immagine. Nessun PDF serve nel contesto di build.
-*.pdf
-**/*.pdf
+# NB: NON escludere i *.pdf in generale! I manuali (frontend/dist/docs/*.pdf)
+# sono serviti da Caddy DALL'IMMAGINE (root /srv/dist, baked con COPY
+# frontend/dist), quindi DEVONO entrare nel contesto di build. I PDF sorgente
+# non necessari sono gia' fuori contesto perche' stanno in docs/ e
+# frontend/public/ (esclusi sopra). Solo i PDF legali caricati dall'admin
+# vivono in un volume a runtime, ma quelli non passano comunque da qui.
 
 # Python / cache / ambienti / segreti / log
 **/__pycache__
