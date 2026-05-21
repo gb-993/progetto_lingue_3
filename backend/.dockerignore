@@ -1,0 +1,26 @@
+# .dockerignore del backend — vale per il build del servizio `backend`
+# (context: ./backend, Dockerfile fa `COPY . .`). Tiene fuori dall'immagine
+# tutto ciò che non serve a runtime: test, PDF legali di test (file di dev,
+# in prod vivono nel volume legal_archive), cache Python, venv e segreti.
+
+# Test: non vanno nell'immagine di produzione
+tests
+.pytest_cache
+
+# PDF legali locali (solo dev). In prod stanno nel volume Docker legal_archive.
+legal_documents_local
+
+# Cache Python / bytecode
+**/__pycache__
+*.py[cod]
+*.pyo
+
+# Ambienti virtuali e segreti
+.venv
+venv
+env
+.env
+.env.*
+
+# Log
+*.log

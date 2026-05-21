@@ -1,0 +1,44 @@
+# .dockerignore (radice) — vale per il build del servizio `caddy`, che usa
+# `context: .` (vedi docker-compose.prod.yml). Caddy ha bisogno SOLO di
+# caddy/Caddyfile e frontend/dist: tutto il resto è zavorra che verrebbe
+# spedita al daemon Docker sulla VM a ogni rebuild, rallentando il build e
+# occupando spazio. Qui escludiamo esplicitamente il superfluo lasciando
+# intatti caddy/ e frontend/dist.
+
+# Git e metadati
+.git
+.gitignore
+.github
+
+# Node: il node_modules a root è orfano (stray package.json), quelli di
+# frontend/ e tools/ non servono a Caddy. Il frontend è già buildato in dist.
+node_modules
+**/node_modules
+package.json
+package-lock.json
+frontend/src
+frontend/public
+frontend/node_modules
+
+# Backend: non serve all'immagine di Caddy
+backend
+
+# Documentazione / sito / tooling: niente di tutto questo va nell'immagine
+docs
+site
+tools
+*.md
+
+# PDF (manuali, doc legali): Caddy serve i PDF legali dal volume a runtime,
+# non dall'immagine. Nessun PDF serve nel contesto di build.
+*.pdf
+**/*.pdf
+
+# Python / cache / ambienti / segreti / log
+**/__pycache__
+*.py[cod]
+.venv
+venv
+.env
+.env.*
+*.log
