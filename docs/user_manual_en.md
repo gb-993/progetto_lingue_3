@@ -96,7 +96,7 @@ If the email doesn't arrive (check your spam folder) or the link has expired, re
 
 ### Session expired
 
-The access token lasts **30 minutes of inactivity**. After that, protected pages will automatically send you back to the login. Nothing is broken, just log in again.
+The session stays valid for a long time, so in day-to-day use you won't be logged out. If it does expire, protected pages automatically send you back to the login. Nothing is broken — just log in again.
 
 ---
 
@@ -925,7 +925,7 @@ Create a second admin **before** deleting the existing one.
 
 ### The site logged me out unexpectedly
 
-Token expired (30 min of inactivity). Log in again.
+Your session expired. Just log in again. (Sessions are long-lived, so this happens rarely.)
 
 ### I changed the taxonomy but languages still show the old names
 

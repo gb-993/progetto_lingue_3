@@ -96,7 +96,7 @@ Se la mail non arriva (controlla lo spam) o il link è scaduto, richiedine uno n
 
 ### Sessione scaduta
 
-Il token di accesso dura **30 minuti di inattività**. Dopo, le pagine protette ti rimanderanno automaticamente al login. Niente di rotto, basta fare login di nuovo.
+La sessione resta valida a lungo, quindi nell'uso quotidiano non vieni sloggato. Se però scade, le pagine protette ti rimandano automaticamente al login. Niente di rotto — basta rifare login.
 
 ---
 
@@ -925,7 +925,7 @@ Crea un secondo admin **prima** di cancellare quello esistente.
 
 ### Il sito mi ha sloggato all'improvviso
 
-Token scaduto (30 min di inattività). Fai login di nuovo.
+La sessione è scaduta. Rifai login. (Le sessioni durano a lungo, quindi capita di rado.)
 
 ### Ho cambiato il taxonomy ma le lingue mostrano ancora i vecchi nomi
 
