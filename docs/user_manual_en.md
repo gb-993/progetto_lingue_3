@@ -117,7 +117,7 @@ All the main pages. The visible items depend on your role:
 | Item | User | Admin |
 |---|---|---|
 | Dashboard | ✓ | ✓ |
-| Citation Guidelines | ✓ | ✓ |
+| Citation Guidelines / How to cite | ✓ | ✓ |
 | Languages | ✓ | ✓ |
 | Parameters | — | ✓ |
 | Parameters Graph | — | ✓ |
@@ -459,7 +459,7 @@ When the status is `Rejected`:
 
 - **Reopen**: the language goes back to `Pending` (after reading the rejection note). You can resume editing.
 
-Remember: an admin can force the language status at any time and in any direction (see §9 of [documentation_en.md](documentation_en.md) for the full workflow).
+Remember: an admin can force the language status at any time and in any direction, via the *Admin override* banner and the **Change Status** dropdown (see *What an admin sees in addition*, below).
 
 ---
 
@@ -727,13 +727,13 @@ Beyond filters, **each table row** has a checkbox: lets you further restrict the
 
 ---
 
-## 14. ADMIN ONLY — Filters (Queries Q1–Q10)
+## 14. ADMIN ONLY — Filters (Queries Q1–Q11)
 
 Page: **Sidebar > Filters** (`/queries`).
 
-![Filters & Queries page: on the left the Queries Configuration menu with the 10 queries listed, on the right the execution area for the selected query](img/manuale/queries.png)
+![Filters & Queries page: on the left the Queries Configuration menu with the 11 queries listed, on the right the execution area for the selected query](img/manuale/queries.png)
 
-10 predefined views to query the database in a focused way. Menu on the left (collapsible), main area on the right.
+11 predefined views to query the database in a focused way. Menu on the left (collapsible), main area on the right.
 
 | Query | Question |
 |---|---|
@@ -744,9 +744,10 @@ Page: **Sidebar > Filters** (`/queries`).
 | **Q5** | Parameters with value `−` (per language) |
 | **Q6** | Parameters with value `0` (per language) |
 | **Q7** | Comparable parameters (per pair of languages) |
-| **Q8** | Questions with answer YES (per language) |
-| **Q9** | Questions with answer NO (per language) |
+| **Q8** | Question with answer YES (per language) |
+| **Q9** | Question with answer NO (per language) |
 | **Q10** | Show answers and examples (per question) |
+| **Q11** | Question without an answer (per language) |
 
 ### Q3 — the richest
 
@@ -851,7 +852,7 @@ Restore of a **ZIP bundle exported** from [Languages → Download Data → Expor
 
 ![Import from Excel page: Strategy block (Schema strict update / Database_model full replace / Cascading errors), File picker for Excel file, Start Import and Cancel buttons](img/manuale/import-excel.png)
 
-Structured Excel import. 50 MB cap on the file. The sheet must follow the same format produced by the Excel export ([documentation_en.md](documentation_en.md) §10.4).
+Structured Excel import. 50 MB cap on the file. The sheet must follow the same format produced by the site's Excel export (`Database_model` sheet).
 
 ---
 

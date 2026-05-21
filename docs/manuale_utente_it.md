@@ -117,7 +117,7 @@ Tutte le pagine principali. Le voci che vedi dipendono dal tuo ruolo:
 | Voce | User | Admin |
 |---|---|---|
 | Dashboard | ✓ | ✓ |
-| Citation Guidelines | ✓ | ✓ |
+| Citation Guidelines / How to cite | ✓ | ✓ |
 | Languages | ✓ | ✓ |
 | Parameters | — | ✓ |
 | Parameters Graph | — | ✓ |
@@ -459,7 +459,7 @@ Quando lo stato è `Rejected`:
 
 - **Reopen**: la lingua torna a `Pending` (dopo aver letto la nota di rifiuto). Puoi riprendere l'editing.
 
-Ricorda: l'admin può forzare lo stato della lingua in qualsiasi momento e in qualsiasi direzione (vedi §6 del [documentation_it.md](documentation_it.md) per il workflow completo).
+Ricorda: l'admin può forzare lo stato della lingua in qualsiasi momento e in qualsiasi direzione, tramite il banner *Admin override* e il dropdown **Change Status** (vedi *Cosa vede l'admin in più*, qui sotto).
 
 ---
 
@@ -727,13 +727,13 @@ Dropdown **Download / Analysis ▾** in alto:
 
 ---
 
-## 14. SOLO ADMIN — Filters (Queries Q1–Q10)
+## 14. SOLO ADMIN — Filters (Queries Q1–Q11)
 
 Pagina: **Sidebar > Filters** (`/queries`).
 
-![Pagina Filters & Queries: a sinistra il menu Queries Configuration con le 10 query elencate, a destra l'area di esecuzione della query selezionata](img/manuale/queries.png)
+![Pagina Filters & Queries: a sinistra il menu Queries Configuration con le 11 query elencate, a destra l'area di esecuzione della query selezionata](img/manuale/queries.png)
 
-10 viste predefinite per interrogare il database in modo mirato. Menu a sinistra (collassabile), area principale a destra.
+11 viste predefinite per interrogare il database in modo mirato. Menu a sinistra (collassabile), area principale a destra.
 
 | Query | Domanda |
 |---|---|
@@ -744,9 +744,10 @@ Pagina: **Sidebar > Filters** (`/queries`).
 | **Q5** | Parameters with value `−` (per language) |
 | **Q6** | Parameters with value `0` (per language) |
 | **Q7** | Comparable parameters (per pair of languages) |
-| **Q8** | Questions with answer YES (per language) |
-| **Q9** | Questions with answer NO (per language) |
+| **Q8** | Question with answer YES (per language) |
+| **Q9** | Question with answer NO (per language) |
 | **Q10** | Show answers and examples (per question) |
+| **Q11** | Question without an answer (per language) |
 
 ### Q3 — la più ricca
 
@@ -851,7 +852,7 @@ Restore di un **bundle ZIP esportato** da [Languages → Download Data → Expor
 
 ![Pagina Import from Excel: blocco Strategy (Schema strict update / Database_model full replace / Cascading errors), file picker File Excel, pulsanti Start Import e Cancel](img/manuale/import-excel.png)
 
-Import strutturato da Excel. Cap 50 MB sul file. Il foglio deve seguire lo stesso formato prodotto dall'export Excel ([documentation_it.md](documentation_it.md) §10.4).
+Import strutturato da Excel. Cap 50 MB sul file. Il foglio deve seguire lo stesso formato prodotto dall'export Excel del sito (foglio `Database_model`).
 
 ---
 
