@@ -295,10 +295,45 @@ export default function Layout({ children }) {
     return (
         <>
             <div className={`app-wrapper${collapsed ? ' is-sidebar-collapsed' : ''}`}>
+                {/* TOP BAR — fascia a tutta larghezza. Il logo vive qui (non piu'
+                    dentro la sidebar) cosi' resta sempre visibile anche a sidebar
+                    ristretta ed e' cliccabile per tornare alla dashboard. */}
+                <header className="top-bar">
+                    <div className="top-bar-left">
+                        <Link to="/dashboard" className="brand" title="Dashboard">The PCM Hub</Link>
+                        <Breadcrumb pathname={location.pathname} />
+                    </div>
+                    <div className="top-bar-right">
+                        <Link to="/me" className="btn" style={{ background: 'transparent', border: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>
+                            MyAccount
+                        </Link>
+                        <button
+                            type="button"
+                            className="theme-toggle"
+                            onClick={toggleTheme}
+                            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                            aria-pressed={theme === 'dark'}
+                        >
+                            {theme === 'dark' ? (
+                                <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="4" />
+                                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                                </svg>
+                            ) : (
+                                <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                                </svg>
+                            )}
+                            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+                        </button>
+                        <button className="btn" onClick={handleLogout}>Logout</button>
+                    </div>
+                </header>
+
                 {/* SIDEBAR */}
                 <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`} id="main-sidebar">
                     <div className="sidebar-header">
-                        {!collapsed && <h1 className="site-title">The PCM Hub</h1>}
                         <button
                             type="button"
                             className="sidebar-toggle"
@@ -353,7 +388,7 @@ export default function Layout({ children }) {
                                             </li>
                                             <li>
                                                 <Link className={`btn ${isCurrent('/admin/parameters/graph')}`} to="/admin/parameters/graph" title="Parameters Graph">
-                                                    <Workflow size={18} className="nav-icon" />
+                                                    <Network size={18} className="nav-icon" />
                                                     <span className="nav-label">Parameters Graph</span>
                                                 </Link>
                                             </li>
@@ -371,7 +406,7 @@ export default function Layout({ children }) {
                                             </li>
                                             <li>
                                                 <Link className={`btn ${isCurrent('/admin/taxonomy')}`} to="/admin/taxonomy" title="Taxonomy">
-                                                    <Network size={18} className="nav-icon" />
+                                                    <Workflow size={18} className="nav-icon" />
                                                     <span className="nav-label">Taxonomy</span>
                                                 </Link>
                                             </li>
@@ -453,39 +488,6 @@ export default function Layout({ children }) {
                 </aside>
 
                 <div className="main-layout">
-                    {/* TOP BAR */}
-                    <header className="top-bar">
-                        <div className="top-bar-left">
-                            <Breadcrumb pathname={location.pathname} />
-                        </div>
-                        <div className="top-bar-right">
-                            <Link to="/me" className="btn" style={{ background: 'transparent', border: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>
-                                MyAccount
-                            </Link>
-                            <button
-                                type="button"
-                                className="theme-toggle"
-                                onClick={toggleTheme}
-                                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                                aria-pressed={theme === 'dark'}
-                            >
-                                {theme === 'dark' ? (
-                                    <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                        <circle cx="12" cy="12" r="4" />
-                                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-                                    </svg>
-                                ) : (
-                                    <svg className="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                                    </svg>
-                                )}
-                                <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-                            </button>
-                            <button className="btn" onClick={handleLogout}>Logout</button>
-                        </div>
-                    </header>
-
                     <main id="main">
                         <div className="main-container">
                             {children}

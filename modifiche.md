@@ -1,6 +1,4 @@
 # RIEPILOGO MODIFICHE
-- [x] Roberto Romano per problemi con mail, password e https
-- [ ] Servizi informatici per espandere disco della vm a 20 GB
 
 ## LANDING PAGE
 
