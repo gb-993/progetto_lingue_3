@@ -51,7 +51,7 @@ export default function Login() {
                     </div>
                 </form>
                 <div className="auth-secondary">
-                    <Link to="/forgot-password">Password dimenticata?</Link>
+                    <Link to="/forgot-password" style={{ color: 'var(--brand)' }}>Forgot password?</Link>
                 </div>
             </section>
         </div>

@@ -17,6 +17,32 @@ import { Style, Circle, Fill, Stroke } from 'ol/style';
 const NULL_COLOR = '#9ca3af';
 const NULL_LABEL = '— Unassigned';
 
+// Citazione di attribuzione per la mappa esportata in PNG. DEVE restare allineata
+// a backend/services/citation.py (build_citation_text): è la stessa dicitura che
+// compare nel footer di PDF/Excel/CSV/HTML. La mappa è l'unico export generato
+// lato browser (canvas), quindi non passa da citation.py e va replicata qui.
+const CITATION_EDITORS =
+    'Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, ' +
+    'Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge';
+const CITATION_YEAR = '2026';
+const CITATION_WORK_TITLE = 'The PCM_Hub';
+const CITATION_VERSION = 'version 1';
+
+// Due righe della citazione, con "Accessed on" = data del download (UTC, gg/mm/aaaa),
+// come utc_now()/_format_date nel backend.
+function buildCitationLines() {
+    const now = new Date();
+    const dd = String(now.getUTCDate()).padStart(2, '0');
+    const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = now.getUTCFullYear();
+    const accessed = `${dd}/${mm}/${yyyy}`;
+    return [
+        'Downloaded from:',
+        `${CITATION_EDITORS} (eds). ${CITATION_YEAR}. ${CITATION_WORK_TITLE} ` +
+        `(${CITATION_VERSION}, Accessed on ${accessed})`,
+    ];
+}
+
 // Riduce l'opacità di un colore CSS (hsl o hex) sostituendolo con hsla / rgba
 function dimCssColor(cssColor, alpha) {
     if (typeof cssColor !== 'string') return cssColor;
@@ -225,7 +251,30 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
                     });
 
                     const legendH = PAD + TITLE_H + TITLE_GAP + rows * ROW_H + PAD;
-                    const totalH = mapH + legendH;
+
+                    // ===== Layout citazione (footer, come negli altri export) =====
+                    const CITE_FONT = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+                    const CITE_LINE_H = 15;
+                    const CITE_PAD = 14;
+                    measureCtx.font = CITE_FONT;
+                    const citeMaxW = mapW - 2 * PAD;
+                    const citeLines = [];
+                    buildCitationLines().forEach(logical => {
+                        let line = '';
+                        logical.split(' ').forEach(word => {
+                            const test = line ? `${line} ${word}` : word;
+                            if (line && measureCtx.measureText(test).width > citeMaxW) {
+                                citeLines.push(line);
+                                line = word;
+                            } else {
+                                line = test;
+                            }
+                        });
+                        if (line) citeLines.push(line);
+                    });
+                    const citeH = CITE_PAD + citeLines.length * CITE_LINE_H + CITE_PAD;
+
+                    const totalH = mapH + legendH + citeH;
 
                     const out = document.createElement('canvas');
                     out.width = mapW;
@@ -315,6 +364,20 @@ function LanguageMap({ languages, filters, allTopFamilies }, ref) {
                             cx += w + ENTRY_GAP_X;
                         });
                     }
+                    ctx.textBaseline = 'alphabetic';
+
+                    // ===== Citazione "Downloaded from…" (stessa dicitura di PDF/Excel) =====
+                    const citeY = mapH + legendH;
+                    ctx.fillStyle = '#e5e7eb';
+                    ctx.fillRect(0, citeY, mapW, 1);
+                    ctx.font = CITE_FONT;
+                    ctx.fillStyle = '#787878';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    citeLines.forEach((line, i) => {
+                        ctx.fillText(line, mapW / 2, citeY + CITE_PAD + i * CITE_LINE_H);
+                    });
+                    ctx.textAlign = 'left';
                     ctx.textBaseline = 'alphabetic';
 
                     out.toBlob(blob => {
