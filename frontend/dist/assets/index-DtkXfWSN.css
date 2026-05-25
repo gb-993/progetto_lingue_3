@@ -155,6 +155,10 @@ a:hover { color: var(--link-hover); }
    decoration. */
 :root[data-theme="dark"] .breadcrumb a,
 :root[data-theme="dark"] .breadcrumb a:hover { color: inherit; }
+/* Logo top-bar: stesso motivo del breadcrumb. Senza questo override il link
+   .brand erediterebbe --link (peach) invece del rosso brand in dark mode. */
+:root[data-theme="dark"] .top-bar .brand,
+:root[data-theme="dark"] .top-bar .brand:hover { color: var(--brand); }
 :root[data-theme="dark"] .badge {
   background: var(--surface-2);
   color: var(--text);
@@ -250,22 +254,28 @@ a:hover{text-decoration:underline}
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  /* Riga 1 = fascia top-bar (a tutta larghezza, contiene il logo);
+     Riga 2 = corpo (sidebar + contenuto). */
+  grid-template-rows: var(--topbar-height) 1fr;
   background: var(--bg);
 }
 .app-wrapper.is-sidebar-collapsed{
   --sidebar-width: 64px;
 }
 .sidebar{
+  grid-column: 1;
+  grid-row: 2;
   position: sticky;
-  top: 0;
+  /* Parte sotto la top-bar (riga 1) e resta agganciata appena sotto di lei. */
+  top: var(--topbar-height);
   align-self: start;
   /* height (non min-height) + overflow-y abilita lo scroll INTERNO della
      sidebar quando le voci eccedono il viewport. Senza overflow-y la
      sidebar cresceva oltre lo schermo e le ultime voci finivano sotto la
      fold senza essere raggiungibili. */
-  height: 100vh;
+  height: calc(100vh - var(--topbar-height));
   overflow-y: auto;
-  padding: var(--sp-6) var(--sp-5);
+  padding: var(--sp-5) var(--sp-5);
   border-right: 1px solid var(--border);
   background: var(--surface);
   transition: padding 0.18s ease;
@@ -276,18 +286,14 @@ a:hover{text-decoration:underline}
 .sidebar-header{
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* Solo il toggle: lo teniamo allineato a destra (come prima quando era
+     accanto al logo). A sidebar ristretta passa al centro. */
+  justify-content: flex-end;
   gap: var(--sp-2);
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-4);
 }
 .sidebar.is-collapsed .sidebar-header{
   justify-content: center;
-}
-.sidebar-header .site-title{
-  font-size: 1.9rem;
-  line-height: 1.1;
-  flex: 1;
-  min-width: 0;
 }
 .sidebar-toggle{
   display: inline-flex;
@@ -360,11 +366,17 @@ a:hover{text-decoration:underline}
   margin-top: .5rem;
 }
 .main-layout{
+  grid-column: 2;
+  grid-row: 2;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 .top-bar{
+  /* Occupa tutte e due le colonne della griglia: il logo (a sinistra) resta
+     cosi' sempre visibile, indipendentemente dallo stato della sidebar. */
+  grid-column: 1 / -1;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -376,6 +388,34 @@ a:hover{text-decoration:underline}
   position: sticky;
   top: 0;
   z-index: 20;
+}
+.top-bar-left{
+  display: flex;
+  align-items: center;
+  /* niente gap: l'inizio del breadcrumb e' determinato dalla larghezza del
+     logo (vedi .brand), cosi' parte esattamente dal bordo della sidebar. */
+  gap: 0;
+  min-width: 0;
+}
+/* Logo "The PCM Hub" nella top-bar. Occupa la stessa larghezza della colonna
+   sidebar (meno il padding sinistro della top-bar): cosi' il breadcrumb che lo
+   segue parte allineato col bordo destro della sidebar. min-width: max-content
+   evita che il testo si tagli quando la sidebar e' ristretta. Cliccabile -> dashboard. */
+.top-bar .brand{
+  flex-shrink: 0;
+  width: calc(var(--sidebar-width) - var(--sp-6));
+  min-width: max-content;
+  padding-right: var(--sp-4);
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.top-bar .brand:hover{
+  text-decoration: none;
+  opacity: 0.85;
 }
 .top-bar-right{
   display: flex;
@@ -399,14 +439,26 @@ a:hover{text-decoration:underline}
 
 /* Layout responsive */
 @media (max-width: 960px){
-  .app-wrapper{ grid-template-columns: 1fr; }
+  .app-wrapper{
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
   .sidebar{
+    grid-column: 1;
+    grid-row: auto;
     position: relative;
+    top: auto;
+    height: auto;
     min-height: auto;
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
+  .main-layout{
+    grid-column: 1;
+    grid-row: auto;
+  }
   .top-bar{
+    grid-column: 1;
     position: relative;
     top: auto;
   }
