@@ -60,17 +60,45 @@ function dimCssColor(cssColor, alpha) {
     return cssColor;
 }
 
+// Palette categorica curata a mano: ogni colore appartiene a una "famiglia
+// percettiva" diversa (un solo rosso, un solo verde, un solo blu, …), così due
+// voci qualunque sono facilmente distinguibili a occhio anche da chi confonde
+// tinte vicine. Sono tutti colori saturi e medio-scuri, scelti per risaltare
+// sia sulla terraferma beige sia sul mare azzurro della mappa (niente gialli o
+// pastelli che si confonderebbero col fondo). L'ordine massimizza il contrasto
+// tra voci consecutive, utile quando molte famiglie finiscono adiacenti in
+// ordine alfabetico.
+const CATEGORICAL_PALETTE = [
+    '#e6194b', // rosso
+    '#3cb44b', // verde
+    '#4363d8', // blu
+    '#f58231', // arancione
+    '#911eb4', // viola
+    '#469990', // verde acqua (teal)
+    '#f032e6', // magenta
+    '#9a6324', // marrone
+    '#42d4f4', // ciano
+    '#808000', // oliva
+    '#000075', // blu notte
+    '#800000', // bordeaux
+    '#bfef45', // lime
+    '#6a5acd', // indaco
+    '#2e8b57', // verde mare
+    '#ff8c00', // ambra scura
+    '#c71585', // rosa-violetto
+    '#1f78b4', // azzurro acciaio
+];
+
 // Assegna a ogni NOME un colore distinto e stabile. Una sola logica usata a
 // tutti i livelli (top-family / subfamily / group): l'unica differenza tra i
 // livelli è QUALE elenco di nomi passiamo. Due proprietà chiave:
 //   • Stabile: il colore dipende dalla posizione del nome nell'elenco GLOBALE
 //     ordinato alfabeticamente, non dal sottoinsieme attualmente a video. Così
 //     lo stesso gruppo ha lo stesso colore per tutti, qualunque filtro abbia.
-//   • Distinto: hue distribuita con sequenza low-discrepancy (golden ratio),
-//     così nomi adiacenti nell'elenco ricevono tinte ben distanti; una leggera
-//     variazione di luminosità aggiunge separazione quando i nomi sono molti.
-// Nota: NON leghiamo più il colore dei figli a quello della famiglia madre —
-// scelta voluta per massimizzare la distinguibilità.
+//   • Distinto: finché le voci entrano nella palette curata usiamo quella; se
+//     sono di più (tipico dei "group"), per le eccedenti torniamo a una hue
+//     distribuita con sequenza low-discrepancy (golden ratio) sfasata, così non
+//     resta scoperta e nessun punto perde colore.
 function buildNameColorMap(allNames) {
     const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
     const sorted = [...new Set((allNames || []).filter(Boolean))].sort((a, b) =>
@@ -78,8 +106,14 @@ function buildNameColorMap(allNames) {
     );
     const map = {};
     sorted.forEach((name, i) => {
-        const hue = ((i * PHI) % 1) * 360;        // [0,360) ben distribuita
-        const lightPos = (i * PHI * PHI) % 1;     // fase decorrelata
+        if (i < CATEGORICAL_PALETTE.length) {
+            map[name] = CATEGORICAL_PALETTE[i];
+            return;
+        }
+        // Riserva algoritmica per quando le categorie superano la palette.
+        const j = i - CATEGORICAL_PALETTE.length;
+        const hue = ((j * PHI) % 1) * 360;        // [0,360) ben distribuita
+        const lightPos = (j * PHI * PHI) % 1;     // fase decorrelata
         const lightness = 42 + lightPos * 16;     // 42% - 58%
         map[name] = `hsl(${hue.toFixed(1)}, 68%, ${lightness.toFixed(1)}%)`;
     });
