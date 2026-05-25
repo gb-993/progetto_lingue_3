@@ -781,6 +781,8 @@ export default function LanguageList() {
                     languages={effectiveLanguages}
                     filters={filters}
                     allTopFamilies={options.opt_top_families}
+                    allFamilies={options.opt_families}
+                    allGroups={options.opt_groups}
                 />
             </div>
 
