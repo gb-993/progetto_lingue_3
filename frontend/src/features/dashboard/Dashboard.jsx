@@ -77,7 +77,7 @@ function AdminDashboard() {
 // ----- Card 1: Pending Approvals -----
 function PendingApprovalsCard({ count, items }) {
     return (
-        <div className={`card counter-card${count > 0 ? ' border-bad' : ''}`}>
+        <div className="card counter-card">
             <h3 className="admin-label">Waiting for Approval</h3>
             <div className="admin-big-number">{count}</div>
             {items.length > 0 ? (
@@ -211,7 +211,7 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
 function RedParamsCard({ total, languages }) {
     const list = languages || [];
     return (
-        <div className={`card counter-card${total > 0 ? ' border-bad' : ''}`}>
+        <div className="card counter-card">
             <h3 className="admin-label">Flagged/Unsure Parameters</h3>
             <p className="muted small" style={{ margin: '0.1rem 0 0.25rem', fontSize: '0.72rem' }}>
                 Unsure or partially compiled (empty parameters excluded).
