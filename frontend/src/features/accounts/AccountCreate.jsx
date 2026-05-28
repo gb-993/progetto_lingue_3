@@ -23,9 +23,9 @@ export default function AccountCreate() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '600px', marginTop: '2rem' }}>
+        <div className="container" style={{ maxWidth: '600px', marginTop: 'var(--form-page-top, 2rem)' }}>
             <div className="card">
-                <header style={{ marginBottom: '1.5rem' }}><h2>Create New Account</h2></header>
+                <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}><h2>Create New Account</h2></header>
                 {error && <div className="alert alert-error mb-1">{error}</div>}
 
                 <form onSubmit={handleSubmit} className="grid grid-2">
@@ -53,7 +53,7 @@ export default function AccountCreate() {
                             <option value="public">Public User</option>
                         </select>
                     </div>
-                    <div className="toolbar" style={{ gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                    <div className="toolbar" style={{ gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: 'var(--form-field-mb, 1rem)' }}>
                         <Link to="/admin/accounts" className="btn">Cancel</Link>
                         <button type="submit" className="btn btn--primary">Create Account</button>
                     </div>

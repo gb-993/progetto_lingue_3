@@ -59,8 +59,8 @@ export default function LegalDocuments() {
     }, []);
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
+        <div className="container" style={{ maxWidth: '1100px', marginTop: 'var(--form-page-top, 2rem)' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}>
                 <h1>Legal Documents</h1>
                 <p className="muted">
                     Gestisci le versioni di <strong>Terms of Use</strong> e
@@ -75,8 +75,8 @@ export default function LegalDocuments() {
                 style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-                    gap: '1.5rem',
-                    marginBottom: '2rem',
+                    gap: 'var(--form-col-gap, 1.5rem)',
+                    marginBottom: 'var(--form-col-gap, 2rem)',
                 }}
             >
                 <UploadCard
@@ -93,7 +93,7 @@ export default function LegalDocuments() {
                 />
             </div>
 
-            <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>All versions</h3>
 
                 {loadingList && <div className="muted">Loading...</div>}
@@ -144,7 +144,7 @@ export default function LegalDocuments() {
                 )}
             </div>
 
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                 <Link to="/dashboard" className="btn">Back to dashboard</Link>
             </div>
         </div>
@@ -273,7 +273,7 @@ function UploadCard({ type, title, hint, onPublished }) {
                     onChange={handleFile}
                     disabled={analyzing || publishing}
                     style={{
-                        display: 'block', padding: '0.5rem',
+                        display: 'block', padding: 'var(--form-input-pad, 0.5rem)',
                         border: '1px solid var(--border)', borderRadius: '4px',
                         width: '100%',
                     }}

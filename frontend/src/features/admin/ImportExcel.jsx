@@ -72,8 +72,8 @@ export default function ImportExcel() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
+        <div className="container" style={{ maxWidth: '1100px', marginTop: 'var(--form-page-top, 2rem)' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h1>Import from Excel</h1>
                 <p className="muted">
                     Upload an Excel file to import schema (Motivations, Parameters, Questions, QAM)
@@ -81,7 +81,7 @@ export default function ImportExcel() {
                 </p>
             </header>
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Strategy</h3>
                 <ul className="small" style={{ lineHeight: 1.8, marginBottom: 0 }}>
                     <li><strong>Schema</strong> (Motivations / Parameters / Questions / QAM): <em>strict update</em>. If the <code>id</code> exists in the DB, the fields are replaced with the value from the file. If the <code>id</code> does not exist, the row is an error (skipped, included in the report). Entities not mentioned in the file remain untouched.</li>
@@ -90,7 +90,7 @@ export default function ImportExcel() {
                 </ul>
             </div>
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1rem' }}>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem' }}>
@@ -101,7 +101,7 @@ export default function ImportExcel() {
                             accept=".xlsx,.xlsm"
                             onChange={handleFile}
                             disabled={busy}
-                            style={{ display: 'block', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', maxWidth: '500px' }}
+                            style={{ display: 'block', padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid var(--border)', borderRadius: '4px', width: '100%', maxWidth: '500px' }}
                         />
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -119,7 +119,7 @@ export default function ImportExcel() {
 
             {busy && (
                 <div className="card" style={{
-                    padding: '1.25rem 1.5rem', marginBottom: '1.5rem',
+                    padding: 'var(--form-box-pad-lg, 1.25rem 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)',
                     display: 'flex', alignItems: 'center', gap: '1rem',
                 }}>
                     <Loader2 size={28} className="spin" style={{ color: 'var(--brand, #3b82f6)' }} />
@@ -154,7 +154,7 @@ function ImportReport({ report, onDownloadErrors }) {
     const sheets = Object.entries(report.by_sheet || {});
 
     return (
-        <div className="card" style={{ padding: '1.5rem' }}>
+        <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem',
@@ -185,7 +185,7 @@ function ImportReport({ report, onDownloadErrors }) {
             {sheets.length === 0 ? (
                 <p className="small muted">No sheet recognised in the file.</p>
             ) : (
-                <table className="table" style={{ marginBottom: '1.5rem' }}>
+                <table className="table" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <thead>
                         <tr>
                             <th>Sheet</th>
@@ -257,7 +257,7 @@ function ImportReport({ report, onDownloadErrors }) {
                 </>
             )}
 
-            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+            <div style={{ marginTop: 'var(--form-col-gap, 1.5rem)', display: 'flex', gap: '0.75rem' }}>
                 <Link to="/languages" className="btn btn--primary">Go to languages list</Link>
                 {report.target_language_id && (
                     <Link to={`/languages/${report.target_language_id}/data`} className="btn">

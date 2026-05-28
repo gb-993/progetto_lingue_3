@@ -51,7 +51,7 @@ export default function GlossaryList() {
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
-                padding: '0.85rem 1rem',
+                padding: 'var(--filter-card-pad, 0.85rem 1rem)',
                 border: '1px solid var(--border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
@@ -67,7 +67,7 @@ export default function GlossaryList() {
                         placeholder="Search by term or description..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                        style={{ width: '100%', padding: 'var(--form-input-pad, 0.75rem)', borderRadius: '4px', border: '1px solid #ccc' }}
                     />
                 </div>
                 {isAdmin && (
@@ -77,24 +77,24 @@ export default function GlossaryList() {
                 )}
             </section>
 
-            <div className="card" style={{padding: 0, overflow: 'hidden', marginTop: '1.5rem'}}>
+            <div className="card" style={{padding: 0, overflow: 'hidden', marginTop: 'var(--form-col-gap, 1.5rem)'}}>
                 {/* Aggiunto tableLayout: 'fixed' per stabilizzare le larghezze */}
                 <table className="table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead style={{ backgroundColor: '#f9f9f9', textAlign: 'left' }}>
                     <tr>
-                        <th style={{ padding: '1rem', width: '25%', borderBottom: '2px solid #eee' }}>Term</th>
-                        <th style={{ padding: '1rem', width: isAdmin ? '45%' : '75%', borderBottom: '2px solid #eee' }}>Description</th>
-                        {isAdmin && <th style={{ padding: '1rem', width: '22%', textAlign: 'right', borderBottom: '2px solid #eee' }}>Actions</th>}
+                        <th style={{ padding: 'var(--form-box-pad, 1rem)', width: '25%', borderBottom: '2px solid #eee' }}>Term</th>
+                        <th style={{ padding: 'var(--form-box-pad, 1rem)', width: isAdmin ? '45%' : '75%', borderBottom: '2px solid #eee' }}>Description</th>
+                        {isAdmin && <th style={{ padding: 'var(--form-box-pad, 1rem)', width: '22%', textAlign: 'right', borderBottom: '2px solid #eee' }}>Actions</th>}
                     </tr>
                     </thead>
                     <tbody>
                     {filteredGlossary.map(item => (
                         <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
                             
-                            <td style={{ fontWeight: 'bold', padding: '1rem', verticalAlign: 'top', wordWrap: 'break-word' }}>
+                            <td style={{ fontWeight: 'bold', padding: 'var(--form-box-pad, 1rem)', verticalAlign: 'top', wordWrap: 'break-word' }}>
                                 {item.word}
                             </td>
-                            <td style={{ padding: '1rem', verticalAlign: 'top' }}>
+                            <td style={{ padding: 'var(--form-box-pad, 1rem)', verticalAlign: 'top' }}>
                                 {/* DIV CON TRONCAMENTO A 3 RIGHE */}
                                 <div style={{
                                     display: '-webkit-box',
@@ -109,7 +109,7 @@ export default function GlossaryList() {
                                 </div>
                             </td>
                             {isAdmin && (
-                                <td className="row-actions" style={{ padding: '1rem', textAlign: 'right', verticalAlign: 'top' }}>
+                                <td className="row-actions" style={{ padding: 'var(--form-box-pad, 1rem)', textAlign: 'right', verticalAlign: 'top' }}>
                                     <Link to={`/admin/glossary/${item.id}/edit`} className="btn">Edit</Link>
                                     <button onClick={() => handleDelete(item.id)} className="btn btn--danger" style={{color: 'red', marginLeft: '0.5rem'}}>Delete</button>
                                 </td>

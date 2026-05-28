@@ -117,7 +117,7 @@ function LanguagesBackupsPanel() {
 
     return (
         <div>
-            <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad, 1.25rem)', border: '1px solid var(--border)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Create global languages backup</h3>
                 <p className="small muted" style={{ marginTop: 0 }}>
                     Snapshot of <strong>every language</strong> with answers and examples. Useful before major changes — backups remain until they are explicitly deleted.
@@ -134,7 +134,7 @@ function LanguagesBackupsPanel() {
                                 value={backupNote}
                                 onChange={(e) => setBackupNote(e.target.value)}
                                 placeholder="E.g. Before the v2.0 release..."
-                                style={{ width: '100%', padding: '0.5rem' }}
+                                style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }}
                             />
                         </div>
                         <button type="submit" className="btn btn--primary">+ Create languages backup now</button>
@@ -232,7 +232,7 @@ function ParametersBackupsPanel() {
 
     return (
         <div>
-            <div className="card" style={{ padding: '1.25rem', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad, 1.25rem)', border: '1px solid var(--border)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Create global parameters backup</h3>
                 <p className="small muted" style={{ marginTop: 0 }}>
                     Snapshot of <strong>every parameter definition</strong> with its questions and the motivations allowed for each question. The data filled in by linguists per language is not included here (see the Languages backup for that).
@@ -249,7 +249,7 @@ function ParametersBackupsPanel() {
                                 value={backupNote}
                                 onChange={(e) => setBackupNote(e.target.value)}
                                 placeholder="E.g. Before the questions revision..."
-                                style={{ width: '100%', padding: '0.5rem' }}
+                                style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }}
                             />
                         </div>
                         <button type="submit" className="btn btn--primary">+ Create parameters backup now</button>

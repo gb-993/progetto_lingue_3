@@ -54,26 +54,26 @@ export default function GlossaryForm() {
     };
 
     return (
-        <div className="container" style={{maxWidth: '600px', marginTop: '2rem'}}>
+        <div className="container" style={{maxWidth: '600px', marginTop: 'var(--form-page-top, 2rem)'}}>
             <div className="card">
-                <header style={{marginBottom: '1.5rem'}}>
+                <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)'}}>
                     <h2>{isEditMode ? 'Edit Term' : 'Add Term to Glossary'}</h2>
                 </header>
 
-                {error && <div style={{color: 'red', marginBottom: '1rem', padding: '0.5rem', border: '1px solid red', borderRadius: '4px'}}>{error}</div>}
+                {error && <div style={{color: 'red', marginBottom: 'var(--form-field-mb, 1rem)', padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid red', borderRadius: '4px'}}>{error}</div>}
 
-                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)'}}>
                     <div>
                         <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Word / Term</label>
-                        <input type="text" name="word" value={formData.word} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} placeholder="E.g. Inflectional language" />
+                        <input type="text" name="word" value={formData.word} onChange={handleChange} required style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="E.g. Inflectional language" />
                     </div>
 
                     <div>
                         <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 'bold'}}>Description</label>
-                        <textarea name="description" value={formData.description} onChange={handleChange} required rows="6" style={{width: '100%', padding: '0.5rem'}} placeholder="Enter the detailed definition..." />
+                        <textarea name="description" value={formData.description} onChange={handleChange} required rows="6" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Enter the detailed definition..." />
                     </div>
 
-                    <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
+                    <div style={{display: 'flex', gap: '1rem', marginTop: 'var(--form-field-mb, 1rem)'}}>
                         <button type="submit" className="btn btn--primary">Save Term</button>
                         {/* CORREZIONE: Anche il tasto annulla punta alla pagina corretta */}
                         <Link to="/glossary" className="btn">Cancel</Link>

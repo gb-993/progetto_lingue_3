@@ -218,11 +218,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
         <div
             ref={cardRef}
             className={`card question-row${isHighlighted ? ' is-highlighted' : ''}`}
-            style={{ padding: '1.5rem', background: 'var(--surface, #fff)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', marginBottom: '1rem' }}
+            style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', background: 'var(--surface, #fff)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', marginBottom: 'var(--form-field-mb, 1rem)' }}
         >
 
             {/* Header Domanda */}
-            <div className="q-head" style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '1rem', borderLeft: '3px solid var(--brand)', paddingLeft: '0.85rem', marginBottom: '1.5rem' }}>
+            <div className="q-head" style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '1rem', borderLeft: '3px solid var(--brand)', paddingLeft: '0.85rem', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <strong className="q-id" style={{ color: 'var(--brand)', fontSize: '1.1rem' }}>{question.id}</strong>
                     <div className="q-text" style={{ fontSize: '1.05rem', fontWeight: 600 }}>{question.text}</div>
@@ -280,14 +280,14 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             )}
 
             {/* Select Risposta */}
-            <div className="info-row" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <label className="info-row__label">Answer</label>
                 <div className="info-row__content">
                     <select
                         value={value.response_text || ''}
                         onChange={(e) => onChange({ response_text: e.target.value })}
                         disabled={isReadOnly}
-                        style={{ padding: '0.6rem', width: '100%', maxWidth: '300px', borderRadius: '4px', border: '1px solid var(--border)' }}
+                        style={{ padding: 'var(--form-input-pad, 0.6rem)', width: '100%', maxWidth: '300px', borderRadius: '4px', border: '1px solid var(--border)' }}
                     >
                         <option value="">— select —</option>
                         <option value="yes">YES</option>
@@ -302,7 +302,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 <div className="info-row">
                     <div className="info-row__label">Motivations</div>
                     <div className="info-row__content">
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '6px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '6px' }}>
                             {question.allowed_motivations.length > 0 ? (
                                 question.allowed_motivations.map(m => (
                                     <label key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
@@ -328,13 +328,13 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             {/* BLOCCO Esempi: visibile per yes/no/unsure. La validazione "≥2 esempi"
                 vale solo per yes/unsure; per 'no' sono facoltativi (zero o più). */}
             {(value.response_text === 'yes' || value.response_text === 'no' || value.response_text === 'unsure') && (
-                <div className="info-row" style={{ marginTop: '1.5rem' }}>
+                <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                     <div className="info-row__label">
                         Examples{value.response_text === 'no' && ' (optional)'}
                     </div>
                     <div className="info-row__content">
 
-                        {localError && <div className="alert alert-warning" style={{ marginBottom: '1rem', fontWeight: 'bold' }}>{localError}</div>}
+                        {localError && <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)', fontWeight: 'bold' }}>{localError}</div>}
 
                         {/*
                             Layout responsive: su schermi larghi (≥ ~880px) gli esempi
@@ -346,11 +346,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                         <div className="examples-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-                            gap: '1rem',
+                            gap: 'var(--form-grid-gap, 1rem)',
                             marginBottom: value.examples.length > 0 ? '1rem' : 0,
                         }}>
                             {value.examples.map((ex, index) => (
-                                <div key={ex.tempId} className="card" style={{ padding: '1rem', background: 'var(--surface-2)', position: 'relative' }}>
+                                <div key={ex.tempId} className="card" style={{ padding: 'var(--form-box-pad, 1rem)', background: 'var(--surface-2)', position: 'relative' }}>
                                     <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
                                         <button
                                             type="button"
@@ -401,8 +401,8 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                             <div
                                 className="card"
                                 style={{
-                                    marginBottom: '1rem',
-                                    padding: '1rem',
+                                    marginBottom: 'var(--form-field-mb, 1rem)',
+                                    padding: 'var(--form-box-pad, 1rem)',
                                     background: 'color-mix(in oklab, #dc2626 7%, var(--surface-2))',
                                     border: '1px dashed #dc2626',
                                     boxShadow: '0 0 0 3px color-mix(in oklab, #dc2626 10%, transparent)',
@@ -434,7 +434,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     Example in clipboard{copied.sourceQuestionId ? ` · from ${copied.sourceQuestionId}` : ''}
                                 </h4>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
                                     <div>
                                         <label className="small">Example text</label>
                                         <div style={clipboardFieldStyle}>{copied.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
@@ -487,7 +487,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             )}
 
             {/* Commenti liberi */}
-            <div className="info-row" style={{ marginTop: '1.5rem' }}>
+            <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                 <label className="info-row__label">Comments</label>
                 <div className="info-row__content">
                     <textarea
@@ -495,7 +495,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                         value={value.comments || ''}
                         onChange={(e) => onChange({ comments: e.target.value })}
                         disabled={isReadOnly}
-                        style={{ width: '100%', padding: '0.5rem', resize: 'vertical' }}
+                        style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)', resize: 'vertical' }}
                     />
                 </div>
             </div>

@@ -319,9 +319,9 @@ export default function TableA() {
     return (
         <div className="container" style={{ maxWidth: '100%' }}>
 
-            <header className="dashboard-hero" style={{ marginBottom: '2rem' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <h1>Table A</h1>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <nav style={{ background: '#e9ecef', padding: '5px', borderRadius: '50px', display: 'inline-flex' }}>
                         <button
                             className={`btn ${view === 'params' ? 'btn-light' : 'btn-outline'}`}
@@ -342,12 +342,12 @@ export default function TableA() {
             </header>
 
             {/* ================= PANNELLO FILTRI ================= */}
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', gap: 'var(--form-col-gap, 2rem)', marginBottom: 'var(--form-field-mb, 1rem)', flexWrap: 'wrap' }}>
 
                     {/* Filtri Lingua */}
                     <div style={{ flex: '1 1 300px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: '1rem', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
                             Language Filters
                         </span>
 
@@ -406,7 +406,7 @@ export default function TableA() {
 
                     {/* Filtri Specifici (Params/Questions) */}
                     <div style={{ flex: '1 1 300px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: '1rem', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
                             {view === 'params' ? 'Parameters Filters' : 'Questions Filters'}
                         </span>
 
@@ -459,7 +459,7 @@ export default function TableA() {
                 </div>
 
                 {/* Barra Azioni */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 'var(--form-box-pad, 1.25rem)' }}>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={fetchMatrix} className="btn btn--primary">Apply Filters</button>
                         <button onClick={resetFilters} className="btn">Reset</button>
@@ -519,11 +519,11 @@ export default function TableA() {
             </div>
 
             {/* ================= TABELLA RISULTATI ================= */}
-            {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+            {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{
-                    padding: '1rem',
+                    padding: 'var(--form-box-pad, 1rem)',
                     borderBottom: '1px solid var(--border)',
                     display: 'flex',
                     alignItems: 'center',
@@ -650,7 +650,7 @@ export default function TableA() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
                     }}
                 >
-                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(440px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
+                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(440px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: 'var(--modal-pad, 1.25rem 1.5rem)' }}>
                         <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Mantel test</h3>
                         <p className="muted small" style={{ marginTop: 0 }}>
                             Choose two or three distance matrices.
@@ -697,7 +697,7 @@ export default function TableA() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
                     }}
                 >
-                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(460px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: '1.25rem 1.5rem' }}>
+                    <div style={{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, width: 'min(460px, 92vw)', boxShadow: '0 12px 36px rgba(0,0,0,0.25)', padding: 'var(--modal-pad, 1.25rem 1.5rem)' }}>
                         <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>Cluster map</h3>
                         <p className="muted small" style={{ marginTop: 0 }}>
                             Builds an interactive HTML map: UPGMA clusters (linkage = average) on the geographic coordinates of the selected languages.

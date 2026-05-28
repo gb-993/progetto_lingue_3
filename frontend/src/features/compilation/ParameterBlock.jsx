@@ -154,7 +154,7 @@ export default function ParameterBlock({
     };
 
     return (
-        <section className="card parameter-block" style={{ padding: '1.5rem' }}>
+        <section className="card parameter-block" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
             <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
                 {parameter.id} — {parameter.name}
             </h3>
@@ -162,7 +162,7 @@ export default function ParameterBlock({
 
             {isAdmin && (
                 <div style={{
-                    marginTop: '1rem',
+                    marginTop: 'var(--form-field-mb, 1rem)',
                     border: '1px solid var(--border)',
                     borderRadius: '6px',
                     background: 'var(--surface-alt, var(--surface-2))',
@@ -219,7 +219,7 @@ export default function ParameterBlock({
                                 placeholder="Free-text note visible only to admins. Not exported to users."
                                 style={{
                                     width: '100%',
-                                    padding: '0.5rem',
+                                    padding: 'var(--form-input-pad, 0.5rem)',
                                     fontSize: '0.85rem',
                                     resize: 'vertical',
                                     fontFamily: 'inherit',
@@ -233,7 +233,7 @@ export default function ParameterBlock({
                 </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)', marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                 {parameter.questions.map(q => (
                     <QuestionRow
                         key={q.id}
@@ -250,7 +250,7 @@ export default function ParameterBlock({
             <div
                 className="card parameter-finalize-sticky"
                 style={{
-                    marginTop: '2rem',
+                    marginTop: 'var(--form-col-gap, 2rem)',
                     marginLeft: 'auto',
                     width: 'fit-content',
                     maxWidth: '100%',

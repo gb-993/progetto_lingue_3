@@ -693,16 +693,16 @@ export default function QuestionForm({ mode = 'page' }) {
         : (paramFromUrl ? `/admin/parameters/${paramFromUrl}/edit` : '/admin/questions');
 
     return (
-        <div className="container" style={{ maxWidth: '900px', marginTop: isDrawerMode ? 0 : '2rem', position: 'relative' }}>
+        <div className="container" style={{ maxWidth: '900px', marginTop: isDrawerMode ? 0 : 'var(--form-page-top, 2rem)', position: 'relative' }}>
             <div className="card">
-                <header style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                     <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
                     <DraftIndicator lastSavedAt={lastSavedAt} />
                 </header>
 
-                {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+                {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.2rem)' }}>
                     {/* --- IMPORT (solo in creazione, riga compatta) --- */}
                     {!isEditMode && (
                         <>  
@@ -776,10 +776,10 @@ export default function QuestionForm({ mode = 'page' }) {
                         </>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question ID</label>
-                            <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem' }} />
+                            <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
                             {!isEditMode && formData.parameter_id && (
                                 <div className="small muted" style={{ marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: 1.35 }}>
                                     {currentParamQuestions.length > 0 ? (
@@ -800,7 +800,7 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Destination Parameter</label>
-                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: '0.6rem', backgroundColor: isEditMode ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
+                            <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', backgroundColor: isEditMode ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
                                 <option value="">Select parameter...</option>
                                 {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}
                             </select>
@@ -809,41 +809,41 @@ export default function QuestionForm({ mode = 'page' }) {
 
                     <div>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question Text</label>
-                        <textarea name="text" value={formData.text} onChange={handleChange} required rows="3" style={{ width: '100%', padding: '0.6rem' }} />
+                        <textarea name="text" value={formData.text} onChange={handleChange} required rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
                     </div>
 
                     {/* SEZIONE ISTRUZIONI */}
-                    <div style={{ background: 'var(--surface, #fafafa)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                        <h4 style={{marginTop: 0, marginBottom: '1rem'}}>Instructions</h4>
+                    <div style={{ background: 'var(--surface, #fafafa)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <h4 style={{marginTop: 0, marginBottom: 'var(--form-field-mb, 1rem)'}}>Instructions</h4>
 
-                        <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>General Instructions (optional)</label>
-                            <textarea name="instruction" value={formData.instruction} onChange={handleChange} rows="2" style={{ width: '100%', padding: '0.6rem' }} placeholder="Shown to users regardless of their answer..." />
+                            <textarea name="instruction" value={formData.instruction} onChange={handleChange} rows="2" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} placeholder="Shown to users regardless of their answer..." />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
                             <div>
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'green' }}>Instruction for YES</label>
-                                <textarea name="instruction_yes" value={formData.instruction_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem', borderLeft: '4px solid green' }} placeholder="Specific instruction if the user answers YES..." />
+                                <textarea name="instruction_yes" value={formData.instruction_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid green' }} placeholder="Specific instruction if the user answers YES..." />
                             </div>
                             <div>
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'red' }}>Instruction for NO</label>
-                                <textarea name="instruction_no" value={formData.instruction_no} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem', borderLeft: '4px solid red' }} placeholder="Specific instruction if the user answers NO..." />
+                                <textarea name="instruction_no" value={formData.instruction_no} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid red' }} placeholder="Specific instruction if the user answers NO..." />
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '1rem' }}>
+                        <div style={{ marginTop: 'var(--form-field-mb, 1rem)' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Example for YES (illustrative)</label>
-                            <textarea name="example_yes" value={formData.example_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem' }} placeholder="Example shown when discussing a YES case..." />
+                            <textarea name="example_yes" value={formData.example_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} placeholder="Example shown when discussing a YES case..." />
                         </div>
 
-                        <div style={{ marginTop: '1rem' }}>
+                        <div style={{ marginTop: 'var(--form-field-mb, 1rem)' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Help info (More info expandable)</label>
-                            <textarea name="help_info" value={formData.help_info} onChange={handleChange} rows="3" style={{ width: '100%', padding: '0.6rem' }} placeholder="Additional info shown in the More info expander on the compilation page..." />
+                            <textarea name="help_info" value={formData.help_info} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} placeholder="Additional info shown in the More info expander on the compilation page..." />
                         </div>
                     </div>
 
-                    <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ background: 'var(--surface-2, #f8fafc)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                             Allowed Motivations (for NO answers)
                         </label>
@@ -880,10 +880,10 @@ export default function QuestionForm({ mode = 'page' }) {
                     {/* --- SEZIONE MOTIVAZIONE (Visibile sia in creazione che in modifica) --- */}
                     <div style={{
                         background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
-                        padding: '1.5rem',
+                        padding: 'var(--form-box-pad-lg, 1.5rem)',
                         borderRadius: '8px',
                         border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
-                        marginTop: '1rem'
+                        marginTop: 'var(--form-field-mb, 1rem)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
                             <h4 style={{ margin: 0, color: isDirty ? '#664d03' : 'inherit' }}>
@@ -902,7 +902,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                 </button>
                             )}
                         </div>
-                        <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                        <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.9rem' }}>
                             {!isEditMode
                                 ? 'You are adding a new question. Enter a description that will be saved in the history of the parent parameter.'
                                 : (isDirty
@@ -910,7 +910,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                     : 'No changes detected. Edit at least one field to enable saving and to add a note. The note will be saved in the history of the parent parameter.')}
                         </p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)' }}>
                             <div>
                                 <textarea
                                     value={changeNote}
@@ -922,7 +922,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                     disabled={!isDirty}
                                     style={{
                                         width: '100%',
-                                        padding: '0.5rem',
+                                        padding: 'var(--form-input-pad, 0.5rem)',
                                         borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
                                         borderRadius: '4px',
                                         // Quando dirty il container esterno è giallo chiaro hard-coded:
@@ -991,7 +991,7 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: 'var(--form-col-gap, 1.5rem)', borderTop: '1px solid var(--border)', paddingTop: 'var(--form-col-gap, 1.5rem)', flexWrap: 'wrap' }}>
                         <button
                             type="submit"
                             className="btn btn--primary"
@@ -1026,11 +1026,11 @@ export default function QuestionForm({ mode = 'page' }) {
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '400px' }}>
                         <h3>New Motivation</h3>
-                        <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             <label className="small">Code</label>
                             <input type="text" value={newMotData.code} onChange={e => setNewMotData({...newMotData, code: e.target.value.toUpperCase()})} style={{ width: '100%', padding: '0.4rem' }} />
                         </div>
-                        <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             <label className="small">Description (Label)</label>
                             <textarea rows="3" value={newMotData.label} onChange={e => setNewMotData({...newMotData, label: e.target.value})} style={{ width: '100%', padding: '0.4rem' }} />
                         </div>
@@ -1116,7 +1116,7 @@ export default function QuestionForm({ mode = 'page' }) {
                     <div style={modalOverlayStyle}>
                         <div className="card" style={{ width: '460px' }}>
                             <h3 style={{ marginTop: 0 }}>Modifica motivation</h3>
-                            <div className="alert alert-warning" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
+                            <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.82rem' }}>
                                 <strong>Attenzione.</strong> Le modifiche al <em>code</em> o al <em>label</em>
                                 sono globali: si propagano in tutte le risposte già date e in tutte le
                                 domande che la usano. {linkedCount > 0 && (
@@ -1129,7 +1129,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                 )}
                             </div>
 
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                                 <label className="small" style={{ fontWeight: 'bold' }}>Code</label>
                                 <input
                                     type="text"

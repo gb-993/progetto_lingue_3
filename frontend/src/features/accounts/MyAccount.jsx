@@ -2,11 +2,33 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
 
+// Stessa logica del toggle tema (data-theme): la densita' del layout vive in
+// un attributo data-density su <html>, persistito in localStorage e applicato
+// gia' in index.html per evitare il flash al reload.
+const DENSITY_STORAGE_KEY = 'pcm-density';
+
+function getInitialDensity() {
+    if (typeof window === 'undefined') return 'comfortable';
+    return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'comfortable';
+}
+
 export default function MyAccount() {
     const navigate = useNavigate();
     const [profile, setProfile] = useState({ name: '', surname: '', email: '' });
     const [passwords, setPasswords] = useState({ old_password: '', new_password1: '', new_password2: '' });
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [density, setDensity] = useState(getInitialDensity);
+
+    const handleDensityChange = (e) => {
+        const value = e.target.value;
+        setDensity(value);
+        if (value === 'compact') {
+            document.documentElement.setAttribute('data-density', 'compact');
+        } else {
+            document.documentElement.removeAttribute('data-density');
+        }
+        localStorage.setItem(DENSITY_STORAGE_KEY, value);
+    };
 
     useEffect(() => {
         const fetchMe = async () => {
@@ -46,18 +68,18 @@ export default function MyAccount() {
     };
 
     return (
-        <div className="container" style={{maxWidth: '800px', marginTop: '2rem'}}>
-            <header style={{marginBottom: '1.5rem'}}>
+        <div className="container" style={{maxWidth: '800px', marginTop: 'var(--acc-page-top, 2rem)'}}>
+            <header style={{marginBottom: 'var(--acc-header-gap, 1.5rem)'}}>
                 <h1>My Account</h1>
             </header>
 
             {message.text && (
-                <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'}`} style={{marginBottom: '1rem'}}>
+                <div className={`alert ${message.type === 'error' ? 'alert-error' : 'alert-success'}`} style={{marginBottom: 'var(--acc-alert-gap, 1rem)'}}>
                     {message.text}
                 </div>
             )}
 
-            <div className="card" style={{marginBottom: '2rem'}}>
+            <div className="card" style={{marginBottom: 'var(--acc-section-gap, 2rem)'}}>
                 <h3 className="mb-2">Profile</h3>
                 <form onSubmit={handleProfileSubmit} className="grid grid-2">
                     <div className="form-group">
@@ -72,10 +94,29 @@ export default function MyAccount() {
                         <label>Email</label>
                         <input type="email" name="email" value={profile.email} onChange={handleProfileChange} required />
                     </div>
-                    <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: '1rem'}}>
+                    <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: 'var(--acc-action-top, 1rem)'}}>
                         <button type="submit" className="btn btn--primary">Save Profile</button>
                     </div>
                 </form>
+            </div>
+
+            <div className="card" style={{marginBottom: 'var(--acc-section-gap, 2rem)'}}>
+                <h3 className="mb-2">Appearance</h3>
+                <div className="form-group">
+                    <label htmlFor="density-select">Layout density</label>
+                    <select
+                        id="density-select"
+                        value={density}
+                        onChange={handleDensityChange}
+                        style={{maxWidth: '320px'}}
+                    >
+                        <option value="comfortable">Comfortable (default)</option>
+                        <option value="compact">Compact</option>
+                    </select>
+                    <p className="muted" style={{marginTop: '.5rem', fontSize: '.9rem'}}>
+                        Compact riduce dimensioni e spaziature per un look più da gestionale. I colori restano invariati.
+                    </p>
+                </div>
             </div>
 
             <div className="card">
@@ -93,7 +134,7 @@ export default function MyAccount() {
                         <label>Confirm New Password</label>
                         <input type="password" name="new_password2" value={passwords.new_password2} onChange={handlePasswordChange} required minLength={8} />
                     </div>
-                    <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: '1rem'}}>
+                    <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: 'var(--acc-action-top, 1rem)'}}>
                         <button type="submit" className="btn btn--primary">Update Password</button>
                     </div>
                 </form>

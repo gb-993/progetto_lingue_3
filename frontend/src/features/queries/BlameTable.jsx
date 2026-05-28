@@ -92,7 +92,7 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
 
     return (
         <div className="card" style={{
-            padding: compact ? '0.55rem 0.7rem' : '1.25rem',
+            padding: compact ? '0.55rem 0.7rem' : 'var(--form-box-pad, 1.25rem)',
             border: `1px solid ${meta.border}`,
             marginTop: 0,
             background: compact ? 'var(--surface-2)' : 'var(--surface)'

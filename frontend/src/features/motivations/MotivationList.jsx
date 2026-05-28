@@ -99,11 +99,11 @@ export default function MotivationList() {
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
-                padding: '0.85rem 1rem',
+                padding: 'var(--filter-card-pad, 0.85rem 1rem)',
                 border: '1px solid var(--border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                marginBottom: '1rem',
+                marginBottom: 'var(--form-field-mb, 1rem)',
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr) auto',
                 alignItems: 'center',
@@ -177,11 +177,11 @@ export default function MotivationList() {
             {showModal && (
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '460px' }}>
-                        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>
+                        <h3 style={{ marginTop: 0, marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             {editingId ? 'Edit Motivation' : 'New Motivation'}
                         </h3>
                         <form onSubmit={handleSave}>
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Code</label>
                                 <input
                                     type="text"
@@ -191,16 +191,16 @@ export default function MotivationList() {
                                     readOnly={!!editingId}
                                     style={{
                                         width: '100%',
-                                        padding: '0.5rem',
+                                        padding: 'var(--form-input-pad, 0.5rem)',
                                         background: editingId ? 'var(--surface-2)' : undefined,
                                         color: editingId ? 'var(--text-muted)' : undefined,
                                         cursor: editingId ? 'not-allowed' : undefined,
                                     }}
                                 />
                             </div>
-                            <div style={{ marginBottom: '1.5rem' }}>
+                            <div style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                                 <label style={{fontWeight: 'bold', display: 'block', marginBottom: '0.3rem'}}>Description</label>
-                                <textarea rows="3" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} required style={{ width: '100%', padding: '0.5rem' }} />
+                                <textarea rows="3" value={formData.label} onChange={e => setFormData({...formData, label: e.target.value})} required style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn" onClick={() => setShowModal(false)}>Cancel</button>

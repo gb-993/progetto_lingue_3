@@ -240,7 +240,7 @@ export default function ParameterList() {
 
             {/* ==== FILTRI ==== */}
             <div className="card" style={{
-                padding: '1rem 1.25rem',
+                padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
                 border: '1px solid var(--border)',
                 position: 'sticky',
@@ -251,7 +251,7 @@ export default function ParameterList() {
                 WebkitBackdropFilter: 'blur(10px)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
             }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 'var(--filter-card-gap, 0.75rem)', alignItems: 'end' }}>
                     <FilterField label="Search">
                         <input
                             type="search"
@@ -288,7 +288,7 @@ export default function ParameterList() {
                     </FilterField>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
                         {filteredParams.length} of {parameters.length} parameters
                         {activeFilterCount > 0 && <span> · {activeFilterCount} active filters · reordering disabled while filtering</span>}
@@ -435,7 +435,7 @@ export default function ParameterList() {
 }
 
 // ===== Helper UI =====
-const inputStyle = { width: '100%', padding: '0.45rem', fontSize: '0.85rem' };
+const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {
     return (

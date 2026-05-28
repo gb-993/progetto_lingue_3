@@ -89,7 +89,7 @@ export default function OldQuestionsTab() {
         <>
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <p className="small muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.45 }}>
                     Each row groups the archived versions of a single question. A new version
                     is created whenever an admin saves a question with the
@@ -99,13 +99,13 @@ export default function OldQuestionsTab() {
                 </p>
             </div>
 
-            <div className="card" style={{ padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+            <div className="card" style={{ padding: 'var(--filter-card-pad, 0.75rem 1rem)', marginBottom: 'var(--form-field-mb, 1rem)' }}>
                 <input
                     type="search"
                     placeholder="Search by question ID, parameter, archived text or note..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px' }}
+                    style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid var(--border)', borderRadius: '4px' }}
                 />
             </div>
 

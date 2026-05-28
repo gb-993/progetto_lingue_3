@@ -48,23 +48,23 @@ export default function AccountAssign() {
     if (!user) return <div className="container">Loading...</div>;
 
     return (
-        <div className="container" style={{ maxWidth: '800px', marginTop: '2rem' }}>
+        <div className="container" style={{ maxWidth: '800px', marginTop: 'var(--form-page-top, 2rem)' }}>
             <div className="card">
-                <header style={{ marginBottom: '1.5rem' }}>
+                <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}>
                     <h2>Assign Languages to: {user.name} {user.surname}</h2>
                     <p className="muted">{user.email}</p>
                 </header>
 
                 {error && <div className="alert alert-error mb-1">{error}</div>}
 
-                <div className="alert alert-warning" style={{ marginBottom: '1.5rem' }}>
+                <div className="alert alert-warning" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <span>
                         <strong>Warning:</strong> If you select a language labelled "Assigned to others", it will be <strong>immediately revoked</strong> from the previous owner and transferred to this user.
                     </span>
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                         {languages.map(lang => (
                             <label key={lang.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0', borderBottom: '1px solid var(--surface-2)' }}>
                                 <input

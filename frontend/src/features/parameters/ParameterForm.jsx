@@ -370,29 +370,29 @@ export default function ParameterForm() {
     // Stili riutilizzabili per le righe delle domande
     const qRowStyle = {
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        gap: '0.75rem', padding: '0.75rem 0.9rem', marginBottom: '0.5rem',
+        gap: '0.75rem', padding: 'var(--form-row-pad, 0.75rem 0.9rem)', marginBottom: '0.5rem',
         background: 'var(--surface, #fff)', border: '1px solid var(--border, #dadde2)',
-        borderRadius: '0.6rem'
+        borderRadius: 'var(--form-row-radius, 0.6rem)'
     };
 
     return (
         <>
-        <div className="container" style={{maxWidth: '1200px', marginTop: '2rem', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem'}}>
+        <div className="container" style={{maxWidth: '1200px', marginTop: 'var(--form-page-top, 2rem)', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 'var(--form-aside-gap, 2rem)'}}>
 
             {/* MODAL DISATTIVAZIONE */}
             {showDeactivateModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '400px', padding: '2rem' }}>
+                    <div className="card" style={{ width: '400px', padding: 'var(--modal-pad, 2rem)' }}>
                         <h3 style={{ color: 'var(--bad)', marginTop: 0 }}>Deactivate Parameter</h3>
                         <p className="small muted">Enter your admin password to confirm the operation.</p>
                         <form onSubmit={submitDeactivation}>
-                            <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                                 <label style={{ fontWeight: 'bold' }}>Admin Password</label>
-                                <input type="password" required value={deactivateForm.password} onChange={e => setDeactivateForm({...deactivateForm, password: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
+                                <input type="password" required value={deactivateForm.password} onChange={e => setDeactivateForm({...deactivateForm, password: e.target.value})} style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }} />
                             </div>
                             <div style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ fontWeight: 'bold' }}>Reason (optional)</label>
-                                <textarea rows="2" value={deactivateForm.reason} onChange={e => setDeactivateForm({...deactivateForm, reason: e.target.value})} style={{ width: '100%', padding: '0.5rem' }} />
+                                <textarea rows="2" value={deactivateForm.reason} onChange={e => setDeactivateForm({...deactivateForm, reason: e.target.value})} style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
@@ -403,9 +403,9 @@ export default function ParameterForm() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.5rem)' }}>
                 <div className="card">
-                    <header style={{marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                    <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                         <h2 style={{margin: 0}}>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <DraftIndicator lastSavedAt={lastSavedAt} />
@@ -422,27 +422,27 @@ export default function ParameterForm() {
                         </div>
                     </header>
 
-                    {error && <div className="alert alert-error" style={{marginBottom: '1rem'}}>{error}</div>}
+                    {error && <div className="alert alert-error" style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>{error}</div>}
 
                     <form onSubmit={handleSubmit}>
                         {/* --- INIZIO CAMPI FORM --- */}
-                        <div className="grid grid-2" style={{gap: '1rem', marginBottom: '1rem'}}>
+                        <div className="grid grid-2" style={{gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Parameter ID</label>
-                                <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: '0.5rem'}} />
+                                <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                             </div>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Position</label>
-                                <input type="number" name="position" value={formData.position} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
+                                <input type="number" name="position" value={formData.position} onChange={handleChange} required style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                             </div>
                         </div>
 
-                        <div style={{marginBottom: '1rem'}}>
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Name</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleChange} required style={{width: '100%', padding: '0.5rem'}} />
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} required style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                         </div>
 
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>
+                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px'}}>
                             <LookupField
                                 label="Schema"
                                 name="schema"
@@ -481,17 +481,17 @@ export default function ParameterForm() {
                             />
                         </div>
 
-                        <div style={{marginBottom: '1rem'}}>
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Short Description</label>
-                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="2" style={{width: '100%', padding: '0.5rem'}} />
+                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="2" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                         </div>
 
-                        <div style={{marginBottom: '1rem'}}>
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Long Description</label>
-                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: '0.5rem'}} placeholder="Extended description of the parameter (optional)" />
+                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Extended description of the parameter (optional)" />
                         </div>
 
-                        <div style={{marginBottom: '1rem'}}>
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Implicational Condition(s)</label>
                             <input
                                 type="text"
@@ -499,17 +499,17 @@ export default function ParameterForm() {
                                 value={formData.implicational_condition || ''}
                                 onChange={handleChange}
                                 placeholder="e.g. (+FGM | -ABC)"
-                                style={{width: '100%', padding: '0.5rem', borderColor: syntaxError ? 'red' : 'inherit'}}
+                                style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: syntaxError ? 'red' : 'inherit'}}
                             />
                             {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{syntaxError}</p>}
                         </div>
 
-                        <div style={{marginBottom: '1rem'}}>
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition(s)</label>
-                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: '0.5rem'}} placeholder="Textual explanation (optional)" />
+                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Textual explanation (optional)" />
                         </div>
 
-                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem', background: 'var(--surface-2)', padding: '1rem', borderRadius: '8px'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'var(--form-field-mb, 1rem)', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px'}}>
                             <input
                                 type="checkbox"
                                 id="is_active"
@@ -537,16 +537,16 @@ export default function ParameterForm() {
                         </div>
                         {/* --- FINE CAMPI FORM --- */}
 
-                        <hr style={{ margin: '2rem 0', borderColor: 'var(--border)' }} />
+                        <hr style={{ margin: 'var(--form-hr-margin, 2rem) 0', borderColor: 'var(--border)' }} />
 
                         {/* --- SEZIONE MOTIVAZIONE MODIFICA (Sempre visibile in Edit Mode) --- */}
                         {isEditMode && (
                             <div style={{
                                 background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
-                                padding: '1.5rem',
+                                padding: 'var(--form-box-pad-lg, 1.5rem)',
                                 borderRadius: '8px',
                                 border: isDirty ? '1px solid #ffe69c' : '1px solid var(--border)',
-                                marginBottom: '1.5rem'
+                                marginBottom: 'var(--form-col-gap, 1.5rem)'
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
                                     <h4 style={{ margin: 0, color: isDirty ? '#664d03' : 'inherit' }}>
@@ -561,13 +561,13 @@ export default function ParameterForm() {
                                         Download PDF
                                     </button>
                                 </div>
-                                <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                <p style={{ color: isDirty ? '#664d03' : '#64748b', marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.9rem' }}>
                                     {isDirty
                                         ? 'You have modified this parameter. You must enter a reason in order to save.'
                                         : 'No changes detected. Edit at least one field to enable saving and to add a note.'}
                                 </p>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)' }}>
                                     <div>
                                         <textarea
                                             value={changeNote}
@@ -658,7 +658,7 @@ export default function ParameterForm() {
                 {isEditMode && (
                     <div className="card">
                         <h3>Questions</h3>
-                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1rem' }}>
+                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)', marginTop: 'var(--form-field-mb, 1rem)' }}>
                             {/* Colonna Domande Normali */}
                             <div>
                                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Questions</label>
@@ -721,7 +721,7 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{
-                            marginTop: '1.5rem',
+                            marginTop: 'var(--form-col-gap, 1.5rem)',
                             padding: '0.85rem 1rem',
                             background: 'var(--surface-2, #f8fafc)',
                             border: '1px solid var(--border)',
@@ -748,7 +748,7 @@ export default function ParameterForm() {
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
+                        <div style={{ marginTop: 'var(--form-col-gap, 1.5rem)', textAlign: 'right' }}>
                             {/* Assicurati che in React Router tu abbia una rotta per /admin/questions/add */}
                             <Link to={`/admin/parameters/${id}/edit/questions/add`} className="btn btn--primary">
                                 Add a new question
@@ -761,7 +761,7 @@ export default function ParameterForm() {
             <aside>
                 <div className="card" style={{position: 'sticky', top: '2rem'}}>
                     <h3>Where Used</h3>
-                    <p className="small muted" style={{marginBottom: '1rem'}}>
+                    <p className="small muted" style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                         Other parameters that depend on this one.
                     </p>
 
@@ -805,7 +805,7 @@ function LookupField({
     return (
         <div>
             <label style={{ fontWeight: 'bold' }}>{label}</label>
-            <select name={name} value={value} onChange={onChange} style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}>
+            <select name={name} value={value} onChange={onChange} style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)', marginBottom: '0.5rem' }}>
                 <option value="">-- Select --</option>
                 {items.map(it => <option key={it.id} value={it.label}>{it.label}</option>)}
             </select>

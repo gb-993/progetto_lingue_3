@@ -155,7 +155,7 @@ export default function PublicHome() {
 
     return (
         <div className="page-shell">
-            <header className="page-hero" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <header className="page-hero" style={{ textAlign: 'center', marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <h1 className="page-title">Welcome to the PCM Hub</h1>
                 <p className="page-lead" style={{ maxWidth: '800px', margin: '0 auto 1.5rem' }}>
                     The <a href="http://www.parametricomparison.unimore.it" target="_blank" rel="noreferrer" style={{ color: 'var(--brand)' }}><strong>Parametric Comparison Method</strong></a> (PCM, Longobardi and Guardiano 2009) compares languages using universal syntactic parameters to measure their degree of similarity, reconstruct phylogenetic relationships, and infer patterns of divergence and convergence at a cross-family level.
@@ -166,7 +166,7 @@ export default function PublicHome() {
             </header>
 
             {/* MAPPA INTERATTIVA */}
-            <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '3rem' }}>
+            <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--form-col-gap, 3rem)' }}>
                 <div ref={mapRef} style={{ width: '100%', height: '450px' }}>
                     {loading && (
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', background: 'var(--surface-2)', color: 'var(--text)' }}>
@@ -241,9 +241,9 @@ export default function PublicHome() {
                 )}
             </div>
 
-            <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-col-gap, 2rem)' }}>
                 <section className="card page-card" style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div className="p-6" style={{ padding: '1.5rem', flexGrow: 1 }}>
+                    <div className="p-6" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', flexGrow: 1 }}>
                         <h3>How to cite</h3>
                         <p className="page-muted-block">
                             If you use data, methodology or any further material/resource from the PCM Hub in your research, please cite your source appropriately, following the Citation Guidelines below.
@@ -257,7 +257,7 @@ export default function PublicHome() {
                 </section>
 
                 <section className="card page-card" style={{ borderTop: '4px solid #2c3e50' }}>
-                    <div className="p-6" style={{ padding: '1.5rem' }}>
+                    <div className="p-6" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
                         <h3>Collaborations</h3>
                         <p className="page-muted-block">
                             Are you interested in contributing to data collection or proposing a scientific collaboration?

@@ -147,9 +147,9 @@ export default function Taxonomy() {
             <div className="taxonomy-columns" style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr 1fr',
-                gap: '1rem',
+                gap: 'var(--form-grid-gap, 1rem)',
                 alignItems: 'start',
-                marginBottom: '1.5rem',
+                marginBottom: 'var(--form-col-gap, 1.5rem)',
             }}>
                 {/* COLONNA 1 — TOP FAMILIES */}
                 <Column
@@ -657,7 +657,7 @@ function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
             <div className="card" style={{ width: '420px' }}>
                 <h3 style={{ marginTop: 0 }}>{title}</h3>
                 <form onSubmit={handleSave}>
-                    <div style={{ marginBottom: '1rem' }}>
+                    <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                         <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>Name</label>
                         <input
                             type="text"
@@ -665,19 +665,19 @@ function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
                             value={name}
                             onChange={(ev) => setName(ev.target.value)}
                             required
-                            style={{ width: '100%', padding: '0.5rem' }}
+                            style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }}
                         />
                     </div>
 
                     {hasParent && (
-                        <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>
                                 {modal.kind === 'family' ? 'Top-Family' : 'Subfamily'}
                             </label>
                             <select
                                 value={parentId}
                                 onChange={(ev) => setParentId(ev.target.value)}
-                                style={{ width: '100%', padding: '0.5rem' }}
+                                style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)' }}
                             >
                                 {parentOptions.map(o => (
                                     <option key={o.value} value={o.value}>{o.label}</option>

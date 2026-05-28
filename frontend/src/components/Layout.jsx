@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
 const THEME_STORAGE_KEY = 'pcm-theme';
+const DENSITY_STORAGE_KEY = 'pcm-density';
 const SIDEBAR_COLLAPSED_KEY = 'pcm-sidebar-collapsed';
 
 function getInitialTheme() {
@@ -277,8 +278,10 @@ export default function Layout({ children }) {
 
     const handleLogout = () => {
         const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        const savedDensity = localStorage.getItem(DENSITY_STORAGE_KEY);
         localStorage.clear();
         if (savedTheme) localStorage.setItem(THEME_STORAGE_KEY, savedTheme);
+        if (savedDensity) localStorage.setItem(DENSITY_STORAGE_KEY, savedDensity);
         // Delega al context: oltre a `removeItem('token')` (già coperto da
         // localStorage.clear() sopra) azzera lo stato `user` del provider e
         // ridireziona. Senza questa chiamata il context restava sporco e

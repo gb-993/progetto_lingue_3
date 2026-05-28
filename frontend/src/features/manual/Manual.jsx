@@ -90,11 +90,11 @@ export default function Manual() {
                 </p>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)', marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                 {visible.map((m) => {
                     const Icon = m.icon;
                     return (
-                        <div key={m.id} className="card" style={{ padding: '1.25rem' }}>
+                        <div key={m.id} className="card" style={{ padding: 'var(--form-box-pad, 1.25rem)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
                                 <Icon size={20} />
                                 <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{m.title}</h2>

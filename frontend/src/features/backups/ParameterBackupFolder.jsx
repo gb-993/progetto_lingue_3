@@ -42,7 +42,7 @@ export default function ParameterBackupFolder() {
 
     return (
         <div className="container">
-            <header className="dashboard-hero" style={{ marginBottom: '2rem' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <Link to="/admin/history?tab=backups" className="btn btn-outline-secondary">← Back to all folders</Link>
                     <h1 className="m-0" style={{ margin: 0 }}>Parameters backup: {displayDate}</h1>

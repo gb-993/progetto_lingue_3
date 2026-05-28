@@ -188,8 +188,8 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
     return (
         <div>
             {/* Pannello filtri */}
-            <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', alignItems: 'end' }}>
+            <div className="card" style={{ padding: 'var(--filter-card-pad, 1rem 1.25rem)', marginBottom: '1rem', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--filter-card-gap, 0.75rem)', alignItems: 'end' }}>
                     {!lockEntityType && (
                         <FilterField label="Entity type">
                             <select name="entity_type" value={filters.entity_type} onChange={handleFilterChange} style={inputStyle}>
@@ -247,7 +247,7 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                     </FilterField>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.85rem', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
                     <div className="small muted">
                         {total} total versions{activeFilters > 0 && ` · ${activeFilters} active filters`}
                     </div>
@@ -368,7 +368,7 @@ function VersionDetailDrawer({ versionId, onClose }) {
                     width: '760px', maxWidth: '95vw', height: '100%',
                     background: 'var(--surface)', color: 'var(--text)',
                     overflowY: 'auto', boxShadow: '-4px 0 20px rgba(0,0,0,0.4)',
-                    padding: '1.5rem',
+                    padding: 'var(--form-box-pad-lg, 1.5rem)',
                 }}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
@@ -519,7 +519,7 @@ function VersionDiffView({ data, onClose }) {
 }
 
 // ============================================================================
-const inputStyle = { width: '100%', padding: '0.45rem', fontSize: '0.85rem' };
+const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {
     return (

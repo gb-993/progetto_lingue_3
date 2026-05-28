@@ -261,8 +261,8 @@ export default function BackupRestore() {
     }, [exporting]);
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
+        <div className="container" style={{ maxWidth: '1100px', marginTop: 'var(--form-page-top, 2rem)' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h1>Backup &amp; Restore</h1>
                 <p className="muted">
                     Download a complete site backup for disaster recovery, or upload a
@@ -272,7 +272,7 @@ export default function BackupRestore() {
             </header>
 
             {/* === Export full backup === */}
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Export full backup</h3>
                 <p className="small" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
                     Generates a <code>PCM_full_backup_*.zip</code> with everything the
@@ -325,7 +325,7 @@ export default function BackupRestore() {
             </div>
 
             {/* === Restore section === */}
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>How to get the bundle for restore</h3>
                 <ol className="small" style={{ lineHeight: 1.7, marginTop: 0, marginBottom: '0.75rem', paddingLeft: '1.25rem' }}>
                     <li>
@@ -354,7 +354,7 @@ export default function BackupRestore() {
             </div>
 
             {wipe && (
-                <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #b91c1c' }}>
+                <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c' }}>
                     <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Destructive operation</h3>
                     <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
                         <li>With <code>wipe</code> enabled, <strong>all data tables are deleted</strong> before the restore (schema, languages, answers, examples, motivations, glossary, snapshots, change logs, taxonomy, site content, archived questions, parameter submissions).</li>
@@ -364,7 +364,7 @@ export default function BackupRestore() {
                 </div>
             )}
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1rem' }}>
                         <label className="form-label" htmlFor="backupFile">
@@ -427,7 +427,7 @@ export default function BackupRestore() {
             )}
 
             {error && (
-                <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem', borderLeft: '4px solid #b91c1c', color: '#b91c1c' }}>
+                <div className="card" style={{ padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c', color: '#b91c1c' }}>
                     <strong>Error:</strong> {error}
                 </div>
             )}
@@ -447,7 +447,7 @@ function ProgressPanel({ jobState, elapsed }) {
     const showCounter = total > 0;
 
     return (
-        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0 }}>Restore in progress</h3>
                 <span className="small muted">
@@ -561,7 +561,7 @@ function RestoreReport({ report }) {
     const hasErrors = errors.length > 0 || langsFailed.length > 0;
 
     return (
-        <div className="card" style={{ padding: '1.5rem' }}>
+        <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
             <h3 style={{ marginTop: 0 }}>
                 {hasErrors ? 'Restore completed with warnings' : 'Restore completed'}
             </h3>

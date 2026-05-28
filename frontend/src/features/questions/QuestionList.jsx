@@ -52,7 +52,7 @@ export default function QuestionList() {
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
-                padding: '0.85rem 1rem',
+                padding: 'var(--filter-card-pad, 0.85rem 1rem)',
                 border: '1px solid var(--border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',

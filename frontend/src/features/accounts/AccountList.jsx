@@ -38,7 +38,7 @@ export default function AccountList() {
     const publicUsers = filteredUsers.filter(u => u.role === 'public');
 
     const renderTable = (userList, title, showAssignBtn = false) => (
-        <div style={{marginBottom: '2rem'}}>
+        <div style={{marginBottom: 'var(--form-col-gap, 2rem)'}}>
             <h3>{title}</h3>
             <div className="card" style={{padding: 0, overflow: 'hidden'}}>
                 <table className="table">
@@ -102,7 +102,7 @@ export default function AccountList() {
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)',
                 backdropFilter: 'blur(10px)',
                 WebkitBackdropFilter: 'blur(10px)',
-                padding: '0.85rem 1rem',
+                padding: 'var(--filter-card-pad, 0.85rem 1rem)',
                 border: '1px solid var(--border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',

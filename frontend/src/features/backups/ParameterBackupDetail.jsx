@@ -80,7 +80,7 @@ export default function ParameterBackupDetail() {
 
     return (
         <div className="container">
-            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+            <header style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: 'var(--form-col-gap, 2rem)', flexWrap: 'wrap' }}>
                 <Link to={`/admin/backups/parameters/${encodeURIComponent(sub.submitted_at)}`} className="btn btn-outline-secondary">
                     ← Back to Folder
                 </Link>
@@ -91,7 +91,7 @@ export default function ParameterBackupDetail() {
             </header>
 
             {/* HEADER CARD */}
-            <div className="card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', border: '1px solid var(--border)' }}>
+            <div className="card" style={{ padding: 'var(--ld-header-pad, 1.5rem 2rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
                 <div style={{ marginBottom: '1.5rem' }}>
                     <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--brand)' }}>
                         {p.name || 'Unknown Parameter'}

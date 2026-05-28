@@ -166,8 +166,8 @@ export default function LanguageData() {
         callWorkflow('admin_force_waiting');
     };
 
-    if (loading) return <div className="container" style={{ marginTop: '2rem' }}>Loading...</div>;
-    if (error) return <div className="container alert alert-error" style={{ marginTop: '2rem' }}>{error}</div>;
+    if (loading) return <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>Loading...</div>;
+    if (error) return <div className="container alert alert-error" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>{error}</div>;
     if (!data) return null;
 
     const { language, parameters } = data;
@@ -181,11 +181,11 @@ export default function LanguageData() {
     const isReadOnly = isAdmin ? false : isLocked;
 
     return (
-        <main className="container" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
+        <main className="container" style={{ marginTop: 'var(--form-page-top, 2rem)', paddingBottom: '10rem' }}>
 
             {/* Header Lingua */}
-            <div className="card lang-header-card" style={{ marginBottom: '1rem', padding: '1.5rem 2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="card lang-header-card" style={{ marginBottom: '1rem', padding: 'var(--ld-header-pad, 1.5rem 2rem)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <h2 style={{ margin: 0 }}>
                         {language.name_full} <span className="muted" style={{ fontWeight: 400, fontSize: '0.7em' }}>({language.id})</span>
                     </h2>
@@ -197,7 +197,7 @@ export default function LanguageData() {
 
             {/* Banner Status */}
             <div className={`status-banner is-${status}`} style={{
-                padding: '1rem 1.25rem',
+                padding: 'var(--ld-banner-pad, 1rem 1.25rem)',
                 borderRadius: '8px',
                 marginBottom: '1rem',
                 display: 'flex',
@@ -327,7 +327,7 @@ export default function LanguageData() {
             {/* Modal Reject */}
             {showRejectModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '500px', padding: '1.5rem' }}>
+                    <div className="card" style={{ width: '500px', padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
                         <h3 style={{ marginTop: 0, color: 'var(--bad)' }}>Reject Language</h3>
                         <p className="small muted">Enter a note (optional) that will be shown to the assigned user.</p>
                         <textarea
@@ -335,7 +335,7 @@ export default function LanguageData() {
                             value={rejectNote}
                             onChange={e => setRejectNote(e.target.value)}
                             placeholder="E.g.: section X is incomplete, please review the answers for parameters Y..."
-                            style={{ width: '100%', padding: '0.5rem', resize: 'vertical' }}
+                            style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)', resize: 'vertical' }}
                         />
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                             <button className="btn" onClick={() => setShowRejectModal(false)}>Cancel</button>
@@ -444,7 +444,7 @@ function LanguageMetaGrid({ language, isAdmin }) {
         <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-            columnGap: '4rem',
+            columnGap: 'var(--ld-meta-colgap, 4rem)',
             rowGap: '0.8rem',
             alignItems: 'start',
         }}>

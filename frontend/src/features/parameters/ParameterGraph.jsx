@@ -581,7 +581,7 @@ function SidePanel({ chain, symFor, onJump, conditionTree, selectedLang, langVal
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minHeight: 0 }}>
-            <div className="card" style={{ padding: '0.7rem 0.9rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad, 0.7rem 0.9rem)' }}>
                 <h4 style={{ margin: '0 0 0.4rem', fontSize: '0.85rem' }}>
                     {chain ? `Selected: ${chain.label}` : 'No node selected'}
                 </h4>
@@ -605,7 +605,7 @@ function SidePanel({ chain, symFor, onJump, conditionTree, selectedLang, langVal
                 )}
             </div>
 
-            <div className="card" style={{ padding: '0.7rem 0.9rem', flex: 1, overflow: 'auto' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad, 0.7rem 0.9rem)', flex: 1, overflow: 'auto' }}>
                 <h4 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem' }}>Implicational condition</h4>
                 <ConditionTreeView data={conditionTree} />
             </div>

@@ -38,17 +38,17 @@ export default function EditSiteContent() {
     if (loading) return <div className="container"><p>Loading editor...</p></div>;
 
     return (
-        <div className="container" style={{ marginTop: '2rem' }}>
-            <header style={{ marginBottom: '1.5rem' }}>
+        <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>
+            <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}>
                 <h2>Edit visible text</h2>
                 <p className="muted">You are editing: <strong>{key}</strong></p>
             </header>
 
-            {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
+            {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
-            <div className="card" style={{ maxWidth: '800px', padding: '2rem' }}>
+            <div className="card" style={{ maxWidth: '800px', padding: 'var(--form-box-pad-lg, 2rem)' }}>
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                         <label htmlFor="content" style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                             Content (HTML tags allowed, e.g. &lt;em&gt;Title&lt;/em&gt;):
                         </label>
@@ -59,7 +59,7 @@ export default function EditSiteContent() {
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
                             style={{
-                                width: '100%', padding: '1rem', fontFamily: 'monospace',
+                                width: '100%', padding: 'var(--form-box-pad, 1rem)', fontFamily: 'monospace',
                                 fontSize: '0.95rem', border: '1px solid #ccc', borderRadius: '4px'
                             }}
                         />

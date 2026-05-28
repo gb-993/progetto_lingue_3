@@ -192,8 +192,8 @@ export default function QueriesDashboard() {
         const needsQuestion = activeTab === 'q10';
 
         return (
-            <form onSubmit={executeQuery} className="card" style={{ padding: '1.5rem', marginBottom: '2rem', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+            <form onSubmit={executeQuery} className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--form-grid-gap, 1rem)', alignItems: 'end' }}>
                     {needsLang && (
                         <div>
                             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
@@ -254,14 +254,14 @@ export default function QueriesDashboard() {
 
     return (
         <div className="container" style={{ maxWidth: '1200px' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '2rem' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <h1>Filters & Queries</h1>
             </header>
 
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: `${menuCollapsed ? '56px' : '350px'} 1fr`,
-                gap: '2rem',
+                gap: 'var(--form-col-gap, 2rem)',
                 alignItems: 'start',
                 transition: 'grid-template-columns 0.2s',
             }}>
@@ -306,8 +306,8 @@ export default function QueriesDashboard() {
                                         display: 'flex', alignItems: 'center',
                                         justifyContent: menuCollapsed ? 'center' : 'flex-start',
                                         gap: menuCollapsed ? 0 : '0.6rem',
-                                        padding: menuCollapsed ? '0 0' : '0.85rem 1rem',
-                                        minHeight: 64,
+                                        padding: menuCollapsed ? '0 0' : 'var(--queries-tab-pad, 0.85rem 1rem)',
+                                        minHeight: 'var(--queries-tab-h, 64px)',
                                         textAlign: 'left', border: 'none',
                                         borderBottom: '1px solid var(--border)',
                                         background: active ? 'var(--surface-2)' : 'transparent',

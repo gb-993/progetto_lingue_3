@@ -37,15 +37,15 @@ export default function HowToCite() {
     const dataText = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds). 2026. The PCM_Hub (version 1, Accessed on XX/XX/20XX)";
 
     return (
-        <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '3rem' }}>
+        <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: 'var(--form-box-pad-lg, 2rem)' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 3rem)' }}>
                 <h1>Citation Guidelines</h1>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-col-gap, 2rem)' }}>
 
                 {/* CARD 1: PARAMETERS */}
-                <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Admins and Users</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Parameters & Manifestations</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
@@ -82,7 +82,7 @@ export default function HowToCite() {
                 </div>
 
                 {/* CARD 2: DATA & MAP */}
-                <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Public and Admins</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Updated language list & map, analyses, graphs and scripts</h3>
                     <p className="small" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>

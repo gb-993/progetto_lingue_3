@@ -177,8 +177,8 @@ export default function MigrationImport() {
     }, [busy]);
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', marginTop: '2rem' }}>
-            <header className="dashboard-hero" style={{ marginBottom: '1.5rem' }}>
+        <div className="container" style={{ maxWidth: '1100px', marginTop: 'var(--form-page-top, 2rem)' }}>
+            <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h1>Restore Database</h1>
                 <p className="muted">
                     Carica il <strong>Migration Bundle ZIP</strong> generato dal vecchio sito
@@ -187,7 +187,7 @@ export default function MigrationImport() {
                 </p>
             </header>
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', borderLeft: '4px solid #b91c1c' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c' }}>
                 <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Operazione distruttiva</h3>
                 <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
                     <li>Con <code>wipe</code> attivo, vengono <strong>cancellate tutte le tabelle dati</strong> (lingue, parametri, domande, risposte, esempi, motivazioni, glossario, snapshots, change logs, tassonomia).</li>
@@ -197,7 +197,7 @@ export default function MigrationImport() {
                 </ul>
             </div>
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Contenuto atteso del bundle</h3>
                 <pre className="small" style={{
                     background: 'var(--surface-2, #f1f3f5)', padding: '1rem',
@@ -217,7 +217,7 @@ export default function MigrationImport() {
                 </pre>
             </div>
 
-            <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1rem' }}>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem' }}>
@@ -229,7 +229,7 @@ export default function MigrationImport() {
                             onChange={handleFile}
                             disabled={busy}
                             style={{
-                                display: 'block', padding: '0.5rem',
+                                display: 'block', padding: 'var(--form-input-pad, 0.5rem)',
                                 border: '1px solid var(--border)', borderRadius: '4px',
                                 width: '100%', maxWidth: '500px',
                             }}
@@ -263,7 +263,7 @@ export default function MigrationImport() {
                                 disabled={busy}
                                 placeholder="WIPE"
                                 style={{
-                                    padding: '0.5rem', border: '1px solid var(--border)',
+                                    padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid var(--border)',
                                     borderRadius: '4px', width: '200px',
                                 }}
                             />
@@ -308,7 +308,7 @@ function ProgressPanel({ jobState, elapsed }) {
     const showPhaseCounter = total > 0;
 
     return (
-        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0 }}>Migration in progress</h3>
                 <span className="small muted">
@@ -369,7 +369,7 @@ function MigrationReport({ report }) {
     const hasDagFails = (report.languages_dag_failed?.length || 0) > 0;
 
     return (
-        <div className="card" style={{ padding: '1.5rem' }}>
+        <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
             <h3 style={{ marginTop: 0 }}>
                 {hasErrors || hasDagFails ? 'Migrazione completata con avvertimenti' : 'Migrazione completata'}
             </h3>
@@ -382,7 +382,7 @@ function MigrationReport({ report }) {
 
             <h4 style={{ marginBottom: '0.5rem' }}>Riassunto per sezione</h4>
             <div style={{ overflowX: 'auto' }}>
-                <table className="table" style={{ marginBottom: '1.5rem' }}>
+                <table className="table" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <thead>
                         <tr>
                             <th>Sezione</th>
@@ -420,7 +420,7 @@ function MigrationReport({ report }) {
             {hasDagFails && (
                 <>
                     <h4 style={{ marginBottom: '0.5rem' }}>Lingue con DAG fallito ({report.languages_dag_failed.length})</h4>
-                    <ul className="small" style={{ marginBottom: '1.5rem', color: '#b91c1c' }}>
+                    <ul className="small" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)', color: '#b91c1c' }}>
                         {report.languages_dag_failed.map((d, i) => (
                             <li key={i}><strong>{d.language_id}</strong>: {d.error}</li>
                         ))}
@@ -463,7 +463,7 @@ function MigrationReport({ report }) {
                 </>
             )}
 
-            <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+            <div style={{ marginTop: 'var(--form-col-gap, 1.5rem)', display: 'flex', gap: '0.75rem' }}>
                 <Link to="/languages" className="btn btn--primary">Vai alla lista lingue</Link>
                 <Link to="/dashboard" className="btn">Dashboard</Link>
             </div>

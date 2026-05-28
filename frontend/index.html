@@ -18,6 +18,13 @@
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');
         }
+        // Densita' layout (comfortable default / compact "gestionale").
+        // Applicata qui per evitare il flash dello stile comodo al reload.
+        try {
+          if (localStorage.getItem('pcm-density') === 'compact') {
+            document.documentElement.setAttribute('data-density', 'compact');
+          }
+        } catch (e) { /* no-op */ }
       })();
     </script>
   </head>

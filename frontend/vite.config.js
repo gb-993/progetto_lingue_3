@@ -11,6 +11,15 @@ export default defineConfig({
     cssMinify: false,
   },
   server: {
+    // Docker su Windows: gli eventi del filesystem NON si propagano dal disco
+    // host (Windows) al container (Linux) attraverso il bind mount, quindi il
+    // watcher di default di Vite non vede le modifiche ai file e l'HMR non
+    // scatta. usePolling forza Vite a interrogare periodicamente i file: piu'
+    // CPU ma il live-reload torna affidabile dentro il container.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
     // In dev non c'e' Caddy davanti, quindi le rotte non-SPA come
     // /legal-docs/* (PDF dei documenti legali caricati via UI admin)
     // restano scoperte: il browser le chiederebbe a Vite (5173) e
