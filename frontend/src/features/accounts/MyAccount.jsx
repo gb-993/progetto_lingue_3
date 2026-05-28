@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
+import SegmentedToggle from '../../components/SegmentedToggle';
 
 // Stessa logica del toggle tema (data-theme): la densita' del layout vive in
 // un attributo data-density su <html>, persistito in localStorage e applicato
@@ -8,8 +9,11 @@ import api from '../../api'; // Sostituito axios
 const DENSITY_STORAGE_KEY = 'pcm-density';
 
 function getInitialDensity() {
-    if (typeof window === 'undefined') return 'comfortable';
-    return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'comfortable';
+    if (typeof window === 'undefined') return 'zoom';
+    // Default = "zoom" (modalita' grande). Solo il valore 'compact' attiva
+    // l'attributo data-density="compact"; qualunque altro valore (incluso il
+    // vecchio 'comfortable' di utenti gia' esistenti) ricade su 'zoom'.
+    return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'zoom';
 }
 
 export default function MyAccount() {
@@ -19,8 +23,7 @@ export default function MyAccount() {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [density, setDensity] = useState(getInitialDensity);
 
-    const handleDensityChange = (e) => {
-        const value = e.target.value;
+    const applyDensity = (value) => {
         setDensity(value);
         if (value === 'compact') {
             document.documentElement.setAttribute('data-density', 'compact');
@@ -102,20 +105,14 @@ export default function MyAccount() {
 
             <div className="card" style={{marginBottom: 'var(--acc-section-gap, 2rem)'}}>
                 <h3 className="mb-2">Appearance</h3>
-                <div className="form-group">
-                    <label htmlFor="density-select">Layout density</label>
-                    <select
-                        id="density-select"
+                <div className="form-group" style={{display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap'}}>
+                    <label style={{margin: 0}}>Layout density</label>
+                    <SegmentedToggle
+                        ariaLabel="Layout density"
                         value={density}
-                        onChange={handleDensityChange}
-                        style={{maxWidth: '320px'}}
-                    >
-                        <option value="comfortable">Comfortable (default)</option>
-                        <option value="compact">Compact</option>
-                    </select>
-                    <p className="muted" style={{marginTop: '.5rem', fontSize: '.9rem'}}>
-                        Compact riduce dimensioni e spaziature per un look più da gestionale. I colori restano invariati.
-                    </p>
+                        onChange={applyDensity}
+                        options={[{ value: 'zoom', label: 'Zoom' }, { value: 'compact', label: 'Compact' }]}
+                    />
                 </div>
             </div>
 

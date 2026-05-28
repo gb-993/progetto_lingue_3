@@ -4,6 +4,7 @@ import Select from 'react-select';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
 import reactSelectStyles from '../../utils/reactSelectStyles';
+import SegmentedToggle from '../../components/SegmentedToggle';
 
 export default function TableA() {
     const [view, setView] = useState('params'); // 'params' o 'questions'
@@ -325,22 +326,12 @@ export default function TableA() {
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <h1>Table A</h1>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
-                    <nav style={{ background: '#e9ecef', padding: '5px', borderRadius: '50px', display: 'inline-flex' }}>
-                        <button
-                            className={`btn ${view === 'params' ? 'btn-light' : 'btn-outline'}`}
-                            style={{ borderRadius: '50px', border: 'none', background: view === 'params' ? 'white' : 'transparent', fontWeight: 600, color: view === 'params' ? 'black' : '#6c757d', boxShadow: view === 'params' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none' }}
-                            onClick={() => setView('params')}
-                        >
-                            Parameters View
-                        </button>
-                        <button
-                            className={`btn ${view === 'questions' ? 'btn-light' : 'btn-outline'}`}
-                            style={{ borderRadius: '50px', border: 'none', background: view === 'questions' ? 'white' : 'transparent', fontWeight: 600, color: view === 'questions' ? 'black' : '#6c757d', boxShadow: view === 'questions' ? '0 2px 5px rgba(0,0,0,0.1)' : 'none' }}
-                            onClick={() => setView('questions')}
-                        >
-                            Questions View
-                        </button>
-                    </nav>
+                    <SegmentedToggle
+                        ariaLabel="View"
+                        value={view}
+                        onChange={setView}
+                        options={[{ value: 'params', label: 'Parameters View' }, { value: 'questions', label: 'Questions View' }]}
+                    />
                 </div>
             </header>
 

@@ -608,7 +608,7 @@ export default function ParameterForm() {
                                                 disabled={!isDirty}
                                                 onChange={e => setIsTestEdit(e.target.checked)}
                                             />
-                                            <span>🧪 Mark as test edit</span>
+                                            <span>Mark as test edit</span>
                                         </label>
                                         {isTestEdit && isDirty && (
                                             <div style={{

@@ -102,16 +102,18 @@
    I max-width delle pagine NON sono toccati.
    --------------------------------------------------------- */
 
-/* Sidebar 280 -> 200px in compact: il font delle voci e' piu' piccolo
+/* Sidebar 280 -> 212px in compact: il font delle voci e' piu' piccolo
    (.88rem) quindi le etichette ci stanno comunque. :not(.is-sidebar-collapsed)
    cosi' lo stato "collassato" (64px) continua a vincere quando attivo. */
 :root[data-density="compact"] .app-wrapper:not(.is-sidebar-collapsed) {
-  --sidebar-width: 200px;
+  --sidebar-width: 212px;
 }
 
-/* Padding interno della sidebar piu' contenuto */
+/* Padding interno della sidebar: un filo piu' di margine orizzontale (0.75rem)
+   cosi' le voci non risultano incollate al bordo dello schermo (versione in
+   scala del margine che ha la modalita' zoom). */
 :root[data-density="compact"] .sidebar {
-  padding: var(--sp-4) var(--sp-3);
+  padding: var(--sp-4) 0.75rem;
 }
 
 /* Body centrale: meno padding ai lati e sopra/sotto */

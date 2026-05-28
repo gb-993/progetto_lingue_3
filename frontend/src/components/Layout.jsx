@@ -368,7 +368,7 @@ export default function Layout({ children }) {
                             {/* Voci per User loggati e Admin (ordine come nel vecchio base.html) */}
                             {role !== 'public' && (
                                 <>
-                                    <li className="nav-divider-label">Data & Tools</li>
+                                    <li className="nav-divider-label" aria-hidden="true"></li>
                                     <li>
                                         <Link className={`btn ${isCurrent('/languages')}`} to="/languages" title="Languages">
                                             <Languages size={18} className="nav-icon" />
