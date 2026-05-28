@@ -39,7 +39,7 @@ export default function GlossaryList() {
     const filteredGlossary = glossary.filter(item => searchMatches(item, search));
 
     return (
-        <div className="container">
+        <div className="container" style={{ maxWidth: '1200px' }}>
             <header className="dashboard-hero">
                 <h1>Glossary</h1>
             </header>
@@ -77,7 +77,7 @@ export default function GlossaryList() {
                 )}
             </section>
 
-            <div className="card" style={{padding: 0, overflow: 'hidden', marginTop: 'var(--form-col-gap, 1.5rem)'}}>
+            <div className="card" style={{padding: 0, overflow: 'hidden'}}>
                 {/* Aggiunto tableLayout: 'fixed' per stabilizzare le larghezze */}
                 <table className="table" style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                     <thead style={{ backgroundColor: '#f9f9f9', textAlign: 'left' }}>

@@ -437,6 +437,12 @@ a:hover{text-decoration:underline}
   padding: var(--sp-3) var(--sp-6) var(--sp-6);
 }
 
+/* Pagine "da leggere/compilare" usano <div className="container" style maxWidth>.
+   Centrandole, lo spazio extra resta SIMMETRICO ai lati invece di accumularsi
+   tutto a destra. Sulle pagine full-width (container senza maxWidth, es. liste e
+   tabelle dense) margin:auto e' un no-op, quindi restano a tutta larghezza. */
+.container{ margin-left:auto; margin-right:auto; }
+
 /* Layout responsive */
 @media (max-width: 960px){
   .app-wrapper{
@@ -2372,10 +2378,11 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
    I max-width delle pagine NON sono toccati.
    --------------------------------------------------------- */
 
-/* Sidebar 280 -> 230px. :not(.is-sidebar-collapsed) cosi' lo stato
-   "collassato" (64px) continua a vincere quando attivo. */
+/* Sidebar 280 -> 200px in compact: il font delle voci e' piu' piccolo
+   (.88rem) quindi le etichette ci stanno comunque. :not(.is-sidebar-collapsed)
+   cosi' lo stato "collassato" (64px) continua a vincere quando attivo. */
 :root[data-density="compact"] .app-wrapper:not(.is-sidebar-collapsed) {
-  --sidebar-width: 230px;
+  --sidebar-width: 200px;
 }
 
 /* Padding interno della sidebar piu' contenuto */

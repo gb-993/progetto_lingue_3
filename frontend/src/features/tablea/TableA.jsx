@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import Select from 'react-select';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import reactSelectStyles from '../../utils/reactSelectStyles';
 
 export default function TableA() {
     const [view, setView] = useState('params'); // 'params' o 'questions'
@@ -129,12 +131,13 @@ export default function TableA() {
     const hasFilterIntent = selectedRows.length > 0 || search.trim() !== '';
     const wouldExportNothing = hasFilterIntent && effective_ids.length === 0;
 
-    // Gestione checkbox lingue
-    const handleLangCheckbox = (id) => {
-        setSelectedLangs(prev =>
-            prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]
-        );
-    };
+    // Opzioni per il multi-select delle lingue (searchable). `selectedLangs`
+    // resta un array di id: il comportamento (filtraggio matrice + payload
+    // f_lang_specific dei download) e' identico a prima, cambia solo il widget.
+    const langSelectOptions = useMemo(
+        () => (options.opt_all_languages || []).map(l => ({ value: l.id, label: `${l.name} (${l.id})` })),
+        [options.opt_all_languages]
+    );
 
     // Gestione selezione righe (tabella)
     const handleRowCheckbox = (id) => {
@@ -351,24 +354,23 @@ export default function TableA() {
                             Language Filters
                         </span>
 
-                        <div style={{ marginBottom: '0.75rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Specific Languages</label>
-                            <div style={{ maxHeight: '120px', overflowY: 'auto', border: '1px solid var(--border)', padding: '0.5rem', background: 'var(--surface-2)', borderRadius: '4px' }}>
-                                {options.opt_all_languages.map(lang => (
-                                    <div key={lang.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '0.3rem' }}>
-                                        <input
-                                            type="checkbox"
-                                            id={`lang_${lang.id}`}
-                                            checked={selectedLangs.includes(lang.id)}
-                                            onChange={() => handleLangCheckbox(lang.id)}
-                                            style={{ marginRight: '0.5rem' }}
-                                        />
-                                        <label htmlFor={`lang_${lang.id}`} style={{ margin: 0, cursor: 'pointer', fontSize: '0.85rem' }}>
-                                            {lang.name} ({lang.id})
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
+                        <div style={{ marginBottom: '0.85rem' }}>
+                            <Select
+                                isMulti
+                                isSearchable
+                                closeMenuOnSelect={false}
+                                options={langSelectOptions}
+                                value={langSelectOptions.filter(o => selectedLangs.includes(o.value))}
+                                onChange={(sel) => setSelectedLangs(sel ? sel.map(o => o.value) : [])}
+                                placeholder="Search and select languages…"
+                                noOptionsMessage={() => 'No language'}
+                                styles={{
+                                    ...reactSelectStyles,
+                                    multiValue: (base) => ({ ...base, background: 'var(--surface-2)', border: '1px solid var(--border)' }),
+                                    multiValueLabel: (base) => ({ ...base, color: 'var(--text)' }),
+                                    multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' } }),
+                                }}
+                            />
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -406,11 +408,30 @@ export default function TableA() {
 
                     {/* Filtri Specifici (Params/Questions) */}
                     <div style={{ flex: '1 1 300px' }}>
+                        {/* SEARCH ALL: titolo gemello di "Language Filters" con la barra
+                            di ricerca globale subito sotto (filtra le righe lato client).
+                            Stessa altezza della tendina lingue a sinistra -> barre allineate. */}
                         <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
-                            {view === 'params' ? 'Parameters Filters' : 'Questions Filters'}
+                            Search all
                         </span>
+                        <div style={{ marginBottom: '0.85rem' }}>
+                            <input
+                                type="search"
+                                placeholder={view === 'params' ? 'Search ID, name, conditions...' : 'Search Q.ID, text, parameter...'}
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                style={{ width: '100%', height: '38px', padding: '0 0.6rem', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                            />
+                        </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        {/* Sezione che cambia col toggle Param/Question: contorno
+                            tratteggiato per distinguerla dal resto. */}
+                        <div style={{ border: '1px dashed var(--border)', borderRadius: '6px', padding: '0.6rem 0.7rem' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: '0.6rem', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
+                                {view === 'params' ? 'Parameters Filters' : 'Questions Filters'}
+                            </span>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: view === 'params' ? 'repeat(3, 1fr)' : '1fr 1fr', gap: '0.75rem' }}>
                             {view === 'params' ? (
                                 <>
                                     <div>
@@ -454,6 +475,7 @@ export default function TableA() {
                                     </div>
                                 </>
                             )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -530,24 +552,6 @@ export default function TableA() {
                     gap: '0.75rem',
                     flexWrap: 'wrap',
                 }}>
-                    <input
-                        type="search"
-                        placeholder={view === 'params'
-                            ? "Search every field (ID, name, conditions)..."
-                            : "Search every field (Q.ID, text, parameter)..."}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{
-                            flex: '1 1 260px',
-                            minWidth: '220px',
-                            padding: '0.45rem 0.6rem',
-                            fontSize: '0.85rem',
-                            border: '1px solid var(--border)',
-                            borderRadius: '4px',
-                            background: 'var(--surface)',
-                            color: 'var(--text)',
-                        }}
-                    />
                     <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(filteredRows.map(r => r.item.id))}>Select All</button>
                     <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows([])}>Deselect All</button>
                     <span className="small muted" style={{ marginLeft: 'auto' }}>

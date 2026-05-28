@@ -103,7 +103,7 @@ export default function MotivationList() {
                 border: '1px solid var(--border)',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                marginBottom: 'var(--form-field-mb, 1rem)',
+                marginBottom: '1rem',
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr) auto',
                 alignItems: 'center',

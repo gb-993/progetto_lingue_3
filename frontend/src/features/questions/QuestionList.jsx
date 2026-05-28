@@ -105,7 +105,8 @@ export default function QuestionList() {
                                             <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
                                             <button
                                                 type="button"
-                                                className={`btn ${isActive ? 'btn--bad' : ''}`}
+                                                className={`btn ${isActive ? 'btn--danger' : ''}`}
+                                                style={{ color: isActive ? 'red' : 'green' }}
                                                 onClick={() => handleToggleActive(q)}
                                                 title={isActive ? 'Soft-delete (deactivate)' : 'Restore (reactivate)'}
                                             >

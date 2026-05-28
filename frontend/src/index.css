@@ -437,6 +437,12 @@ a:hover{text-decoration:underline}
   padding: var(--sp-3) var(--sp-6) var(--sp-6);
 }
 
+/* Pagine "da leggere/compilare" usano <div className="container" style maxWidth>.
+   Centrandole, lo spazio extra resta SIMMETRICO ai lati invece di accumularsi
+   tutto a destra. Sulle pagine full-width (container senza maxWidth, es. liste e
+   tabelle dense) margin:auto e' un no-op, quindi restano a tutta larghezza. */
+.container{ margin-left:auto; margin-right:auto; }
+
 /* Layout responsive */
 @media (max-width: 960px){
   .app-wrapper{
