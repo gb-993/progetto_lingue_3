@@ -37,7 +37,7 @@ export default function HowToCite() {
     const dataText = contents.data_cite || "Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge (eds). 2026. The PCM_Hub (version 1, Accessed on XX/XX/20XX)";
 
     return (
-        <div className="container" style={{ maxWidth: '1000px', margin: '0 auto', padding: 'var(--form-box-pad-lg, 2rem)' }}>
+        <div className="container" style={{ padding: 'var(--form-box-pad-lg, 2rem)' }}>
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 3rem)' }}>
                 <h1>Citation Guidelines</h1>
             </header>

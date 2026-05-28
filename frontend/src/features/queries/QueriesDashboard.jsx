@@ -253,7 +253,7 @@ export default function QueriesDashboard() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '1200px' }}>
+        <div className="container">
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
                 <h1>Filters & Queries</h1>
             </header>

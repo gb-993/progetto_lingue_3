@@ -62,7 +62,7 @@ export default function History() {
     const [tab, setTab] = useState(initialTab);
 
     return (
-        <div className="container" style={{ maxWidth: '1300px' }}>
+        <div className="container">
             <header className="dashboard-hero" style={{ marginBottom: '1rem' }}>
                 <h1>History & Backups</h1>
 

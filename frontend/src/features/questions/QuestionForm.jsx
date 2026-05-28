@@ -693,7 +693,7 @@ export default function QuestionForm({ mode = 'page' }) {
         : (paramFromUrl ? `/admin/parameters/${paramFromUrl}/edit` : '/admin/questions');
 
     return (
-        <div className="container" style={{ maxWidth: '900px', marginTop: isDrawerMode ? 0 : 'var(--form-page-top, 2rem)', position: 'relative' }}>
+        <div className="container" style={{ maxWidth: '760px', marginTop: isDrawerMode ? 0 : 'var(--form-page-top, 2rem)', position: 'relative' }}>
             <div className="card">
                 <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                     <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>

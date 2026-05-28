@@ -261,7 +261,7 @@ export default function BackupRestore() {
     }, [exporting]);
 
     return (
-        <div className="container" style={{ maxWidth: '1100px', marginTop: 'var(--form-page-top, 2rem)' }}>
+        <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h1>Backup &amp; Restore</h1>
                 <p className="muted">

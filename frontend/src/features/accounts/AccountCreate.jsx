@@ -23,7 +23,7 @@ export default function AccountCreate() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '600px', marginTop: 'var(--form-page-top, 2rem)' }}>
+        <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>
             <div className="card">
                 <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}><h2>Create New Account</h2></header>
                 {error && <div className="alert alert-error mb-1">{error}</div>}

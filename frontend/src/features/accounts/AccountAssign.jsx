@@ -48,7 +48,7 @@ export default function AccountAssign() {
     if (!user) return <div className="container">Loading...</div>;
 
     return (
-        <div className="container" style={{ maxWidth: '800px', marginTop: 'var(--form-page-top, 2rem)' }}>
+        <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>
             <div className="card">
                 <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}>
                     <h2>Assign Languages to: {user.name} {user.surname}</h2>

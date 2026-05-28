@@ -54,7 +54,7 @@ export default function GlossaryForm() {
     };
 
     return (
-        <div className="container" style={{maxWidth: '600px', marginTop: 'var(--form-page-top, 2rem)'}}>
+        <div className="container" style={{marginTop: 'var(--form-page-top, 2rem)'}}>
             <div className="card">
                 <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)'}}>
                     <h2>{isEditMode ? 'Edit Term' : 'Add Term to Glossary'}</h2>

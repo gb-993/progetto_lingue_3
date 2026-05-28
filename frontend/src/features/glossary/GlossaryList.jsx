@@ -39,7 +39,7 @@ export default function GlossaryList() {
     const filteredGlossary = glossary.filter(item => searchMatches(item, search));
 
     return (
-        <div className="container" style={{ maxWidth: '1200px' }}>
+        <div className="container">
             <header className="dashboard-hero">
                 <h1>Glossary</h1>
             </header>
