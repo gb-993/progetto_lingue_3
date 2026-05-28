@@ -11,6 +11,12 @@ export const AuthProvider = ({ children }) => {
     // refreshRequiredConsents(), chiamata al login e quando l'interceptor
     // di api.js intercetta un 403 con required_acceptance.
     const [requiredConsents, setRequiredConsents] = useState([]);
+    // True dopo il PRIMO tentativo di caricare i consensi (riuscito o fallito).
+    // Serve a chi deve aspettare di SAPERE lo stato consensi prima di agire:
+    // es. il modale "What's New" non deve comparire finche' non e' certo che
+    // non ci sia un consenso legale pendente (che ha sempre la precedenza).
+    // Non influenza in alcun modo il flusso legale.
+    const [consentsLoaded, setConsentsLoaded] = useState(false);
 
     // Carica la lista required dal backend. Tollerante agli errori: se la
     // chiamata fallisce (rete giu', backend in restart) lasciamo la lista
@@ -22,6 +28,8 @@ export const AuthProvider = ({ children }) => {
             return res.data?.required || [];
         } catch {
             return null;
+        } finally {
+            setConsentsLoaded(true);
         }
     }, []);
 
@@ -66,6 +74,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('name');
         setUser(null);
         setRequiredConsents([]);
+        setConsentsLoaded(false);
         window.location.href = redirectTo;
     };
 
@@ -111,6 +120,7 @@ export const AuthProvider = ({ children }) => {
             loading,
             isAdmin: user?.role === 'admin',
             requiredConsents,
+            consentsLoaded,
             refreshRequiredConsents,
             acceptConsents,
         }}>

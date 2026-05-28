@@ -11,6 +11,7 @@ import Layout, { SiteFooter } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 import ErrorBoundary, { RouterErrorElement } from './components/ErrorBoundary';
 import LegalConsentsModal from './components/LegalConsentsModal';
+import WhatsNewModal from './components/WhatsNewModal';
 import NotFound from './components/NotFound';
 
 import PublicHome from './features/public/PublicHome';
@@ -53,6 +54,7 @@ import ImportExcel from './features/admin/ImportExcel';
 import LegalDocuments from './features/admin/LegalDocuments';
 import MigrationImport from './features/admin/MigrationImport';
 import BackupRestore from './features/admin/BackupRestore';
+import WhatsNew from './features/admin/WhatsNew';
 import History from './features/history/History';
 import Taxonomy from './features/taxonomy/Taxonomy';
 
@@ -81,6 +83,7 @@ function AppRoot() {
             <ScrollToTop />
             <Outlet />
             <LegalConsentsModal />
+            <WhatsNewModal />
         </AuthProvider>
     );
 }
@@ -186,6 +189,7 @@ const router = createBrowserRouter([
             // distruttive sull'intero DB.
             { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
             { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
+            { path: 'admin/whats-new', element: <AdminRoute requireSuperAdmin><Layout><WhatsNew /></Layout></AdminRoute> },
             // Gestione versioni documenti legali (ToU, Privacy Notice).
             // Accessibile a tutti gli admin: la pubblicazione e' un'operazione
             // amministrativa normale, e il backend (require_admin) la limita

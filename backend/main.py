@@ -43,6 +43,7 @@ from routers import (auth,
                      backup_restore,
                      recompute,
                      archived_questions,
+                     whats_new,
                      email)
 
 @asynccontextmanager
@@ -159,4 +160,5 @@ app.include_router(migration.router)
 app.include_router(backup_restore.router)
 app.include_router(recompute.router)
 app.include_router(archived_questions.router)
+app.include_router(whats_new.router)
 app.include_router(email.router)

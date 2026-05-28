@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
     DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
-    FileText, BookMarked,
+    FileText, BookMarked, Megaphone,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
@@ -458,6 +458,12 @@ export default function Layout({ children }) {
                                                         <Link className={`btn ${isCurrent('/admin/backup-restore')}`} to="/admin/backup-restore" title="Backup Restore">
                                                             <Upload size={18} className="nav-icon" />
                                                             <span className="nav-label">Backup Restore</span>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link className={`btn ${isCurrent('/admin/whats-new')}`} to="/admin/whats-new" title="What's New">
+                                                            <Megaphone size={18} className="nav-icon" />
+                                                            <span className="nav-label">What&apos;s New</span>
                                                         </Link>
                                                     </li>
                                                 </>
