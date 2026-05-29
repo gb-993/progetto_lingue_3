@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import usePersistentState from '../../utils/usePersistentState';
 
 export default function GlossaryList() {
     const [glossary, setGlossary] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('glossary:search', '');
 
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';

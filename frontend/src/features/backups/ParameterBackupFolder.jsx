@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
+import usePersistentState from '../../utils/usePersistentState';
 
 // Lista parametri salvati in una cartella (timestamp) di backup parametri.
 export default function ParameterBackupFolder() {
     const { timestamp } = useParams();
     const [submissions, setSubmissions] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState(`paramBackupFolder:${timestamp}:search`, '');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import usePersistentState from '../../utils/usePersistentState';
 
 function truncate(text, n = 70) {
     if (!text) return '';
@@ -10,7 +11,7 @@ function truncate(text, n = 70) {
 
 export default function QuestionList() {
     const [questions, setQuestions] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('questions:search', '');
 
     const fetchQuestions = async () => {
         try {

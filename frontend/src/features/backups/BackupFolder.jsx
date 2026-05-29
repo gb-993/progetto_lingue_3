@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
+import usePersistentState from '../../utils/usePersistentState';
 
 export default function BackupFolder() {
     const { timestamp } = useParams();
     const [submissions, setSubmissions] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState(`backupFolder:${timestamp}:search`, '');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 

@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
+import usePersistentState from '../../utils/usePersistentState';
 
 // ==========================================
 // Tab "Old questions archive" della pagina History.
@@ -15,7 +16,7 @@ export default function OldQuestionsTab() {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('oldQuestions:search', '');
     const [expanded, setExpanded] = useState(() => new Set());
 
     const fetchGroups = async () => {

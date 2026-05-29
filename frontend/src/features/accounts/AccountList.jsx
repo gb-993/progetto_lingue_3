@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
+import usePersistentState from '../../utils/usePersistentState';
 
 export default function AccountList() {
     const [users, setUsers] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('accounts:search', '');
 
     const fetchUsers = async () => {
         try {

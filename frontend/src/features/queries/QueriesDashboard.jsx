@@ -7,6 +7,7 @@ import {
 import Select from 'react-select';
 import api from '../../api';
 import reactSelectStyles from '../../utils/reactSelectStyles';
+import usePersistentState from '../../utils/usePersistentState';
 import BlameTable, { AnswersList } from './BlameTable';
 
 const QUERIES_MENU_COLLAPSED_KEY = 'pcm-queries-menu-collapsed';
@@ -26,7 +27,7 @@ const QUERY_TABS = [
 ];
 
 export default function QueriesDashboard() {
-    const [activeTab, setActiveTab] = useState('q1');
+    const [activeTab, setActiveTab] = usePersistentState('queries:activeTab', 'q1');
     const [options, setOptions] = useState({ langs: [], params: [], questions: [] });
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
@@ -40,15 +41,15 @@ export default function QueriesDashboard() {
     }, [menuCollapsed]);
 
     // Stati per i form
-    const [paramId, setParamId] = useState('');
-    const [langId, setLangId] = useState('');
-    const [langIdB, setLangIdB] = useState('');
-    const [questionId, setQuestionId] = useState('');
+    const [paramId, setParamId] = usePersistentState('queries:paramId', '');
+    const [langId, setLangId] = usePersistentState('queries:langId', '');
+    const [langIdB, setLangIdB] = usePersistentState('queries:langIdB', '');
+    const [questionId, setQuestionId] = usePersistentState('queries:questionId', '');
 
     // Filtri Q10: restringono SOLO il dropdown delle question, non il risultato.
     // Lasciandoli vuoti, il dropdown mostra tutte le ~N centinaia di question.
-    const [q10FilterLang, setQ10FilterLang] = useState('');
-    const [q10FilterParam, setQ10FilterParam] = useState('');
+    const [q10FilterLang, setQ10FilterLang] = usePersistentState('queries:q10FilterLang', '');
+    const [q10FilterParam, setQ10FilterParam] = usePersistentState('queries:q10FilterParam', '');
     // Set di question_id risposte dalla lingua filtrata. null = filtro non
     // applicato, Set vuoto = filtro applicato ma la lingua non ha risposte.
     const [q10AnsweredQids, setQ10AnsweredQids] = useState(null);
@@ -111,47 +112,32 @@ export default function QueriesDashboard() {
     }, [options.questions, q10FilterParam, q10FilterLang, q10AnsweredQids]);
 
     useEffect(() => {
+        // Attendi che le question siano caricate: altrimenti al rientro nella pagina
+        // azzereremmo il questionId ripristinato da sessionStorage prima che la lista
+        // sia disponibile (lista ancora vuota = ogni id risulterebbe "sparito").
+        if (options.questions.length === 0) return;
         if (questionId && !q10FilteredQuestions.some(q => q.id === questionId)) {
             setQuestionId('');
         }
-    }, [q10FilteredQuestions, questionId]);
+    }, [q10FilteredQuestions, questionId, setQuestionId, options.questions.length]);
 
     // Cambio tab: langId e paramId persistono (il linguista tipicamente lavora su un
     // singolo (lingua, parametro) per sessione). langIdB e' specifico di Q7, lo resettiamo.
-    // Se tutti i campi richiesti dal nuovo tab sono gia' compilati, lanciamo automaticamente
-    // la ricerca, cosi' lo switch tab equivale a un nuovo "Search" senza altri click.
+    // La ricerca riparte da sola tramite l'effetto di auto-run qui sotto, non appena i
+    // campi richiesti dal nuovo tab risultano compilati: nessun click necessario.
     const handleTabChange = (tabId) => {
         setActiveTab(tabId);
         setResults(null);
         setLangIdB('');
-
-        const needsParam = ['q1', 'q2', 'q3'].includes(tabId);
-        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q11'].includes(tabId);
-        const needsLangB = tabId === 'q7';
-        const needsQuestion = tabId === 'q10';
-        if (needsLangB) return;                  // langIdB appena resettato
-        if (needsLang && !langId) return;
-        if (needsParam && !paramId) return;
-        if (needsQuestion && !questionId) return;
-        executeQuery(null, tabId);
     };
 
-    // Switch to Q3 with prefilled language + parameter and run the query immediately.
-    const goToQ3 = async (langIdToUse, paramIdToUse) => {
+    // Switch to Q3 with prefilled language + parameter. La query parte da sola grazie
+    // all'effetto di auto-run (param + lang risultano entrambi compilati).
+    const goToQ3 = (langIdToUse, paramIdToUse) => {
         setActiveTab('q3');
         setLangId(langIdToUse);
         setParamId(paramIdToUse);
         setLangIdB('');
-        setLoading(true);
-        setResults(null);
-        try {
-            const res = await api.get(`/api/queries/q3?lang_id=${langIdToUse}&param_id=${paramIdToUse}`);
-            setResults(res.data);
-        } catch {
-            setResults({ error: "Error while executing the query." });
-        } finally {
-            setLoading(false);
-        }
     };
 
     const executeQuery = async (e, tabOverride) => {
@@ -184,6 +170,32 @@ export default function QueriesDashboard() {
             setLoading(false);
         }
     };
+
+    // Auto-run: appena i campi richiesti dal tab attivo sono tutti compilati eseguiamo
+    // la query, senza bisogno del pulsante "Search". Vale anche al rientro nella pagina,
+    // quando i filtri vengono ripristinati da sessionStorage. Se manca un campo richiesto
+    // svuotiamo i risultati, così non resta visibile un risultato vecchio o "a metà".
+    // set-state-in-effect è qui voluto: vogliamo proprio lanciare la query (e quindi
+    // aggiornare lo stato) in reazione al completamento degli input.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    useEffect(() => {
+        const needsParam = ['q1', 'q2', 'q3'].includes(activeTab);
+        const needsLang = ['q3', 'q4', 'q5', 'q6', 'q7', 'q8', 'q9', 'q11'].includes(activeTab);
+        const needsLangB = activeTab === 'q7';
+        const needsQuestion = activeTab === 'q10';
+
+        const ready =
+            (!needsParam || !!paramId) &&
+            (!needsLang || !!langId) &&
+            (!needsLangB || !!langIdB) &&
+            (!needsQuestion || !!questionId);
+
+        if (ready) executeQuery(null, activeTab);
+        else setResults(null);
+        // executeQuery legge solo questi stessi input, già elencati nelle dipendenze
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, paramId, langId, langIdB, questionId]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const renderForm = () => {
         const needsParam = ['q1', 'q2', 'q3'].includes(activeTab);
@@ -242,11 +254,6 @@ export default function QueriesDashboard() {
                             langFilterReady={!q10FilterLang || q10AnsweredQids !== null}
                         />
                     )}
-                    <div>
-                        <button type="submit" className="btn btn--primary" style={{ width: '100%' }} disabled={loading}>
-                            {loading ? 'Searching...' : 'Search'}
-                        </button>
-                    </div>
                 </div>
             </form>
         );

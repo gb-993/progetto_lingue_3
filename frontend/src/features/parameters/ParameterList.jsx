@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import usePersistentState from '../../utils/usePersistentState';
 
 // Stesso helper di LanguageList — forza download della blob ricevuta
 async function downloadBlob(request, fallbackName) {
@@ -26,8 +27,8 @@ const INITIAL_FILTERS = {
 
 export default function ParameterList() {
     const [parameters, setParameters] = useState([]);
-    const [search, setSearch] = useState('');
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
+    const [search, setSearch] = usePersistentState('parameters:search', '');
+    const [filters, setFilters] = usePersistentState('parameters:filters', INITIAL_FILTERS);
     const [options, setOptions] = useState({ opt_schemas: [], opt_types: [], opt_levels: [] });
     const [loading, setLoading] = useState(true);
 

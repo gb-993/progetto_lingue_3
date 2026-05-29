@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api';
+import usePersistentState from '../../utils/usePersistentState';
 import BackupsTab from './BackupsTab';
 import OldQuestionsTab from './OldQuestionsTab';
 import { formatBackendDate } from '../../utils/dateFormat';
@@ -129,8 +130,9 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
     const [options, setOptions] = useState({ entity_types: [], sources: [], operations: [], users: [] });
     const [openVersion, setOpenVersion] = useState(null);
 
-    // Filtri
-    const [filters, setFilters] = useState({
+    // Filtri — chiave distinta per le due istanze (change history vs answer changes)
+    const scope = lockEntityType ? `lock-${lockEntityType}` : `excl-${excludeEntityType || 'none'}`;
+    const [filters, setFilters] = usePersistentState(`history:versions:${scope}:filters`, {
         entity_type: '',
         entity_id: '',
         user_id: '',

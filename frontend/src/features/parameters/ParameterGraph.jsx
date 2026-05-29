@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import cytoscape from 'cytoscape';
 import { Search, RotateCcw, Workflow, Maximize2 } from 'lucide-react';
 import api from '../../api';
+import usePersistentState from '../../utils/usePersistentState';
 
 // --- Palette dei valori finali (post-DAG). Coerente col vecchio progetto:
 // + verde, - rosso, 0 blu, ? grigio scuro, unset bianco. -----------------
@@ -128,17 +129,17 @@ export default function ParameterGraph() {
     const navigate = useNavigate();
 
     const [graph, setGraph] = useState(null);                  // {nodes, edges}
-    const [includeInactive, setIncludeInactive] = useState(false);
+    const [includeInactive, setIncludeInactive] = usePersistentState('graph:includeInactive', false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     const [langOptions, setLangOptions] = useState([]);
-    const [selectedLang, setSelectedLang] = useState('');
+    const [selectedLang, setSelectedLang] = usePersistentState('graph:selectedLang', '');
     const [langValues, setLangValues] = useState(null);        // {language, nodes:[{id,final,...}], edges:[{source,target,sign,satisfied}]}
 
     const [options, setOptions] = useState({ schemas: [], types: [], levels: [] });
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
-    const [search, setSearch] = useState('');
+    const [filters, setFilters] = usePersistentState('graph:filters', INITIAL_FILTERS);
+    const [search, setSearch] = usePersistentState('graph:search', '');
 
     const [selectedId, setSelectedId] = useState(null);
     const [conditionTree, setConditionTree] = useState(null); // {expression, tree, evaluated, error}

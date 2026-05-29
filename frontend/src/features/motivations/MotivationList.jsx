@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import usePersistentState from '../../utils/usePersistentState';
 
 export default function MotivationList() {
     const [motivations, setMotivations] = useState([]);
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('motivations:search', '');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 

@@ -4,15 +4,16 @@ import Select from 'react-select';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
 import reactSelectStyles from '../../utils/reactSelectStyles';
+import usePersistentState from '../../utils/usePersistentState';
 import SegmentedToggle from '../../components/SegmentedToggle';
 
 export default function TableA() {
-    const [view, setView] = useState('params'); // 'params' o 'questions'
+    const [view, setView] = usePersistentState('tablea:view', 'params'); // 'params' o 'questions'
 
     // Ricerca testuale client-side (free-text). Affina i risultati gia'
     // restituiti dal backend filtrando matrixData.rows in memoria — stesso
     // pattern delle liste Parameters/Questions/Languages.
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = usePersistentState('tablea:search', '');
 
     // Stato per le opzioni delle tendine
     const [options, setOptions] = useState({
@@ -22,7 +23,7 @@ export default function TableA() {
     });
 
     // Stato per i filtri attivi
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = usePersistentState('tablea:filters', {
         f_lang_top_family: '', f_lang_family: '', f_lang_grp: '', f_lang_hist: 'all',
         f_p_schema: '', f_p_type: '', f_p_level: '',
         f_q_template: '', f_q_stop: 'all'

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { searchMatches } from '../../utils/search';
+import usePersistentState from '../../utils/usePersistentState';
 import LanguageMap from './LanguageMap';
 
 const STATUS_BADGE = {
@@ -44,8 +45,8 @@ async function downloadBlob(request, fallbackName) {
 
 export default function LanguageList() {
     const [languages, setLanguages] = useState([]);
-    const [search, setSearch] = useState('');
-    const [filters, setFilters] = useState(INITIAL_FILTERS);
+    const [search, setSearch] = usePersistentState('languages:search', '');
+    const [filters, setFilters] = usePersistentState('languages:filters', INITIAL_FILTERS);
     const [options, setOptions] = useState({ opt_top_families: [], opt_families: [], opt_groups: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
