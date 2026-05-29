@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
@@ -36,6 +36,11 @@ export default function WhatsNewModal() {
 
     const [content, setContent] = useState(null); // null = non ancora caricato / errore
     const [shouldShow, setShouldShow] = useState(false);
+    const [version, setVersion] = useState(null); // updated_at corrente dal server
+    // Versione chiusa dall'utente in questa sessione: la teniamo nascosta anche
+    // se il POST /seen e' lento o fallisce (no ricomparsa per race/rete). Si
+    // "sblocca" solo quando arriva una versione DIVERSA (nuova pubblicazione).
+    const ackedVersionRef = useRef(null);
 
     // Possiamo controllare solo se: loggati, stato consensi noto (cosi' non
     // corriamo davanti al legale) e nessun consenso legale pendente (precedenza
@@ -46,8 +51,14 @@ export default function WhatsNewModal() {
         if (!canCheck) return;
         api.get('/api/whats-new')
             .then(res => {
+                const v = res.data?.updated_at ?? null;
                 setContent(res.data?.content ?? '');
-                setShouldShow(!!res.data?.should_show);
+                setVersion(v);
+                // Se e' la versione gia' chiusa in questa sessione, restiamo
+                // nascosti anche se il server non ha ancora registrato il
+                // "seen" (POST in volo o fallito).
+                const acked = ackedVersionRef.current !== null && ackedVersionRef.current === v;
+                setShouldShow(!!res.data?.should_show && !acked);
             })
             .catch(() => { setContent(null); setShouldShow(false); });
     }, [canCheck]);
@@ -79,11 +90,13 @@ export default function WhatsNewModal() {
     if (!hasRealText(content)) return null; // vuoto -> non e' una novita'
 
     const handleOk = () => {
-        // Ottimistico: nascondo subito e segnalo "visto" al server. Se il POST
-        // fallisce il banner ricomparira' al prossimo refresh (fail-safe
-        // accettabile: meglio che bloccare la UI).
+        // Ricorda la versione chiusa (guard locale) e nascondi subito, poi
+        // segnala "visto" al server. Il guard fa sì che, anche se il POST è
+        // lento o fallisce, il banner non riappaia in sessione per QUESTA
+        // versione; tornerà solo a una pubblicazione diversa.
+        ackedVersionRef.current = version;
         setShouldShow(false);
-        api.post('/api/whats-new/seen').catch(() => { /* ignore */ });
+        api.post('/api/whats-new/seen').catch(() => { /* ignore: tiene il guard locale */ });
     };
 
     return (
