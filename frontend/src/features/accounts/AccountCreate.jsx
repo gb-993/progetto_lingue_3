@@ -43,7 +43,7 @@ export default function AccountCreate() {
                     </div>
                     <div className="form-group">
                         <label>Temporary Password (min 8 characters)</label>
-                        <input type="password" name="password" value={formData.password} onChange={handleChange} required minLength={8} />
+                        <input type="password" name="password" value={formData.password} onChange={handleChange} required minLength={8} autoComplete="new-password" />
                     </div>
                     <div className="form-group">
                         <label>Role</label>

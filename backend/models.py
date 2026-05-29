@@ -497,6 +497,32 @@ class SiteContent(Base):
     updated_by = relationship("User")
 
 
+class WhatsNewView(Base):
+    """Traccia, per utente, l'ultima versione di "What's New" gia' vista.
+
+    La "versione" del contenuto e' `site_contents.updated_at` della riga con
+    key='whats_new' (bumpato a ogni ripubblicazione del super-admin). Qui
+    salviamo, per ciascun utente, l'updated_at dell'ultima versione su cui ha
+    cliccato "OK" (`seen_version`). Il banner ricompare solo se la versione
+    corrente e' piu' recente di quella vista -> esattamente "una volta" per
+    utente, su qualsiasi dispositivo (a differenza del vecchio localStorage,
+    che era per-browser).
+
+    Tabella separata da `users` (come `consents`) per non toccare la tabella
+    piu' sensibile dell'app. Una riga per utente (PK = user_id, upsert).
+    ondelete CASCADE: e' un dato informativo, niente audit legale, quindi alla
+    cancellazione dell'utente la riga sparisce.
+    """
+    __tablename__ = "whats_new_views"
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    seen_version = Column(DateTime, nullable=False)  # = whats_new.updated_at vista
+    seen_at = Column(DateTime, default=utc_now, nullable=False)
+
+
 # ==========================================
 # 6. BACKUP E SNAPSHOT (Submissions)
 # ==========================================

@@ -1,27 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
-// Stato "gia' visto" tenuto SOLO lato client (per-dispositivo): nessun rischio
-// per il DB / login. Salviamo l'HASH del contenuto visto l'ultima volta e lo
-// confrontiamo con l'hash del contenuto corrente.
-const SEEN_KEY = 'pcm-whatsnew-seen';
-
 // Vero solo se, tolti i tag e gli spazi, resta del testo reale. Serve a NON
-// trattare una finestra vuota (o con solo <p></p>/&nbsp;) come "nuovo contenuto".
+// mostrare una finestra vuota (o con solo <p></p>/&nbsp;) come "novita'".
+// NB: il backend applica la stessa regola in should_show; questa e' una
+// seconda difesa lato client.
 function hasRealText(html) {
     if (!html) return false;
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length > 0;
-}
-
-// Hash djb2 compatto: firma il contenuto cosi' in localStorage salviamo una
-// stringa corta invece dell'HTML intero. Due contenuti uguali -> stessa firma.
-function hashContent(str) {
-    let h = 5381;
-    for (let i = 0; i < str.length; i++) {
-        h = ((h << 5) + h) ^ str.charCodeAt(i);
-    }
-    return (h >>> 0).toString(36);
 }
 
 /**
@@ -30,41 +18,72 @@ function hashContent(str) {
  * Regole (volutamente conservative, "non deve dare problemi"):
  *  - cede SEMPRE il passo al modale legale: finche' ci sono consensi pendenti
  *    (requiredConsents non vuoto) non compare;
- *  - compare solo se c'e' testo reale ED e' DIVERSO dall'ultimo visto;
+ *  - compare solo se il server dice should_show=true (versione corrente non
+ *    ancora vista dall'utente E con testo reale) ED il testo e' reale;
+ *  - lo stato "gia' visto" e' lato server, per-utente (tabella whats_new_views):
+ *    "una volta" vale su qualsiasi dispositivo;
+ *  - "dal vivo" senza logout: ricontrolliamo a ogni cambio pagina e quando
+ *    l'utente torna sulla scheda (niente timer). Cosi' se il super-admin
+ *    pubblica mentre l'utente e' gia' dentro, lo vede appena naviga/rifocalizza;
  *  - qualsiasi errore di rete -> semplicemente non si mostra (fail-safe);
- *  - OK (o click fuori) = segna come visto e chiude; non riappare finche' il
- *    super-admin non pubblica un contenuto diverso.
+ *  - OK (o click fuori) = nasconde subito e POST /api/whats-new/seen; non
+ *    riappare finche' il super-admin non pubblica un contenuto nuovo.
  */
 export default function WhatsNewModal() {
     const { user, requiredConsents, consentsLoaded } = useAuth();
     const legalPending = !!(requiredConsents && requiredConsents.length > 0);
+    const { pathname } = useLocation();
 
     const [content, setContent] = useState(null); // null = non ancora caricato / errore
-    const [dismissed, setDismissed] = useState(false);
+    const [shouldShow, setShouldShow] = useState(false);
 
-    useEffect(() => {
-        // Non interroghiamo nemmeno il backend se: non loggati, lo stato dei
-        // consensi non e' ancora noto (cosi' non corriamo davanti al legale),
-        // o c'e' un consenso legale pendente (che ha SEMPRE la precedenza).
-        if (!user || !consentsLoaded || legalPending) return;
-        let active = true;
+    // Possiamo controllare solo se: loggati, stato consensi noto (cosi' non
+    // corriamo davanti al legale) e nessun consenso legale pendente (precedenza
+    // assoluta al modale legale).
+    const canCheck = !!user && consentsLoaded && !legalPending;
+
+    const refresh = useCallback(() => {
+        if (!canCheck) return;
         api.get('/api/whats-new')
-            .then(res => { if (active) setContent(res.data?.content ?? ''); })
-            .catch(() => { if (active) setContent(null); });
-        return () => { active = false; };
-    }, [user, consentsLoaded, legalPending]);
+            .then(res => {
+                setContent(res.data?.content ?? '');
+                setShouldShow(!!res.data?.should_show);
+            })
+            .catch(() => { setContent(null); setShouldShow(false); });
+    }, [canCheck]);
 
-    if (!user || !consentsLoaded || legalPending || dismissed || content == null) return null;
-    if (!hasRealText(content)) return null; // vuoto -> non e' nuovo contenuto
+    // Ricarica quando cambiano i presupposti (login / consensi) E a ogni
+    // navigazione (pathname). Se non possiamo controllare, azzeriamo.
+    useEffect(() => {
+        if (!canCheck) { setShouldShow(false); return; }
+        refresh();
+    }, [canCheck, pathname, refresh]);
 
-    const sig = hashContent(content);
-    let seen = null;
-    try { seen = localStorage.getItem(SEEN_KEY); } catch { /* ignore */ }
-    if (seen === sig) return null; // stesso contenuto del precedente -> non mostrare
+    // Ricarica quando l'utente torna sulla scheda/finestra (focus o tab di
+    // nuovo visibile): cosi' una pubblicazione fatta mentre era altrove
+    // compare al rientro, senza bisogno di logout o reload manuale.
+    useEffect(() => {
+        if (!canCheck) return;
+        const onFocus = () => refresh();
+        const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [canCheck, refresh]);
+
+    if (!canCheck || content == null) return null;
+    if (!shouldShow) return null; // versione corrente gia' vista (o niente da mostrare)
+    if (!hasRealText(content)) return null; // vuoto -> non e' una novita'
 
     const handleOk = () => {
-        try { localStorage.setItem(SEEN_KEY, sig); } catch { /* ignore */ }
-        setDismissed(true);
+        // Ottimistico: nascondo subito e segnalo "visto" al server. Se il POST
+        // fallisce il banner ricomparira' al prossimo refresh (fail-safe
+        // accettabile: meglio che bloccare la UI).
+        setShouldShow(false);
+        api.post('/api/whats-new/seen').catch(() => { /* ignore */ });
     };
 
     return (
