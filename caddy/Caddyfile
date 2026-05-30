@@ -59,6 +59,19 @@ hub.parametricomparison.unimore.it {
 	# permette il deep-linking (/parameters/SPK, ecc.) senza 404.
 	handle {
 		root * /srv/dist
+
+		# Strategia di cache per la SPA:
+		# - /assets/* hanno l'hash del contenuto nel nome (es. index-AbC123.js):
+		#   a parita' di nome non cambiano mai -> cache "immutable" 1 anno.
+		# - tutto il resto (in pratica index.html, servita anche ai deep-link
+		#   tramite il fallback try_files) NON va cachato "duro": no-cache fa
+		#   rivalidare il browser a ogni visita, cosi' dopo un deploy gli utenti
+		#   vedono subito la versione nuova senza dover fare Ctrl+F5.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@notassets not path /assets/*
+		header @notassets Cache-Control "no-cache"
+
 		try_files {path} /index.html
 		file_server
 	}
