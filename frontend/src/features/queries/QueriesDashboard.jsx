@@ -259,6 +259,17 @@ export default function QueriesDashboard() {
         );
     };
 
+    // Larghezza colonne: menu collassato = solo icone (56px) in ogni densità.
+    // Menu espanso: in densità compact ~1/3 menu · 2/3 risultati; comfortable = 350px.
+    // IMPORTANTE per l'animazione: tutte le larghezze del menu sono px o %
+    // (mai 'fr'), così la transizione interpola e scorre fluida come la sidebar.
+    // 'fr' ↔ 'px' non è interpolabile dal browser → salterebbe di colpo.
+    const isCompact = typeof document !== 'undefined'
+        && document.documentElement.getAttribute('data-density') === 'compact';
+    const gridCols = menuCollapsed
+        ? '56px 1fr'
+        : (isCompact ? '33.333% 1fr' : '350px 1fr');
+
     return (
         <div className="container">
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-col-gap, 2rem)' }}>
@@ -267,10 +278,10 @@ export default function QueriesDashboard() {
 
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: `${menuCollapsed ? '56px' : '350px'} 1fr`,
+                gridTemplateColumns: gridCols,
                 gap: 'var(--form-col-gap, 2rem)',
                 alignItems: 'start',
-                transition: 'grid-template-columns 0.2s',
+                transition: 'grid-template-columns 0.13s ease',
             }}>
 
                 {/* SIDEBAR NAVIGATION */}
@@ -278,11 +289,18 @@ export default function QueriesDashboard() {
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         justifyContent: menuCollapsed ? 'center' : 'space-between',
-                        padding: menuCollapsed ? '0.6rem 0' : '0.75rem 1rem',
+                        padding: menuCollapsed ? '0 0' : '0 1rem',
                         background: 'var(--surface-2)', borderBottom: '1px solid var(--border)',
-                        fontWeight: 'bold', minHeight: 44,
+                        fontWeight: 'bold', height: 52, boxSizing: 'border-box',
+                        overflow: 'hidden',
                     }}>
-                        {!menuCollapsed && <span>Queries Configuration</span>}
+                        {!menuCollapsed && (
+                            <span style={{
+                                flex: '0 1 auto', minWidth: 0,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>Queries Configuration</span>
+                        )}
+                        {/* Toggle a destra quando aperto, centrato quando chiuso (come la sidebar). */}
                         <button
                             type="button"
                             className="sidebar-toggle"
@@ -291,6 +309,7 @@ export default function QueriesDashboard() {
                             title={menuCollapsed ? 'Expand queries menu' : 'Collapse queries menu'}
                             aria-pressed={menuCollapsed}
                             style={{
+                                flexShrink: 0,
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                 width: 28, height: 28, padding: 0,
                                 background: 'transparent', border: 'none', cursor: 'pointer',
@@ -307,14 +326,17 @@ export default function QueriesDashboard() {
                             return (
                                 <button
                                     key={t.id}
-                                    title={menuCollapsed ? t.label : undefined}
+                                    title={t.label}
                                     aria-label={menuCollapsed ? t.label : undefined}
                                     style={{
                                         display: 'flex', alignItems: 'center',
-                                        justifyContent: menuCollapsed ? 'center' : 'flex-start',
-                                        gap: menuCollapsed ? 0 : '0.6rem',
-                                        padding: menuCollapsed ? '0 0' : 'var(--queries-tab-pad, 0.85rem 1rem)',
-                                        minHeight: 'var(--queries-tab-h, 64px)',
+                                        justifyContent: 'flex-start',
+                                        gap: 0,
+                                        padding: 0,
+                                        width: '100%',
+                                        height: 'var(--queries-tab-h, 64px)',
+                                        boxSizing: 'border-box',
+                                        overflow: 'hidden',
                                         textAlign: 'left', border: 'none',
                                         borderBottom: '1px solid var(--border)',
                                         background: active ? 'var(--surface-2)' : 'transparent',
@@ -325,18 +347,33 @@ export default function QueriesDashboard() {
                                     }}
                                     onClick={() => handleTabChange(t.id)}
                                 >
-                                    {Icon ? (
-                                        <Icon size={18} style={{ flexShrink: 0 }} />
-                                    ) : (
-                                        <span style={{
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            width: 18, height: 18, flexShrink: 0,
-                                            fontSize: '1.05rem', fontWeight: 700, lineHeight: 1,
-                                        }}>
-                                            {t.symbol}
-                                        </span>
-                                    )}
-                                    {!menuCollapsed && <span>{t.label}</span>}
+                                    {/* Slot icona a larghezza fissa (56px = larghezza del menu
+                                        collassato): l'icona resta sempre nella stessa posizione,
+                                        non si sposta durante l'apri/chiudi → animazione fluida. */}
+                                    <span style={{
+                                        flex: '0 0 56px', width: 56, alignSelf: 'stretch',
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        {Icon ? (
+                                            <Icon size={18} />
+                                        ) : (
+                                            <span style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1 }}>
+                                                {t.symbol}
+                                            </span>
+                                        )}
+                                    </span>
+                                    {/* Etichetta: occupa lo spazio rimanente e sfuma in/out.
+                                        È sempre nel DOM così l'opacità può animarsi. */}
+                                    <span style={{
+                                        flex: '1 1 auto', minWidth: 0, paddingRight: '1rem',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        lineHeight: 1.2,
+                                        opacity: menuCollapsed ? 0 : 1,
+                                        transition: 'opacity 0.13s ease',
+                                    }}>{t.label}</span>
                                 </button>
                             );
                         })}
@@ -361,38 +398,46 @@ export default function QueriesDashboard() {
                     {results && !results.error && (
                         <div className="query-results" style={{ animation: 'fadeIn 0.3s ease' }}>
 
-                            {/* Q1: Implicational conditions */}
+                            {/* Q1: Implicational conditions — vista minimale */}
                             {activeTab === 'q1' && (
                                 <div>
-                                    <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
-                                        <strong>Implicational Condition:</strong> <br/>
-                                        <code>{results.raw_condition || "None (Always active)"}</code>
-                                        {results.pretty_condition && <><br/><small>{results.pretty_condition}</small></>}
+                                    {/* Condizione: etichetta + valore a sinistra. L'.alert è flex
+                                        space-between di default → qui lo forziamo a sinistra. */}
+                                    <div className="alert alert-info" style={{ marginBottom: '1.5rem', justifyContent: 'flex-start', gap: '0.5rem' }}>
+                                        <strong>Implicational condition:</strong>
+                                        <code>{results.raw_condition || 'None (always active)'}</code>
                                     </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+
+                                    {/* Implicant → Implicated: due colonne affiancate, ogni header
+                                        sopra il proprio elenco, freccia tra le due colonne. */}
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
                                         <div>
-                                            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Implicating parameters</h3>
-                                            <div className="card" style={{ padding: 0 }}>
-                                                <table className="table" style={{ margin: 0 }}>
-                                                    <thead className="table-light"><tr><th>ID</th><th>Name</th></tr></thead>
-                                                    <tbody>
-                                                    {results.implicating.map(p => <tr key={p.id}><td><strong>{p.id}</strong></td><td>{p.name}</td></tr>)}
-                                                    {results.implicating.length === 0 && <tr><td colSpan="2" style={{ textAlign: 'center', padding: '1rem' }} className="muted">None</td></tr>}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <h3 style={{ fontSize: '1rem', margin: '0 0 0.6rem' }}>Implicant</h3>
+                                            {results.implicating.length > 0 ? (
+                                                <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                                                    {results.implicating.map(p => (
+                                                        <li key={p.id} style={{ marginBottom: '0.25rem' }}>
+                                                            <Link to={`/admin/parameters/${p.id}/edit`}>{p.id}</Link>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : <p className="muted" style={{ margin: 0 }}>None</p>}
                                         </div>
+
+                                        {/* freccia, allineata verticalmente con gli header */}
+                                        <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', height: '1.2rem', fontSize: '1.5rem', fontWeight: 700, lineHeight: 1 }}>→</div>
+
                                         <div>
-                                            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Implicated parameters</h3>
-                                            <div className="card" style={{ padding: 0 }}>
-                                                <table className="table" style={{ margin: 0 }}>
-                                                    <thead className="table-light"><tr><th>ID</th><th>Name</th></tr></thead>
-                                                    <tbody>
-                                                    {results.implicated.map(p => <tr key={p.id}><td><strong>{p.id}</strong></td><td>{p.name}</td></tr>)}
-                                                    {results.implicated.length === 0 && <tr><td colSpan="2" style={{ textAlign: 'center', padding: '1rem' }} className="muted">None</td></tr>}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                            <h3 style={{ fontSize: '1rem', margin: '0 0 0.6rem' }}>Implicated</h3>
+                                            {results.implicated.length > 0 ? (
+                                                <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
+                                                    {results.implicated.map(p => (
+                                                        <li key={p.id} style={{ marginBottom: '0.25rem' }}>
+                                                            <Link to={`/admin/parameters/${p.id}/edit`}>{p.id}</Link>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : <p className="muted" style={{ margin: 0 }}>None</p>}
                                         </div>
                                     </div>
                                 </div>

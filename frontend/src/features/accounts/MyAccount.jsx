@@ -7,13 +7,22 @@ import SegmentedToggle from '../../components/SegmentedToggle';
 // un attributo data-density su <html>, persistito in localStorage e applicato
 // gia' in index.html per evitare il flash al reload.
 const DENSITY_STORAGE_KEY = 'pcm-density';
+const THEME_STORAGE_KEY = 'pcm-theme';
 
 function getInitialDensity() {
-    if (typeof window === 'undefined') return 'zoom';
-    // Default = "zoom" (modalita' grande). Solo il valore 'compact' attiva
-    // l'attributo data-density="compact"; qualunque altro valore (incluso il
-    // vecchio 'comfortable' di utenti gia' esistenti) ricade su 'zoom'.
-    return localStorage.getItem(DENSITY_STORAGE_KEY) === 'compact' ? 'compact' : 'zoom';
+    if (typeof window === 'undefined') return 'compact';
+    // Default = "compact". Solo la scelta esplicita 'zoom' dell'utente attiva la
+    // modalita' grande, e resta salvata in localStorage (rispettata per sempre,
+    // anche dopo i deploy). Ogni altro valore (null o il vecchio 'comfortable')
+    // ricade sul default compact.
+    return localStorage.getItem(DENSITY_STORAGE_KEY) === 'zoom' ? 'zoom' : 'compact';
+}
+
+// Il tema (data-theme) e' gia' applicato da index.html prima di React, quindi
+// lo leggiamo dall'attributo: e' la verita' corrente, coerente con la top bar.
+function getInitialTheme() {
+    if (typeof document === 'undefined') return 'light';
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
 
 export default function MyAccount() {
@@ -22,6 +31,7 @@ export default function MyAccount() {
     const [passwords, setPasswords] = useState({ old_password: '', new_password1: '', new_password2: '' });
     const [message, setMessage] = useState({ text: '', type: '' });
     const [density, setDensity] = useState(getInitialDensity);
+    const [theme, setTheme] = useState(getInitialTheme);
 
     const applyDensity = (value) => {
         setDensity(value);
@@ -32,6 +42,23 @@ export default function MyAccount() {
         }
         localStorage.setItem(DENSITY_STORAGE_KEY, value);
     };
+
+    // Cambia il tema e notifica la top bar (e ogni altro toggle) via evento,
+    // così restano sempre in sync. Stessa sorgente di verità: data-theme +
+    // localStorage. La top bar fa esattamente lo stesso quando viene cliccata.
+    const applyTheme = (value) => {
+        setTheme(value);
+        document.documentElement.setAttribute('data-theme', value);
+        localStorage.setItem(THEME_STORAGE_KEY, value);
+        window.dispatchEvent(new CustomEvent('pcm-theme-change', { detail: value }));
+    };
+
+    // Tiene allineato questo toggle quando il tema cambia dalla top bar.
+    useEffect(() => {
+        const handler = (e) => setTheme(prev => (prev === e.detail ? prev : e.detail));
+        window.addEventListener('pcm-theme-change', handler);
+        return () => window.removeEventListener('pcm-theme-change', handler);
+    }, []);
 
     useEffect(() => {
         const fetchMe = async () => {
@@ -106,12 +133,21 @@ export default function MyAccount() {
             <div className="card" style={{marginBottom: 'var(--acc-section-gap, 2rem)'}}>
                 <h3 className="mb-2">Appearance</h3>
                 <div className="form-group" style={{display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap'}}>
-                    <label style={{margin: 0}}>Layout density</label>
+                    <label style={{margin: 0, minWidth: '8rem'}}>Layout density</label>
                     <SegmentedToggle
                         ariaLabel="Layout density"
                         value={density}
                         onChange={applyDensity}
                         options={[{ value: 'zoom', label: 'Zoom' }, { value: 'compact', label: 'Compact' }]}
+                    />
+                </div>
+                <div className="form-group" style={{display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', marginTop: '1rem'}}>
+                    <label style={{margin: 0, minWidth: '8rem'}}>Theme</label>
+                    <SegmentedToggle
+                        ariaLabel="Theme"
+                        value={theme}
+                        onChange={applyTheme}
+                        options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
                     />
                 </div>
             </div>

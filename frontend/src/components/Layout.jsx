@@ -132,12 +132,8 @@ function BackToTop() {
 // =============================================================================
 // Footer
 // =============================================================================
-export function SiteFooter({ role }) {
+export function SiteFooter() {
     const year = new Date().getFullYear();
-    const roleLabel =
-        role === 'admin' ? 'Admin Access'
-        : role === 'public' ? 'Public View'
-        : 'User Access';
 
     // Versioni correnti di ToU e Privacy Notice (caricate via UI admin).
     // I link "Privacy Policy" / "Disclaimer" puntano sempre all'ultima
@@ -190,6 +186,9 @@ export function SiteFooter({ role }) {
                                 </a>
                             </span>
                         </div>
+                        <p className="muted" style={{ margin: '1rem 0 0', fontSize: '0.85rem' }}>
+                            © {year} – The PCM Hub. All rights reserved.
+                        </p>
                     </div>
 
                     <div className="footer-col">
@@ -232,15 +231,6 @@ export function SiteFooter({ role }) {
                     </div>
 
                 </div>
-
-                <div className="footer-bottom">
-                    <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
-                        © {year} – The PCM Hub. All rights reserved.
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span className="role-badge">{roleLabel}</span>
-                    </div>
-                </div>
             </div>
         </footer>
     );
@@ -267,7 +257,18 @@ export default function Layout({ children }) {
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem(THEME_STORAGE_KEY, theme);
+        // Notifica gli altri toggle del tema (es. quello in My Account) così
+        // restano sincronizzati con la top bar.
+        window.dispatchEvent(new CustomEvent('pcm-theme-change', { detail: theme }));
     }, [theme]);
+
+    // Sincronizza la top bar quando il tema viene cambiato altrove (My Account).
+    // Il guard (ritorna prev se uguale) evita loop di eventi.
+    useEffect(() => {
+        const handler = (e) => setTheme(prev => (prev === e.detail ? prev : e.detail));
+        window.addEventListener('pcm-theme-change', handler);
+        return () => window.removeEventListener('pcm-theme-change', handler);
+    }, []);
 
     useEffect(() => {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
@@ -307,7 +308,7 @@ export default function Layout({ children }) {
                         <Breadcrumb pathname={location.pathname} />
                     </div>
                     <div className="top-bar-right">
-                        <Link to="/me" className="btn" style={{ background: 'transparent', border: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>
+                        <Link to="/me" className="btn account-link" style={{ background: 'transparent', border: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>
                             MyAccount
                         </Link>
                         <button
@@ -505,7 +506,7 @@ export default function Layout({ children }) {
                 </div>
             </div>
 
-            <SiteFooter role={role} />
+            <SiteFooter />
             <BackToTop />
         </>
     );

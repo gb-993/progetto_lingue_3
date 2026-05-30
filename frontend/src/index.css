@@ -159,6 +159,13 @@ a:hover { color: var(--link-hover); }
    .brand erediterebbe --link (peach) invece del rosso brand in dark mode. */
 :root[data-theme="dark"] .top-bar .brand,
 :root[data-theme="dark"] .top-bar .brand:hover { color: var(--brand); }
+/* Link "My Account" nella top bar: sempre rosso brand (non il peach di --link),
+   anche in hover. Serve scavalcare la regola globale dei link, soprattutto in
+   dark (`:root[data-theme="dark"] a:hover`). */
+.top-bar-right .account-link,
+.top-bar-right .account-link:hover { color: var(--brand); }
+:root[data-theme="dark"] .top-bar-right .account-link,
+:root[data-theme="dark"] .top-bar-right .account-link:hover { color: var(--brand); }
 :root[data-theme="dark"] .badge {
   background: var(--surface-2);
   color: var(--text);
@@ -258,6 +265,13 @@ a:hover{text-decoration:underline}
      Riga 2 = corpo (sidebar + contenuto). */
   grid-template-rows: var(--topbar-height) 1fr;
   background: var(--bg);
+  /* Slide veloce della sidebar: anima la larghezza della colonna 1 quando
+     passa da 280px a 64px (collasso) e viceversa. Stessa durata della pagina
+     Filters per coerenza. */
+  transition: grid-template-columns 0.13s ease;
+}
+@media (prefers-reduced-motion: reduce){
+  .app-wrapper{ transition: none; }
 }
 .app-wrapper.is-sidebar-collapsed{
   --sidebar-width: 64px;
@@ -278,7 +292,7 @@ a:hover{text-decoration:underline}
   padding: var(--sp-5) var(--sp-5);
   border-right: 1px solid var(--border);
   background: var(--surface);
-  transition: padding 0.18s ease;
+  transition: padding 0.13s ease;
 }
 .sidebar.is-collapsed{
   padding: var(--sp-6) var(--sp-2);
@@ -341,6 +355,15 @@ a:hover{text-decoration:underline}
 }
 .sidebar-nav .nav-list .btn .nav-icon{
   flex-shrink: 0;
+}
+/* Etichette su una sola riga: niente a-capo, così l'altezza delle voci resta
+   identica tra sidebar espansa e collassata (nessun salto verticale). Se un
+   testo eccede, viene troncato con "…" (il testo completo è nel title). */
+.sidebar-nav .nav-list .nav-label{
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sidebar.is-collapsed .nav-list .btn{
   justify-content: center;
@@ -697,9 +720,11 @@ a:hover{text-decoration:underline}
 
 .breadcrumb {
   margin-top: .5rem;
-  /* Brand su entrambi i temi: var(--brand) cambia automaticamente fra
-     #d14124 (light) e #e9573b (dark). Tutti i figli (link, separatori
-     "/", current page) ereditano questo colore. */
+  /* Light: nero (--text). Dark: rosso brand (override sotto). Tutti i figli
+     (link, separatori "/", current page) ereditano questo colore. */
+  color: var(--text);
+}
+:root[data-theme="dark"] .breadcrumb {
   color: var(--brand);
 }
 
@@ -2091,8 +2116,8 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   width: 100%;
   background-color: var(--bg);
   border-top: 1px solid var(--border);
-  padding-top: 3rem;
-  padding-bottom: 2rem;
+  padding-top: 2rem;
+  padding-bottom: 1.25rem;
   margin-top: 5rem;
   position: relative;
   z-index: 200;
@@ -2166,6 +2191,13 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   background: var(--brand-700);
   color: #fff;
   text-decoration: none;
+}
+/* In dark mode la regola globale `:root[data-theme="dark"] a` (peach) avrebbe
+   priorita' sul colore del bottone: la scavalchiamo per tenere il testo bianco
+   e leggibile dentro al bottone rosso. */
+:root[data-theme="dark"] .footer-btn,
+:root[data-theme="dark"] .footer-btn:hover {
+  color: #fff;
 }
 
 .footer-bottom {

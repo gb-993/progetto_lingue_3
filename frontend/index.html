@@ -21,7 +21,9 @@
         // Densita' layout (comfortable default / compact "gestionale").
         // Applicata qui per evitare il flash dello stile comodo al reload.
         try {
-          if (localStorage.getItem('pcm-density') === 'compact') {
+          // Compact e' il default: lo applichiamo SEMPRE, tranne quando l'utente
+          // ha scelto esplicitamente 'zoom' (scelta salvata e rispettata per sempre).
+          if (localStorage.getItem('pcm-density') !== 'zoom') {
             document.documentElement.setAttribute('data-density', 'compact');
           }
         } catch (e) { /* no-op */ }

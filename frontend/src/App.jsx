@@ -98,7 +98,7 @@ function ConditionalLayout({ children }) {
     return (
         <>
             {children}
-            <SiteFooter role="public" />
+            <SiteFooter />
         </>
     );
 }
