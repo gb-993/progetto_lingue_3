@@ -10,6 +10,7 @@ import models
 from dependencies import get_db, require_admin
 from services.versioning import record_version
 from services import archive_service
+from services.question_copy import copy_question_data
 from services.recompute import recompute_parameter_for_all_languages
 
 ID_MAX_LEN = 40  # Length(Question.id) — vincolo schema
@@ -40,6 +41,10 @@ class QuestionUpdate(QuestionBase):
 
 class QuestionCreate(QuestionBase):
     change_note: Optional[str] = ""
+    # Se valorizzato, dopo aver creato la question vengono clonati tutti i dati
+    # linguistici (Answer/Example/AnswerMotivation) della question sorgente
+    # indicata. È il "Duplicate WITH data": la sorgente resta intatta.
+    copy_data_from: Optional[str] = None
 
 # --- ENDPOINT ---
 @router.get("")
@@ -75,10 +80,18 @@ def get_admin_question(id: str, db: Session = Depends(get_db), current_user: mod
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def create_admin_question(item: QuestionCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == item.parameter_id).first()
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
+
+    # Duplicate WITH data: la sorgente da clonare deve esistere. La validiamo
+    # qui (prima di creare la nuova question) così un id sbagliato non lascia
+    # una question vuota a metà.
+    if item.copy_data_from:
+        source_q = db.query(models.Question).filter(models.Question.id == item.copy_data_from).first()
+        if not source_q:
+            raise HTTPException(status_code=400, detail="The source question to copy data from does not exist.")
 
     db_item = models.Question(
         id=item.id,
@@ -101,12 +114,22 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
             for mot_id in item.allowed_motivations:
                 db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
 
+        # Duplicate WITH data: clona Answer/Example/AnswerMotivation dalla
+        # sorgente. Avviene dopo il primo commit, così il FK question_id punta
+        # a una question già persistita.
+        copied = None
+        if item.copy_data_from:
+            copied = copy_question_data(db, item.copy_data_from, db_item.id)
+
         # Registra il log di creazione nel parametro genitore (stessa logica del PUT)
         if item.change_note and item.change_note.strip():
+            note = f"[Question {item.id}] New: {item.change_note.strip()}"
+            if copied:
+                note += f" (data copied from {item.copy_data_from}: {copied['answers']} answers, {copied['examples']} examples)"
             log = models.ParameterChangeLog(
                 parameter_id=item.parameter_id,
                 user_id=current_user.id,
-                change_note=f"[Question {item.id}] New: {item.change_note.strip()}"
+                change_note=note
             )
             db.add(log)
 
@@ -114,6 +137,12 @@ def create_admin_question(item: QuestionCreate, db: Session = Depends(get_db), c
         record_version(db, db_item, operation="create", source="manual",
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
+
+        # Se sono stati copiati dati, il consolidate del parametro cambia:
+        # schedula il ricalcolo per tutte le lingue (come toggle-active).
+        if copied and copied["answers"]:
+            background_tasks.add_task(recompute_parameter_for_all_languages, item.parameter_id)
+
         return db_item
     except IntegrityError:
         db.rollback()

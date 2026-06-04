@@ -12,6 +12,9 @@ function truncate(text, n = 70) {
 export default function QuestionList() {
     const [questions, setQuestions] = useState([]);
     const [search, setSearch] = usePersistentState('questions:search', '');
+    // Spunta accanto all'header "Is Active": nasconde dall'elenco le domande
+    // disattivate. Persistente come gli altri filtri della lista.
+    const [hideInactive, setHideInactive] = usePersistentState('questions:hideInactive', false);
 
     const fetchQuestions = async () => {
         try {
@@ -26,7 +29,9 @@ export default function QuestionList() {
         fetchQuestions();
     }, []);
 
-    const filteredQuestions = questions.filter(q => searchMatches(q, search));
+    const filteredQuestions = questions
+        .filter(q => !hideInactive || q.is_active !== false)
+        .filter(q => searchMatches(q, search));
 
     const handleToggleActive = async (q) => {
         const isActive = q.is_active !== false;
@@ -83,6 +88,22 @@ export default function QuestionList() {
                             <th>ID</th>
                             <th>Text Snippet</th>
                             <th>Type</th>
+                            <th>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span>Is Active</span>
+                                    <label
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 400, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                        title="Hide deactivated questions from the list"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={hideInactive}
+                                            onChange={(e) => setHideInactive(e.target.checked)}
+                                        />
+                                        <span className="muted">hide inactive</span>
+                                    </label>
+                                </div>
+                            </th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -92,14 +113,16 @@ export default function QuestionList() {
                             return (
                                 <tr key={q.id} style={{ opacity: isActive ? 1 : 0.5 }}>
                                     <td style={{ fontWeight: 'bold' }}>{q.id}</td>
-                                    <td>
-                                        {truncate(q.text, 70)}
-                                        {!isActive && <> <span className="status bad">Inactive</span></>}
-                                    </td>
+                                    <td>{truncate(q.text, 70)}</td>
                                     <td>
                                         {q.is_stop_question
                                             ? <span style={{ color: 'var(--bad, #d9534f)', fontWeight: 700 }}>Stop</span>
                                             : <span className="muted">Standard</span>}
+                                    </td>
+                                    <td>
+                                        {isActive
+                                            ? <span className="status ok">Yes</span>
+                                            : <span className="status bad">No</span>}
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                         <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
@@ -120,7 +143,7 @@ export default function QuestionList() {
                         })}
                         {filteredQuestions.length === 0 && (
                             <tr>
-                                <td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>No question found.</td>
+                                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No question found.</td>
                             </tr>
                         )}
                     </tbody>

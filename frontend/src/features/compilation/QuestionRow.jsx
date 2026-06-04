@@ -479,9 +479,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                 />
                             </div>
                         </div>
-                        <p className="small muted" style={{ marginTop: '0.4rem' }}>
-                            <strong>The imported example is a copy — edit it freely.</strong>
-                        </p>
                     </div>
                 </div>
             )}

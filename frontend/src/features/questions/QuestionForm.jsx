@@ -29,6 +29,64 @@ const Q_DRAFT_FIELDS = [
     'example_yes', 'help_info',
 ];
 
+const ID_MAX_LEN = 40; // Length(Question.id) — vincolo schema backend
+const escapeRegexId = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Calcola l'ID suggerito per una question NUOVA.
+//
+// Due schemi, scelti da `copySource`:
+//  - copySource == null  → schema "a lettera" (question nuova da zero):
+//      `{param}_Q{prossima lettera libera}` (o `_QS` se Stop Question). Le due
+//      sequenze sono indipendenti perché `_Q([a-z])` non matcha `_QS...`.
+//  - copySource == id    → schema "numerato" (Duplicate WITH data):
+//      base della sorgente senza cifre finali (`FMM_Qa2` → `FMM_Qa`), infisso
+//      `_Q`/`_QS` adattato alla spunta Stop corrente, poi il primo numero
+//      libero ≥ 2 (`FMM_Qa` → `FMM_Qa2`). Se la sorgente non segue lo schema
+//      `_Q`/`_QS` (ID legacy custom) non c'è infisso da scambiare: si appende
+//      solo il numero e la spunta Stop non altera l'ID.
+function computeSuggestedQuestionId({ parameterId, isStop, copySource, questions }) {
+    if (!parameterId) return '';
+    const sameParam = (questions || []).filter(q => q.parameter_id === parameterId);
+
+    if (!copySource) {
+        const infix = isStop ? '_QS' : '_Q';
+        const re = new RegExp(`^${escapeRegexId(parameterId)}${infix}([a-z])`);
+        const used = new Set();
+        for (const q of sameParam) {
+            const m = String(q.id).match(re);
+            if (m) used.add(m[1]);
+        }
+        for (let i = 0; i < 26; i++) {
+            const letter = String.fromCharCode(97 + i);
+            if (!used.has(letter)) return `${parameterId}${infix}${letter}`;
+        }
+        return ''; // tutte le lettere a-z occupate (>26 domande)
+    }
+
+    // Schema numerato. Base = sorgente senza cifre finali.
+    const base = String(copySource).replace(/\d+$/, '');
+    let stem;
+    const stopM = base.match(/^(.*)_QS([a-zA-Z]*)$/);
+    if (stopM) {
+        stem = isStop ? `${stopM[1]}_QS${stopM[2]}` : `${stopM[1]}_Q${stopM[2]}`;
+    } else {
+        const normM = base.match(/^(.*)_Q([a-zA-Z]*)$/);
+        stem = normM
+            ? (isStop ? `${normM[1]}_QS${normM[2]}` : `${normM[1]}_Q${normM[2]}`)
+            : base; // nessun infisso riconoscibile
+    }
+    const numRe = new RegExp(`^${escapeRegexId(stem)}(\\d+)$`);
+    const usedNums = new Set();
+    for (const q of sameParam) {
+        const m = String(q.id).match(numRe);
+        if (m) usedNums.add(parseInt(m[1], 10));
+    }
+    let n = 2; // l'originale (senza numero) vale "1": si parte sempre da 2
+    while (usedNums.has(n)) n++;
+    const candidate = `${stem}${n}`;
+    return candidate.length > ID_MAX_LEN ? candidate.slice(0, ID_MAX_LEN) : candidate;
+}
+
 // react-select non legge i CSS variable del tema: in dark mode il menu resta
 // bianco con testo chiaro (illeggibile). Qui mappiamo le sue parti sui token
 // del tema così segue automaticamente light/dark.
@@ -116,6 +174,13 @@ export default function QuestionForm({ mode = 'page' }) {
     // `importedFrom` resta come indicatore "Imported from X" dopo l'import.
     const [templateSource, setTemplateSource] = useState(null);
     const [importedFrom, setImportedFrom] = useState(null);
+    // Stessi tre stati per il box "Duplicate WITH data": oltre a riempire il
+    // form coi testi (come WITHOUT), arma la copia dei dati linguistici della
+    // sorgente, eseguita lato backend al salvataggio. `copyDataFrom` è l'id
+    // della sorgente da clonare (null = nessuna copia).
+    const [dataTemplateSource, setDataTemplateSource] = useState(null);
+    const [dataImportedFrom, setDataImportedFrom] = useState(null);
+    const [copyDataFrom, setCopyDataFrom] = useState(null);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -246,37 +311,19 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    // Lista delle domande del parametro corrente (per il pannello "Existing in this parameter")
-    const currentParamQuestions = useMemo(() => {
-        if (!formData.parameter_id) return [];
-        return allQuestions
-            .filter(q => q.parameter_id === formData.parameter_id)
-            .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    }, [allQuestions, formData.parameter_id]);
-
-    // Calcola la prossima lettera libera per l'ID. Il formato dipende dalla
-    // checkbox "Stop Question": stop → `{paramId}_QS{lettera}` (S maiuscola),
-    // normale → `{paramId}_Q{lettera}`. Le due sequenze di lettere sono
-    // indipendenti perché il regex `_Q([a-z])` non matcha `_QS...` (la S è
-    // maiuscola), quindi spuntando/togliendo la casella il suggerimento passa
-    // dall'una all'altra senza che i conteggi si sovrappongano. Ritorna ''
-    // se tutte le lettere a-z sono già occupate.
-    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const suggestedQuestionId = useMemo(() => {
-        if (!formData.parameter_id) return '';
-        const infix = formData.is_stop_question ? '_QS' : '_Q';
-        const re = new RegExp(`^${escapeRegex(formData.parameter_id)}${infix}([a-z])`);
-        const used = new Set();
-        for (const q of currentParamQuestions) {
-            const m = String(q.id).match(re);
-            if (m) used.add(m[1]);
-        }
-        for (let i = 0; i < 26; i++) {
-            const letter = String.fromCharCode(97 + i);
-            if (!used.has(letter)) return `${formData.parameter_id}${infix}${letter}`;
-        }
-        return ''; // tutte le lettere occupate (>26 domande)
-    }, [formData.parameter_id, formData.is_stop_question, currentParamQuestions]);
+    // ID suggerito. Normalmente è lo schema "a lettera" del parametro corrente;
+    // dopo un "Duplicate WITH data" (`copyDataFrom` valorizzato) diventa lo
+    // schema "numerato" derivato dalla sorgente. In entrambi i casi resta
+    // reattivo alla spunta Stop Question (vedi computeSuggestedQuestionId).
+    const suggestedQuestionId = useMemo(
+        () => computeSuggestedQuestionId({
+            parameterId: formData.parameter_id,
+            isStop: formData.is_stop_question,
+            copySource: copyDataFrom,
+            questions: allQuestions,
+        }),
+        [formData.parameter_id, formData.is_stop_question, copyDataFrom, allQuestions]
+    );
 
     // Pre-compila il campo ID col suggerimento quando si sceglie un parametro o
     // si spunta/toglie "Stop Question" (cambia `suggestedQuestionId` e l'ID
@@ -312,27 +359,60 @@ export default function QuestionForm({ mode = 'page' }) {
             .filter(g => g.options.length > 0);
     }, [parameters, allQuestions]);
 
-    const handleImportQuestion = async (selected) => {
+    // Riempie il form coi soli testi della sorgente. Con `withData` arma anche
+    // la copia dei dati linguistici (eseguita al salvataggio dal backend).
+    // I due box sono mutuamente esclusivi: l'ultimo usato "vince" e l'altro
+    // viene azzerato, così è sempre chiaro quale duplicazione è attiva.
+    const handleImportQuestion = async (selected, { withData = false } = {}) => {
         if (!selected) {
-            setImportedFrom(null);
+            if (withData) { setDataImportedFrom(null); setCopyDataFrom(null); }
+            else { setImportedFrom(null); }
             return;
         }
         try {
             const res = await api.get(`/api/admin/questions/${selected.value}`);
             const q = res.data;
-            // Non sovrascriviamo id (deve essere nuovo) né parameter_id (è il corrente)
+            const sourceParam = q.parameter_id || '';
+            const sourceStop = q.is_stop_question ?? false;
+            // ID auto-dedotto: schema numerato (WITH data) o a lettera (WITHOUT
+            // data), calcolato sul PARAMETRO DELLA SORGENTE — è lì che finirà la
+            // duplicata.
+            const newId = computeSuggestedQuestionId({
+                parameterId: sourceParam,
+                isStop: sourceStop,
+                copySource: withData ? selected.value : null,
+                questions: allQuestions,
+            });
+            // Il click di Duplicate sovrascrive sempre il campo Question ID,
+            // anche se l'utente ne aveva digitato uno a mano: riazzeriamo il flag
+            // così l'auto-suggerimento riprende a guidarlo (e a ri-adattarsi a
+            // Stop Question). Destination Parameter e Stop Question seguono la
+            // sorgente.
+            idEditedByUserRef.current = false;
             setFormData(prev => ({
                 ...prev,
+                parameter_id: sourceParam,
                 text: q.text || '',
                 instruction: q.instruction || '',
                 instruction_yes: q.instruction_yes || '',
                 instruction_no: q.instruction_no || '',
                 example_yes: q.example_yes || '',
                 help_info: q.help_info || '',
-                is_stop_question: q.is_stop_question ?? false,
-                allowed_motivations: q.allowed_motivations || []
+                is_stop_question: sourceStop,
+                allowed_motivations: q.allowed_motivations || [],
+                id: newId,
             }));
-            setImportedFrom(selected);
+            if (withData) {
+                setCopyDataFrom(selected.value);
+                setDataImportedFrom(selected);
+                setImportedFrom(null);
+                setTemplateSource(null);
+            } else {
+                setImportedFrom(selected);
+                setCopyDataFrom(null);
+                setDataImportedFrom(null);
+                setDataTemplateSource(null);
+            }
         } catch (err) {
             alert(getApiErrorMessage(err, 'Could not import the selected question.'));
         }
@@ -564,6 +644,8 @@ export default function QuestionForm({ mode = 'page' }) {
                     ? `${isEditMode ? 'Test edit' : 'Test new question'}. ${changeNote}`
                     : changeNote,
                 wipe_data: wipeData,
+                // Solo in creazione: id della sorgente da clonare "con dati".
+                copy_data_from: !isEditMode ? copyDataFrom : null,
             };
 
             if (isEditMode) {
@@ -676,6 +758,42 @@ export default function QuestionForm({ mode = 'page' }) {
                     {/* --- IMPORT (solo in creazione) --- */}
                     {!isEditMode && (
                         <>
+                            {/* DUPLICATE WITH DATA: riempie il form coi testi della
+                                sorgente E clona, al salvataggio, tutte le risposte/
+                                esempi/motivazioni di quella question (tutte le lingue). */}
+                            <div style={importBoxStyle}>
+                                <span style={importTitleStyle}>Duplicate WITH data</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+                                        <Select
+                                            isClearable
+                                            options={groupedQuestionOptions}
+                                            value={dataTemplateSource}
+                                            onChange={setDataTemplateSource}
+                                            placeholder="Pick a source question…"
+                                            noOptionsMessage={() => "No question available"}
+                                            styles={reactSelectStyles}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleImportQuestion(dataTemplateSource, { withData: true })}
+                                        disabled={!dataTemplateSource}
+                                        className="btn btn--small"
+                                    >
+                                        Duplicate
+                                    </button>
+                                    {dataImportedFrom && (
+                                        <span className="small" style={{ color: '#0056b3' }}>
+                                            Duplicating <strong>{dataImportedFrom.value}</strong> with its data
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="small muted" style={importDescStyle}>
+                                    Fills the form with the source text and instructions, and on save copies all its answers, examples and motivations (every language) into the new question. The source stays untouched.
+                                </div>
+                            </div>
+
                             {/* DUPLICATE WITHOUT DATA: riempie il form con i soli testi
                                 della sorgente. La copia avviene al click di "Duplicate",
                                 non alla selezione. */}
@@ -739,24 +857,6 @@ export default function QuestionForm({ mode = 'page' }) {
                             Renaming <code>{initialData.id}</code> → <code>{formData.id}</code>: all linked answers, examples and motivations follow automatically, and the old ID is kept as a historical alias (so old backups/Excel files still resolve). The new ID must be unique and ≤ 40 characters.
                         </div>
                     )}
-                    {!isEditMode && formData.parameter_id && (
-                        <div className="small muted" style={{ marginTop: '-0.6rem', fontSize: '0.75rem', lineHeight: 1.35 }}>
-                            {currentParamQuestions.length > 0 ? (
-                                <>
-                                    Existing in this parameter:{' '}
-                                    {currentParamQuestions.map((q, i) => (
-                                        <span key={q.id}>
-                                            <code style={{ fontSize: '0.78rem' }}>{q.id}</code>
-                                            {i < currentParamQuestions.length - 1 ? ', ' : ''}
-                                        </span>
-                                    ))}
-                                </>
-                            ) : (
-                                <>No questions yet in this parameter.</>
-                            )}
-                        </div>
-                    )}
-
                     <div>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question Text</label>
                         <textarea name="text" value={formData.text} onChange={handleChange} required rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
