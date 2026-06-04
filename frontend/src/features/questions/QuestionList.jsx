@@ -100,7 +100,7 @@ export default function QuestionList() {
                                             checked={hideInactive}
                                             onChange={(e) => setHideInactive(e.target.checked)}
                                         />
-                                        <span className="muted">hide inactive</span>
+                                        <span className="muted"></span>
                                     </label>
                                 </div>
                             </th>
