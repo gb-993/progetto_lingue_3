@@ -72,4 +72,54 @@ api.interceptors.response.use(
     }
 );
 
+// Estrae un messaggio d'errore leggibile da un errore axios. Pensata per gli
+// alert/`setError` dei form: copre i casi in cui il `detail` NON è una stringa
+// (e quindi mostrare `detail` direttamente darebbe "[object Object]" o niente):
+//   - nessuna risposta dal server (rete giù, backend irraggiungibile, CORS,
+//     timeout): `err.response` è undefined;
+//   - 422 di FastAPI: `detail` è una lista di errori di validazione;
+//   - 5xx generico senza dettaglio testuale.
+// `fallback` è il messaggio usato solo quando non si riesce a ricavare nulla.
+export function getApiErrorMessage(err, fallback = 'Operazione non riuscita.') {
+    // 1) Nessuna risposta: la richiesta non è arrivata al server o non è
+    //    tornata indietro. È il caso "alert ma nessuna riga in Network".
+    if (err && !err.response) {
+        if (err.code === 'ECONNABORTED') {
+            return 'La richiesta è scaduta (timeout). Riprova.';
+        }
+        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+            return 'Impossibile contattare il server: backend non raggiungibile, '
+                + 'connessione assente o richiesta bloccata (CORS). '
+                + 'Controlla che il backend sia attivo e l’indirizzo API corretto.';
+        }
+        return err?.message ? `Errore di rete: ${err.message}` : fallback;
+    }
+
+    const status = err?.response?.status;
+    const detail = err?.response?.data?.detail;
+
+    // 2) Caso normale: il backend manda un detail testuale.
+    if (typeof detail === 'string' && detail.trim()) return detail;
+
+    // 3) 422 FastAPI: detail è una lista di {loc, msg, type}.
+    if (Array.isArray(detail)) {
+        const msgs = detail
+            .map((d) => {
+                const loc = Array.isArray(d?.loc)
+                    ? d.loc.filter((x) => x !== 'body').join('.')
+                    : '';
+                return loc ? `${loc}: ${d?.msg || ''}` : (d?.msg || '');
+            })
+            .filter(Boolean);
+        if (msgs.length) return `Dati non validi — ${msgs.join('; ')}`;
+    }
+
+    // 4) detail oggetto con un campo message, o nient'altro di utile.
+    if (detail && typeof detail === 'object' && typeof detail.message === 'string') {
+        return detail.message;
+    }
+
+    return status ? `${fallback} (HTTP ${status})` : fallback;
+}
+
 export default api;

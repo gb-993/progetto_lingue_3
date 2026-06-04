@@ -49,6 +49,8 @@ export default function ParameterForm() {
     const [usage, setUsage] = useState([]);
     const [error, setError] = useState('');
     const [syntaxError, setSyntaxError] = useState('');
+    // Avviso live sul campo ID quando l'utente digita un carattere non ammesso.
+    const [idWarning, setIdWarning] = useState('');
     // Disattiva il guard "modifiche non salvate" durante un submit in corso
     // (altrimenti il navigate post-save verrebbe bloccato da se stesso).
     const [isSaving, setIsSaving] = useState(false);
@@ -164,6 +166,25 @@ export default function ParameterForm() {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    // L'ID è il token usato DENTRO le formule (es. +FGM, -ABC, 0P3): il segno
+    // (+ - 0) è già il valore del parametro, quindi un id non può contenere
+    // + né -. Il backend ammette solo [A-Za-z0-9_] (_VALID_PARAM_ID_RE). Qui
+    // filtriamo gli altri caratteri MENTRE si digita (così + - spazi e simboli
+    // non entrano mai nel campo) e avvisiamo l'utente di cosa è stato rifiutato.
+    const handleIdChange = (e) => {
+        const raw = e.target.value;
+        const cleaned = raw.replace(/[^A-Za-z0-9_]/g, '');
+        if (cleaned !== raw) {
+            const rejected = [...new Set(
+                raw.split('').filter(c => !/[A-Za-z0-9_]/.test(c))
+            )].map(c => (c === ' ' ? 'spazio' : `« ${c} »`)).join(', ');
+            setIdWarning(`Carattere non ammesso: ${rejected}. Usa solo lettere, numeri e underscore ( _ ).`);
+        } else {
+            setIdWarning('');
+        }
+        setFormData(prev => ({ ...prev, id: cleaned }));
     };
 
     const handleAddLookup = async (typeCategory, endpoint, inputKey) => {
@@ -430,7 +451,8 @@ export default function ParameterForm() {
                         <div className="grid grid-2" style={{gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Parameter ID</label>
-                                <input type="text" name="id" value={formData.id} onChange={handleChange} required maxLength={10} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
+                                <input type="text" name="id" value={formData.id} onChange={handleIdChange} required maxLength={10} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: idWarning ? 'red' : 'inherit'}} />
+                                {idWarning && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{idWarning}</p>}
                             </div>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Position</label>

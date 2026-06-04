@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import Select, { components as RSComponents } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
-import api from '../../api';
+import api, { getApiErrorMessage } from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
@@ -158,12 +158,6 @@ export default function QuestionForm({ mode = 'page' }) {
         enabled: draftReady,
     });
 
-    // Stato per il "Clone with data" (azione che crea una nuova question
-    // copiando answers/examples/motivations dalla sorgente). Il nuovo ID viene
-    // letto dal campo "Question ID" del form (già auto-precompilato con la
-    // prossima lettera libera del parametro target).
-    const [cloneSource, setCloneSource] = useState(null);
-    const [cloning, setCloning] = useState(false);
 
     // Stato per il flusso "Save and delete linked data": apre un modal di
     // conferma che mostra quanti dati linguistici verranno spostati nell'archivio.
@@ -224,8 +218,8 @@ export default function QuestionForm({ mode = 'page' }) {
                         console.warn("Impossibile caricare i log del parametro", err);
                     }
                 }
-            } catch {
-                setError('Could not load the data.');
+            } catch (err) {
+                setError(getApiErrorMessage(err, 'Could not load the data.'));
             } finally {
                 setDraftReady(true);
             }
@@ -318,65 +312,6 @@ export default function QuestionForm({ mode = 'page' }) {
             .filter(g => g.options.length > 0);
     }, [parameters, allQuestions]);
 
-    // Selezione della sorgente da clonare. Comodità: se non hai ancora scelto
-    // un parametro di destinazione, lo impostiamo a quello della domanda
-    // sorgente (caso tipico: duplica nello stesso parametro). Senza questo, il
-    // pulsante "Clone now" restava bloccato perché manca `parameter_id` e il
-    // menu Destination Parameter è staccato, più in basso nel form.
-    const handleCloneSourceChange = (selected) => {
-        setCloneSource(selected);
-        if (selected && !formData.parameter_id) {
-            const srcQ = allQuestions.find(q => q.id === selected.value);
-            if (srcQ?.parameter_id) {
-                setFormData(prev => prev.parameter_id ? prev : { ...prev, parameter_id: srcQ.parameter_id });
-                // Aggiorna i log del recap come farebbe handleChange su parameter_id.
-                api.get(`/api/admin/parameters/${srcQ.parameter_id}`)
-                    .then(res => setChangeLogs(res.data.change_logs || []))
-                    .catch(() => {});
-            }
-        }
-    };
-
-    const handleCloneWithData = async () => {
-        if (!cloneSource) {
-            alert('Pick a source question to clone.');
-            return;
-        }
-        if (!formData.parameter_id) {
-            alert('Pick a target parameter first.');
-            return;
-        }
-        const newId = (formData.id || '').trim();
-        const message =
-            `This creates a NEW question "${newId || '(auto)'}" in parameter "${formData.parameter_id}" ` +
-            `cloning "${cloneSource.value}" together with all its answers, examples and motivations ` +
-            `from every language. The source question will not be modified.\n\n` +
-            `Any unsaved changes in the form below will be discarded. Continue?`;
-        if (!window.confirm(message)) return;
-        setCloning(true);
-        try {
-            const res = await api.post('/api/admin/questions/clone', {
-                source_question_id: cloneSource.value,
-                target_parameter_id: formData.parameter_id,
-                new_id: newId || null,
-            });
-            clearDraft();
-            const newId = res.data?.id;
-            const stats = res.data?.stats || {};
-            alert(
-                `Cloned as ${newId}.\n` +
-                `Copied: ${stats.answers || 0} answers, ${stats.examples || 0} examples, ` +
-                `${stats.motivations || 0} answer-motivations, ${stats.allowed_motivations || 0} allowed motivations.`
-            );
-            navigate(`/admin/questions/${encodeURIComponent(newId)}/edit`);
-        } catch (err) {
-            const detail = err?.response?.data?.detail;
-            alert(typeof detail === 'string' ? detail : 'Could not clone the question.');
-        } finally {
-            setCloning(false);
-        }
-    };
-
     const handleImportQuestion = async (selected) => {
         if (!selected) {
             setImportedFrom(null);
@@ -398,8 +333,8 @@ export default function QuestionForm({ mode = 'page' }) {
                 allowed_motivations: q.allowed_motivations || []
             }));
             setImportedFrom(selected);
-        } catch {
-            alert("Error importing the selected question.");
+        } catch (err) {
+            alert(getApiErrorMessage(err, 'Could not import the selected question.'));
         }
     };
 
@@ -639,7 +574,7 @@ export default function QuestionForm({ mode = 'page' }) {
             clearDraft();
             navigate(`/admin/parameters/${formData.parameter_id}/edit`);
         } catch (err) {
-            setError(err.response?.data?.detail || 'Error while saving.');
+            setError(getApiErrorMessage(err, 'Error while saving.'));
         } finally {
             setIsLoading(false);
         }
@@ -716,7 +651,7 @@ export default function QuestionForm({ mode = 'page' }) {
     // la guardia sulla navigazione interna (la X del drawer, click outside,
     // ESC, breadcrumb, ecc.). Il `beforeunload` invece sopravvive perché sono
     // `useEffect` indipendenti su `window`.
-    const questionDirtyForGuard = isDirtyForGuard && !isLoading && !cloning;
+    const questionDirtyForGuard = isDirtyForGuard && !isLoading;
     const guardActive = questionDirtyForGuard || motDirty;
     const guardMessage = motDirty
         ? 'Hai modifiche non salvate alla motivation. Se esci ora andranno perse. Continuare?'
@@ -741,40 +676,9 @@ export default function QuestionForm({ mode = 'page' }) {
                     {/* --- IMPORT (solo in creazione) --- */}
                     {!isEditMode && (
                         <>
-                            {/* IMPORT WITH DATA: crea subito una nuova domanda copiando
-                                anche risposte/esempi/motivazioni. Select + bottone. */}
-                            <div style={importBoxStyle}>
-                                <span style={importTitleStyle}>Duplicate WITH data</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
-                                        <Select
-                                            isClearable
-                                            options={groupedQuestionOptions}
-                                            value={cloneSource}
-                                            onChange={handleCloneSourceChange}
-                                            placeholder="Pick a source question…"
-                                            noOptionsMessage={() => "No question available"}
-                                            isDisabled={cloning}
-                                            styles={reactSelectStyles}
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleCloneWithData}
-                                        disabled={!cloneSource || !formData.parameter_id || cloning}
-                                        className="btn btn--small"
-                                    >
-                                        {cloning ? 'Duplicating…' : 'Duplicate now'}
-                                    </button>
-                                </div>
-                                <div className="small muted" style={importDescStyle}>
-                                    Creates the new question now, copying answers, examples and motivations from every language. The source is left untouched.
-                                </div>
-                            </div>
-
-                            {/* IMPORT WITHOUT DATA: riempie il form con i soli testi della
-                                sorgente. La copia avviene al click di "Import", non alla
-                                selezione, per uniformita' con il box sopra. */}
+                            {/* DUPLICATE WITHOUT DATA: riempie il form con i soli testi
+                                della sorgente. La copia avviene al click di "Duplicate",
+                                non alla selezione. */}
                             <div style={importBoxStyle}>
                                 <span style={importTitleStyle}>Duplicate WITHOUT data</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -1232,8 +1136,8 @@ export default function QuestionForm({ mode = 'page' }) {
     );
 }
 
-// Stile condiviso dei due box di import (WITH/WITHOUT data): identici, bordo
-// solido. Titoli in stile "Language Filters/Parameters Filters" di TableA.
+// Stile del box "Duplicate WITHOUT data": bordo solido, titolo in stile
+// "Language Filters/Parameters Filters" di TableA.
 const importBoxStyle = {
     background: 'var(--surface-2, #f8fafc)',
     padding: '0.85rem 1rem',
