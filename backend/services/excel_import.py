@@ -34,6 +34,8 @@ import models
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
 from services.language_alias import resolve_language
+from services.question_alias import resolve_question
+from services.parameter_alias import resolve_parameter
 
 
 # ============================================================================
@@ -448,6 +450,14 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
 
         pid_key = pid.upper()
         existing = by_id.get(pid_key)
+        if existing is None:
+            # Fallback: il parametro potrebbe essere stato rinominato dopo
+            # l'export. Lo ritroviamo via alias storico e aggiorniamo quello
+            # corrente invece di crearne un duplicato.
+            resolved = resolve_parameter(db, pid)
+            if resolved.parameter is not None:
+                existing = resolved.parameter
+                by_id[pid_key] = existing
 
         # Validazione condition (se presente). La facciamo prima del branch
         # create-vs-update così si applica anche al nuovo parametro.
@@ -609,10 +619,24 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
 
         qid_key = qid.upper()
         existing = by_id.get(qid_key)
+        if existing is None:
+            # Fallback: la domanda potrebbe essere stata rinominata dopo l'export.
+            # La ritroviamo via alias storico e aggiorniamo quella corrente,
+            # invece di crearne un duplicato (speculare al resolver lingue).
+            resolved = resolve_question(db, qid)
+            if resolved.question is not None:
+                existing = resolved.question
+                by_id[qid_key] = existing
         new_param_id = _str(_get(row, hmap, "Parameter ID"))
         new_param_id_key = new_param_id.upper() if new_param_id else ""
         # Risolvi l'ID canonico del parametro (case-insensitive); None se non esiste.
         canonical_new_param_id = param_id_by_upper.get(new_param_id_key) if new_param_id else None
+        if new_param_id and canonical_new_param_id is None:
+            # Fallback su alias storico (parametro rinominato dopo l'export).
+            resolved_p = resolve_parameter(db, new_param_id)
+            if resolved_p.parameter is not None:
+                canonical_new_param_id = resolved_p.parameter.id
+                param_id_by_upper[new_param_id_key] = canonical_new_param_id
 
         # CREATE branch (solo se create_missing=True e domanda non esiste)
         if existing is None:
@@ -798,6 +822,12 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             continue
         question_db = by_qid.get(qid_key)
         if question_db is None:
+            # Fallback su alias storico (domanda rinominata dopo l'export).
+            resolved = resolve_question(db, qid)
+            if resolved.question is not None:
+                question_db = resolved.question
+                by_qid[qid_key] = question_db
+        if question_db is None:
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="QuestionAllowedMotivations", row=ridx,
@@ -961,6 +991,12 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
         canonical_qid = q_id_by_upper.get(qid_key)
+        if canonical_qid is None:
+            # Fallback su alias storico (domanda rinominata dopo l'export).
+            resolved = resolve_question(db, qid)
+            if resolved.question is not None:
+                canonical_qid = resolved.question.id
+                q_id_by_upper[qid_key] = canonical_qid
         if canonical_qid is None:
             summary.errors += 1
             report.errors.append(ImportError(

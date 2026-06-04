@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from typing import Any
 from pyparsing import (
     Word, alphanums, oneOf, Literal, CaselessKeyword, Combine,
@@ -39,6 +40,40 @@ def build_parser():
         ]
     )
     return expr
+
+
+# ----------------------------------------------------------------------------
+# Rinomina di un parametro DENTRO le formule (implicational_condition).
+#
+# A differenza di lingue/question, l'id di un parametro compare come testo negli
+# operandi delle formule di altri parametri (`+P1`, `-FGM`, `0P3`). Quando un id
+# viene rinominato bisogna riscrivere quelle formule. Lo facciamo con una regex
+# TOKEN-AWARE (non un replace di stringa): un operando è `sign + param` senza
+# spazi, con sign ∈ {+,-,0} e param = [A-Za-z0-9_]+ (coerente con build_parser).
+# Confrontando la PAROLA INTERA evitiamo di toccare i parametri di cui old_id è
+# solo prefisso/sottostringa (rinominando 'P1' NON cambiamo '+P12' né '+P1A').
+# Il lookbehind impedisce di interpretare come "segno" uno 0 interno a una parola.
+# ----------------------------------------------------------------------------
+_OPERAND_RE = re.compile(r'(?<![A-Za-z0-9_])([+\-0])([A-Za-z0-9_]+)')
+
+
+def rename_param_in_expression(expr: str | None, old_id: str, new_id: str) -> str:
+    """Sostituisce ogni operando che cita `old_id` con `new_id`, preservando
+    segno, operatori, parentesi e spaziatura. Case-insensitive sul nome del
+    parametro (il parser uppercasa in valutazione). Ritorna la formula invariata
+    se `expr` è vuota o `old_id == new_id`.
+    """
+    if not expr or old_id == new_id:
+        return expr or ""
+    old_up = old_id.upper()
+
+    def _repl(m: "re.Match") -> str:
+        sign, word = m.group(1), m.group(2)
+        if word.upper() == old_up:
+            return f"{sign}{new_id}"
+        return m.group(0)
+
+    return _OPERAND_RE.sub(_repl, expr)
 
 
 def _as_list(node: Any):

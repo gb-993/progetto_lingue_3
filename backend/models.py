@@ -332,6 +332,34 @@ class ParameterDef(Base):
 
     questions = relationship("Question", back_populates="parameter", cascade="all, delete-orphan")
     change_logs = relationship("ParameterChangeLog", back_populates="parameter", cascade="all, delete-orphan")
+    aliases = relationship("ParameterAlias", back_populates="parameter", cascade="all, delete-orphan")
+
+
+class ParameterAlias(Base):
+    """Storico degli id passati di un ParameterDef.
+
+    Ogni volta che `ParameterDef.id` viene rinominato (via PUT admin), il vecchio
+    id viene salvato qui. Il restore di backup e l'import Excel usano questa
+    tabella come fallback quando non trovano il parametro per id corrente.
+
+    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due parametri diversi.
+    Speculare a [[LanguageAlias]] e QuestionAlias. NOTA: a differenza di lingue e
+    question, i parametri si citano per id dentro le formule `implicational_condition`
+    di altri parametri; il rename riscrive anche quelle (vedi router parameters).
+    """
+    __tablename__ = "parameter_aliases"
+    id = Column(Integer, primary_key=True)
+    parameter_id = Column(
+        String(10),
+        ForeignKey("parameter_defs.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    old_id = Column(String(10), nullable=False, unique=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    parameter = relationship("ParameterDef", back_populates="aliases")
+
 
 class ParamSchema(Base):
     __tablename__ = "param_schemas"
@@ -361,7 +389,7 @@ class LanguageParameterStatus(Base):
     # `parameter_id` invece serve un indice esplicito per query "tutti i record
     # di questo parametro" (es. consolidate, dashboard cross-language).
     language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False, index=True)
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
 
@@ -370,7 +398,7 @@ class LanguageParameterStatus(Base):
 class Question(Base):
     __tablename__ = "questions"
     id = Column(String(40), primary_key=True)
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"), nullable=False)
     text = Column(Text, nullable=False)
     template_type = Column(String(100), default="")
     instruction = Column(Text, nullable=True)
@@ -384,6 +412,33 @@ class Question(Base):
     parameter = relationship("ParameterDef", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
     allowed_motivations = relationship("QuestionAllowedMotivation", back_populates="question", cascade="all, delete-orphan")
+    aliases = relationship("QuestionAlias", back_populates="question", cascade="all, delete-orphan")
+
+
+class QuestionAlias(Base):
+    """Storico degli id passati di una Question.
+
+    Ogni volta che `Question.id` viene rinominato (via PUT admin), il vecchio
+    id viene salvato qui. Il restore di backup e l'import Excel usano questa
+    tabella come fallback quando non trovano la domanda per id corrente:
+    cercano per `old_id` e, se trovato, lavorano sulla domanda puntata.
+
+    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due domande diverse
+    (l'incoerenza renderebbe ambigui restore e import). Il vincolo viene
+    presidiato anche a livello applicativo nel PUT. Speculare a [[LanguageAlias]].
+    """
+    __tablename__ = "question_aliases"
+    id = Column(Integer, primary_key=True)
+    question_id = Column(
+        String(40),
+        ForeignKey("questions.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    old_id = Column(String(40), nullable=False, unique=True)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    question = relationship("Question", back_populates="aliases")
 
 # ==========================================
 # 4. RISPOSTE ED ESEMPI
@@ -395,7 +450,7 @@ class Answer(Base):
     # `question_id` ha bisogno di un indice esplicito per query "tutte le
     # risposte a questa domanda" (export, history, consolidate cross-language).
     language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    question_id = Column(String(40), ForeignKey("questions.id"), nullable=False, index=True)
+    question_id = Column(String(40), ForeignKey("questions.id", onupdate="CASCADE"), nullable=False, index=True)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
     response_text = Column(Enum("yes", "no", "unsure", name="response_types"), nullable=True)
@@ -431,7 +486,7 @@ class Motivation(Base):
 class QuestionAllowedMotivation(Base):
     __tablename__ = "question_allowed_motivations"
     id = Column(Integer, primary_key=True, index=True)
-    question_id = Column(String(40), ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
+    question_id = Column(String(40), ForeignKey("questions.id", ondelete="CASCADE", onupdate="CASCADE"), nullable=False)
     motivation_id = Column(Integer, ForeignKey("motivations.id", ondelete="CASCADE"), nullable=False)
     question = relationship("Question", back_populates="allowed_motivations")
     motivation = relationship("Motivation")
@@ -456,7 +511,7 @@ class Glossary(Base):
 class ParameterChangeLog(Base):
     __tablename__ = "parameter_change_logs"
     id = Column(Integer, primary_key=True)
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"), nullable=False)
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     change_note = Column(Text, nullable=False)
     created_at = Column(DateTime, default=utc_now)
@@ -467,7 +522,7 @@ class LanguageParameter(Base):
     __tablename__ = "language_parameters"
     id = Column(Integer, primary_key=True)
     language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"))
-    parameter_id = Column(String(10), ForeignKey("parameter_defs.id"))
+    parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"))
     value_orig = Column(Enum("+", "-", "0", "?", name="param_values_orig"), nullable=True)
     warning_orig = Column(Boolean, default=False)
     eval = relationship("LanguageParameterEval", back_populates="language_parameter", uselist=False, cascade="all, delete-orphan")

@@ -337,6 +337,7 @@ export default function ParameterForm() {
     // Verifica se ci sono state modifiche per abilitare la textarea delle motivazioni
     const safeString = (val) => val === null || val === undefined ? '' : String(val);
     const isDirty = isEditMode && initialData && (
+        safeString(formData.id) !== safeString(initialData.id) ||
         safeString(formData.name) !== safeString(initialData.name) ||
         safeString(formData.position) !== safeString(initialData.position) ||
         safeString(formData.short_description) !== safeString(initialData.short_description) ||
@@ -429,13 +430,19 @@ export default function ParameterForm() {
                         <div className="grid grid-2" style={{gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Parameter ID</label>
-                                <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
+                                <input type="text" name="id" value={formData.id} onChange={handleChange} required maxLength={10} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                             </div>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Position</label>
                                 <input type="number" name="position" value={formData.position} onChange={handleChange} required style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                             </div>
                         </div>
+
+                        {isEditMode && initialData && formData.id !== initialData.id && (
+                            <div className="small" style={{ marginTop: '-0.4rem', marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.75rem', lineHeight: 1.4, color: '#664d03', background: '#fff3cd', border: '1px solid #ffe69c', borderRadius: '6px', padding: '0.5rem 0.7rem' }}>
+                                Renaming <code>{initialData.id}</code> → <code>{formData.id}</code>: linked questions, language values and history follow automatically, the old ID is kept as a historical alias, and <strong>every formula that references it is rewritten</strong> ({initialData.id} → {formData.id}). The new ID must be unique, ≤ 10 characters and contain only letters, digits or underscore.
+                            </div>
+                        )}
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Name</label>

@@ -20,9 +20,13 @@ async function downloadBlob(request, fallbackName) {
     URL.revokeObjectURL(url);
 }
 
+// La bozza locale salva solo i TESTI della domanda (così non si perde quanto
+// scritto se si esce). NON salviamo `is_stop_question`: è una scelta strutturale,
+// non testo da recuperare, e persisterla faceva ricomparire la casella spuntata
+// da una sessione precedente. Default sempre "domanda normale" (casella vuota).
 const Q_DRAFT_FIELDS = [
     'text', 'instruction', 'instruction_yes', 'instruction_no',
-    'example_yes', 'help_info', 'is_stop_question',
+    'example_yes', 'help_info',
 ];
 
 // react-select non legge i CSS variable del tema: in dark mode il menu resta
@@ -226,6 +230,9 @@ export default function QuestionForm({ mode = 'page' }) {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        // Traccia se l'utente ha digitato un ID custom: in quel caso l'auto-fill
+        // smette di sovrascriverlo. Se svuota il campo, l'auto-fill riprende.
+        if (name === 'id') idEditedByUserRef.current = value.trim() !== '';
         setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
 
         // In creazione, se cambia il parametro genitore aggiorniamo i log mostrati nel recap
@@ -248,14 +255,18 @@ export default function QuestionForm({ mode = 'page' }) {
             .sort((a, b) => String(a.id).localeCompare(String(b.id)));
     }, [allQuestions, formData.parameter_id]);
 
-    // Calcola la prossima lettera libera per gli ID di tipo `{paramId}_Q{lettera}`.
-    // Le stop question hanno pattern `_QS...` (S maiuscola) e vengono ignorate dal
-    // matching grazie al group [a-z] case-sensitive. Ritorna null se tutte le
-    // lettere a-z sono già occupate.
+    // Calcola la prossima lettera libera per l'ID. Il formato dipende dalla
+    // checkbox "Stop Question": stop → `{paramId}_QS{lettera}` (S maiuscola),
+    // normale → `{paramId}_Q{lettera}`. Le due sequenze di lettere sono
+    // indipendenti perché il regex `_Q([a-z])` non matcha `_QS...` (la S è
+    // maiuscola), quindi spuntando/togliendo la casella il suggerimento passa
+    // dall'una all'altra senza che i conteggi si sovrappongano. Ritorna ''
+    // se tutte le lettere a-z sono già occupate.
     const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const suggestedQuestionId = useMemo(() => {
         if (!formData.parameter_id) return '';
-        const re = new RegExp(`^${escapeRegex(formData.parameter_id)}_Q([a-z])`);
+        const infix = formData.is_stop_question ? '_QS' : '_Q';
+        const re = new RegExp(`^${escapeRegex(formData.parameter_id)}${infix}([a-z])`);
         const used = new Set();
         for (const q of currentParamQuestions) {
             const m = String(q.id).match(re);
@@ -263,27 +274,26 @@ export default function QuestionForm({ mode = 'page' }) {
         }
         for (let i = 0; i < 26; i++) {
             const letter = String.fromCharCode(97 + i);
-            if (!used.has(letter)) return `${formData.parameter_id}_Q${letter}`;
+            if (!used.has(letter)) return `${formData.parameter_id}${infix}${letter}`;
         }
         return ''; // tutte le lettere occupate (>26 domande)
-    }, [formData.parameter_id, currentParamQuestions]);
+    }, [formData.parameter_id, formData.is_stop_question, currentParamQuestions]);
 
-    // Pre-compila il campo ID col suggerimento quando si sceglie un parametro.
-    // Sovrascriviamo solo se l'utente non ha digitato un ID custom: tracciamo
-    // l'ultimo valore auto-generato e lo aggiorniamo solo se l'attuale combacia.
-    const lastAutoFilledRef = useRef('');
+    // Pre-compila il campo ID col suggerimento quando si sceglie un parametro o
+    // si spunta/toglie "Stop Question" (cambia `suggestedQuestionId` e l'ID
+    // passa da `_Q` a `_QS` e viceversa). Sovrascriviamo solo se l'utente non
+    // ha digitato un ID custom: tracciamo l'ultimo valore auto-generato e lo
+    // aggiorniamo solo se l'attuale combacia.
+    // True quando l'utente ha digitato un ID a mano: da quel momento l'auto-fill
+    // non tocca più il campo (finché non lo svuota). Finché è false, l'ID segue
+    // sempre `suggestedQuestionId`, così togliere/rimettere la spunta Stop
+    // Question aggiorna il nome in tempo reale (`_Q` ⇄ `_QS`).
+    const idEditedByUserRef = useRef(false);
     useEffect(() => {
         if (isEditMode) return;
         if (!suggestedQuestionId) return;
-        setFormData(prev => {
-            const isEmpty = !prev.id;
-            const isStillAuto = prev.id === lastAutoFilledRef.current;
-            if (isEmpty || isStillAuto) {
-                lastAutoFilledRef.current = suggestedQuestionId;
-                return { ...prev, id: suggestedQuestionId };
-            }
-            return prev;
-        });
+        if (idEditedByUserRef.current) return;
+        setFormData(prev => (prev.id === suggestedQuestionId ? prev : { ...prev, id: suggestedQuestionId }));
     }, [suggestedQuestionId, isEditMode]);
 
     // Opzioni raggruppate per parametro per il select di import
@@ -302,6 +312,25 @@ export default function QuestionForm({ mode = 'page' }) {
             })
             .filter(g => g.options.length > 0);
     }, [parameters, allQuestions]);
+
+    // Selezione della sorgente da clonare. Comodità: se non hai ancora scelto
+    // un parametro di destinazione, lo impostiamo a quello della domanda
+    // sorgente (caso tipico: duplica nello stesso parametro). Senza questo, il
+    // pulsante "Clone now" restava bloccato perché manca `parameter_id` e il
+    // menu Destination Parameter è staccato, più in basso nel form.
+    const handleCloneSourceChange = (selected) => {
+        setCloneSource(selected);
+        if (selected && !formData.parameter_id) {
+            const srcQ = allQuestions.find(q => q.id === selected.value);
+            if (srcQ?.parameter_id) {
+                setFormData(prev => prev.parameter_id ? prev : { ...prev, parameter_id: srcQ.parameter_id });
+                // Aggiorna i log del recap come farebbe handleChange su parameter_id.
+                api.get(`/api/admin/parameters/${srcQ.parameter_id}`)
+                    .then(res => setChangeLogs(res.data.change_logs || []))
+                    .catch(() => {});
+            }
+        }
+    };
 
     const handleCloneWithData = async () => {
         if (!cloneSource) {
@@ -651,6 +680,7 @@ export default function QuestionForm({ mode = 'page' }) {
     // In creazione la nota è sempre richiesta (l'intera domanda è "nuova"),
     // in modifica solo se almeno un campo è cambiato.
     const isDirty = !isEditMode || (initialData && (
+        safeString(formData.id) !== safeString(initialData.id) ||
         safeString(formData.text) !== safeString(initialData.text) ||
         safeString(formData.instruction) !== safeString(initialData.instruction) ||
         safeString(formData.instruction_yes) !== safeString(initialData.instruction_yes) ||
@@ -727,7 +757,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         isClearable
                                         options={groupedQuestionOptions}
                                         value={cloneSource}
-                                        onChange={setCloneSource}
+                                        onChange={handleCloneSourceChange}
                                         placeholder="Pick a question to clone with all its answers, examples and motivations..."
                                         noOptionsMessage={() => "No question available"}
                                         isDisabled={cloning}
@@ -742,6 +772,13 @@ export default function QuestionForm({ mode = 'page' }) {
                                 >
                                     {cloning ? 'Cloning...' : 'Clone now'}
                                 </button>
+                                {!cloning && (!cloneSource || !formData.parameter_id) && (
+                                    <div className="small" style={{ flexBasis: '100%', fontSize: '0.72rem', lineHeight: 1.35, color: '#9a6700' }}>
+                                        {!cloneSource
+                                            ? 'Pick a source question above to enable cloning.'
+                                            : 'Pick a Destination Parameter (below) to enable cloning.'}
+                                    </div>
+                                )}
                                 <div className="small muted" style={{ flexBasis: '100%', fontSize: '0.72rem', lineHeight: 1.35, marginTop: '0.1rem' }}>
                                     Creates immediately a new question in the target parameter (using the <strong>Question ID</strong> below)
                                     by copying answers, examples and motivations from <em>every language</em>.
@@ -776,28 +813,10 @@ export default function QuestionForm({ mode = 'page' }) {
                         </>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
-                        <div>
-                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question ID</label>
-                            <input type="text" name="id" value={formData.id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
-                            {!isEditMode && formData.parameter_id && (
-                                <div className="small muted" style={{ marginTop: '0.3rem', fontSize: '0.75rem', lineHeight: 1.35 }}>
-                                    {currentParamQuestions.length > 0 ? (
-                                        <>
-                                            Existing in this parameter:{' '}
-                                            {currentParamQuestions.map((q, i) => (
-                                                <span key={q.id}>
-                                                    <code style={{ fontSize: '0.78rem' }}>{q.id}</code>
-                                                    {i < currentParamQuestions.length - 1 ? ', ' : ''}
-                                                </span>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <>No questions yet in this parameter.</>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                    {/* Riga unica: prima si sceglie il parametro, poi si decide se è
+                        una Stop Question (la spunta cambia il formato dell'ID
+                        suggerito in `_QS`), infine il Question ID auto-compilato. */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 'var(--form-grid-gap, 1rem)', alignItems: 'end' }}>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Destination Parameter</label>
                             <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', backgroundColor: isEditMode ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
@@ -805,7 +824,37 @@ export default function QuestionForm({ mode = 'page' }) {
                                 {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}
                             </select>
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.6rem', whiteSpace: 'nowrap' }}>
+                            <input type="checkbox" id="is_stop_question" name="is_stop_question" checked={formData.is_stop_question} onChange={handleChange} />
+                            <label htmlFor="is_stop_question" style={{ fontWeight: 'bold' }}>Stop Question</label>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question ID</label>
+                            <input type="text" name="id" value={formData.id} onChange={handleChange} required maxLength={40} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
+                        </div>
                     </div>
+                    {isEditMode && initialData && formData.id !== initialData.id && (
+                        <div className="small" style={{ marginTop: '-0.6rem', fontSize: '0.75rem', lineHeight: 1.4, color: '#664d03', background: '#fff3cd', border: '1px solid #ffe69c', borderRadius: '6px', padding: '0.5rem 0.7rem' }}>
+                            Renaming <code>{initialData.id}</code> → <code>{formData.id}</code>: all linked answers, examples and motivations follow automatically, and the old ID is kept as a historical alias (so old backups/Excel files still resolve). The new ID must be unique and ≤ 40 characters.
+                        </div>
+                    )}
+                    {!isEditMode && formData.parameter_id && (
+                        <div className="small muted" style={{ marginTop: '-0.6rem', fontSize: '0.75rem', lineHeight: 1.35 }}>
+                            {currentParamQuestions.length > 0 ? (
+                                <>
+                                    Existing in this parameter:{' '}
+                                    {currentParamQuestions.map((q, i) => (
+                                        <span key={q.id}>
+                                            <code style={{ fontSize: '0.78rem' }}>{q.id}</code>
+                                            {i < currentParamQuestions.length - 1 ? ', ' : ''}
+                                        </span>
+                                    ))}
+                                </>
+                            ) : (
+                                <>No questions yet in this parameter.</>
+                            )}
+                        </div>
+                    )}
 
                     <div>
                         <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Question Text</label>
@@ -867,10 +916,6 @@ export default function QuestionForm({ mode = 'page' }) {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <input type="checkbox" id="is_stop_question" name="is_stop_question" checked={formData.is_stop_question} onChange={handleChange} />
-                            <label htmlFor="is_stop_question" style={{ fontWeight: 'bold' }}>Stop Question</label>
-                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <input type="checkbox" id="is_active" name="is_active" checked={formData.is_active} onChange={handleChange} />
                             <label htmlFor="is_active" style={{ fontWeight: 'bold' }}>Active Question</label>

@@ -11,11 +11,18 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 import auth
 import models
 from dependencies import get_db, require_admin
-from services.logic_parser import validate_expression, ParseException
+from services.logic_parser import validate_expression, ParseException, rename_param_in_expression
 from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
 from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
 
+import re as _re
+
+ID_MAX_LEN = 10  # Length(ParameterDef.id) — vincolo schema
+# Un id parametro deve essere un token valido per le formule (sign + param):
+# param = [A-Za-z0-9_]+ in logic_parser. Vincoliamo lo stesso charset così un
+# rename non puo' produrre una implicational_condition non parsabile.
+_VALID_PARAM_ID_RE = _re.compile(r'^[A-Za-z0-9_]+$')
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
 
@@ -224,36 +231,126 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    # Escludiamo is_active e change_note dal normale PUT
-    update_data = item.dict(exclude={'is_active', 'change_note'})
-    for key, value in update_data.items():
-        setattr(db_item, key, value)
-
-    # Blocca il salvataggio se il TUDO parser fallisce
+    # Blocca il salvataggio se il parser della formula fallisce (fail fast,
+    # prima di toccare il DB con rename/cascade).
     if item.implicational_condition:
         try:
             validate_expression(item.implicational_condition)
         except ParseException as e:
             raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
 
-    # Registra il log di modifica se presente
-    if item.change_note and item.change_note.strip():
-        log = models.ParameterChangeLog(
-            parameter_id=id,
-            user_id=current_user.id,
-            change_note=item.change_note.strip()
+    # --- Rename dell'id (speculare a languages/questions) + riscrittura formule ---
+    # Le FK verso parameter_defs.id hanno ON UPDATE CASCADE: questions,
+    # language_parameters, language_parameter_statuses, parameter_change_logs
+    # seguono il nuovo id nella stessa transazione. I riferimenti dentro le
+    # `implicational_condition` di ALTRI parametri sono testo libero e NON
+    # seguono la cascade: li riscriviamo qui sotto in modo token-aware.
+    new_id = (item.id or "").strip()
+    if not new_id:
+        raise HTTPException(status_code=422, detail="Parameter ID cannot be empty.")
+    if len(new_id) > ID_MAX_LEN:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Parameter ID exceeds the {ID_MAX_LEN}-character limit.",
         )
-        db.add(log)
+    old_id = db_item.id
+    renaming = new_id != old_id
+    rename_note = None
+    rewritten_param_ids: list[str] = []
+    if renaming:
+        if not _VALID_PARAM_ID_RE.match(new_id):
+            raise HTTPException(
+                status_code=422,
+                detail="Parameter ID can only contain letters, digits and underscore (it is used inside formulas).",
+            )
+        if db.query(models.ParameterDef.id).filter(models.ParameterDef.id == new_id).first():
+            raise HTTPException(status_code=409, detail=f"Parameter ID '{new_id}' is already in use.")
+        conflicting_alias = (
+            db.query(models.ParameterAlias)
+            .filter(
+                models.ParameterAlias.old_id == new_id,
+                models.ParameterAlias.parameter_id != old_id,
+            )
+            .first()
+        )
+        if conflicting_alias:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Parameter ID '{new_id}' is already used as a historical alias "
+                    f"of parameter '{conflicting_alias.parameter_id}'."
+                ),
+            )
+
+    # Applica i campi NON-id (l'id e' gestito sotto, a parte, per la cascade).
+    update_data = item.dict(exclude={'is_active', 'change_note', 'id'})
+    for key, value in update_data.items():
+        setattr(db_item, key, value)
+
+    if renaming:
+        # A->B->A: se il nuovo id era un alias di QUESTO stesso parametro, rimuovilo.
+        db.query(models.ParameterAlias).filter(
+            models.ParameterAlias.old_id == new_id,
+            models.ParameterAlias.parameter_id == old_id,
+        ).delete(synchronize_session=False)
+        # Applica il rename: la cascade DB sposta i figli sul nuovo id.
+        db_item.id = new_id
+        db.flush()
+        existing_alias = (
+            db.query(models.ParameterAlias)
+            .filter(models.ParameterAlias.old_id == old_id)
+            .first()
+        )
+        if existing_alias is None:
+            db.add(models.ParameterAlias(parameter_id=new_id, old_id=old_id))
+
+        # Riscrittura delle formule che citano il vecchio id. Il LIKE e'
+        # sovra-inclusivo (prende anche chi cita un id di cui old_id e'
+        # sottostringa); il rewrite token-aware applica la sostituzione SOLO
+        # sugli operandi esatti e ci dice quali formule sono davvero cambiate.
+        candidates = (
+            db.query(models.ParameterDef)
+            .filter(models.ParameterDef.implicational_condition.ilike(f"%{old_id}%"))
+            .all()
+        )
+        for p in candidates:
+            cond = p.implicational_condition or ""
+            new_cond = rename_param_in_expression(cond, old_id, new_id)
+            if new_cond != cond:
+                p.implicational_condition = new_cond
+                rewritten_param_ids.append(p.id)
+                db.add(models.ParameterChangeLog(
+                    parameter_id=p.id,
+                    user_id=current_user.id,
+                    change_note=f"[Auto] Formula updated: parameter '{old_id}' renamed to '{new_id}'",
+                ))
+        rename_note = f"Renamed from {old_id} to {new_id}"
+        if rewritten_param_ids:
+            rename_note += f" (formulas rewritten in: {', '.join(sorted(set(rewritten_param_ids)))})"
+
+    # Log di modifica sul parametro corrente (nota utente + marcatore rename).
+    note_parts = []
+    if item.change_note and item.change_note.strip():
+        note_parts.append(item.change_note.strip())
+    if renaming:
+        note_parts.append(f"[Renamed {old_id} -> {new_id}]")
+    if note_parts:
+        db.add(models.ParameterChangeLog(
+            parameter_id=new_id,
+            user_id=current_user.id,
+            change_note=" ".join(note_parts),
+        ))
 
     try:
         db.commit()
         record_version(db, db_item, operation="update", source="manual",
-                       user_id=current_user.id, note=(item.change_note or None))
+                       user_id=current_user.id, note=(rename_note or item.change_note or None))
         db.commit()
         # Qualunque modifica al parametro può rendere stale i value_orig/value_eval
-        # (cambio formula → DAG diverso, cambio nome/descrizione → no-op ma costo
-        # trascurabile). Ricalcoliamo sempre in background per coerenza.
-        background_tasks.add_task(recompute_parameter_for_all_languages, id)
+        # (cambio formula → DAG diverso). Ricalcoliamo il corrente e, se il rename
+        # ha toccato le formule di altri parametri, anche quelli.
+        for pid in {new_id, *rewritten_param_ids}:
+            background_tasks.add_task(recompute_parameter_for_all_languages, pid)
         return db_item
     except IntegrityError:
         db.rollback()

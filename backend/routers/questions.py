@@ -12,6 +12,8 @@ from services.versioning import record_version
 from services import archive_service
 from services.recompute import recompute_parameter_for_all_languages
 
+ID_MAX_LEN = 40  # Length(Question.id) — vincolo schema
+
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
 
 # --- SCHEMA PYDANTIC ---
@@ -132,8 +134,48 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     # ricalcolare anche il parametro vecchio (oltre a quello nuovo, sempre).
     old_parameter_id = db_item.parameter_id
 
+    # --- Rename dell'id: validazioni + gestione alias (speculare a languages) ---
+    # Il DB ha ON UPDATE CASCADE su tutte le FK verso questions.id (answers,
+    # question_allowed_motivations), quindi i record collegati vengono aggiornati
+    # nella stessa transazione. Le tabelle storiche con question_id denormalizzato
+    # senza FK (archived_questions.original_question_id, entity_versions) NON
+    # seguono: per design conservano il valore al momento dell'archiviazione/log.
+    new_id = (item.id or "").strip()
+    if not new_id:
+        raise HTTPException(status_code=422, detail="Question ID cannot be empty.")
+    if len(new_id) > ID_MAX_LEN:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Question ID exceeds the {ID_MAX_LEN}-character limit.",
+        )
+    old_id = db_item.id
+    renaming = new_id != old_id
+    rename_note = None
+    if renaming:
+        if db.query(models.Question.id).filter(models.Question.id == new_id).first():
+            raise HTTPException(status_code=409, detail=f"Question ID '{new_id}' is already in use.")
+        # Il nuovo id non puo' collidere con un alias di un'altra domanda,
+        # altrimenti il resolver di restore/import diventerebbe ambiguo.
+        conflicting_alias = (
+            db.query(models.QuestionAlias)
+            .filter(
+                models.QuestionAlias.old_id == new_id,
+                models.QuestionAlias.question_id != old_id,
+            )
+            .first()
+        )
+        if conflicting_alias:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Question ID '{new_id}' is already used as a historical alias "
+                    f"of question '{conflicting_alias.question_id}'."
+                ),
+            )
+
     # Wipe + snapshot dei dati nelle tabelle archive PRIMA di applicare le
-    # modifiche al testo: lo snapshot deve riflettere la versione vecchia.
+    # modifiche (testo o rename): lo snapshot deve riflettere la versione vecchia
+    # e l'archivio registra il vecchio id.
     archived_id = None
     if item.wipe_data:
         archived = archive_service.archive_and_wipe(
@@ -144,7 +186,29 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
         )
         archived_id = archived.id
 
-    db_item.id = item.id
+    if renaming:
+        # Se il nuovo id era un alias di QUESTA stessa domanda (rename A->B->A),
+        # rimuovi quell'alias adesso: tra poco l'id ridiventa "corrente".
+        db.query(models.QuestionAlias).filter(
+            models.QuestionAlias.old_id == new_id,
+            models.QuestionAlias.question_id == old_id,
+        ).delete(synchronize_session=False)
+        # Applica il rename PRIMA di registrare l'alias: la cascade DB sposta
+        # answers/question_allowed_motivations sul nuovo id nella stessa
+        # transazione, ed evitiamo dipendenze sull'ordine di flush.
+        db_item.id = new_id
+        db.flush()
+        existing_alias = (
+            db.query(models.QuestionAlias)
+            .filter(models.QuestionAlias.old_id == old_id)
+            .first()
+        )
+        if existing_alias is None:
+            db.add(models.QuestionAlias(question_id=new_id, old_id=old_id))
+        rename_note = f"Renamed from {old_id} to {new_id}"
+    else:
+        db_item.id = new_id
+
     db_item.parameter_id = item.parameter_id
     db_item.text = item.text
     db_item.instruction = item.instruction
@@ -160,24 +224,26 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     for mot_id in item.allowed_motivations:
         db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
 
-    # Registra il log di modifica nel parametro genitore (segna anche il wipe).
+    # Registra il log di modifica nel parametro genitore (segna anche rename/wipe).
     note_parts = []
     if item.change_note and item.change_note.strip():
         note_parts.append(item.change_note.strip())
+    if renaming:
+        note_parts.append(f"[Renamed {old_id} -> {new_id}]")
     if item.wipe_data:
         note_parts.append("[Linked data archived]")
     if note_parts:
         log = models.ParameterChangeLog(
             parameter_id=item.parameter_id,
             user_id=current_user.id,
-            change_note=f"[Question {id}] {' '.join(note_parts)}"
+            change_note=f"[Question {new_id}] {' '.join(note_parts)}"
         )
         db.add(log)
 
     try:
         db.commit()
         record_version(db, db_item, operation="update", source="manual",
-                       user_id=current_user.id, note=(item.change_note or None))
+                       user_id=current_user.id, note=(rename_note or item.change_note or None))
         db.commit()
 
         # Recompute sempre per il parametro corrente (qualunque modifica alla
