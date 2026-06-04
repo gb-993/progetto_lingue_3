@@ -110,6 +110,11 @@ export default function QuestionForm({ mode = 'page' }) {
     const [parameters, setParameters] = useState([]);
     const [allMotivations, setAllMotivations] = useState([]);
     const [allQuestions, setAllQuestions] = useState([]);
+    // `templateSource` = sorgente selezionata per l'import WITHOUT data (solo
+    // testo). La copia nel form avviene al click del bottone "Import", non alla
+    // selezione: stesso schema dell'import WITH data (select + bottone).
+    // `importedFrom` resta come indicatore "Imported from X" dopo l'import.
+    const [templateSource, setTemplateSource] = useState(null);
     const [importedFrom, setImportedFrom] = useState(null);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -733,83 +738,75 @@ export default function QuestionForm({ mode = 'page' }) {
                 {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.2rem)' }}>
-                    {/* --- IMPORT (solo in creazione, riga compatta) --- */}
+                    {/* --- IMPORT (solo in creazione) --- */}
                     {!isEditMode && (
-                        <>  
-
-
-                            {/* --- CLONE WITH DATA (azione di duplicazione vera) --- */}
-                            <div style={{
-                                background: 'var(--surface-2, #f8fafc)',
-                                padding: '0.6rem 0.85rem',
-                                borderRadius: '8px',
-                                border: '1px dashed var(--border)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.6rem',
-                                flexWrap: 'wrap',
-                            }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                    Import WITH data
-                                </label>
-                                <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
-                                    <Select
-                                        isClearable
-                                        options={groupedQuestionOptions}
-                                        value={cloneSource}
-                                        onChange={handleCloneSourceChange}
-                                        placeholder="Pick a question to clone with all its answers, examples and motivations..."
-                                        noOptionsMessage={() => "No question available"}
-                                        isDisabled={cloning}
-                                        styles={reactSelectStyles}
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleCloneWithData}
-                                    disabled={!cloneSource || !formData.parameter_id || cloning}
-                                    className="btn btn--small"
-                                >
-                                    {cloning ? 'Cloning...' : 'Clone now'}
-                                </button>
-                                {!cloning && (!cloneSource || !formData.parameter_id) && (
-                                    <div className="small" style={{ flexBasis: '100%', fontSize: '0.72rem', lineHeight: 1.35, color: '#9a6700' }}>
-                                        {!cloneSource
-                                            ? 'Pick a source question above to enable cloning.'
-                                            : 'Pick a Destination Parameter (below) to enable cloning.'}
+                        <>
+                            {/* IMPORT WITH DATA: crea subito una nuova domanda copiando
+                                anche risposte/esempi/motivazioni. Select + bottone. */}
+                            <div style={importBoxStyle}>
+                                <span style={importTitleStyle}>Duplicate WITH data</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+                                        <Select
+                                            isClearable
+                                            options={groupedQuestionOptions}
+                                            value={cloneSource}
+                                            onChange={handleCloneSourceChange}
+                                            placeholder="Pick a source question…"
+                                            noOptionsMessage={() => "No question available"}
+                                            isDisabled={cloning}
+                                            styles={reactSelectStyles}
+                                        />
                                     </div>
-                                )}
-                                <div className="small muted" style={{ flexBasis: '100%', fontSize: '0.72rem', lineHeight: 1.35, marginTop: '0.1rem' }}>
-                                    Creates immediately a new question in the target parameter (using the <strong>Question ID</strong> below)
-                                    by copying answers, examples and motivations from <em>every language</em>.
-                                    The source question is left untouched.
+                                    <button
+                                        type="button"
+                                        onClick={handleCloneWithData}
+                                        disabled={!cloneSource || !formData.parameter_id || cloning}
+                                        className="btn btn--small"
+                                    >
+                                        {cloning ? 'Duplicating…' : 'Duplicate now'}
+                                    </button>
+                                </div>
+                                <div className="small muted" style={importDescStyle}>
+                                    Creates the new question now, copying answers, examples and motivations from every language. The source is left untouched.
                                 </div>
                             </div>
 
-                            
-                            <div style={{ background: 'var(--surface-2, #f8fafc)', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                                    Import template (text only)
-                                </label>
-                                <div style={{ flex: '1 1 320px', minWidth: '260px' }}>
-                                    <Select
-                                        isClearable
-                                        options={groupedQuestionOptions}
-                                        value={importedFrom}
-                                        onChange={handleImportQuestion}
-                                        placeholder="Pick a question to copy text, instructions, motivations into the form below..."
-                                        noOptionsMessage={() => "No question available"}
-                                        styles={reactSelectStyles}
-                                    />
+                            {/* IMPORT WITHOUT DATA: riempie il form con i soli testi della
+                                sorgente. La copia avviene al click di "Import", non alla
+                                selezione, per uniformita' con il box sopra. */}
+                            <div style={importBoxStyle}>
+                                <span style={importTitleStyle}>Duplicate WITHOUT data</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+                                        <Select
+                                            isClearable
+                                            options={groupedQuestionOptions}
+                                            value={templateSource}
+                                            onChange={setTemplateSource}
+                                            placeholder="Pick a source question…"
+                                            noOptionsMessage={() => "No question available"}
+                                            styles={reactSelectStyles}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleImportQuestion(templateSource)}
+                                        disabled={!templateSource}
+                                        className="btn btn--small"
+                                    >
+                                        Duplicate
+                                    </button>
+                                    {importedFrom && (
+                                        <span className="small" style={{ color: '#0056b3' }}>
+                                            Imported from <strong>{importedFrom.value}</strong>
+                                        </span>
+                                    )}
                                 </div>
-                                {importedFrom && (
-                                    <span className="small" style={{ color: '#0056b3' }}>
-                                        Imported from <strong>{importedFrom.value}</strong>
-                                    </span>
-                                )}
+                                <div className="small muted" style={importDescStyle}>
+                                    Fills the form below with the source text, instructions and motivations only — no answers. Then edit and save.
+                                </div>
                             </div>
-
-                            
                         </>
                     )}
 
@@ -1234,6 +1231,28 @@ export default function QuestionForm({ mode = 'page' }) {
         </div>
     );
 }
+
+// Stile condiviso dei due box di import (WITH/WITHOUT data): identici, bordo
+// solido. Titoli in stile "Language Filters/Parameters Filters" di TableA.
+const importBoxStyle = {
+    background: 'var(--surface-2, #f8fafc)',
+    padding: '0.85rem 1rem',
+    borderRadius: '8px',
+    border: '1px solid var(--border)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.6rem',
+};
+const importTitleStyle = {
+    fontSize: '0.8rem',
+    fontWeight: 900,
+    color: 'var(--text)',
+    textTransform: 'uppercase',
+    borderBottom: '1px solid var(--border)',
+    display: 'block',
+    paddingBottom: '0.25rem',
+};
+const importDescStyle = { fontSize: '0.72rem', lineHeight: 1.35 };
 
 const modalOverlayStyle = {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
