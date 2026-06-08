@@ -15,6 +15,7 @@
 - [ ] Poter cambiare l'ordine degli esempi già inseriti per una question (tipo trascinandoli?)
 
 ## DEBUG PARAMETRI
+- [ ] Se Initial value è + e Final value è 0, mostrare Final value come 0+. Idealmente si dovrebbe vedere 0+ per questi parametri anche nella Table A, ma poi negli script 0+ dovrebbe essere equiparato a 0
 - [x] Fare in modo che se una condizione implicazione è falsa il parametro vada a 0 indipendentemente dalle risposte che sono state date alle sue question. Ora se c’è un’incongruenza tra tra questions e stop-questions giustamente la rileva, mette il warning e lo propaga, mentre vorrebbero che siccome tanto il parametro deve andare a 0 ci fosse un warning “arancione” solo sulle answers/initial value, ma questo non bloccasse lo 0 e i parametri che dipendono da quello
 
 ## LISTA PARAMETRI
