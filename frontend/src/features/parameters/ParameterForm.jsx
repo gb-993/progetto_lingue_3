@@ -5,6 +5,7 @@ import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import Drawer from '../../components/Drawer';
+import TransferDataModal from '../questions/TransferDataModal';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -339,13 +340,15 @@ export default function ParameterForm() {
     };
 
     // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
-    const handleToggleQuestionActive = async (questionId, currentStatus) => {
-        const actionText = currentStatus ? 'deactivate' : 'reactivate';
-        const consequence = currentStatus
-            ? 'It will disappear from the form'
-            : 'It will reappear in the form';
-        if (!window.confirm(`Are you sure you want to ${actionText} question ${questionId}? (${consequence})`)) return;
+    // Stati del flusso di disattivazione: la domanda candidata, le stats dei
+    // dati collegati (per decidere se offrire il transfer) e l'id per cui è
+    // aperto il modale di transfer.
+    const [deactivateCandidate, setDeactivateCandidate] = useState(null);
+    const [deactivateStats, setDeactivateStats] = useState(null);
+    const [deactivateStatsLoading, setDeactivateStatsLoading] = useState(false);
+    const [transferForId, setTransferForId] = useState(null);
 
+    const doToggleQuestionActive = async (questionId) => {
         try {
             await api.patch(`/api/admin/questions/${questionId}/toggle-active`);
             // Ricarica i dati per avere la lista aggiornata
@@ -353,6 +356,29 @@ export default function ParameterForm() {
             setQuestions(paramRes.data.questions || []);
         } catch (err) {
             alert(err.response?.data?.detail || `Error while changing the question status.`);
+        }
+    };
+
+    const handleToggleQuestionActive = async (questionId, currentStatus) => {
+        // Riattivazione: conferma semplice.
+        if (!currentStatus) {
+            if (!window.confirm(`Reactivate question ${questionId}? It will reappear in the form.`)) return;
+            await doToggleQuestionActive(questionId);
+            return;
+        }
+        // Disattivazione: apri il modale di scelta (disattiva soltanto / trasferisci
+        // prima i dati). Carica le stats dei dati collegati per capire se ha senso
+        // offrire il trasferimento.
+        setDeactivateCandidate(questionId);
+        setDeactivateStats(null);
+        setDeactivateStatsLoading(true);
+        try {
+            const res = await api.get(`/api/admin/questions/${questionId}/data-stats`);
+            setDeactivateStats(res.data || { answers: 0, examples: 0, languages: 0 });
+        } catch {
+            setDeactivateStats({ answers: 0, examples: 0, languages: 0, error: true });
+        } finally {
+            setDeactivateStatsLoading(false);
         }
     };
 
@@ -427,7 +453,7 @@ export default function ParameterForm() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.5rem)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.5rem)', minWidth: 0 }}>
                 <div className="card">
                     <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                         <h2 style={{margin: 0}}>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
@@ -699,13 +725,13 @@ export default function ParameterForm() {
                         <h3>Questions</h3>
                         <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)', marginTop: 'var(--form-field-mb, 1rem)' }}>
                             {/* Colonna Domande Normali */}
-                            <div>
+                            <div style={{ minWidth: 0 }}>
                                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Questions</label>
                                 {normalQuestions.length > 0 ? (
                                     <div>
                                         {normalQuestions.map(q => (
                                             <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
-                                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                                <div style={{ flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
                                                     <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
@@ -729,13 +755,13 @@ export default function ParameterForm() {
                             </div>
 
                             {/* Colonna Stop Questions */}
-                            <div>
+                            <div style={{ minWidth: 0 }}>
                                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Stop questions</label>
                                 {stopQuestions.length > 0 ? (
                                     <div>
                                         {stopQuestions.map(q => (
                                             <div key={q.id} style={{ ...qRowStyle, opacity: q.is_active ? 1 : 0.5 }}>
-                                                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                                <div style={{ flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere' }}>
                                                     <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{q.id}</span>
                                                     <span>{q.text} {q.is_active ? '' : '(Inactive)'}</span>
                                                 </div>
@@ -821,6 +847,57 @@ export default function ParameterForm() {
             è attiva. Chiusura → torna alla rotta parent; il guard delle
             modifiche non salvate vive nel QuestionForm e intercetta da solo
             la transizione. */}
+        {/* MODALE SCELTA alla disattivazione di una domanda: disattiva soltanto
+            oppure trasferisci prima i dati a un'altra question. */}
+        {deactivateCandidate && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                <div className="card" style={{ width: '480px', maxWidth: '92vw' }}>
+                    <h3 style={{ marginTop: 0 }}>Deactivate question {deactivateCandidate}?</h3>
+                    <p className="small muted" style={{ marginTop: 0 }}>
+                        It will disappear from the compilation form. You can reactivate it later.
+                    </p>
+                    <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.6rem 0.85rem', margin: '0.75rem 0', fontSize: '0.85rem' }}>
+                        {deactivateStatsLoading && <span>Loading linked data…</span>}
+                        {!deactivateStatsLoading && deactivateStats && (
+                            deactivateStats.answers > 0
+                                ? <span><strong>{deactivateStats.answers}</strong> answer(s), <strong>{deactivateStats.examples}</strong> example(s) in <strong>{deactivateStats.languages}</strong> language(s) are linked to this question.</span>
+                                : <span>No linked data on this question.</span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <button type="button" className="btn" onClick={() => setDeactivateCandidate(null)}>Cancel</button>
+                        {!deactivateStatsLoading && deactivateStats && deactivateStats.answers > 0 && (
+                            <button
+                                type="button"
+                                className="btn"
+                                onClick={() => { const qid = deactivateCandidate; setDeactivateCandidate(null); setTransferForId(qid); }}
+                            >
+                                Transfer data, then deactivate…
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            className="btn"
+                            style={{ background: '#d9534f', borderColor: '#d9534f', color: '#fff' }}
+                            onClick={async () => { const qid = deactivateCandidate; setDeactivateCandidate(null); await doToggleQuestionActive(qid); }}
+                        >
+                            {deactivateStats?.answers > 0 ? 'Deactivate without transferring' : 'Deactivate'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Modale di transfer aperto dal flusso di disattivazione: dopo il
+            trasferimento, disattiva la domanda sorgente (ormai svuotata). */}
+        {transferForId && (
+            <TransferDataModal
+                sourceQuestionId={transferForId}
+                onClose={() => setTransferForId(null)}
+                onTransferred={async () => { const qid = transferForId; setTransferForId(null); await doToggleQuestionActive(qid); }}
+            />
+        )}
+
         <Drawer
             open={isDrawerOpen}
             onClose={() => navigate(`/admin/parameters/${id}/edit`)}

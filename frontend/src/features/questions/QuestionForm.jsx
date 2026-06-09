@@ -6,6 +6,7 @@ import api, { getApiErrorMessage } from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
+import TransferDataModal from './TransferDataModal';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -230,6 +231,10 @@ export default function QuestionForm({ mode = 'page' }) {
     const [wipeStats, setWipeStats] = useState(null);
     const [wipeStatsLoading, setWipeStatsLoading] = useState(false);
 
+    // Modale "Transfer data to another question": sposta i dati linguistici di
+    // questa question su una destinazione a scelta (componente riutilizzabile).
+    const [transferOpen, setTransferOpen] = useState(false);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -358,6 +363,7 @@ export default function QuestionForm({ mode = 'page' }) {
             })
             .filter(g => g.options.length > 0);
     }, [parameters, allQuestions]);
+
 
     // Riempie il form coi soli testi della sorgente. Con `withData` arma anche
     // la copia dei dati linguistici (eseguita al salvataggio dal backend).
@@ -688,6 +694,9 @@ export default function QuestionForm({ mode = 'page' }) {
         setWipeConfirmOpen(false);
         await performSave({ wipeData: true });
     };
+
+    // Apre il modale di transfer (componente riutilizzabile TransferDataModal).
+    const handleOpenTransfer = () => { if (isEditMode) setTransferOpen(true); };
 
     // Logica per isDirty
     const safeString = (val) => val === null || val === undefined ? '' : String(val);
@@ -1045,16 +1054,33 @@ export default function QuestionForm({ mode = 'page' }) {
                         >
                             {isLoading ? 'Saving...' : (isEditMode ? 'Save the changes and maintain data' : 'Save Question')}
                         </button>
+                        {isEditMode && (() => {
+                            const wipeDisabled = isLoading || !isDirty || !changeNote.trim();
+                            // Abilitato: rosso pieno con testo bianco (azione distruttiva,
+                            // alto contrasto). Disabilitato: nessuno stile inline, così
+                            // eredita la palette grigia muta e leggibile di .btn[disabled].
+                            return (
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={handleOpenWipeConfirm}
+                                    disabled={wipeDisabled}
+                                    title="Archive all linked answers and examples, then save the new text"
+                                    style={wipeDisabled ? undefined : { background: '#d9534f', borderColor: '#d9534f', color: '#fff' }}
+                                >
+                                    Save the changes and delete the linked data
+                                </button>
+                            );
+                        })()}
                         {isEditMode && (
                             <button
                                 type="button"
-                                className="btn btn--bad"
-                                onClick={handleOpenWipeConfirm}
-                                disabled={isLoading || !isDirty || !changeNote.trim()}
-                                title="Archive all linked answers and examples, then save the new text"
-                                style={{ borderColor: '#d9534f', color: '#d9534f' }}
+                                className="btn"
+                                onClick={handleOpenTransfer}
+                                disabled={isLoading}
+                                title="Move all answers and examples of this question to another question (a safety snapshot is archived). This question is left empty."
                             >
-                                Save the changes and delete the linked data
+                                Transfer data to another question…
                             </button>
                         )}
                         <Link to={cancelLink} className="btn">Cancel</Link>
@@ -1126,6 +1152,34 @@ export default function QuestionForm({ mode = 'page' }) {
                             )}
                         </div>
 
+                        {/* Alternativa all'archiviazione: trasferire i dati a un'altra
+                            question. Apre il modal di transfer (stesso endpoint del
+                            bottone "Transfer data to another question…"). */}
+                        <div style={{
+                            background: 'var(--surface-2, #f8fafc)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '6px',
+                            padding: '0.7rem 0.9rem',
+                            margin: '0 0 1rem 0',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            flexWrap: 'wrap',
+                        }}>
+                            <span style={{ fontSize: '0.85rem' }}>
+                                Prefer to keep this data? Move it to another question instead of archiving.
+                            </span>
+                            <button
+                                type="button"
+                                className="btn btn--small"
+                                onClick={() => { setWipeConfirmOpen(false); handleOpenTransfer(); }}
+                                disabled={isLoading}
+                            >
+                                Transfer to another question…
+                            </button>
+                        </div>
+
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                             <button
                                 type="button"
@@ -1137,7 +1191,7 @@ export default function QuestionForm({ mode = 'page' }) {
                             </button>
                             <button
                                 type="button"
-                                className="btn btn--bad"
+                                className="btn"
                                 onClick={handleConfirmWipe}
                                 disabled={isLoading || wipeStatsLoading}
                                 style={{ background: '#d9534f', borderColor: '#d9534f', color: 'white' }}
@@ -1147,6 +1201,16 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Modale di transfer (componente riutilizzabile, usato anche dalle
+                liste question/parametro). */}
+            {transferOpen && (
+                <TransferDataModal
+                    sourceQuestionId={id}
+                    onClose={() => setTransferOpen(false)}
+                    onTransferred={() => { setTransferOpen(false); navigate(`/admin/parameters/${formData.parameter_id}/edit`); }}
+                />
             )}
 
             {/* MODAL EDIT/DELETE MOTIVATION ESISTENTE

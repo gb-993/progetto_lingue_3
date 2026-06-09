@@ -4,7 +4,7 @@ from time_utils import utc_now
 import io
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import func, case
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -58,6 +58,18 @@ class ParameterBase(BaseModel):
     schema: str = ""
     param_type: str = ""
     level_of_comparison: str = ""
+
+    # Le colonne di testo sono nullable a livello DB: righe vecchie possono
+    # avere NULL (es. admin_remarks aggiunta dopo). Coerciamo None -> "" così la
+    # response non fallisce la validazione contro il tipo `str`.
+    @field_validator(
+        "short_description", "long_description", "admin_remarks",
+        "description_of_the_implicational_condition",
+        mode="before",
+    )
+    @classmethod
+    def _none_to_empty(cls, v):
+        return "" if v is None else v
 
 class ParameterListItem(ParameterBase):
     questions_count: int = 0

@@ -66,19 +66,19 @@ def count_linked_data(db: Session, question_id: str) -> Dict[str, int]:
 # WIPE: snapshot + sposta dati nell'archivio + cancella dai tavoli attivi
 # ============================================================================
 
-def archive_and_wipe(
+def snapshot_question_data(
     db: Session,
     question: models.Question,
     user_id: int | None,
     archive_note: str | None = None,
 ) -> models.ArchivedQuestion:
     """
-    Crea una ArchivedQuestion con lo snapshot della question PRIMA della
-    modifica (chi chiama deve invocarla *prima* di applicare le modifiche
-    al testo), copia tutte le Answer/Example/AnswerMotivation collegate
-    nelle tabelle archive, poi cancella quelle attive.
+    Crea una ArchivedQuestion con lo snapshot della question e copia tutte le
+    Answer/Example/AnswerMotivation collegate nelle tabelle archive, SENZA
+    cancellare i dati attivi.
 
-    NON committa: chi chiama gestisce la transazione.
+    Usato sia dal wipe (che subito dopo cancella le righe vive) sia dal transfer
+    (che invece le sposta su un'altra question). NON committa.
     """
     # Lookup nome del parametro per lo snapshot (denormalizzato).
     param = (
@@ -174,8 +174,31 @@ def archive_and_wipe(
     archived.answers_count = answers_count
     archived.examples_count = examples_count
 
+    db.flush()
+    return archived
+
+
+def archive_and_wipe(
+    db: Session,
+    question: models.Question,
+    user_id: int | None,
+    archive_note: str | None = None,
+) -> models.ArchivedQuestion:
+    """
+    Snapshot della question PRIMA della modifica (chi chiama deve invocarla
+    *prima* di applicare le modifiche al testo) + cancellazione dei dati attivi.
+
+    NON committa: chi chiama gestisce la transazione.
+    """
+    archived = snapshot_question_data(db, question, user_id, archive_note)
+
     # Cancella i dati attivi. Le cascate "all, delete-orphan" su Answer.examples
     # e Answer.answer_motivations gestiscono Example/AnswerMotivation.
+    answers = (
+        db.query(models.Answer)
+        .filter(models.Answer.question_id == question.id)
+        .all()
+    )
     for a in answers:
         db.delete(a)
 

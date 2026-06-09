@@ -324,7 +324,8 @@ class ParameterDef(Base):
     long_description = Column(Text, default="")
     # Nota libera interna per gli admin sul parametro (non esportata). Distinta
     # dalla admin_note di LanguageParameterStatus, che e' per (lingua, parametro).
-    admin_remarks = Column(Text, default="")
+    # server_default="" così le righe esistenti non restano NULL al deploy.
+    admin_remarks = Column(Text, default="", server_default="")
     implicational_condition = Column(String(255), nullable=True)
     description_of_the_implicational_condition = Column(Text, default="")
     is_active = Column(Boolean, default=True, nullable=False)

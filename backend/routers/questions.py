@@ -10,6 +10,7 @@ import models
 from dependencies import get_db, require_admin
 from services.versioning import record_version
 from services import archive_service
+from services import question_transfer
 from services.question_copy import copy_question_data
 from services.recompute import recompute_parameter_for_all_languages
 
@@ -306,6 +307,112 @@ def get_question_data_stats(
     if not db.query(models.Question.id).filter(models.Question.id == id).first():
         raise HTTPException(status_code=404, detail="Question not found")
     return archive_service.count_linked_data(db, id)
+
+
+# --- TRASFERIMENTO DATI VERSO UN'ALTRA QUESTION ---
+class TransferDataPayload(BaseModel):
+    dest_id: str
+    # Lingue (id) per cui, in caso di conflitto, si sovrascrive la destinazione
+    # con la sorgente. Le lingue in conflitto NON elencate qui mantengono la
+    # risposta gia' presente nella destinazione.
+    overwrite_language_ids: List[str] = []
+    change_note: Optional[str] = ""
+
+
+@router.get("/{id}/transfer-preview")
+def get_transfer_preview(
+    id: str,
+    dest_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Preview dei conflitti per il trasferimento dati da `id` a `dest_id`.
+
+    Ritorna quante lingue verrebbero spostate direttamente e l'elenco di quelle
+    in conflitto (destinazione gia' valorizzata) con un riassunto delle risposte.
+    """
+    source = db.query(models.Question).filter(models.Question.id == id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Question not found")
+    dest = db.query(models.Question).filter(models.Question.id == dest_id).first()
+    if not dest:
+        raise HTTPException(status_code=400, detail="Destination question not found.")
+    if source.id == dest.id:
+        raise HTTPException(status_code=400, detail="Source and destination must be different questions.")
+    return question_transfer.preview_transfer_conflicts(db, source.id, dest.id)
+
+
+@router.post("/{id}/transfer-data")
+def transfer_question_data_endpoint(
+    id: str,
+    payload: TransferDataPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Sposta tutti i dati linguistici della question `id` sulla `dest_id`.
+
+    Prima archivia uno snapshot di sicurezza della sorgente (Old Questions
+    Archive), poi sposta/risolve i conflitti per-lingua. La question sorgente
+    resta viva ma senza dati. Ricalcola i parametri coinvolti in background.
+    """
+    source = db.query(models.Question).filter(models.Question.id == id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Question not found")
+    dest = db.query(models.Question).filter(models.Question.id == payload.dest_id).first()
+    if not dest:
+        raise HTTPException(status_code=400, detail="Destination question not found.")
+    if source.id == dest.id:
+        raise HTTPException(status_code=400, detail="Source and destination must be different questions.")
+
+    note = (payload.change_note or "").strip()
+
+    # 1. Snapshot di sicurezza della sorgente (prima di spostare/cancellare).
+    archived = archive_service.snapshot_question_data(
+        db, source, current_user.id,
+        archive_note=note or f"Data transferred to {dest.id}",
+    )
+
+    # 2. Sposta i dati risolvendo i conflitti per-lingua.
+    result = question_transfer.transfer_question_data(
+        db, source.id, dest.id, set(payload.overwrite_language_ids or []),
+    )
+
+    # 3. Log sul parametro sorgente (e su quello destinazione, se diverso).
+    src_param = source.parameter_id
+    dst_param = dest.parameter_id
+    suffix = f" Note: {note}" if note else ""
+    db.add(models.ParameterChangeLog(
+        parameter_id=src_param,
+        user_id=current_user.id,
+        change_note=(
+            f"[Question {source.id}] Data transferred to {dest.id} "
+            f"(moved {result['moved']}, overwritten {result['overwritten']}, "
+            f"kept {result['kept']}); snapshot archived.{suffix}"
+        ),
+    ))
+    if dst_param != src_param:
+        db.add(models.ParameterChangeLog(
+            parameter_id=dst_param,
+            user_id=current_user.id,
+            change_note=(
+                f"[Question {dest.id}] Received data from {source.id} "
+                f"(moved {result['moved']}, overwritten {result['overwritten']}).{suffix}"
+            ),
+        ))
+
+    db.commit()
+
+    # 4. Ricalcolo dei parametri coinvolti (consolidate + DAG) in background.
+    background_tasks.add_task(recompute_parameter_for_all_languages, src_param)
+    if dst_param != src_param:
+        background_tasks.add_task(recompute_parameter_for_all_languages, dst_param)
+
+    return {
+        "detail": "Data transferred successfully",
+        "archived_question_id": archived.id,
+        **result,
+    }
 
 
 @router.patch("/{id}/toggle-active")

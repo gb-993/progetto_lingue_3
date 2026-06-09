@@ -23,7 +23,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('parameter_defs', sa.Column('admin_remarks', sa.Text(), nullable=True))
+    # server_default="" così le righe gia' esistenti vengono valorizzate a ""
+    # invece di NULL (la response Pydantic richiede un `str`).
+    op.add_column(
+        'parameter_defs',
+        sa.Column('admin_remarks', sa.Text(), nullable=True, server_default=''),
+    )
 
 
 def downgrade() -> None:
