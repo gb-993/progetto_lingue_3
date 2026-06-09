@@ -253,10 +253,11 @@ export default function ParameterByLanguage() {
                             {meta.short_description}
                         </p>
                     )}
-                    <p className="small muted" style={{ marginTop: '0.4rem' }}>
-                        One parameter across every language · {total} active question{total === 1 ? '' : 's'}
-                        {!meta?.is_active && <span> · <span className="status bad">parameter disabled</span></span>}
-                    </p>
+                    {meta && !meta.is_active && (
+                        <p className="small muted" style={{ marginTop: '0.4rem' }}>
+                            <span className="status bad">parameter disabled</span>
+                        </p>
+                    )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <Link to={`/admin/parameters/${paramId}/edit`} className="btn btn--small">Edit definition</Link>
@@ -326,12 +327,6 @@ export default function ParameterByLanguage() {
                     </div>
                     <button onClick={resetAll} className="btn btn--small">Reset</button>
                 </div>
-            </div>
-
-            {/* Promemoria: l'admin edita a prescindere dallo status, senza cambiarlo. */}
-            <div className="admin-override-banner" style={{ marginBottom: '1rem' }}>
-                <strong>Admin shortcut:</strong> editing a language here saves it immediately, exactly
-                like opening its page — the language status is never changed automatically.
             </div>
 
             {/* ==== WIZARD A QUADRATINI (un quadratino = una lingua) ==== */}
