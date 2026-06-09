@@ -51,6 +51,7 @@ class ParameterBase(BaseModel):
     position: int
     short_description: str = ""
     long_description: str = ""
+    admin_remarks: str = ""
     implicational_condition: Optional[str] = None
     description_of_the_implicational_condition: str = ""
     is_active: bool = True
@@ -107,6 +108,7 @@ def get_admin_parameters(db: Session = Depends(get_db), current_user: models.Use
             position=p.position,
             short_description=p.short_description or "",
             long_description=p.long_description or "",
+            admin_remarks=p.admin_remarks or "",
             implicational_condition=p.implicational_condition,
             description_of_the_implicational_condition=p.description_of_the_implicational_condition or "",
             is_active=p.is_active,

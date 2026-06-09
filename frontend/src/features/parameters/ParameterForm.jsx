@@ -20,7 +20,7 @@ async function downloadBlob(request, fallbackName) {
 }
 
 const DRAFT_FIELDS = [
-    'name', 'short_description', 'long_description',
+    'name', 'short_description', 'long_description', 'admin_remarks',
     'implicational_condition', 'description_of_the_implicational_condition',
     'schema', 'param_type', 'level_of_comparison',
 ];
@@ -39,6 +39,7 @@ export default function ParameterForm() {
     const [formData, setFormData] = useState({
         id: '', name: '', position: 0, short_description: '',
         long_description: '',
+        admin_remarks: '',
         implicational_condition: '',
         description_of_the_implicational_condition: '',
         is_active: true,
@@ -363,6 +364,7 @@ export default function ParameterForm() {
         safeString(formData.position) !== safeString(initialData.position) ||
         safeString(formData.short_description) !== safeString(initialData.short_description) ||
         safeString(formData.long_description) !== safeString(initialData.long_description) ||
+        safeString(formData.admin_remarks) !== safeString(initialData.admin_remarks) ||
         safeString(formData.implicational_condition) !== safeString(initialData.implicational_condition) ||
         safeString(formData.description_of_the_implicational_condition) !== safeString(initialData.description_of_the_implicational_condition) ||
         safeString(formData.schema) !== safeString(initialData.schema) ||
@@ -518,6 +520,14 @@ export default function ParameterForm() {
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <label style={{fontWeight: 'bold'}}>Long Description</label>
                             <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Extended description of the parameter (optional)" />
+                        </div>
+
+                        <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
+                            <label style={{fontWeight: 'bold'}}>Admin remarks</label>
+                            <textarea name="admin_remarks" value={formData.admin_remarks || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Internal admin notes about this parameter (not shown to users, not exported)" />
+                            <p className="small muted" style={{ marginTop: '0.3rem', fontSize: '0.78rem' }}>
+                                Internal field for admins only — like the other fields, editing it requires a change note to save. Not included in the exported Excel files.
+                            </p>
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
