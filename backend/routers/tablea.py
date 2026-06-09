@@ -174,7 +174,19 @@ def get_tablea_options(db: Session = Depends(get_db), current_user: models.User 
         "opt_types": distinct(models.ParamType.label),
         "opt_levels": distinct(models.ParamLevelOfComparison.label),
         "opt_templates": distinct(models.Question.template_type),
-        "opt_all_languages": [{"id": l.id, "name": l.name_full} for l in db.query(models.Language).order_by(models.Language.name_full).all()]
+        # Aggiunti top_family/family/grp/historical: servono al frontend per
+        # "espandere" una famiglia nelle sue lingue e costruire l'insieme di
+        # colonne (selezione famiglie → escludi/aggiungi singole lingue), come
+        # nella pagina Languages. Campi additivi: i consumer storici usano solo
+        # id/name.
+        "opt_all_languages": [{
+            "id": l.id,
+            "name": l.name_full,
+            "top_family": l.top_level_family or "",
+            "family": l.family or "",
+            "grp": l.grp or "",
+            "historical": bool(l.historical_language),
+        } for l in db.query(models.Language).order_by(models.Language.name_full).all()]
     }
 
 def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, bool]:
@@ -247,6 +259,34 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
     return result
 
 
+def _value_orig_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, str]:
+    """Mappa (param_id, lang_id) -> value_orig (valore "iniziale"), sola lettura.
+
+    Usata SOLO per la resa estetica di "0+" (parametro con initial '+' azzerato
+    dall'implicazione) a schermo e nei due export leggibili (xlsx/csv). Non entra
+    in alcun calcolo: distanze/Mantel/cluster/PCA leggono sempre value_eval.
+    """
+    m: Dict[tuple, str] = {}
+    if param_ids and lang_ids:
+        for p_id, l_id, v_orig in db.query(
+            models.LanguageParameter.parameter_id,
+            models.LanguageParameter.language_id,
+            models.LanguageParameter.value_orig,
+        ).filter(
+            models.LanguageParameter.parameter_id.in_(param_ids),
+            models.LanguageParameter.language_id.in_(lang_ids),
+        ).all():
+            m[(p_id, l_id)] = v_orig or ""
+    return m
+
+
+def _display_cell(val: str, init: str) -> str:
+    """Dettaglio PURAMENTE estetico: un '0' finale con valore iniziale '+' si
+    mostra come '0+'. Mai persistito e mai passato a calcoli/DB (l'Enum ammette
+    solo +/-/0/?); negli script '0+' va trattato come '0'."""
+    return "0+" if (val == "0" and init == "+") else val
+
+
 @router.post("/matrix")
 def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     langs, rows = _get_filtered_data(db, filters)
@@ -256,10 +296,14 @@ def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db
     # (incomplete o flagged unsure). La vista questions mostra le singole
     # Answer e non ha questo concetto.
     incomplete_map: Dict[tuple, bool] = {}
+    # Valore iniziale (value_orig) per cella: serve SOLO alla resa a schermo del
+    # dettaglio "0+" (parametro azzerato dall'implicazione ma con initial '+').
+    # Nessun impatto sui calcoli/export computazionali. Read-only.
+    init_map: Dict[tuple, str] = {}
     if filters.view == "params":
-        incomplete_map = _compute_param_incomplete_map(
-            db, lang_ids, [r["id"] for r in rows],
-        )
+        param_ids = [r["id"] for r in rows]
+        incomplete_map = _compute_param_incomplete_map(db, lang_ids, param_ids)
+        init_map = _value_orig_map(db, lang_ids, param_ids)
 
     return {
         "languages": [{"id": l.id, "name": l.name_full} for l in langs],
@@ -269,6 +313,7 @@ def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db
                 {
                     "lang_id": lid,
                     "val": val,
+                    "init": init_map.get((r["id"], lid), ""),
                     "is_incomplete": incomplete_map.get((lid, r["id"]), False),
                 }
                 for lid, val in zip(lang_ids, r["cells"])
@@ -284,16 +329,23 @@ def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db
 def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Export XLSX standard con gestione colonne differenziata."""
     langs, rows = _get_filtered_data(db, filters)
+    lang_ids = [l.id for l in langs]
     wb = Workbook()
     ws = wb.active
 
+    # Resa estetica "0+" solo per la vista params (mappa value_orig read-only).
+    # I valori grezzi restano '0': qui li trasformiamo solo nel testo scritto.
+    init_map = _value_orig_map(db, lang_ids, [r["id"] for r in rows]) if filters.view == "params" else {}
+
     # Intestazione specifica per vista
     if filters.view == "questions":
-        ws.append(["Label", "Question text"] + [l.id for l in langs])
+        ws.append(["Label", "Question text"] + lang_ids)
         for r in rows: ws.append([r["id"], r["name"]] + r["cells"])
     else:
-        ws.append(["Label", "Parameter", "Implicational Condition(s)"] + [l.id for l in langs])
-        for r in rows: ws.append([r["id"], r["name"], r["extra"]] + r["cells"])
+        ws.append(["Label", "Parameter", "Implicational Condition(s)"] + lang_ids)
+        for r in rows:
+            cells = [_display_cell(v, init_map.get((r["id"], lang_ids[i]), "")) for i, v in enumerate(r["cells"])]
+            ws.append([r["id"], r["name"], r["extra"]] + cells)
 
     apply_excel_citation(wb)
     buf = io.BytesIO()
@@ -306,12 +358,15 @@ def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_d
 def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Export CSV Trasposto: righe=lingue, colonne=parametri."""
     langs, rows = _get_filtered_data(db, filters)
+    # Resa estetica "0+" solo per la vista params (vedi _display_cell). Per la
+    # vista questions init_map resta vuoto → nessuna trasformazione.
+    init_map = _value_orig_map(db, [l.id for l in langs], [r["id"] for r in rows]) if filters.view == "params" else {}
     buf = io.StringIO()
     buf.write(build_citation_comment())
     writer = csv.writer(buf)
     writer.writerow(["Language"] + [r["id"] for r in rows])
     for i, l in enumerate(langs):
-        writer.writerow([l.id] + [r["cells"][i] for r in rows])
+        writer.writerow([l.id] + [_display_cell(r["cells"][i], init_map.get((r["id"], l.id), "")) for r in rows])
 
     return Response(content=buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": f"attachment; filename=tableA_{filters.view}_transposed.csv"})

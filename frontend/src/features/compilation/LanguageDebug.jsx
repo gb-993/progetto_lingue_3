@@ -4,6 +4,12 @@ import api from '../../api';
 
 const SHOW_INACTIVE_KEY = 'language-debug.show-inactive-questions';
 
+// Dettaglio puramente visivo: un parametro con Initial value '+' che viene
+// azzerato dall'implicazione (Final value '0') si mostra come '0+', per
+// ricordare che il valore "grezzo" era +. Nessun impatto sui calcoli/export:
+// lì 0+ resta equiparato a 0 (vedi modifiche.md → DEBUG PARAMETRI).
+const displayFinalValue = (initial, final) => (initial === '+' && final === '0' ? '0+' : final);
+
 export default function LanguageDebug() {
     const { id } = useParams();
     const [debugData, setDebugData] = useState(null);
@@ -160,7 +166,9 @@ export default function LanguageDebug() {
                                 {r.cond_true === null && <span className="muted">—</span>}
                             </td>
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                                {r.final === '?' ? <span style={{ color: '#d63384' }}>?</span> : r.final || <span className="muted"> </span>}
+                                {r.final === '?'
+                                    ? <span style={{ color: '#d63384' }}>?</span>
+                                    : displayFinalValue(r.initial, r.final) || <span className="muted"> </span>}
                             </td>
                             <td style={{ textAlign: 'center' }} title={r.warn_final ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
                                 {r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}

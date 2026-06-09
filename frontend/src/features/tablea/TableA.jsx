@@ -7,6 +7,17 @@ import reactSelectStyles from '../../utils/reactSelectStyles';
 import usePersistentState from '../../utils/usePersistentState';
 import SegmentedToggle from '../../components/SegmentedToggle';
 
+// Stili condivisi per i multi-select react-select (chip coerenti col tema).
+const multiSelectStyles = {
+    ...reactSelectStyles,
+    multiValue: (base) => ({ ...base, background: 'var(--surface-2)', border: '1px solid var(--border)' }),
+    multiValueLabel: (base) => ({ ...base, color: 'var(--text)' }),
+    multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' } }),
+};
+const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' };
+const sectionTitleStyle = { fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' };
+const toOpts = (arr) => (arr || []).map(v => ({ value: v, label: v }));
+
 export default function TableA() {
     const [view, setView] = usePersistentState('tablea:view', 'params'); // 'params' o 'questions'
 
@@ -22,15 +33,29 @@ export default function TableA() {
         opt_all_languages: []
     });
 
-    // Stato per i filtri attivi
-    const [filters, setFilters] = usePersistentState('tablea:filters', {
-        f_lang_top_family: '', f_lang_family: '', f_lang_grp: '', f_lang_hist: 'all',
+    // Filtri per gli ITEM (parametri/domande). I filtri lingua NON stanno più
+    // qui: la selezione delle lingue (colonne) è costruita come nella pagina
+    // Languages (famiglie multi a cascata → set di base → escludi/aggiungi
+    // singole lingue) e risolta lato client in una lista esplicita di id.
+    // Chiave nuova ('tablea:itemFilters') così eventuali f_lang_* persistiti
+    // dalla vecchia versione non vengono più spruzzati nei payload.
+    const [filters, setFilters] = usePersistentState('tablea:itemFilters', {
         f_p_schema: '', f_p_type: '', f_p_level: '',
         f_q_template: '', f_q_stop: 'all'
     });
 
-    // Stato per le lingue specifiche (checkbox)
-    const [selectedLangs, setSelectedLangs] = useState([]);
+    // Selezione lingue stile Languages:
+    //  - langFilters: famiglie (multi, a cascata) + historical → set di base
+    //  - excludedLangs: id tolti dal set di base
+    //  - addedLangs: id aggiunti singolarmente (anche fuori dalle famiglie)
+    // Insieme finale di colonne = (base − escluse) ∪ aggiunte, risolto lato client.
+    const [langFilters, setLangFilters] = usePersistentState('tablea:langFilters', {
+        top_family: [], family: [], grp: [], historical: 'all',
+    });
+    const [excludedLangs, setExcludedLangs] = usePersistentState('tablea:excludedLangs', []);
+    const [addedLangs, setAddedLangs] = usePersistentState('tablea:addedLangs', []);
+    // Filtro testuale della lista "lingue in selezione" (solo UI, non persistito).
+    const [langPickFilter, setLangPickFilter] = useState('');
 
     // Stato per le righe selezionate manualmente (checkbox tabella)
     const [selectedRows, setSelectedRows] = useState([]);
@@ -50,6 +75,59 @@ export default function TableA() {
     const [clusterMapOpts, setClusterMapOpts] = useState({ distance: 'hamming', threshold_coeff: 0.56 });
     const [clusterMapRunning, setClusterMapRunning] = useState(false);
 
+    // ====== SELEZIONE LINGUE: catena dati (risolta lato client) ======
+    // Definita qui in alto perché fetchMatrix e i bottoni di export la usano.
+    const allLangs = useMemo(() => options.opt_all_languages || [], [options.opt_all_languages]);
+
+    // Set di base = lingue che passano i filtri famiglia (multi) + historical.
+    const baseLangs = useMemo(() => allLangs.filter(l => {
+        if (langFilters.top_family.length && !langFilters.top_family.includes(l.top_family)) return false;
+        if (langFilters.family.length && !langFilters.family.includes(l.family)) return false;
+        if (langFilters.grp.length && !langFilters.grp.includes(l.grp)) return false;
+        if (langFilters.historical === 'yes' && !l.historical) return false;
+        if (langFilters.historical === 'no' && l.historical) return false;
+        return true;
+    }), [allLangs, langFilters]);
+
+    const baseIdSet = useMemo(() => new Set(baseLangs.map(l => l.id)), [baseLangs]);
+    const excludedSet = useMemo(() => new Set(excludedLangs), [excludedLangs]);
+
+    // Candidati mostrati con checkbox = base ∪ aggiunte (ordinati per nome).
+    const candidateLangs = useMemo(() => {
+        const map = new Map();
+        baseLangs.forEach(l => map.set(l.id, l));
+        addedLangs.forEach(id => {
+            if (!map.has(id)) {
+                const l = allLangs.find(x => x.id === id);
+                if (l) map.set(id, l);
+            }
+        });
+        return [...map.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }, [baseLangs, addedLangs, allLangs]);
+
+    // Insieme finale di colonne = candidati non esclusi.
+    const resolvedLangIds = useMemo(
+        () => candidateLangs.filter(l => !excludedSet.has(l.id)).map(l => l.id),
+        [candidateLangs, excludedSet]
+    );
+
+    // C'è un intento esplicito di selezione lingue? (distingue "tutte" da "nessuna").
+    const hasLangIntent =
+        langFilters.top_family.length > 0 || langFilters.family.length > 0 ||
+        langFilters.grp.length > 0 || langFilters.historical !== 'all' ||
+        excludedLangs.length > 0 || addedLangs.length > 0;
+
+    // L'utente ha un intento ma risolve a 0 colonne: f_lang_specific=[] verrebbe
+    // letto dal backend come "tutte", quindi va bloccato.
+    const langSelectionEmpty = hasLangIntent && resolvedLangIds.length === 0;
+
+    // f_lang_specific per il backend: lista esplicita di id, tranne quando la
+    // selezione coincide con "tutte" → [] (comportamento storico, payload lieve).
+    const langPayloadIds = useMemo(
+        () => (resolvedLangIds.length === allLangs.length ? [] : resolvedLangIds),
+        [resolvedLangIds, allLangs]
+    );
+
     // Caricamento opzioni iniziali
     useEffect(() => {
         const fetchOptions = async () => {
@@ -68,10 +146,16 @@ export default function TableA() {
         setLoading(true);
         setError('');
         try {
+            // Intento di selezione lingue che risolve a 0 colonne: non chiamiamo il
+            // backend (f_lang_specific=[] significherebbe "tutte"). Mostriamo vuoto.
+            if (langSelectionEmpty) {
+                setMatrixData({ languages: [], rows: [] });
+                return;
+            }
             const payload = {
                 view,
                 ...filters,
-                f_lang_specific: selectedLangs,
+                f_lang_specific: langPayloadIds,
                 selected_ids: selectedRows
             };
             const res = await api.post('/api/tablea/matrix', payload);
@@ -131,15 +215,86 @@ export default function TableA() {
     // download per evitare che il backend caschi nel ramo "selected_ids vuoto
     // = nessun filtro" ed esporti tutta la matrice non desiderata.
     const hasFilterIntent = selectedRows.length > 0 || search.trim() !== '';
-    const wouldExportNothing = hasFilterIntent && effective_ids.length === 0;
+    const wouldExportNothing = (hasFilterIntent && effective_ids.length === 0) || langSelectionEmpty;
 
-    // Opzioni per il multi-select delle lingue (searchable). `selectedLangs`
-    // resta un array di id: il comportamento (filtraggio matrice + payload
-    // f_lang_specific dei download) e' identico a prima, cambia solo il widget.
-    const langSelectOptions = useMemo(
-        () => (options.opt_all_languages || []).map(l => ({ value: l.id, label: `${l.name} (${l.id})` })),
-        [options.opt_all_languages]
+    // ====== SELEZIONE LINGUE: opzioni dei widget + handler (solo render) ======
+    // (la catena dati allLangs→langPayloadIds è dichiarata più in alto)
+
+    // Opzioni famiglia a cascata (come LanguageList): la subfamily si restringe
+    // alle top family scelte, il group a top family + subfamily.
+    const familyOpts = useMemo(() => {
+        if (!langFilters.top_family.length) return options.opt_families || [];
+        const set = new Set(allLangs
+            .filter(l => langFilters.top_family.includes(l.top_family))
+            .map(l => l.family).filter(Boolean));
+        return [...set].sort();
+    }, [allLangs, options.opt_families, langFilters.top_family]);
+
+    const groupOpts = useMemo(() => {
+        if (!langFilters.top_family.length && !langFilters.family.length) return options.opt_groups || [];
+        const set = new Set(allLangs
+            .filter(l =>
+                (!langFilters.top_family.length || langFilters.top_family.includes(l.top_family)) &&
+                (!langFilters.family.length || langFilters.family.includes(l.family)))
+            .map(l => l.grp).filter(Boolean));
+        return [...set].sort();
+    }, [allLangs, options.opt_groups, langFilters.top_family, langFilters.family]);
+
+    // Opzioni per "aggiungi lingua singola": lingue fuori dal set di base.
+    const addLangOptions = useMemo(
+        () => allLangs.filter(l => !baseIdSet.has(l.id))
+            .map(l => ({ value: l.id, label: `${l.name} (${l.id})` })),
+        [allLangs, baseIdSet]
     );
+    const addLangValue = useMemo(
+        () => addLangOptions.filter(o => addedLangs.includes(o.value)),
+        [addLangOptions, addedLangs]
+    );
+
+    // Cambio multi-select famiglie con pulizia transitiva (come LanguageList):
+    // cambiando top_family invalido subfamily/group non più pertinenti.
+    const handleLangFamilyChange = (name, values) => {
+        setLangFilters(prev => {
+            const next = { ...prev, [name]: values };
+            if (name === 'top_family') {
+                const allowedFam = new Set(allLangs
+                    .filter(l => values.length === 0 || values.includes(l.top_family))
+                    .map(l => l.family).filter(Boolean));
+                next.family = prev.family.filter(f => allowedFam.has(f));
+            }
+            if (name === 'top_family' || name === 'family') {
+                const tops = next.top_family, fams = next.family;
+                const allowedGrp = new Set(allLangs
+                    .filter(l =>
+                        (tops.length === 0 || tops.includes(l.top_family)) &&
+                        (fams.length === 0 || fams.includes(l.family)))
+                    .map(l => l.grp).filter(Boolean));
+                next.grp = prev.grp.filter(g => allowedGrp.has(g));
+            }
+            return next;
+        });
+    };
+
+    // Toggle inclusione di una singola lingua nella lista dei candidati.
+    const toggleLangIncluded = (id) => {
+        if (excludedSet.has(id)) {
+            setExcludedLangs(prev => prev.filter(x => x !== id));
+            return;
+        }
+        if (baseIdSet.has(id)) {
+            setExcludedLangs(prev => [...prev, id]);
+        } else {
+            // candidato solo perché "aggiunto": toglierlo = rimuoverlo dalle aggiunte
+            setAddedLangs(prev => prev.filter(x => x !== id));
+        }
+    };
+
+    const visibleCandidateLangs = useMemo(() => {
+        const q = langPickFilter.trim().toLowerCase();
+        if (!q) return candidateLangs;
+        return candidateLangs.filter(l =>
+            (l.id || '').toLowerCase().includes(q) || (l.name || '').toLowerCase().includes(q));
+    }, [candidateLangs, langPickFilter]);
 
     // Gestione selezione righe (tabella)
     const handleRowCheckbox = (id) => {
@@ -162,11 +317,13 @@ export default function TableA() {
 
     const resetFilters = () => {
         setFilters({
-            f_lang_top_family: '', f_lang_family: '', f_lang_grp: '', f_lang_hist: 'all',
             f_p_schema: '', f_p_type: '', f_p_level: '',
             f_q_template: '', f_q_stop: 'all'
         });
-        setSelectedLangs([]);
+        setLangFilters({ top_family: [], family: [], grp: [], historical: 'all' });
+        setExcludedLangs([]);
+        setAddedLangs([]);
+        setLangPickFilter('');
         setSelectedRows([]);
         setSearch('');
         // fetchMatrix verrà chiamato manualmente se l'utente clicca "Apply"
@@ -176,8 +333,9 @@ export default function TableA() {
     // GESTIONE DOWNLOAD FILE (BLOB)
     // ==========================================
     const handleDownload = async (endpoint, filename, mimeType) => {
+        if (langSelectionEmpty) { alert('No language selected. Adjust the language selection first.'); return; }
         try {
-            const payload = { view, ...filters, f_lang_specific: selectedLangs, selected_ids: effective_ids };
+            const payload = { view, ...filters, f_lang_specific: langPayloadIds, selected_ids: effective_ids };
             const response = await api.post(`/api/tablea/export/${endpoint}`, payload, { responseType: 'blob' });
 
             const skippedHeader = response.headers['x-skipped-languages'];
@@ -209,11 +367,12 @@ export default function TableA() {
             alert("Select at least 2 distances for the Mantel test.");
             return;
         }
+        if (langSelectionEmpty) { alert('No language selected. Adjust the language selection first.'); return; }
         setMantelRunning(true);
         try {
             const payload = {
                 view, ...filters,
-                f_lang_specific: selectedLangs,
+                f_lang_specific: langPayloadIds,
                 selected_ids: effective_ids,
                 include_gcd: mantelOpts.gcd,
                 include_hamming: mantelOpts.hamming,
@@ -266,11 +425,12 @@ export default function TableA() {
             alert("Threshold coefficient must be in (0, 1].");
             return;
         }
+        if (langSelectionEmpty) { alert('No language selected. Adjust the language selection first.'); return; }
         setClusterMapRunning(true);
         try {
             const payload = {
                 view, ...filters,
-                f_lang_specific: selectedLangs,
+                f_lang_specific: langPayloadIds,
                 selected_ids: effective_ids,
                 distance: clusterMapOpts.distance,
                 threshold_coeff: coeff,
@@ -340,89 +500,123 @@ export default function TableA() {
             <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', gap: 'var(--form-col-gap, 2rem)', marginBottom: 'var(--form-field-mb, 1rem)', flexWrap: 'wrap' }}>
 
-                    {/* Filtri Lingua */}
-                    <div style={{ flex: '1 1 300px' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
-                            Language Filters
-                        </span>
+                    {/* Selezione Lingue (colonne) — modello pagina Languages:
+                        famiglie multi a cascata → set di base → escludi/aggiungi
+                        singole lingue. */}
+                    <div style={{ flex: '1 1 340px' }}>
+                        <span style={sectionTitleStyle}>Language Selection</span>
 
-                        <div style={{ marginBottom: '0.85rem' }}>
-                            <Select
-                                isMulti
-                                isSearchable
-                                closeMenuOnSelect={false}
-                                options={langSelectOptions}
-                                value={langSelectOptions.filter(o => selectedLangs.includes(o.value))}
-                                onChange={(sel) => setSelectedLangs(sel ? sel.map(o => o.value) : [])}
-                                placeholder="Search and select languages…"
-                                noOptionsMessage={() => 'No language'}
-                                styles={{
-                                    ...reactSelectStyles,
-                                    multiValue: (base) => ({ ...base, background: 'var(--surface-2)', border: '1px solid var(--border)' }),
-                                    multiValueLabel: (base) => ({ ...base, color: 'var(--text)' }),
-                                    multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' } }),
-                                }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Top Family</label>
-                                <select className="form-control" name="f_lang_top_family" value={filters.f_lang_top_family} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
-                                    <option value="">All</option>
-                                    {options.opt_top_families.map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
+                                <label style={labelStyle}>Top Family</label>
+                                <Select
+                                    isMulti isSearchable closeMenuOnSelect={false}
+                                    options={toOpts(options.opt_top_families)}
+                                    value={toOpts(langFilters.top_family)}
+                                    onChange={(sel) => handleLangFamilyChange('top_family', sel ? sel.map(o => o.value) : [])}
+                                    placeholder="All"
+                                    styles={multiSelectStyles}
+                                />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Subfamily</label>
-                                <select className="form-control" name="f_lang_family" value={filters.f_lang_family} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
-                                    <option value="">All</option>
-                                    {options.opt_families.map(f => <option key={f} value={f}>{f}</option>)}
-                                </select>
+                                <label style={labelStyle}>Subfamily</label>
+                                <Select
+                                    isMulti isSearchable closeMenuOnSelect={false}
+                                    options={toOpts(familyOpts)}
+                                    value={toOpts(langFilters.family)}
+                                    onChange={(sel) => handleLangFamilyChange('family', sel ? sel.map(o => o.value) : [])}
+                                    placeholder="All"
+                                    styles={multiSelectStyles}
+                                />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Group</label>
-                                <select className="form-control" name="f_lang_grp" value={filters.f_lang_grp} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
-                                    <option value="">All</option>
-                                    {options.opt_groups.map(g => <option key={g} value={g}>{g}</option>)}
-                                </select>
+                                <label style={labelStyle}>Group</label>
+                                <Select
+                                    isMulti isSearchable closeMenuOnSelect={false}
+                                    options={toOpts(groupOpts)}
+                                    value={toOpts(langFilters.grp)}
+                                    onChange={(sel) => handleLangFamilyChange('grp', sel ? sel.map(o => o.value) : [])}
+                                    placeholder="All"
+                                    styles={multiSelectStyles}
+                                />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Historical</label>
-                                <select className="form-control" name="f_lang_hist" value={filters.f_lang_hist} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
+                                <label style={labelStyle}>Historical</label>
+                                <select
+                                    className="form-control"
+                                    value={langFilters.historical}
+                                    onChange={(e) => setLangFilters(prev => ({ ...prev, historical: e.target.value }))}
+                                    style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}
+                                >
                                     <option value="all">Both</option>
                                     <option value="yes">Only Historical</option>
                                     <option value="no">Only Non-Historical</option>
                                 </select>
                             </div>
                         </div>
+
+                        {/* Aggiungi singole lingue fuori dalle famiglie selezionate */}
+                        <div style={{ marginBottom: '0.75rem' }}>
+                            <label style={labelStyle}>Add specific languages</label>
+                            <Select
+                                isMulti isSearchable closeMenuOnSelect={false}
+                                options={addLangOptions}
+                                value={addLangValue}
+                                onChange={(sel) => setAddedLangs(sel ? sel.map(o => o.value) : [])}
+                                placeholder="Add languages outside the selected families…"
+                                noOptionsMessage={() => 'No language to add'}
+                                styles={multiSelectStyles}
+                            />
+                        </div>
+
+                        {/* Lista "lingue in selezione": checkbox per escludere/includere */}
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                                <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>
+                                    Languages selected ({resolvedLangIds.length}{candidateLangs.length !== resolvedLangIds.length ? ` of ${candidateLangs.length}` : ''})
+                                </label>
+                                <input
+                                    type="search"
+                                    placeholder="Search..."
+                                    value={langPickFilter}
+                                    onChange={(e) => setLangPickFilter(e.target.value)}
+                                    style={{ flex: '1 1 120px', minWidth: '120px', padding: '0.35rem 0.5rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                                />
+                            </div>
+                            <div style={{ maxHeight: '5rem', overflow: 'auto', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.35rem 0.5rem' }}>
+                                {candidateLangs.length === 0 ? (
+                                    <div className="small muted" style={{ padding: '0.5rem' }}>
+                                        No language matches the selected families. Adjust the filters above or add specific languages.
+                                    </div>
+                                ) : visibleCandidateLangs.length === 0 ? (
+                                    <div className="small muted" style={{ padding: '0.5rem' }}>No language matches “{langPickFilter}”.</div>
+                                ) : visibleCandidateLangs.map(l => {
+                                    const included = !excludedSet.has(l.id);
+                                    return (
+                                        <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.15rem 0', cursor: 'pointer', fontSize: '0.85rem', opacity: included ? 1 : 0.5 }}>
+                                            <input type="checkbox" checked={included} onChange={() => toggleLangIncluded(l.id)} />
+                                            <span style={{ fontWeight: 700, minWidth: '3rem' }}>{l.id}</span>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</span>
+                                            {!baseIdSet.has(l.id) && (
+                                                <span className="status" style={{ fontSize: '0.65rem', padding: '0 0.35rem', marginLeft: 'auto', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>added</span>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Filtri Specifici (Params/Questions) */}
                     <div style={{ flex: '1 1 300px' }}>
-                        {/* SEARCH ALL: titolo gemello di "Language Filters" con la barra
-                            di ricerca globale subito sotto (filtra le righe lato client).
-                            Stessa altezza della tendina lingue a sinistra -> barre allineate. */}
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
-                            Search all
+                        <span style={sectionTitleStyle}>
+                            {view === 'params' ? 'Parameter Filters' : 'Question Filters'}
                         </span>
-                        <div style={{ marginBottom: '0.85rem' }}>
-                            <input
-                                type="search"
-                                placeholder={view === 'params' ? 'Search ID, name, conditions...' : 'Search Q.ID, text, parameter...'}
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                style={{ width: '100%', height: '38px', padding: '0 0.6rem', fontSize: '0.85rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
-                            />
-                        </div>
 
                         {/* Sezione che cambia col toggle Param/Question: contorno
-                            tratteggiato per distinguerla dal resto. */}
+                            tratteggiato per distinguerla dal resto (il titolo è
+                            quello della colonna, qui sopra). */}
                         <div style={{ border: '1px dashed var(--border)', borderRadius: '6px', padding: '0.6rem 0.7rem' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: '0.6rem', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' }}>
-                                {view === 'params' ? 'Parameters Filters' : 'Questions Filters'}
-                            </span>
-
                             <div style={{ display: 'grid', gridTemplateColumns: view === 'params' ? 'repeat(3, 1fr)' : '1fr 1fr', gap: '0.75rem' }}>
                             {view === 'params' ? (
                                 <>
@@ -546,6 +740,13 @@ export default function TableA() {
                 }}>
                     <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(filteredRows.map(r => r.item.id))}>Select All</button>
                     <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows([])}>Deselect All</button>
+                    <input
+                        type="search"
+                        placeholder={view === 'params' ? 'Search ID, name, conditions...' : 'Search Q.ID, text, parameter...'}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{ flex: '0 1 300px', minWidth: '160px', padding: '0.4rem 0.6rem', fontSize: '0.8rem', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                    />
                     <span className="small muted" style={{ marginLeft: 'auto' }}>
                         {search
                             ? `Showing ${filteredRows.length} of ${matrixData.rows.length} rows`
@@ -616,11 +817,16 @@ export default function TableA() {
                                                 // (testo rosso) e da "valore +" (testo verde).
                                                 background: cell.is_incomplete ? 'rgba(220, 53, 69, 0.15)' : undefined,
                                             }}
-                                            title={cell.is_incomplete ? 'Parameter incomplete or flagged unsure for this language' : undefined}
+                                            title={
+                                                cell.is_incomplete ? 'Parameter incomplete or flagged unsure for this language'
+                                                : (cell.val === '0' && cell.init === '+') ? 'Final value 0 (initial value was +, zeroed by the implicational condition)'
+                                                : undefined
+                                            }
                                         >
                                             {cell.val ? (
                                                 <Link to={`/languages/${cell.lang_id}/data#${view === 'questions' ? 'q_' : ''}${row.item.id}`} style={{ textDecoration: 'none', color: cell.val === '-' ? '#dc3545' : cell.val === '+' ? '#28a745' : 'inherit' }}>
-                                                    {cell.val}
+                                                    {/* Dettaglio visivo: 0 con initial '+' → "0+" (solo a schermo; export e script restano 0) */}
+                                                    {(cell.val === '0' && cell.init === '+') ? '0+' : cell.val}
                                                 </Link>
                                             ) : (
                                                 <span style={{ opacity: 0.3 }}>—</span>
