@@ -44,7 +44,8 @@ from routers import (auth,
                      recompute,
                      archived_questions,
                      whats_new,
-                     email)
+                     email,
+                     presence)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
@@ -162,3 +163,4 @@ app.include_router(recompute.router)
 app.include_router(archived_questions.router)
 app.include_router(whats_new.router)
 app.include_router(email.router)
+app.include_router(presence.router)

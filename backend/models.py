@@ -53,6 +53,33 @@ class PasswordResetToken(Base):
     user = relationship("User")
 
 
+class EditingSession(Base):
+    """Presence effimera per l'avviso "qualcun altro sta modificando".
+
+    Una riga per (entity_type, entity_id, user_id): quando un utente apre un
+    form di modifica, il client batte un heartbeat che aggiorna `last_heartbeat`.
+    Un utente e' considerato "attivo" su un'entita' se il suo heartbeat e'
+    recente (entro un TTL di pochi decine di secondi).
+
+    GDPR/privacy: la tabella e' deliberatamente EFFIMERA e ANONIMA verso gli
+    altri utenti. `user_id` serve solo lato server per non contare l'utente
+    stesso e per deduplicare: l'identita' NON viene mai esposta agli altri (gli
+    endpoint restituiscono solo un conteggio). Le righe scadute vengono ripulite
+    a ogni heartbeat, quindi non resta uno storico di "chi-editava-cosa-quando".
+    """
+    __tablename__ = "editing_sessions"
+    id = Column(Integer, primary_key=True)
+    entity_type = Column(String(20), nullable=False)
+    entity_id = Column(String(40), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    last_heartbeat = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('entity_type', 'entity_id', 'user_id', name='uq_editing_session'),
+        Index('ix_editing_session_entity', 'entity_type', 'entity_id'),
+    )
+
+
 # ==========================================
 # 1.bis DOCUMENTI LEGALI E TRACCIAMENTO ACCETTAZIONI (GDPR + art. 1341 c.c.)
 #

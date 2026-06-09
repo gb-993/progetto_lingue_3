@@ -6,6 +6,7 @@ import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import Drawer from '../../components/Drawer';
 import TransferDataModal from '../questions/TransferDataModal';
+import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -348,6 +349,10 @@ export default function ParameterForm() {
     const [deactivateStatsLoading, setDeactivateStatsLoading] = useState(false);
     const [transferForId, setTransferForId] = useState(null);
 
+    // Presence anonima: numero di ALTRI utenti che stanno modificando questo
+    // stesso parametro adesso (solo in edit). Pill discreta in header.
+    const othersEditing = usePresence('parameter', id, isEditMode && !!id);
+
     const doToggleQuestionActive = async (questionId) => {
         try {
             await api.patch(`/api/admin/questions/${questionId}/toggle-active`);
@@ -457,7 +462,21 @@ export default function ParameterForm() {
                 <div className="card">
                     <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                         <h2 style={{margin: 0}}>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            {othersEditing > 0 && (
+                                <span
+                                    title="Another user is editing this parameter right now. The last save wins, so coordinate to avoid overwriting each other."
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                        fontSize: '0.76rem', color: '#664d03',
+                                        background: '#fff3cd', border: '1px solid #ffe69c',
+                                        borderRadius: '999px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    <span className="presence-dot" aria-hidden="true" />
+                                    {othersEditing > 1 ? `${othersEditing} others editing` : 'Another user editing'}
+                                </span>
+                            )}
                             <DraftIndicator lastSavedAt={lastSavedAt} />
                             {isEditMode && (
                                 <button

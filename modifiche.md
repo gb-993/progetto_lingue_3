@@ -22,9 +22,9 @@
 - [ ] Aggiungere un pulsante che mostri i dati di un certo parametro per ciascuna lingua. Tipo il contrario delle pagine lingue data, cioè invece di avere una lingua e sotto tutti i parametri, avere un parametro e sotto tutte le lingue, per poter cambiare i dati legati a quel parametro senza dover entrare nella pagina di ogni lingua
 
 ## PARAMETERS EDIT
-- [ ] Inserire un campo aggiuntivo (casella di testo bianca "Admin remarks") sotto a Long Description
-- [ ] Alert se due utenti stanno modificando un parametro/question contemporaneamente
-- [ ] Quando elimino una question aggiungere la possibilità di trasferire i dati su una question a scelta
+- [x] Inserire un campo aggiuntivo (casella di testo bianca "Admin remarks") sotto a Long Description
+- [x] Alert se due utenti stanno modificando un parametro/question contemporaneamente
+- [x] Quando elimino una question aggiungere la possibilità di trasferire i dati su una question a scelta
 
 ## GRAPH
 

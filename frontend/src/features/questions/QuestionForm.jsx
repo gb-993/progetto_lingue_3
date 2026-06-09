@@ -7,6 +7,7 @@ import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import TransferDataModal from './TransferDataModal';
+import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -234,6 +235,10 @@ export default function QuestionForm({ mode = 'page' }) {
     // Modale "Transfer data to another question": sposta i dati linguistici di
     // questa question su una destinazione a scelta (componente riutilizzabile).
     const [transferOpen, setTransferOpen] = useState(false);
+
+    // Presence anonima: numero di ALTRI utenti che stanno modificando questa
+    // stessa question adesso (solo in edit). Mostra una pill discreta in header.
+    const othersEditing = usePresence('question', id, isEditMode && !!id);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -758,7 +763,23 @@ export default function QuestionForm({ mode = 'page' }) {
             <div className="card">
                 <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
                     <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
-                    <DraftIndicator lastSavedAt={lastSavedAt} />
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        {othersEditing > 0 && (
+                            <span
+                                title="Another user is editing this question right now. The last save wins, so coordinate to avoid overwriting each other."
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                    fontSize: '0.76rem', color: '#664d03',
+                                    background: '#fff3cd', border: '1px solid #ffe69c',
+                                    borderRadius: '999px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <span className="presence-dot" aria-hidden="true" />
+                                {othersEditing > 1 ? `${othersEditing} others editing` : 'Another user editing'}
+                            </span>
+                        )}
+                        <DraftIndicator lastSavedAt={lastSavedAt} />
+                    </div>
                 </header>
 
                 {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
