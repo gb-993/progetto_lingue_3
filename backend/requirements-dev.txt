@@ -1,0 +1,7 @@
+# Dipendenze SOLO per sviluppo/test. Non vengono installate nell'immagine
+# Docker di produzione (il Dockerfile usa solo requirements.txt).
+# Uso: pip install -r requirements.txt -r requirements-dev.txt
+# I test girano su SQLite in-memory (vedi tests/conftest.py), quindi non
+# serve un Postgres per eseguirli.
+pytest
+httpx

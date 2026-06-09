@@ -17,6 +17,17 @@ services:
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Healthcheck: "container partito" non vuol dire "Postgres pronto".
+    # pg_isready risponde ok solo quando il server accetta connessioni;
+    # il backend (sotto) aspetta questo stato prima di partire.
+    # $$ = escape di compose: la variabile viene letta dall'env del
+    # container a runtime, non interpolata dal .env al parse del file.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   backend:
@@ -35,8 +46,11 @@ services:
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --reload
+    # service_healthy: aspetta il healthcheck del db (pg_isready), non solo
+    # che il container sia partito. Evita errori di connessione al boot.
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:

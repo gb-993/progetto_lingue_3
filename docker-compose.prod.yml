@@ -24,6 +24,18 @@ services:
       PGTZ: UTC
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Healthcheck: "container partito" non vuol dire "Postgres pronto".
+    # pg_isready risponde ok solo quando il server accetta connessioni; il
+    # backend aspetta questo stato (depends_on: service_healthy) prima di
+    # lanciare `alembic upgrade head`, che al primo deploy partiva in race
+    # con l'init del DB. $$ = escape di compose: la variabile viene letta
+    # dall'env del container a runtime, non interpolata al parse del file.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -69,8 +81,12 @@ services:
     # lifespan di FastAPI (bootstrap_first_admin) crasha al primo avvio
     # perche' la tabella users non esiste ancora -> backend in restart loop.
     command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"
+    # service_healthy: aspetta il healthcheck del db (pg_isready) prima di
+    # partire, cosi' alembic trova un Postgres gia' pronto ad accettare
+    # connessioni anche al primissimo deploy (volume vuoto -> initdb lento).
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
     # Health check: pinga /healthz ogni 30s. start_period: tempo di
     # boot di uvicorn + lifespan (bootstrap admin, ecc.) prima che

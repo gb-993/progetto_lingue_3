@@ -180,7 +180,7 @@ def test_unknown_param_id_not_created(db_session):
     # Un errore registrato
     assert len(report.errors) == 1
     assert report.errors[0].sheet == "Parameters"
-    assert "non esiste" in report.errors[0].reason
+    assert "does not exist" in report.errors[0].reason
     assert report.errors[0].value == "FGB"
 
 
@@ -196,7 +196,7 @@ def test_unknown_question_id_not_created(db_session):
     db_session.commit()
 
     assert db_session.query(models.Question).filter_by(id="FGM_99").first() is None
-    assert any("FGM_99" in e.value and "non esiste" in e.reason for e in report.errors)
+    assert any("FGM_99" in e.value and "does not exist" in e.reason for e in report.errors)
 
 
 def test_unknown_motivation_code_not_created(db_session):
@@ -211,7 +211,7 @@ def test_unknown_motivation_code_not_created(db_session):
     db_session.commit()
 
     assert db_session.query(models.Motivation).filter_by(code="MOT_NEW").first() is None
-    assert any(e.value == "MOT_NEW" and "non esiste" in e.reason for e in report.errors)
+    assert any(e.value == "MOT_NEW" and "does not exist" in e.reason for e in report.errors)
 
 
 # ============================================================================
@@ -354,7 +354,7 @@ def test_cascade_qam_when_motivation_failed(db_session):
     # Errore cascade sulla QAM
     qam_errors = [e for e in report.errors if e.sheet == "QuestionAllowedMotivations"]
     assert len(qam_errors) == 1
-    assert "errore upstream" in qam_errors[0].reason
+    assert "upstream error" in qam_errors[0].reason
 
 
 def test_qam_replaces_links_for_questions_in_file(db_session):
@@ -427,7 +427,7 @@ def test_param_invalid_condition_skipped(db_session):
 
     p_after = db_session.query(models.ParameterDef).filter_by(id="FGM").one()
     assert p_after.name == name_before  # NON aggiornato per errore di sintassi
-    assert any("Sintassi" in e.reason for e in report.errors)
+    assert any("Wrong formula syntax" in e.reason for e in report.errors)
 
 
 # ============================================================================
