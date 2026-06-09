@@ -82,6 +82,13 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
         const t = setTimeout(() => setRecentlyCopiedTempId(null), 1500);
         return () => clearTimeout(t);
     }, [recentlyCopiedTempId]);
+    // Flash "✓ Copied N" temporaneo sul bottone "Copy all" (0 = spento).
+    const [copiedAllCount, setCopiedAllCount] = useState(0);
+    useEffect(() => {
+        if (!copiedAllCount) return;
+        const t = setTimeout(() => setCopiedAllCount(0), 1500);
+        return () => clearTimeout(t);
+    }, [copiedAllCount]);
 
     // Validazione base in tempo reale per gli esempi: anche 'unsure' richiede 2 esempi.
     useEffect(() => {
@@ -131,26 +138,51 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
     };
 
     const handleCopyExample = (ex) => {
-        copyToClipboard(ex, currentLangId, question.id);
+        copyToClipboard([ex], currentLangId, question.id);
         setRecentlyCopiedTempId(ex.tempId);
     };
 
-    // Incolla l'esempio copiato come nuovo esempio in questa question. Non
-    // svuota il clipboard: il linguista può fare paste in più question di fila.
+    // Vero se l'esempio ha almeno un campo valorizzato (esclude le righe vuote).
+    const exampleHasContent = (ex) =>
+        [ex.textarea, ex.transliteration, ex.gloss, ex.translation, ex.reference]
+            .some(v => (v || '').trim() !== '');
+
+    // Copia in un colpo solo tutti gli esempi non vuoti di questa question.
+    const handleCopyAllExamples = () => {
+        const nonEmpty = value.examples.filter(exampleHasContent);
+        if (nonEmpty.length === 0) return;
+        copyToClipboard(nonEmpty, currentLangId, question.id);
+        setCopiedAllCount(nonEmpty.length);
+    };
+
+    // Sposta un esempio su (dir=-1) o giù (dir=+1) scambiandolo col vicino.
+    const handleMoveExample = (tempId, dir) => {
+        const idx = value.examples.findIndex(ex => ex.tempId === tempId);
+        const target = idx + dir;
+        if (idx < 0 || target < 0 || target >= value.examples.length) return;
+        const next = [...value.examples];
+        [next[idx], next[target]] = [next[target], next[idx]];
+        onChange({ examples: next });
+    };
+
+    // Incolla in coda TUTTI gli esempi copiati come nuovi esempi in questa
+    // question. Non svuota il clipboard: il linguista può fare paste in più
+    // question di fila.
     const handlePasteFromClipboard = () => {
-        if (!copied) return;
+        if (!copied || !copied.examples?.length) return;
+        const base = Date.now();
         onChange({
             examples: [
                 ...value.examples,
-                {
-                    tempId: Date.now(),
+                ...copied.examples.map((ex, i) => ({
+                    tempId: base + i,
                     id: null,
-                    textarea: copied.textarea || '',
-                    transliteration: copied.transliteration || '',
-                    gloss: copied.gloss || '',
-                    translation: copied.translation || '',
-                    reference: copied.reference || ''
-                }
+                    textarea: ex.textarea || '',
+                    transliteration: ex.transliteration || '',
+                    gloss: ex.gloss || '',
+                    translation: ex.translation || '',
+                    reference: ex.reference || ''
+                }))
             ]
         });
     };
@@ -354,6 +386,28 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
                                         <button
                                             type="button"
+                                            onClick={() => handleMoveExample(ex.tempId, -1)}
+                                            disabled={isReadOnly || index === 0}
+                                            className="btn btn--small"
+                                            style={{ borderColor: 'transparent', padding: '0.2rem 0.45rem' }}
+                                            title="Move this example up"
+                                            aria-label="Move example up"
+                                        >
+                                            ▲
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleMoveExample(ex.tempId, 1)}
+                                            disabled={isReadOnly || index === value.examples.length - 1}
+                                            className="btn btn--small"
+                                            style={{ borderColor: 'transparent', padding: '0.2rem 0.45rem' }}
+                                            title="Move this example down"
+                                            aria-label="Move example down"
+                                        >
+                                            ▼
+                                        </button>
+                                        <button
+                                            type="button"
                                             onClick={() => handleCopyExample(ex)}
                                             disabled={isReadOnly}
                                             className="btn btn--small"
@@ -416,9 +470,9 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         disabled={isReadOnly}
                                         className="btn btn--small"
                                         style={{ borderColor: 'transparent', color: '#16a34a', fontWeight: 600 }}
-                                        title="Paste the copied example as a new example here (clipboard remains, you can paste into more questions)"
+                                        title="Paste the copied example(s) as new examples here (clipboard remains, you can paste into more questions)"
                                     >
-                                        Paste here
+                                        {copied.examples.length > 1 ? 'Paste all here' : 'Paste here'}
                                     </button>
                                     <button
                                         type="button"
@@ -431,31 +485,49 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     </button>
                                 </div>
                                 <h4 style={{ marginTop: 0, marginBottom: '0.85rem', fontSize: '0.9rem', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                    Example in clipboard{copied.sourceQuestionId ? ` · from ${copied.sourceQuestionId}` : ''}
+                                    {copied.examples.length > 1
+                                        ? `${copied.examples.length} examples in clipboard`
+                                        : 'Example in clipboard'}
+                                    {copied.sourceQuestionId ? ` · from ${copied.sourceQuestionId}` : ''}
                                 </h4>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
-                                    <div>
-                                        <label className="small">Example text</label>
-                                        <div style={clipboardFieldStyle}>{copied.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                {/* Un solo esempio: anteprima completa a 5 campi. Più esempi:
+                                    lista compatta numerata col solo testo, per non gonfiare il banner. */}
+                                {copied.examples.length === 1 ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
+                                        <div>
+                                            <label className="small">Example text</label>
+                                            <div style={clipboardFieldStyle}>{copied.examples[0].textarea || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                        </div>
+                                        <div>
+                                            <label className="small">Transliteration</label>
+                                            <div style={clipboardFieldStyle}>{copied.examples[0].transliteration || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                        </div>
+                                        <div>
+                                            <label className="small">Gloss</label>
+                                            <div style={clipboardFieldStyle}>{copied.examples[0].gloss || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                        </div>
+                                        <div>
+                                            <label className="small">English Translation</label>
+                                            <div style={clipboardFieldStyle}>{copied.examples[0].translation || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                        </div>
+                                        <div style={{ gridColumn: '1 / -1' }}>
+                                            <label className="small">Reference</label>
+                                            <div style={{ ...clipboardFieldStyle, minHeight: 'auto' }}>{copied.examples[0].reference || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="small">Transliteration</label>
-                                        <div style={clipboardFieldStyle}>{copied.transliteration || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                        {copied.examples.map((ex, i) => (
+                                            <div key={i} style={{ ...clipboardFieldStyle, minHeight: 'auto', display: 'flex', gap: '0.6rem', alignItems: 'baseline' }}>
+                                                <span style={{ fontWeight: 700, color: '#dc2626', flex: '0 0 auto' }}>#{i + 1}</span>
+                                                <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                                    {ex.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>(empty)</span>}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <label className="small">Gloss</label>
-                                        <div style={clipboardFieldStyle}>{copied.gloss || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
-                                    </div>
-                                    <div>
-                                        <label className="small">English Translation</label>
-                                        <div style={clipboardFieldStyle}>{copied.translation || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
-                                    </div>
-                                    <div style={{ gridColumn: '1 / -1' }}>
-                                        <label className="small">Reference</label>
-                                        <div style={{ ...clipboardFieldStyle, minHeight: 'auto' }}>{copied.reference || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -463,6 +535,18 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                             <button type="button" onClick={handleAddExample} disabled={isReadOnly} className="btn">
                                 + Add another example
                             </button>
+                            {value.examples.some(exampleHasContent) && (
+                                <button
+                                    type="button"
+                                    onClick={handleCopyAllExamples}
+                                    disabled={isReadOnly}
+                                    className="btn"
+                                    style={{ color: copiedAllCount ? '#16a34a' : 'inherit', borderColor: copiedAllCount ? '#16a34a' : undefined }}
+                                    title="Copy all examples of this question to the clipboard (paste them into another question of this language)"
+                                >
+                                    {copiedAllCount ? `✓ Copied ${copiedAllCount}` : 'Copy all'}
+                                </button>
+                            )}
                             <div style={{ flex: '1 1 280px', minWidth: '260px' }}>
                                 <AsyncSelect
                                     isClearable

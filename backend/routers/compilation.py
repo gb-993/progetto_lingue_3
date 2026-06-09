@@ -283,6 +283,10 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                     "response_text": ans.response_text or "",
                     "comments": ans.comments or "",
                     "motivation_ids": [m.motivation_id for m in ans.answer_motivations],
+                    # Ordine per id = ordine di inserimento. Al save gli esempi
+                    # vengono cancellati e ricreati nell'ordine inviato dal client,
+                    # quindi gli id crescenti riflettono il riordino fatto in UI
+                    # (frecce su/giù): ordinando per id qui l'ordine resiste al refresh.
                     "examples": [{
                         "id": ex.id,
                         "number": ex.number or "",
@@ -291,7 +295,7 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                         "gloss": ex.gloss or "",
                         "translation": ex.translation or "",
                         "reference": ex.reference or "",
-                    } for ex in ans.examples]
+                    } for ex in sorted(ans.examples, key=lambda e: e.id)]
                 }
             param_data["questions"].append(q_data)
         result["parameters"].append(param_data)

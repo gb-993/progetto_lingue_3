@@ -11,8 +11,8 @@
 ## LISTA LINGUE
 
 ## LINGUE DATA
-- [ ] Poter copiare da una question a un'altra tutti gli esempi e non solo uno a uno
-- [ ] Poter cambiare l'ordine degli esempi già inseriti per una question (tipo trascinandoli?)
+- [x] Poter copiare da una question a un'altra tutti gli esempi e non solo uno a uno
+- [x] Poter cambiare l'ordine degli esempi già inseriti per una question (tipo trascinandoli?)
 
 ## DEBUG PARAMETRI
 - [ ] Se Initial value è + e Final value è 0, mostrare Final value come 0+. Idealmente si dovrebbe vedere 0+ per questi parametri anche nella Table A, ma poi negli script 0+ dovrebbe essere equiparato a 0

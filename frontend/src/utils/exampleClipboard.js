@@ -3,14 +3,16 @@ import { useState, useEffect, useCallback } from 'react';
 /**
  * Clipboard interno per esempi linguistici della pagina di compilazione.
  *
- * Slot unico (l'ultimo "Copy" sovrascrive). Persiste in localStorage così
- * sopravvive al refresh ed è condiviso tra tab/finestre della stessa origin
+ * Slot unico (l'ultimo "Copy"/"Copy all" sovrascrive) ma può contenere PIÙ
+ * esempi: `copy()` accetta un array, così si può copiare un singolo esempio
+ * oppure tutti quelli di una question in un colpo solo. Persiste in localStorage
+ * così sopravvive al refresh ed è condiviso tra tab/finestre della stessa origin
  * (utile se il linguista apre più finestre della stessa lingua per copiare
  * da una all'altra). Niente TTL: la pulizia avviene solo su:
  *   - "Clear" manuale dal banner Paste
  *   - cambio di lingua (gestito in LanguageData via `clearExampleClipboard`)
  *
- * Un esempio nel clipboard è sempre legato alla `langId` di origine: il
+ * Gli esempi nel clipboard sono sempre legati alla `langId` di origine: il
  * banner Paste compare solo nella stessa lingua, così non si rischia di
  * incollare frammenti di una lingua dentro un'altra.
  */
@@ -21,12 +23,24 @@ const STORAGE_KEY = 'pcm_example_clipboard';
 // pagina non lo saprebbero mai senza questo broadcast intra-tab.
 const LOCAL_EVENT = 'pcm:exampleClipboardChange';
 
+// Riduce un esempio ai soli 5 campi linguistici (scarta tempId/id e altro).
+const normalizeExample = (ex) => ({
+    textarea: ex?.textarea || '',
+    transliteration: ex?.transliteration || '',
+    gloss: ex?.gloss || '',
+    translation: ex?.translation || '',
+    reference: ex?.reference || '',
+});
+
 const readFromStorage = () => {
     try {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         if (!raw) return null;
         const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object' || !parsed.langId) return null;
+        // Forma valida = oggetto con langId e un array `examples` non vuoto.
+        // Le vecchie voci a esempio singolo (senza `examples`) vengono ignorate.
+        if (!parsed || typeof parsed !== 'object' || !parsed.langId
+            || !Array.isArray(parsed.examples) || parsed.examples.length === 0) return null;
         return parsed;
     } catch {
         return null;
@@ -75,16 +89,11 @@ export default function useExampleClipboard() {
         };
     }, []);
 
-    const copy = useCallback((example, langId, sourceQuestionId) => {
-        writeToStorage({
-            langId,
-            sourceQuestionId,
-            textarea: example.textarea || '',
-            transliteration: example.transliteration || '',
-            gloss: example.gloss || '',
-            translation: example.translation || '',
-            reference: example.reference || '',
-        });
+    // `examples` può essere un singolo esempio o un array (Copy vs Copy all).
+    const copy = useCallback((examples, langId, sourceQuestionId) => {
+        const list = (Array.isArray(examples) ? examples : [examples]).map(normalizeExample);
+        if (list.length === 0) return;
+        writeToStorage({ langId, sourceQuestionId, examples: list });
         // Niente setCopied diretto: l'evento LOCAL_EVENT lo aggiorna in tutti
         // i hook montati nella tab (incluso questo).
     }, []);
