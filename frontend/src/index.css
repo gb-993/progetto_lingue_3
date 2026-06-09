@@ -2066,6 +2066,15 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   border-color: #135f3d;
 }
 
+/* Variante "wide" del wizard: stessi colori/stati di .param-btn ma larghezza
+   adattiva, così i quadratini possono ospitare un id più lungo del quadrato
+   fisso 2.5rem (es. l'id della lingua nella vista parametro → lingue). */
+.param-nav--wide .param-btn {
+  width: auto;
+  min-width: 2.5rem;
+  padding: 0 0.6rem;
+}
+
 /* ParameterBlock: card di sfondo + righe di "finalizzazione" */
 .parameter-block {
   background: var(--surface-alt);

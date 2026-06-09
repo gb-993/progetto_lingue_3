@@ -664,6 +664,83 @@ def get_parameter_usage(id: str, db: Session = Depends(get_db), current_user: mo
     ).all()
     return [{"id": p.id, "name": p.name} for p in used_in if p.id != id]
 
+
+@router.get("/{param_id}/by-language")
+def get_parameter_by_language(
+    param_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Riepilogo di UN parametro su TUTTE le lingue: la vista "inversa" della
+    pagina di compilazione (un parametro, sotto tutte le lingue). Per ogni lingua
+    restituisce lo stato workflow, quante question del parametro hanno risposta
+    yes/no, se esistono dati e il flag unsure. Niente risposte/esempi qui: la
+    pagina admin li carica pigramente per la singola lingua via
+    /api/languages/{lang}/parameters/{param}/block. Admin-only.
+    """
+    parameter = (
+        db.query(models.ParameterDef)
+        .filter(models.ParameterDef.id == param_id)
+        .options(selectinload(models.ParameterDef.questions))
+        .first()
+    )
+    if not parameter:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+
+    active_qids = [q.id for q in parameter.questions if q.is_active]
+    total_q = len(active_qids)
+
+    # answered = question con risposta yes/no (coerente col reader di compilazione,
+    # dove 'unsure' non conta come completata); with_response = qualsiasi risposta
+    # non nulla (serve a distinguere "vuoto" da "iniziato").
+    answered_map: dict[str, int] = {}
+    with_response_map: dict[str, int] = {}
+    if active_qids:
+        rows = (
+            db.query(
+                models.Answer.language_id,
+                func.coalesce(func.sum(case((models.Answer.response_text.in_(["yes", "no"]), 1), else_=0)), 0),
+                func.coalesce(func.sum(case((models.Answer.response_text.isnot(None), 1), else_=0)), 0),
+            )
+            .filter(models.Answer.question_id.in_(active_qids))
+            .group_by(models.Answer.language_id)
+            .all()
+        )
+        for lid, answered, with_resp in rows:
+            answered_map[lid] = int(answered or 0)
+            with_response_map[lid] = int(with_resp or 0)
+
+    unsure_rows = (
+        db.query(models.LanguageParameterStatus.language_id, models.LanguageParameterStatus.is_unsure)
+        .filter(models.LanguageParameterStatus.parameter_id == param_id)
+        .all()
+    )
+    unsure_map = {lid: bool(u) for lid, u in unsure_rows}
+
+    languages = db.query(models.Language).order_by(models.Language.position, models.Language.id).all()
+    langs_out = [{
+        "id": l.id,
+        "name_full": l.name_full,
+        "status": l.status,
+        "top_level_family": l.top_level_family or "",
+        "family": l.family or "",
+        "grp": l.grp or "",
+        "answered": answered_map.get(l.id, 0),
+        "with_response": with_response_map.get(l.id, 0),
+        "is_unsure": unsure_map.get(l.id, False),
+    } for l in languages]
+
+    return {
+        "parameter": {
+            "id": parameter.id,
+            "name": parameter.name,
+            "short_description": parameter.short_description or "",
+            "is_active": parameter.is_active,
+            "total_questions": total_q,
+        },
+        "languages": langs_out,
+    }
+
 # ==========================================
 # ENDPOINT LOOKUPS
 # ==========================================

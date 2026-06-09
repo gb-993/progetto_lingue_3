@@ -839,7 +839,20 @@ button.btn {
 
 .btn:hover{ transform:translateY(-1px) }
 .btn:active{ transform:translateY(0) }
-.btn[disabled], .btn[aria-disabled="true"]{ opacity:.6; pointer-events:none }
+/* Stato disabilitato leggibile: palette grigia muta uniforme + cursore
+   not-allowed, invece di sbiadire col solo opacity (che, sommato al filtro
+   globale `saturate(.2)` su [disabled], rendeva il testo illeggibile —
+   soprattutto sui bottoni con colore di testo inline). `filter:none` annulla
+   quel filtro globale per i soli bottoni. */
+.btn[disabled], .btn[aria-disabled="true"]{
+  pointer-events:none;
+  cursor:not-allowed;
+  opacity:.85;
+  filter:none;
+  --btn-bg:var(--surface-2);
+  --btn-fg:var(--text-muted);
+  --btn-bd:var(--border);
+}
 .btn--primary{ --btn-bg:var(--brand); --btn-fg:#fff; --btn-bd:color-mix(in oklab, var(--brand) 75%, black) }
 .btn--bad{
   --btn-bg:var(--brand);
@@ -847,6 +860,19 @@ button.btn {
   --btn-bd:color-mix(in oklab, var(--brand) 75%, black);
 }
 .btn.btn-link{ background:transparent; border-color:transparent; padding:0 }
+
+/* Pallino giallo lampeggiante per l'avviso "un altro utente sta modificando".
+   Effimero e anonimo: segnala solo la presenza, senza nomi. */
+.presence-dot{
+  width:.7rem; height:.7rem; border-radius:50%;
+  background:#f5c518; flex:0 0 auto;
+  animation:presence-blink 1s ease-in-out infinite;
+}
+@keyframes presence-blink{
+  0%,100%{ opacity:1; box-shadow:0 0 0 0 rgba(245,197,24,.55); }
+  50%{ opacity:.35; box-shadow:0 0 0 5px rgba(245,197,24,0); }
+}
+@media (prefers-reduced-motion: reduce){ .presence-dot{ animation:none } }
 
 /* 7) Dashboard tiles */
 .dashboard-hero{ margin:0 0 1rem; text-align:center }
@@ -2038,6 +2064,15 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 :root[data-theme="dark"] .param-nav .param-btn.is-complete {
   background: #1f9b62;
   border-color: #135f3d;
+}
+
+/* Variante "wide" del wizard: stessi colori/stati di .param-btn ma larghezza
+   adattiva, così i quadratini possono ospitare un id più lungo del quadrato
+   fisso 2.5rem (es. l'id della lingua nella vista parametro → lingue). */
+.param-nav--wide .param-btn {
+  width: auto;
+  min-width: 2.5rem;
+  padding: 0 0.6rem;
 }
 
 /* ParameterBlock: card di sfondo + righe di "finalizzazione" */

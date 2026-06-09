@@ -392,6 +392,13 @@ export default function ParameterList() {
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                         <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                            <Link
+                                                to={`/admin/parameters/${param.id}/by-language`}
+                                                className="btn btn--primary"
+                                                title="Open this parameter across all languages (one square per language)"
+                                            >
+                                                Data
+                                            </Link>
                                             <button
                                                 type="button"
                                                 className="btn"

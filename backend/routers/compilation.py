@@ -301,6 +301,122 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
         result["parameters"].append(param_data)
     return result
 
+
+@router.get("/{lang_id}/parameters/{param_id}/block")
+def get_param_block_for_language(
+    lang_id: str,
+    param_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_admin),
+):
+    """Dati di compilazione di UN parametro per UNA lingua, nello stesso formato
+    del singolo blocco prodotto da `get_language_compilation_data`.
+
+    Serve la pagina admin "parametro → tutte le lingue": il blocco viene caricato
+    solo quando una riga-lingua viene espansa, così la lista resta leggera. Il
+    salvataggio riusa l'endpoint esistente `save_block` (con tutta la sua logica
+    di concorrenza ottimistica, validazione esempi e ricalcolo DAG). Admin-only:
+    l'admin può editare a prescindere dallo status della lingua e il salvataggio
+    non cambia lo status (coerente con l'override admin della pagina lingua).
+    """
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
+    if not language:
+        raise HTTPException(status_code=404, detail="Language not found")
+    parameter = (
+        db.query(models.ParameterDef)
+        .filter(models.ParameterDef.id == param_id)
+        .options(
+            selectinload(models.ParameterDef.questions)
+            .selectinload(models.Question.allowed_motivations)
+            .selectinload(models.QuestionAllowedMotivation.motivation)
+        )
+        .first()
+    )
+    if not parameter:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+
+    # Stesso ordinamento deterministico del reader principale.
+    active_questions = sorted(
+        (q for q in parameter.questions if q.is_active),
+        key=lambda x: (x.is_stop_question, x.id),
+    )
+    qids = [q.id for q in active_questions]
+    answers = []
+    if qids:
+        answers = (
+            db.query(models.Answer)
+            .filter(
+                models.Answer.language_id == language.id,
+                models.Answer.question_id.in_(qids),
+            )
+            .options(
+                selectinload(models.Answer.answer_motivations),
+                selectinload(models.Answer.examples),
+            )
+            .all()
+        )
+    ans_dict = {a.question_id: a for a in answers}
+
+    status_entry = db.query(models.LanguageParameterStatus).filter(
+        models.LanguageParameterStatus.language_id == language.id,
+        models.LanguageParameterStatus.parameter_id == param_id,
+    ).first()
+    is_unsure = status_entry.is_unsure if status_entry else False
+    admin_note = (status_entry.admin_note or "") if status_entry else ""
+
+    # Fingerprint del blocco = MAX(updated_at) delle risposte del parametro.
+    block_last_modified = None
+    for q in active_questions:
+        a = ans_dict.get(q.id)
+        if a is not None and a.updated_at is not None:
+            if block_last_modified is None or a.updated_at > block_last_modified:
+                block_last_modified = a.updated_at
+
+    param_data = {
+        "id": parameter.id,
+        "name": parameter.name,
+        "short_description": parameter.short_description,
+        "is_flagged": is_unsure,
+        "admin_note": admin_note,
+        "last_modified": block_last_modified.isoformat() if block_last_modified else None,
+        "questions": [],
+    }
+    for q in active_questions:
+        q_data = {
+            "id": q.id, "text": q.text, "instruction": q.instruction,
+            "instruction_yes": q.instruction_yes, "instruction_no": q.instruction_no,
+            "example_yes": q.example_yes, "help_info": q.help_info,
+            "allowed_motivations": [{"id": am.motivation.id, "label": am.motivation.label} for am in q.allowed_motivations],
+            "answer": None,
+        }
+        if q.id in ans_dict:
+            ans = ans_dict[q.id]
+            q_data["answer"] = {
+                "response_text": ans.response_text or "",
+                "comments": ans.comments or "",
+                "motivation_ids": [m.motivation_id for m in ans.answer_motivations],
+                "examples": [{
+                    "id": ex.id,
+                    "number": ex.number or "",
+                    "textarea": ex.textarea or "",
+                    "transliteration": ex.transliteration or "",
+                    "gloss": ex.gloss or "",
+                    "translation": ex.translation or "",
+                    "reference": ex.reference or "",
+                } for ex in sorted(ans.examples, key=lambda e: e.id)]
+            }
+        param_data["questions"].append(q_data)
+
+    return {
+        "language": {
+            "id": language.id,
+            "name_full": language.name_full,
+            "status": language.status,
+        },
+        "parameter": param_data,
+    }
+
+
 def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Optional[str]:
     """MAX(answer.updated_at) per le risposte di questo (lingua, parametro), in ISO 8601."""
     current_max = db.query(func.max(models.Answer.updated_at)).join(

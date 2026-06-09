@@ -30,6 +30,7 @@ import GlossaryForm from './features/glossary/GlossaryForm';
 import ParameterList from './features/parameters/ParameterList';
 import ParameterForm from './features/parameters/ParameterForm';
 import ParameterGraph from './features/parameters/ParameterGraph';
+import ParameterByLanguage from './features/parameters/ParameterByLanguage';
 import QuestionList from './features/questions/QuestionList';
 import QuestionForm from './features/questions/QuestionForm';
 import LanguageData from './features/compilation/LanguageData';
@@ -165,6 +166,9 @@ const router = createBrowserRouter([
                     { path: 'questions/:qid/edit', element: <QuestionForm mode="drawer" /> },
                 ],
             },
+            // Vista "inversa": un parametro, sotto tutte le lingue (scorciatoia
+            // admin per editare lo stesso parametro in molte lingue).
+            { path: 'admin/parameters/:id/by-language', element: <AdminRoute><Layout><ParameterByLanguage /></Layout></AdminRoute> },
 
             { path: 'admin/questions', element: <AdminRoute><Layout><QuestionList /></Layout></AdminRoute> },
             { path: 'admin/questions/add', element: <AdminRoute><Layout><QuestionForm /></Layout></AdminRoute> },
