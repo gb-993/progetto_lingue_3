@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
 export default function HowToCite() {
     const [contents, setContents] = useState({});
@@ -69,7 +70,7 @@ export default function HowToCite() {
                         >
                             {copyStatus.params}
                         </button>
-                        <div dangerouslySetInnerHTML={{ __html: paramsText }} />
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(paramsText) }} />
                     </div>
 
                     {isAdmin && (
@@ -106,7 +107,7 @@ export default function HowToCite() {
                         >
                             {copyStatus.data}
                         </button>
-                        <div dangerouslySetInnerHTML={{ __html: dataText }} />
+                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(dataText) }} />
                     </div>
 
                     {isAdmin && (

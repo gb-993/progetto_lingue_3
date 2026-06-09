@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../api'; // Sostituito axios
 import SegmentedToggle from '../../components/SegmentedToggle';
 
@@ -26,7 +25,6 @@ function getInitialTheme() {
 }
 
 export default function MyAccount() {
-    const navigate = useNavigate();
     const [profile, setProfile] = useState({ name: '', surname: '', email: '' });
     const [passwords, setPasswords] = useState({ old_password: '', new_password1: '', new_password2: '' });
     const [message, setMessage] = useState({ text: '', type: '' });

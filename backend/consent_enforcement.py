@@ -39,6 +39,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import models
 from auth import ALGORITHM, SECRET_KEY
 from database import SessionLocal
+from dependencies import resolve_user_from_sub
 
 
 logger = logging.getLogger(__name__)
@@ -105,11 +106,11 @@ class ConsentEnforcementMiddleware(BaseHTTPMiddleware):
         token = auth_header[7:]
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email = payload.get("sub")
+            sub = payload.get("sub")
         except JWTError:
             return await call_next(request)
 
-        if not email:
+        if not sub:
             return await call_next(request)
 
         # Nuova sessione DB ad hoc per il middleware (non possiamo riusare
@@ -117,7 +118,10 @@ class ConsentEnforcementMiddleware(BaseHTTPMiddleware):
         # close() in finally per evitare leak di connessioni al pool.
         db = SessionLocal()
         try:
-            user = db.query(models.User).filter(models.User.email == email).first()
+            # Stessa risoluzione di get_current_user (id nei token nuovi,
+            # email nei legacy): se divergessero, un token valido per gli
+            # endpoint potrebbe non essere riconosciuto qui e saltare il check.
+            user = resolve_user_from_sub(db, sub)
             if user is None:
                 return await call_next(request)
 

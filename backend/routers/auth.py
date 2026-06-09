@@ -53,11 +53,17 @@ def _hash_token(token: str) -> str:
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == req.email).first()
+    # Normalizza come fanno create_account e forgot_password: le email in DB
+    # sono salvate lowercase, senza questo "Mario@Unimore.it" non entrerebbe.
+    email = (req.email or "").strip().lower()
+    user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Wrong email or password")
 
-    access_token = auth.create_access_token(data={"sub": user.email, "role": user.role})
+    # sub = id utente (come stringa, lo richiede lo standard JWT), NON l'email:
+    # l'id non cambia mai, quindi cambiare email dal profilo non slogga piu'.
+    # I token vecchi con sub=email restano validi (vedi resolve_user_from_sub).
+    access_token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "name": user.name}
 
 
@@ -93,6 +99,21 @@ def forgot_password(
     token_clear = secrets.token_urlsafe(32)
     token_hash = _hash_token(token_clear)
     now = utc_now()
+
+    # Un solo token valido alla volta: chi richiede un nuovo reset invalida
+    # i precedenti non ancora usati. Senza questo, per 30 minuti potevano
+    # coesistere piu' link validi per lo stesso account.
+    db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.user_id == user.id,
+        models.PasswordResetToken.used_at.is_(None),
+    ).update({"used_at": now})
+
+    # Igiene tabella: butta i token scaduti da piu' di 30 giorni (di chiunque).
+    # Fatto qui invece che in un job dedicato: la tabella cresce solo quando
+    # qualcuno chiede un reset, quindi questo e' il posto naturale e basta.
+    db.query(models.PasswordResetToken).filter(
+        models.PasswordResetToken.expires_at < now - timedelta(days=30),
+    ).delete()
 
     db_token = models.PasswordResetToken(
         user_id=user.id,

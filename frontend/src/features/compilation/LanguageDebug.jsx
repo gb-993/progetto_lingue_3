@@ -22,7 +22,7 @@ export default function LanguageDebug() {
 
     const toggleShowInactive = (val) => {
         setShowInactive(val);
-        try { localStorage.setItem(SHOW_INACTIVE_KEY, val ? '1' : '0'); } catch {}
+        try { localStorage.setItem(SHOW_INACTIVE_KEY, val ? '1' : '0'); } catch { /* storage non disponibile: preferenza non persistita */ }
     };
 
     const fetchDebugData = async () => {

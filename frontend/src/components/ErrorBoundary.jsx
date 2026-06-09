@@ -42,7 +42,6 @@ function ErrorFallback() {
 // "Unexpected Application Error!" default di React Router.
 export function RouterErrorElement() {
     const error = useRouteError();
-    // eslint-disable-next-line no-console
     console.error('Caught by RouterErrorElement:', error);
     return <ErrorFallback />;
 }
@@ -74,7 +73,6 @@ export default class ErrorBoundary extends React.Component {
         this.setState({ errorInfo });
         // Lasciamo comunque traccia in console: durante lo sviluppo aiuta,
         // in prod gli admin possono leggerla dalla devtools.
-        // eslint-disable-next-line no-console
         console.error('Caught by ErrorBoundary:', error, errorInfo);
     }
 

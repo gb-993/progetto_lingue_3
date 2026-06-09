@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import api from '../../api';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
 // Stesso editor di Instructions (TinyMCE), caricato solo quando serve.
 const InstructionsEditor = lazy(() => import('../instructions/InstructionsEditor'));
@@ -107,7 +108,7 @@ export default function WhatsNew() {
                         </div>
                     </div>
                 ) : hasContent ? (
-                    <div className="instructions-view" dangerouslySetInnerHTML={{ __html: content }} />
+                    <div className="instructions-view" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
                 ) : (
                     <p className="muted">Nessun annuncio pubblicato. Clicca <strong>Edit</strong> per scriverne uno.</p>
                 )}

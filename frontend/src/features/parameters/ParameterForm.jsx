@@ -106,7 +106,7 @@ export default function ParameterForm() {
                     setChangeLogs(fetchedLogs || []);
                     setUsage(usageRes.data || []);
                 }
-            } catch (err) {
+            } catch {
                 setError('Error loading the data.');
             } finally {
                 // Solo dopo aver fetchato i dati lasciamo che il draft eventuale
@@ -199,7 +199,7 @@ export default function ParameterForm() {
             const field = inputKey === 'type' ? 'param_type' : (inputKey === 'level' ? 'level_of_comparison' : 'schema');
             setFormData(prev => ({ ...prev, [field]: res.data.label }));
             setNewLookupInputs(prev => ({ ...prev, [inputKey]: '' }));
-        } catch (err) { alert("Error adding lookup"); }
+        } catch { alert("Error adding lookup"); }
     };
 
     const handleSubmit = async (e) => {

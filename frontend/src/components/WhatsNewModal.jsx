@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // Vero solo se, tolti i tag e gli spazi, resta del testo reale. Serve a NON
 // mostrare una finestra vuota (o con solo <p></p>/&nbsp;) come "novita'".
@@ -134,7 +135,7 @@ export default function WhatsNewModal() {
                 <h2 id="whatsnew-title" style={{ marginTop: 0, marginBottom: '1rem' }}>
                     What&apos;s New
                 </h2>
-                <div className="instructions-view" dangerouslySetInnerHTML={{ __html: content }} />
+                <div className="instructions-view" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                     <button type="button" className="btn btn--primary" onClick={handleOk}>
                         OK

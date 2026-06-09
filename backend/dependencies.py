@@ -22,6 +22,29 @@ def get_db():
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
+def resolve_user_from_sub(db: Session, sub) -> models.User | None:
+    """Risolve il claim `sub` del JWT nell'utente corrispondente.
+
+    Token nuovi: sub = id numerico dell'utente. Stabile per sempre: cambiare
+    email dal profilo non invalida piu' la sessione.
+    Token emessi prima di questo cambio: sub = email. Il fallback li tiene
+    validi (in prod durano un anno: senza, al deploy verrebbero sloggati
+    tutti). Nessuna ambiguita': un'email contiene sempre '@', non puo'
+    essere una stringa di sole cifre.
+
+    Usata sia da get_current_user che dal middleware consensi
+    (consent_enforcement.py): i due DEVONO risolvere l'utente allo stesso
+    modo, altrimenti un token valido qui potrebbe non essere riconosciuto
+    la' e bypassare il check consensi.
+    """
+    if sub is None:
+        return None
+    s = str(sub)
+    if s.isdigit():
+        return db.query(models.User).filter(models.User.id == int(s)).first()
+    return db.query(models.User).filter(models.User.email == s).first()
+
+
 # ==========================================
 # DIPENDENZE PER L'AUTENTICAZIONE
 # ==========================================
@@ -34,14 +57,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     try:
         # Decodifica il token JWT usando le impostazioni del tuo file auth.py
         payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        sub = payload.get("sub")
+        if sub is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    # Cerca l'utente nel database
-    user = db.query(models.User).filter(models.User.email == email).first()
+    # Cerca l'utente nel database (id per i token nuovi, email per i legacy)
+    user = resolve_user_from_sub(db, sub)
     if user is None:
         raise credentials_exception
     return user

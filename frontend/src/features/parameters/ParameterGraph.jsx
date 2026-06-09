@@ -534,19 +534,22 @@ export default function ParameterGraph() {
 // =============================================================================
 // LEGEND (overlay nell'angolo)
 // =============================================================================
+// Item/colorBox/lineBox a livello di modulo: definirli dentro Legend li
+// ricreava a ogni render (lint react-hooks/static-components).
+const Item = ({ swatch, label }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem' }}>
+        {swatch}
+        <span>{label}</span>
+    </div>
+);
+const colorBox = (c, border) => (
+    <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: c, border: `1px solid ${border || c}` }} />
+);
+const lineBox = (c, dashed) => (
+    <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${c}` }} />
+);
+
 function Legend({ hasLang }) {
-    const Item = ({ swatch, label }) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem' }}>
-            {swatch}
-            <span>{label}</span>
-        </div>
-    );
-    const colorBox = (c, border) => (
-        <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: c, border: `1px solid ${border || c}` }} />
-    );
-    const lineBox = (c, dashed) => (
-        <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${c}` }} />
-    );
     return (
         <div style={{
             position: 'absolute', bottom: 10, right: 10, padding: '0.5rem 0.7rem',

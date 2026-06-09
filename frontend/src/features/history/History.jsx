@@ -170,7 +170,7 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
         }
     };
 
-    useEffect(() => { fetchVersions(1); /* eslint-disable-next-line */ }, [lockEntityType, excludeEntityType]);
+    useEffect(() => { fetchVersions(1); }, [lockEntityType, excludeEntityType]);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;

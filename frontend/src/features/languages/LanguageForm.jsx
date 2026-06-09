@@ -50,7 +50,7 @@ export default function LanguageForm() {
                     });
                     setOriginalId(langRes.data.id || '');
                 }
-            } catch (err) {
+            } catch {
                 setError('Could not load the data.');
             }
         };

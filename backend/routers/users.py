@@ -108,6 +108,11 @@ def get_single_account(user_id: int, db: Session = Depends(get_db), current_user
 @router.post("/api/admin/accounts", status_code=status.HTTP_201_CREATED)
 def create_account(data: AccountCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Crea un nuovo utente (Admin o User) e gli invia la welcome email."""
+    # Whitelist ruoli: la tendina del frontend manda valori giusti, ma via
+    # API diretta si potrebbe creare un utente con ruolo arbitrario (es.
+    # "Admin" maiuscolo) che non e' admin ne' un "user" coerente.
+    if data.role not in ("admin", "user"):
+        raise HTTPException(status_code=400, detail="Invalid role: must be 'admin' or 'user'.")
     _validate_email(data.email)
     if db.query(models.User).filter(models.User.email == data.email.lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")

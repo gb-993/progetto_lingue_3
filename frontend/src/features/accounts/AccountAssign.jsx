@@ -19,7 +19,7 @@ export default function AccountAssign() {
 
                 const langRes = await api.get('/api/admin/languages');
                 setLanguages(langRes.data);
-            } catch (err) {
+            } catch {
                 setError('Could not load the data.');
             }
         };

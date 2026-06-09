@@ -20,7 +20,7 @@ export default function MotivationList() {
             // /with-usage include il campo linked_questions per ogni motivation.
             const res = await api.get('/api/admin/motivations/with-usage');
             setMotivations(res.data);
-        } catch (err) {
+        } catch {
             setError("Could not load the motivations.");
         } finally {
             setLoading(false);

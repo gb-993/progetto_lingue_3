@@ -216,7 +216,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             clearTimeout(debounceRef.current.timer);
             debounceRef.current.reject();
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const timer = setTimeout(async () => {
                 debounceRef.current = null;
                 resolve(await fetchExamples(inputValue));

@@ -30,7 +30,7 @@ export default function EditSiteContent() {
         try {
             await api.put(`/api/admin/site-content/${key}`, { content });
             navigate('/how-to-cite');
-        } catch (err) {
+        } catch {
             setError("Error while saving.");
         }
     };
