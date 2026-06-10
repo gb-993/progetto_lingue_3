@@ -225,9 +225,7 @@ export default function ParameterBlock({
                                     fontFamily: 'inherit',
                                 }}
                             />
-                            <div className="small muted" style={{ marginTop: '0.35rem' }}>
-                                Saved together with the block when you click <em>Confident</em> or <em>Unsure</em> below.
-                            </div>
+
                         </div>
                     )}
                 </div>

@@ -309,28 +309,31 @@ def get_question_data_stats(
     return archive_service.count_linked_data(db, id)
 
 
-# --- TRASFERIMENTO DATI VERSO UN'ALTRA QUESTION ---
-class TransferDataPayload(BaseModel):
+# --- COPIA SOLO ESEMPI VERSO UN'ALTRA QUESTION ---
+# NB storico: qui vivevano anche /transfer-preview e /transfer-data ("Move
+# data": spostamento delle risposte intere con conflitti keep/overwrite).
+# Rimossi a giugno 2026 su richiesta: l'unico caso d'uso reale era
+# consolidare gli esempi, coperto dalla copia qui sotto senza perdita di dati.
+# Variante "leggera" del transfer (richiesta linguisti): duplica SOLO gli
+# esempi sulla destinazione, lingua per lingua. Risposte, motivazioni e testi
+# restano intatti su entrambe le question; la sorgente non viene svuotata.
+# Niente snapshot d'archivio (la sorgente non perde nulla) e niente recompute
+# (gli esempi non influenzano i valori dei parametri).
+class CopyExamplesPayload(BaseModel):
     dest_id: str
-    # Lingue (id) per cui, in caso di conflitto, si sovrascrive la destinazione
-    # con la sorgente. Le lingue in conflitto NON elencate qui mantengono la
-    # risposta gia' presente nella destinazione.
-    overwrite_language_ids: List[str] = []
     change_note: Optional[str] = ""
 
 
-@router.get("/{id}/transfer-preview")
-def get_transfer_preview(
+@router.get("/{id}/copy-examples-preview")
+def get_copy_examples_preview(
     id: str,
     dest_id: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Preview dei conflitti per il trasferimento dati da `id` a `dest_id`.
-
-    Ritorna quante lingue verrebbero spostate direttamente e l'elenco di quelle
-    in conflitto (destinazione gia' valorizzata) con un riassunto delle risposte.
-    """
+    """Anteprima della copia esempi da `id` a `dest_id`: lingue copiabili
+    (con conteggio esempi e duplicati gia' presenti) e lingue saltate
+    (destinazione senza risposta a cui agganciare gli esempi)."""
     source = db.query(models.Question).filter(models.Question.id == id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -339,23 +342,17 @@ def get_transfer_preview(
         raise HTTPException(status_code=400, detail="Destination question not found.")
     if source.id == dest.id:
         raise HTTPException(status_code=400, detail="Source and destination must be different questions.")
-    return question_transfer.preview_transfer_conflicts(db, source.id, dest.id)
+    return question_transfer.preview_examples_copy(db, source.id, dest.id)
 
 
-@router.post("/{id}/transfer-data")
-def transfer_question_data_endpoint(
+@router.post("/{id}/copy-examples")
+def copy_examples_endpoint(
     id: str,
-    payload: TransferDataPayload,
-    background_tasks: BackgroundTasks,
+    payload: CopyExamplesPayload,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Sposta tutti i dati linguistici della question `id` sulla `dest_id`.
-
-    Prima archivia uno snapshot di sicurezza della sorgente (Old Questions
-    Archive), poi sposta/risolve i conflitti per-lingua. La question sorgente
-    resta viva ma senza dati. Ricalcola i parametri coinvolti in background.
-    """
+    """Copia gli esempi della question `id` sulla `dest_id` (solo esempi)."""
     source = db.query(models.Question).filter(models.Question.id == id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -365,54 +362,35 @@ def transfer_question_data_endpoint(
     if source.id == dest.id:
         raise HTTPException(status_code=400, detail="Source and destination must be different questions.")
 
+    result = question_transfer.copy_examples_only(db, source.id, dest.id)
+
     note = (payload.change_note or "").strip()
-
-    # 1. Snapshot di sicurezza della sorgente (prima di spostare/cancellare).
-    archived = archive_service.snapshot_question_data(
-        db, source, current_user.id,
-        archive_note=note or f"Data transferred to {dest.id}",
-    )
-
-    # 2. Sposta i dati risolvendo i conflitti per-lingua.
-    result = question_transfer.transfer_question_data(
-        db, source.id, dest.id, set(payload.overwrite_language_ids or []),
-    )
-
-    # 3. Log sul parametro sorgente (e su quello destinazione, se diverso).
-    src_param = source.parameter_id
-    dst_param = dest.parameter_id
     suffix = f" Note: {note}" if note else ""
+    skipped = (
+        f"; skipped languages without an answer in destination: {', '.join(result['languages_skipped'])}"
+        if result["languages_skipped"] else ""
+    )
     db.add(models.ParameterChangeLog(
-        parameter_id=src_param,
+        parameter_id=dest.parameter_id,
         user_id=current_user.id,
         change_note=(
-            f"[Question {source.id}] Data transferred to {dest.id} "
-            f"(moved {result['moved']}, overwritten {result['overwritten']}, "
-            f"kept {result['kept']}); snapshot archived.{suffix}"
+            f"[Question {dest.id}] Copied {result['examples_copied']} example(s) "
+            f"from {source.id} across {result['languages_processed']} language(s)"
+            f"{skipped}.{suffix}"
         ),
     ))
-    if dst_param != src_param:
+    if source.parameter_id != dest.parameter_id:
         db.add(models.ParameterChangeLog(
-            parameter_id=dst_param,
+            parameter_id=source.parameter_id,
             user_id=current_user.id,
             change_note=(
-                f"[Question {dest.id}] Received data from {source.id} "
-                f"(moved {result['moved']}, overwritten {result['overwritten']}).{suffix}"
+                f"[Question {source.id}] Examples copied to {dest.id} "
+                f"({result['examples_copied']} copied); source left untouched.{suffix}"
             ),
         ))
 
     db.commit()
-
-    # 4. Ricalcolo dei parametri coinvolti (consolidate + DAG) in background.
-    background_tasks.add_task(recompute_parameter_for_all_languages, src_param)
-    if dst_param != src_param:
-        background_tasks.add_task(recompute_parameter_for_all_languages, dst_param)
-
-    return {
-        "detail": "Data transferred successfully",
-        "archived_question_id": archived.id,
-        **result,
-    }
+    return {"detail": "Examples copied successfully", **result}
 
 
 @router.patch("/{id}/toggle-active")

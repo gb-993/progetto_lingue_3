@@ -220,10 +220,7 @@ export default function LanguageForm() {
 
                     {isEditMode && formData.id !== originalId && (
                         <div className="alert alert-warning" style={{ marginTop: '-0.25rem', padding: '0.5rem 0.75rem', fontSize: '0.82rem' }}>
-                            <strong>Renaming language ID from <code>{originalId}</code> to <code>{formData.id}</code>.</strong>{' '}
                             All answers, parameter values, parameter statuses and backups linked to this language will be re-pointed automatically.{' '}
-                            The old ID <code>{originalId}</code> is kept as a historical alias, so future backup restores and Excel imports referencing it will still match this language.{' '}
-                            Older history entries and archived questions will continue to reference the old ID (they are immutable historical snapshots).
                         </div>
                     )}
 

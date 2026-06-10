@@ -5,7 +5,7 @@ import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import Drawer from '../../components/Drawer';
-import TransferDataModal from '../questions/TransferDataModal';
+import DeactivateQuestionDialog from '../questions/DeactivateQuestionDialog';
 import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
@@ -341,13 +341,9 @@ export default function ParameterForm() {
     };
 
     // --- DISATTIVAZIONE / RIATTIVAZIONE DELLA DOMANDA ---
-    // Stati del flusso di disattivazione: la domanda candidata, le stats dei
-    // dati collegati (per decidere se offrire il transfer) e l'id per cui è
-    // aperto il modale di transfer.
+    // Disattivazione question: tutto delegato al dialogo condiviso
+    // DeactivateQuestionDialog (stesso identico comportamento in QuestionList).
     const [deactivateCandidate, setDeactivateCandidate] = useState(null);
-    const [deactivateStats, setDeactivateStats] = useState(null);
-    const [deactivateStatsLoading, setDeactivateStatsLoading] = useState(false);
-    const [transferForId, setTransferForId] = useState(null);
 
     // Presence anonima: numero di ALTRI utenti che stanno modificando questo
     // stesso parametro adesso (solo in edit). Pill discreta in header.
@@ -371,20 +367,8 @@ export default function ParameterForm() {
             await doToggleQuestionActive(questionId);
             return;
         }
-        // Disattivazione: apri il modale di scelta (disattiva soltanto / trasferisci
-        // prima i dati). Carica le stats dei dati collegati per capire se ha senso
-        // offrire il trasferimento.
+        // Disattivazione: gestita dal dialogo condiviso (stats incluse).
         setDeactivateCandidate(questionId);
-        setDeactivateStats(null);
-        setDeactivateStatsLoading(true);
-        try {
-            const res = await api.get(`/api/admin/questions/${questionId}/data-stats`);
-            setDeactivateStats(res.data || { answers: 0, examples: 0, languages: 0 });
-        } catch {
-            setDeactivateStats({ answers: 0, examples: 0, languages: 0, error: true });
-        } finally {
-            setDeactivateStatsLoading(false);
-        }
     };
 
     // Verifica se ci sono state modifiche per abilitare la textarea delle motivazioni
@@ -509,7 +493,7 @@ export default function ParameterForm() {
 
                         {isEditMode && initialData && formData.id !== initialData.id && (
                             <div className="small" style={{ marginTop: '-0.4rem', marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.75rem', lineHeight: 1.4, color: '#664d03', background: '#fff3cd', border: '1px solid #ffe69c', borderRadius: '6px', padding: '0.5rem 0.7rem' }}>
-                                Renaming <code>{initialData.id}</code> → <code>{formData.id}</code>: linked questions, language values and history follow automatically, the old ID is kept as a historical alias, and <strong>every formula that references it is rewritten</strong> ({initialData.id} → {formData.id}). The new ID must be unique, ≤ 10 characters and contain only letters, digits or underscore.
+                                The new ID must be unique, ≤ 10 characters and contain only letters, digits or underscore.
                             </div>
                         )}
 
@@ -866,54 +850,17 @@ export default function ParameterForm() {
             è attiva. Chiusura → torna alla rotta parent; il guard delle
             modifiche non salvate vive nel QuestionForm e intercetta da solo
             la transizione. */}
-        {/* MODALE SCELTA alla disattivazione di una domanda: disattiva soltanto
-            oppure trasferisci prima i dati a un'altra question. */}
+        {/* Dialogo di disattivazione condiviso (identico in QuestionList). */}
         {deactivateCandidate && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                <div className="card" style={{ width: '480px', maxWidth: '92vw' }}>
-                    <h3 style={{ marginTop: 0 }}>Deactivate question {deactivateCandidate}?</h3>
-                    <p className="small muted" style={{ marginTop: 0 }}>
-                        It will disappear from the compilation form. You can reactivate it later.
-                    </p>
-                    <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.6rem 0.85rem', margin: '0.75rem 0', fontSize: '0.85rem' }}>
-                        {deactivateStatsLoading && <span>Loading linked data…</span>}
-                        {!deactivateStatsLoading && deactivateStats && (
-                            deactivateStats.answers > 0
-                                ? <span><strong>{deactivateStats.answers}</strong> answer(s), <strong>{deactivateStats.examples}</strong> example(s) in <strong>{deactivateStats.languages}</strong> language(s) are linked to this question.</span>
-                                : <span>No linked data on this question.</span>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                        <button type="button" className="btn" onClick={() => setDeactivateCandidate(null)}>Cancel</button>
-                        {!deactivateStatsLoading && deactivateStats && deactivateStats.answers > 0 && (
-                            <button
-                                type="button"
-                                className="btn"
-                                onClick={() => { const qid = deactivateCandidate; setDeactivateCandidate(null); setTransferForId(qid); }}
-                            >
-                                Transfer data, then deactivate…
-                            </button>
-                        )}
-                        <button
-                            type="button"
-                            className="btn"
-                            style={{ background: '#d9534f', borderColor: '#d9534f', color: '#fff' }}
-                            onClick={async () => { const qid = deactivateCandidate; setDeactivateCandidate(null); await doToggleQuestionActive(qid); }}
-                        >
-                            {deactivateStats?.answers > 0 ? 'Deactivate without transferring' : 'Deactivate'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Modale di transfer aperto dal flusso di disattivazione: dopo il
-            trasferimento, disattiva la domanda sorgente (ormai svuotata). */}
-        {transferForId && (
-            <TransferDataModal
-                sourceQuestionId={transferForId}
-                onClose={() => setTransferForId(null)}
-                onTransferred={async () => { const qid = transferForId; setTransferForId(null); await doToggleQuestionActive(qid); }}
+            <DeactivateQuestionDialog
+                questionId={deactivateCandidate}
+                onClose={() => setDeactivateCandidate(null)}
+                onDeactivated={async () => {
+                    setDeactivateCandidate(null);
+                    // Ricarica la lista question del parametro.
+                    const paramRes = await api.get(`/api/admin/parameters/${id}`);
+                    setQuestions(paramRes.data.questions || []);
+                }}
             />
         )}
 

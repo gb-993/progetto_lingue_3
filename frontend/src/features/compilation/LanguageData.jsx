@@ -14,11 +14,11 @@ const STATUS_META = {
     },
     waiting_for_approval: {
         label: 'Waiting for approval',
-        description: 'Awaiting admin review. The form is locked until a decision is made.'
+        description: 'Awaiting admin review. The form is locked until a decision is made (except for admins).'
     },
     approved: {
         label: 'Approved',
-        description: 'Approved. The form is locked.'
+        description: 'Approved. The form is locked (except for admins).'
     },
     rejected: {
         label: 'Rejected',
@@ -315,14 +315,6 @@ export default function LanguageData() {
                     )}
                 </div>
             </div>
-
-            {/* Banner override admin: chiarisce che admin sta editando una lingua bloccata */}
-            {isAdmin && isLocked && (
-                <div className="admin-override-banner">
-                    <strong>Admin override:</strong> you are editing a language in <code>{status}</code> state.
-                    Your changes are saved immediately but the status does not change automatically.
-                </div>
-            )}
 
             {/* Modal Reject */}
             {showRejectModal && (

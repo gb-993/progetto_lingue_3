@@ -1,137 +1,166 @@
 """
-Servizio trasferimento dati di una question verso un'altra.
+Servizio "copia esempi" tra question (richiesta linguisti, 2026-06: "copiare
+solo gli esempi di PSC_Qb in PSC_Qa, senza la domanda o la risposta o le
+motivazioni").
 
-Usato quando si "elimina" (svuota) una question spostando i suoi dati
-linguistici (Answer/Example/AnswerMotivation, per ogni lingua) su una question
-di destinazione a scelta, invece di archiviarli e basta.
+Gli esempi della sorgente vengono DUPLICATI in coda a quelli della
+destinazione, lingua per lingua. Risposte, motivazioni e testi non vengono
+toccati, e la sorgente resta intatta (potra' poi essere disattivata
+normalmente).
 
-A differenza di question_copy (che *duplica* lasciando intatta la sorgente),
-qui i dati vengono *spostati*: la sorgente resta senza dati. Lo spostamento
-avviene ri-puntando `Answer.question_id` alla destinazione, così esempi e
-motivazioni la seguono via FK senza essere ricreati.
+Vincolo strutturale: un Example vive agganciato a una Answer. Le lingue per
+cui la destinazione NON ha una risposta vengono saltate e segnalate nel
+report: creare una risposta "vuota" solo per attaccarci esempi inquinerebbe
+la compilazione.
 
-Nodo dei conflitti: `(language_id, question_id)` e' unico, quindi se la
-destinazione ha gia' una risposta per una lingua si deve decidere se tenerla
-(scartando quella della sorgente) o sovrascriverla con quella della sorgente.
-La scelta e' per-lingua (vedi `overwrite_language_ids`).
+NB storico: qui viveva anche il "Move data" (spostamento delle risposte
+intere con risoluzione conflitti keep/overwrite). Rimosso a giugno 2026 su
+richiesta: l'unico caso d'uso reale era consolidare gli esempi, e la copia
+lo copre senza perdita di dati.
 
 Nessuna funzione qui committa: la transazione la gestisce il chiamante (router).
 """
 from __future__ import annotations
-from typing import Set
 
 from sqlalchemy.orm import Session, selectinload
 
 import models
 
+def _example_fingerprint(e: models.Example) -> tuple:
+    """Identita' di contenuto di un esempio, per la dedup in copia.
 
-def _summarize_answer(a: models.Answer) -> dict:
-    """Riassunto leggero di una risposta per la preview dei conflitti."""
-    resp = a.response_text.upper() if a.response_text in ("yes", "no", "unsure") else ""
-    return {
-        "response_text": resp,
-        "examples_count": len(a.examples),
-        "motivations_count": len(a.answer_motivations),
-        "comments": (a.comments or "").strip(),
-    }
+    Confronta i campi testuali (trim): rilanciare la copia due volte non deve
+    duplicare esempi gia' presenti in destinazione. `number` e' escluso
+    apposta: e' solo un'etichetta d'ordine.
+    """
+    return (
+        (e.textarea or "").strip(),
+        (e.transliteration or "").strip(),
+        (e.gloss or "").strip(),
+        (e.translation or "").strip(),
+        (e.reference or "").strip(),
+    )
 
 
-def preview_transfer_conflicts(db: Session, source_id: str, dest_id: str) -> dict:
-    """Calcola quante lingue verrebbero spostate direttamente e quali sono in
-    conflitto (destinazione gia' valorizzata), con un riassunto delle due
-    risposte per ogni conflitto."""
-    src = (
+def _next_example_number(dest_examples: list) -> int:
+    """Primo numero libero per gli esempi copiati: max dei `number` numerici
+    esistenti (fallback: quanti esempi ci sono) + 1."""
+    best = len(dest_examples)
+    for e in dest_examples:
+        try:
+            best = max(best, int((e.number or "").strip()))
+        except ValueError:
+            pass
+    return best + 1
+
+
+def _load_answers_with_examples(db: Session, question_id: str) -> list:
+    return (
         db.query(models.Answer)
-        .options(
-            selectinload(models.Answer.examples),
-            selectinload(models.Answer.answer_motivations),
-        )
-        .filter(models.Answer.question_id == source_id)
+        .options(selectinload(models.Answer.examples))
+        .filter(models.Answer.question_id == question_id)
         .all()
     )
-    dst = (
-        db.query(models.Answer)
-        .options(
-            selectinload(models.Answer.examples),
-            selectinload(models.Answer.answer_motivations),
-        )
-        .filter(models.Answer.question_id == dest_id)
-        .all()
-    )
-    dst_by_lang = {a.language_id: a for a in dst}
+
+
+def preview_examples_copy(db: Session, source_id: str, dest_id: str) -> dict:
+    """Anteprima della copia esempi: per ogni lingua dice quanti esempi
+    verrebbero copiati, quanti sono gia' presenti identici (duplicati,
+    saltati) e quali lingue verrebbero saltate perche' la destinazione non
+    ha una risposta a cui agganciarli."""
+    src_answers = _load_answers_with_examples(db, source_id)
+    dst_by_lang = {a.language_id: a for a in _load_answers_with_examples(db, dest_id)}
     lang_name = {
         l.id: l.name_full
         for l in db.query(models.Language.id, models.Language.name_full).all()
     }
 
-    conflicts = []
-    transferable = 0
-    for a in src:
+    copyable, skipped = [], []
+    for a in src_answers:
+        if not a.examples:
+            continue
+        entry = {
+            "language_id": a.language_id,
+            "language_name": lang_name.get(a.language_id, "") or "",
+            "examples_count": len(a.examples),
+        }
         dest_a = dst_by_lang.get(a.language_id)
         if dest_a is None:
-            transferable += 1
+            skipped.append(entry)
         else:
-            conflicts.append({
-                "language_id": a.language_id,
-                "language_name": lang_name.get(a.language_id, "") or "",
-                "source": _summarize_answer(a),
-                "dest": _summarize_answer(dest_a),
-            })
-    conflicts.sort(key=lambda c: (c["language_name"] or c["language_id"]))
+            dest_fps = {_example_fingerprint(e) for e in dest_a.examples}
+            dup = sum(1 for e in a.examples if _example_fingerprint(e) in dest_fps)
+            entry["duplicates_count"] = dup
+            copyable.append(entry)
 
+    copyable.sort(key=lambda c: (c["language_name"] or c["language_id"]))
+    skipped.sort(key=lambda c: (c["language_name"] or c["language_id"]))
     return {
-        "source_total": len(src),
-        "dest_total": len(dst),
-        "transferable_count": transferable,
-        "conflict_count": len(conflicts),
-        "conflicts": conflicts,
+        "copyable": copyable,
+        "skipped": skipped,
+        "copyable_examples_total": sum(c["examples_count"] - c["duplicates_count"] for c in copyable),
+        "duplicates_total": sum(c["duplicates_count"] for c in copyable),
     }
 
 
-def transfer_question_data(
-    db: Session,
-    source_id: str,
-    dest_id: str,
-    overwrite_language_ids: Set[str],
-) -> dict:
-    """Sposta le risposte della sorgente sulla destinazione.
+def copy_examples_only(db: Session, source_id: str, dest_id: str) -> dict:
+    """Copia gli esempi della sorgente sulle risposte della destinazione.
 
-    Per ogni lingua:
-      - destinazione vuota                       -> sposta (ri-punta question_id)
-      - destinazione piena e lingua in overwrite -> cancella la dest, poi sposta
-      - destinazione piena e lingua NON overwrite -> cancella la risposta sorgente
-        (il dato e' gia' presente in destinazione e nello snapshot d'archivio)
+    Per ogni lingua in cui la sorgente ha esempi:
+      - destinazione con risposta -> duplica gli esempi in coda (numerazione
+        che prosegue quella esistente); gli esempi identici gia' presenti
+        vengono saltati (idempotente);
+      - destinazione senza risposta -> lingua saltata (vedi report).
 
-    Ritorna i conteggi {moved, overwritten, kept}. NON committa.
+    Nessuna marcatura sugli esempi copiati (richiesta esplicita dei
+    linguisti): la tracciabilita' sta nel ParameterChangeLog del chiamante.
+    Ritorna i conteggi. NON committa.
     """
-    source_answers = (
-        db.query(models.Answer)
-        .filter(models.Answer.question_id == source_id)
-        .all()
-    )
-    dest_by_lang = {
-        a.language_id: a
-        for a in db.query(models.Answer).filter(models.Answer.question_id == dest_id).all()
-    }
+    src_answers = _load_answers_with_examples(db, source_id)
+    dst_by_lang = {a.language_id: a for a in _load_answers_with_examples(db, dest_id)}
 
-    moved = overwritten = kept = 0
-    for a in source_answers:
-        dest_a = dest_by_lang.get(a.language_id)
+    languages_processed = 0
+    examples_copied = 0
+    duplicates_skipped = 0
+    languages_skipped: list[str] = []
+
+    for a in src_answers:
+        if not a.examples:
+            continue
+        dest_a = dst_by_lang.get(a.language_id)
         if dest_a is None:
-            a.question_id = dest_id
-            db.flush()
-            moved += 1
-        elif a.language_id in overwrite_language_ids:
-            # Libera lo slot (language_id, dest_id) prima di ri-puntare, altrimenti
-            # il vincolo UNIQUE scatterebbe durante il flush.
-            db.delete(dest_a)
-            db.flush()
-            a.question_id = dest_id
-            db.flush()
-            overwritten += 1
-        else:
-            db.delete(a)
-            kept += 1
+            languages_skipped.append(a.language_id)
+            continue
+
+        dest_fps = {_example_fingerprint(e) for e in dest_a.examples}
+        next_n = _next_example_number(dest_a.examples)
+        copied_here = 0
+        for e in a.examples:
+            fp = _example_fingerprint(e)
+            if fp in dest_fps:
+                duplicates_skipped += 1
+                continue
+            db.add(models.Example(
+                answer_id=dest_a.id,
+                number=str(next_n),
+                textarea=e.textarea,
+                transliteration=e.transliteration,
+                gloss=e.gloss,
+                translation=e.translation,
+                reference=e.reference,
+            ))
+            dest_fps.add(fp)
+            next_n += 1
+            copied_here += 1
+        if copied_here > 0:
+            languages_processed += 1
+        examples_copied += copied_here
 
     db.flush()
-    return {"moved": moved, "overwritten": overwritten, "kept": kept}
+    languages_skipped.sort()
+    return {
+        "languages_processed": languages_processed,
+        "examples_copied": examples_copied,
+        "duplicates_skipped": duplicates_skipped,
+        "languages_skipped": languages_skipped,
+    }

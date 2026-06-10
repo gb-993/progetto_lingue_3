@@ -6,7 +6,7 @@ import api, { getApiErrorMessage } from '../../api';
 import useFormDraft from '../../utils/useFormDraft';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
-import TransferDataModal from './TransferDataModal';
+import CopyExamplesModal from './CopyExamplesModal';
 import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
@@ -232,9 +232,12 @@ export default function QuestionForm({ mode = 'page' }) {
     const [wipeStats, setWipeStats] = useState(null);
     const [wipeStatsLoading, setWipeStatsLoading] = useState(false);
 
-    // Modale "Transfer data to another question": sposta i dati linguistici di
-    // questa question su una destinazione a scelta (componente riutilizzabile).
-    const [transferOpen, setTransferOpen] = useState(false);
+    // Modale "Copy examples to another question": duplica SOLO gli esempi
+    // sulla destinazione (risposte/motivazioni intatte, sorgente non toccata).
+    // `copyFromWipe`: se aperto dal banner di wipe, alla chiusura si riapre
+    // il wipe confirm cosi' l'utente riprende da dove era.
+    const [copyExamplesOpen, setCopyExamplesOpen] = useState(false);
+    const [copyFromWipe, setCopyFromWipe] = useState(false);
 
     // Presence anonima: numero di ALTRI utenti che stanno modificando questa
     // stessa question adesso (solo in edit). Mostra una pill discreta in header.
@@ -700,9 +703,6 @@ export default function QuestionForm({ mode = 'page' }) {
         await performSave({ wipeData: true });
     };
 
-    // Apre il modale di transfer (componente riutilizzabile TransferDataModal).
-    const handleOpenTransfer = () => { if (isEditMode) setTransferOpen(true); };
-
     // Logica per isDirty
     const safeString = (val) => val === null || val === undefined ? '' : String(val);
     const isArraysEqual = (a, b) => {
@@ -884,7 +884,7 @@ export default function QuestionForm({ mode = 'page' }) {
                     </div>
                     {isEditMode && initialData && formData.id !== initialData.id && (
                         <div className="small" style={{ marginTop: '-0.6rem', fontSize: '0.75rem', lineHeight: 1.4, color: '#664d03', background: '#fff3cd', border: '1px solid #ffe69c', borderRadius: '6px', padding: '0.5rem 0.7rem' }}>
-                            Renaming <code>{initialData.id}</code> → <code>{formData.id}</code>: all linked answers, examples and motivations follow automatically, and the old ID is kept as a historical alias (so old backups/Excel files still resolve). The new ID must be unique and ≤ 40 characters.
+                            The new ID must be unique and ≤ 40 characters.
                         </div>
                     )}
                     <div>
@@ -936,13 +936,13 @@ export default function QuestionForm({ mode = 'page' }) {
                             value={selectedOptions}
                             onChange={handleSelectChange}
                             onCreateOption={handleCreateOption}
-                            placeholder="Search existing motivation or type a code to create…"
+                            placeholder="Search existing motivation... "
                             formatCreateLabel={(inputValue) => `Create new: "${inputValue.toUpperCase()}"`}
                             components={motivationSelectComponents}
                             styles={reactSelectStyles}
                         />
                         <p className="small muted" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                            <strong>click on a chip to edit</strong> · <strong>type a code or use the footer of the dropdown to create</strong>
+                            <strong>click on a chip to edit</strong>
                         </p>
                     </div>
 
@@ -1075,35 +1075,21 @@ export default function QuestionForm({ mode = 'page' }) {
                         >
                             {isLoading ? 'Saving...' : (isEditMode ? 'Save the changes and maintain data' : 'Save Question')}
                         </button>
-                        {isEditMode && (() => {
-                            const wipeDisabled = isLoading || !isDirty || !changeNote.trim();
-                            // Abilitato: rosso pieno con testo bianco (azione distruttiva,
-                            // alto contrasto). Disabilitato: nessuno stile inline, così
-                            // eredita la palette grigia muta e leggibile di .btn[disabled].
-                            return (
-                                <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={handleOpenWipeConfirm}
-                                    disabled={wipeDisabled}
-                                    title="Archive all linked answers and examples, then save the new text"
-                                    style={wipeDisabled ? undefined : { background: '#d9534f', borderColor: '#d9534f', color: '#fff' }}
-                                >
-                                    Save the changes and delete the linked data
-                                </button>
-                            );
-                        })()}
+                        {/* Stesso stile del bottone "maintain data" (uniformati su
+                            richiesta): il segnale di pericolo vive nel modale di
+                            conferma successivo (bottone rosso "Archive and save"). */}
                         {isEditMode && (
                             <button
                                 type="button"
-                                className="btn"
-                                onClick={handleOpenTransfer}
-                                disabled={isLoading}
-                                title="Move all answers and examples of this question to another question (a safety snapshot is archived). This question is left empty."
+                                className="btn btn--primary"
+                                onClick={handleOpenWipeConfirm}
+                                disabled={isLoading || !isDirty || !changeNote.trim()}
+                                title="Archive all linked answers and examples, then save the new text"
                             >
-                                Transfer data to another question…
+                                Save the changes and delete the linked data
                             </button>
                         )}
+                        
                         <Link to={cancelLink} className="btn">Cancel</Link>
                     </div>
                     {isEditMode && (
@@ -1143,12 +1129,8 @@ export default function QuestionForm({ mode = 'page' }) {
                     <div className="card" style={{ width: '500px', maxWidth: '92vw' }}>
                         <h3 style={{ marginTop: 0, color: '#d9534f' }}>Archive linked data?</h3>
                         <p style={{ fontSize: '0.92rem', lineHeight: 1.45 }}>
-                            You are about to save the new question text and move all the
-                            linked answers, examples and motivations to the
-                            <strong> Old Questions Archive</strong>. The data will not be
-                            deleted: it remains accessible in the archive and can be
-                            downloaded as xlsx. This question will then have zero data
-                            and languages will recompile it from scratch.
+                            You are about to delete all data linked to this question. However all the
+                            data will be saved in <strong> Old Questions Archive</strong> (in Hystory & Backups sidebar section) where they can still be consulted or downloaded.
                         </p>
 
                         <div style={{
@@ -1173,9 +1155,9 @@ export default function QuestionForm({ mode = 'page' }) {
                             )}
                         </div>
 
-                        {/* Alternativa all'archiviazione: trasferire i dati a un'altra
-                            question. Apre il modal di transfer (stesso endpoint del
-                            bottone "Transfer data to another question…"). */}
+                        {/* Alternativa prima di archiviare: copiare gli esempi su
+                            un'altra question (richiesta linguisti). Al termine si
+                            torna a questo banner per proseguire col wipe. */}
                         <div style={{
                             background: 'var(--surface-2, #f8fafc)',
                             border: '1px solid var(--border)',
@@ -1189,15 +1171,16 @@ export default function QuestionForm({ mode = 'page' }) {
                             flexWrap: 'wrap',
                         }}>
                             <span style={{ fontSize: '0.85rem' }}>
-                                Prefer to keep this data? Move it to another question instead of archiving.
+                                Prefer to keep the examples? Copy them to another question first.
                             </span>
                             <button
                                 type="button"
                                 className="btn btn--small"
-                                onClick={() => { setWipeConfirmOpen(false); handleOpenTransfer(); }}
+                                title="Copy only the examples to another question, then come back here"
+                                onClick={() => { setWipeConfirmOpen(false); setCopyFromWipe(true); setCopyExamplesOpen(true); }}
                                 disabled={isLoading}
                             >
-                                Transfer to another question…
+                                Copy examples…
                             </button>
                         </div>
 
@@ -1224,13 +1207,19 @@ export default function QuestionForm({ mode = 'page' }) {
                 </div>
             )}
 
-            {/* Modale di transfer (componente riutilizzabile, usato anche dalle
-                liste question/parametro). */}
-            {transferOpen && (
-                <TransferDataModal
+            {/* Modale copia esempi. Se aperto dal banner di wipe, alla chiusura
+                (sia dopo la copia che su Cancel) riapre il wipe confirm. */}
+            {copyExamplesOpen && (
+                <CopyExamplesModal
                     sourceQuestionId={id}
-                    onClose={() => setTransferOpen(false)}
-                    onTransferred={() => { setTransferOpen(false); navigate(`/admin/parameters/${formData.parameter_id}/edit`); }}
+                    onClose={() => {
+                        setCopyExamplesOpen(false);
+                        if (copyFromWipe) { setCopyFromWipe(false); setWipeConfirmOpen(true); }
+                    }}
+                    onCopied={() => {
+                        setCopyExamplesOpen(false);
+                        if (copyFromWipe) { setCopyFromWipe(false); setWipeConfirmOpen(true); }
+                    }}
                 />
             )}
 

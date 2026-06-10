@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api';
+import api, { getApiErrorMessage } from '../../api';
 import { searchMatches } from '../../utils/search';
 import usePersistentState from '../../utils/usePersistentState';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import NoticeToast from '../../components/NoticeToast';
+import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
 
 // Stesso helper di LanguageList — forza download della blob ricevuta
 async function downloadBlob(request, fallbackName) {
@@ -41,6 +44,24 @@ export default function ParameterList() {
     const [backingUpId, setBackingUpId] = useState(null);  // id del parametro per cui si sta facendo backup singolo
     const [globalBackup, setGlobalBackup] = useState(false);
     const [exportingInfo, setExportingInfo] = useState(false);
+
+    // --- Tools ▾, dialogo di conferma e toast esiti (stessi pattern di LanguageList) ---
+    const [toolsOpen, setToolsOpen] = useState(false);
+    const toolsRef = useRef(null);
+    const [dialog, setDialog] = useState(null);
+    const [notice, setNotice] = useState(null);
+    const dismissNotice = useCallback(() => setNotice(null), []);
+    const notify = (type, text) => setNotice({ type, text });
+
+    // Chiusura dropdown Tools al click fuori
+    useEffect(() => {
+        if (!toolsOpen) return;
+        const onDocClick = (e) => {
+            if (toolsRef.current && !toolsRef.current.contains(e.target)) setToolsOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [toolsOpen]);
 
     useEffect(() => {
         const load = async () => {
@@ -132,10 +153,6 @@ export default function ParameterList() {
 
     // ---- Export overview PDF ----
     const onExportInfoPdf = async () => {
-        if (filteredParams.length === 0) {
-            alert('No parameter to export — adjust the filters first.');
-            return;
-        }
         setExportingInfo(true);
         try {
             await downloadBlob(
@@ -147,48 +164,73 @@ export default function ParameterList() {
                 'PCM_parameters_info.pdf'
             );
         } catch {
-            alert('Error while downloading the parameters info PDF.');
+            notify('error', 'Error while downloading the parameters info PDF.');
         } finally {
             setExportingInfo(false);
         }
     };
 
+    // ---- Download PDF di un singolo parametro (voce del menu ⋯ di riga) ----
+    const onDownloadPdf = async (param) => {
+        try {
+            await downloadBlob(
+                api.get(`/api/admin/parameters/${param.id}/pdf`, { responseType: 'blob' }),
+                `Parameter_${param.id}.pdf`
+            );
+        } catch {
+            notify('error', 'Error while downloading the PDF.');
+        }
+    };
+
     // ---- Backup handlers ----
-    const onGlobalBackup = async () => {
-        const note = window.prompt(
-            'Optional note for the global parameters backup (leave empty to skip):',
-            ''
-        );
-        if (note === null) return; // cancel
-        if (!window.confirm('Start a global backup of every parameter (definition + questions + allowed motivations)? This may take a while.')) return;
+    const onGlobalBackup = () => {
+        setDialog({
+            title: 'Full parameters backup',
+            message: 'Snapshot of every parameter (definition + questions + allowed motivations). This may take a while. You will find it in History → Full backups → Parameters.',
+            fields: [
+                { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
+            ],
+            confirmLabel: 'Start backup',
+            onConfirm: (v) => { runGlobalBackup(v.note); },
+        });
+    };
+
+    const runGlobalBackup = async (note) => {
         setGlobalBackup(true);
         try {
             await api.post('/api/admin/backups/parameters/create-all', { note });
-            alert('Global parameters backup completed. You can find it in History → Full backups → Parameters.');
+            notify('success', 'Global parameters backup completed. You can find it in History → Full backups → Parameters.');
         } catch (err) {
             console.error(err);
-            alert(err?.response?.data?.detail || 'Error while creating the parameters backup.');
+            notify('error', getApiErrorMessage(err, 'Error while creating the parameters backup.'));
         } finally {
             setGlobalBackup(false);
         }
     };
 
-    const onBackupParameter = async (param) => {
-        const note = window.prompt(
-            `Optional note for the backup of "${param.name}" (${param.id}):`,
-            ''
-        );
-        if (note === null) return; // cancel
+    const onBackupParameter = (param) => {
+        setDialog({
+            title: `Backup "${param.name}" (${param.id})`,
+            message: 'Snapshot of this parameter (definition + questions + allowed motivations). You will find it in History → Full backups → Parameters.',
+            fields: [
+                { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
+            ],
+            confirmLabel: 'Create backup',
+            onConfirm: (v) => { runBackupParameter(param, v.note); },
+        });
+    };
+
+    const runBackupParameter = async (param, note) => {
         setBackingUpId(param.id);
         try {
             await api.post(
                 `/api/admin/backups/parameters/create-one/${encodeURIComponent(param.id)}`,
                 { note }
             );
-            alert(`Backup of "${param.name}" created. You can find it in History → Full backups → Parameters.`);
+            notify('success', `Backup of "${param.name}" created. You can find it in History → Full backups → Parameters.`);
         } catch (err) {
             console.error(err);
-            alert(err?.response?.data?.detail || 'Error while creating the parameter backup.');
+            notify('error', getApiErrorMessage(err, 'Error while creating the parameter backup.'));
         } finally {
             setBackingUpId(null);
         }
@@ -226,7 +268,7 @@ export default function ParameterList() {
                 order: newArr.map(p => p.id),
             });
         } catch (err) {
-            alert(err.response?.data?.detail || 'Reorder failed.');
+            notify('error', getApiErrorMessage(err, 'Reorder failed.'));
             setParameters(previousArr); // rollback
         } finally {
             setSavingOrder(false);
@@ -297,24 +339,52 @@ export default function ParameterList() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        <button
-                            type="button"
-                            onClick={onExportInfoPdf}
-                            disabled={exportingInfo || filteredParams.length === 0}
-                            className="btn btn--small"
-                            title="Download a PDF with the general info of every (filtered) parameter"
-                        >
-                            {exportingInfo ? 'Exporting…' : 'Download parameters info (.pdf)'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onGlobalBackup}
-                            disabled={globalBackup}
-                            className="btn btn--small"
-                            title="Snapshot every parameter definition (questions + allowed motivations)"
-                        >
-                            {globalBackup ? 'Backing up…' : '+ Full Parameters Backup'}
-                        </button>
+                        {/* Tools ▾: export e manutenzione fuori dalla vista,
+                            come in LanguageList. Add Parameter resta il
+                            bottone primario. */}
+                        <div ref={toolsRef} style={{ position: 'relative' }}>
+                            <button
+                                type="button"
+                                onClick={() => setToolsOpen(o => !o)}
+                                className="btn btn--small"
+                                aria-haspopup="menu"
+                                aria-expanded={toolsOpen}
+                            >
+                                Tools ▾
+                            </button>
+                            {toolsOpen && (
+                                <div
+                                    role="menu"
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(100% + 4px)',
+                                        right: 0,
+                                        minWidth: 280,
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--radius-sm, 6px)',
+                                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                                        zIndex: 50,
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <MenuSection label="Export (current filter)" />
+                                    <DropdownItem
+                                        onClick={() => { setToolsOpen(false); onExportInfoPdf(); }}
+                                        disabled={exportingInfo || filteredParams.length === 0}
+                                    >
+                                        {exportingInfo ? 'Exporting…' : 'Parameters info (.pdf)'}
+                                    </DropdownItem>
+                                    <MenuSection label="Maintenance" divider />
+                                    <DropdownItem
+                                        onClick={() => { setToolsOpen(false); onGlobalBackup(); }}
+                                        disabled={globalBackup}
+                                    >
+                                        {globalBackup ? 'Backing up…' : 'Full parameters backup'}
+                                    </DropdownItem>
+                                </div>
+                            )}
+                        </div>
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
                 </div>
@@ -337,6 +407,11 @@ export default function ParameterList() {
                         </tr>
                     </thead>
                     <tbody>
+                        {loading && (
+                            <tr>
+                                <td colSpan={canReorder ? 10 : 9} className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading parameters…</td>
+                            </tr>
+                        )}
                         {!loading && filteredParams.map(param => {
                             const isDragging = param.id === draggingId;
                             const isDropAbove = dropTarget?.id === param.id && dropTarget?.above;
@@ -391,7 +466,9 @@ export default function ParameterList() {
                                         </span>
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
-                                        <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                        {/* Azioni quotidiane visibili (Data, Edit);
+                                            PDF e Backup nel menu ⋯ come in LanguageList. */}
+                                        <div className="row-actions" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                                             <Link
                                                 to={`/admin/parameters/${param.id}/by-language`}
                                                 className="btn btn--primary"
@@ -399,32 +476,15 @@ export default function ParameterList() {
                                             >
                                                 Data
                                             </Link>
-                                            <button
-                                                type="button"
-                                                className="btn"
-                                                onClick={async () => {
-                                                    try {
-                                                        await downloadBlob(
-                                                            api.get(`/api/admin/parameters/${param.id}/pdf`, { responseType: 'blob' }),
-                                                            `Parameter_${param.id}.pdf`
-                                                        );
-                                                    } catch {
-                                                        alert('Error while downloading the PDF.');
-                                                    }
-                                                }}
-                                            >
-                                                PDF
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn"
-                                                disabled={backingUpId === param.id}
-                                                onClick={() => onBackupParameter(param)}
-                                                title="Snapshot this parameter (definition + questions + allowed motivations)"
-                                            >
-                                                {backingUpId === param.id ? '…' : 'Backup'}
-                                            </button>
                                             <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
+                                            <RowActionsMenu items={[
+                                                { label: 'Download PDF', onClick: () => onDownloadPdf(param) },
+                                                {
+                                                    label: backingUpId === param.id ? 'Backing up…' : 'Backup…',
+                                                    disabled: backingUpId === param.id,
+                                                    onClick: () => onBackupParameter(param),
+                                                },
+                                            ]} />
                                         </div>
                                     </td>
                                 </tr>
@@ -438,6 +498,12 @@ export default function ParameterList() {
                     </tbody>
                 </table>
             </div>
+
+            {/* ==== DIALOGO DI CONFERMA (backup note) ==== */}
+            {dialog && <ConfirmDialog config={dialog} onClose={() => setDialog(null)} />}
+
+            {/* ==== TOAST ESITO OPERAZIONI ==== */}
+            <NoticeToast notice={notice} onClose={dismissNotice} />
         </div>
     );
 }

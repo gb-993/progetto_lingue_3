@@ -2,16 +2,24 @@ import { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
 import api, { getApiErrorMessage } from '../../api';
 
-// Modale riutilizzabile per trasferire i dati linguistici di una question
-// (sorgente) verso un'altra a scelta. Mostra i conflitti (destinazione gia'
-// valorizzata) e per ognuno si sceglie tieni/sovrascrivi. Usa l'endpoint
-// /transfer-preview e /transfer-data. Self-contained: si carica da solo la
-// lista di parametri/question per il select di destinazione.
+// Modale "Copy examples only" (richiesta linguisti 2026-06): DUPLICA gli
+// esempi della question sorgente sulle risposte gia' presenti nella
+// destinazione, lingua per lingua. Risposte, motivazioni e testi non vengono
+// toccati; la sorgente resta intatta. Le lingue per cui la destinazione non
+// ha una risposta vengono saltate e segnalate (un esempio deve essere
+// agganciato a una risposta). Endpoint: /copy-examples-preview + /copy-examples.
+//
+// A copia eseguita il riepilogo (copiati/duplicati/saltati) resta nel modale:
+// l'utente lo legge e chiude. A differenza del Move, la change note e'
+// OPZIONALE: la copia non e' distruttiva e il log in History viene scritto
+// comunque.
 //
 // Props:
-//   sourceQuestionId : id della question da svuotare
-//   onClose()        : chiusura senza azione
-//   onTransferred(r) : chiamata dopo un POST riuscito (r = {moved, overwritten, kept, ...})
+//   sourceQuestionId : id della question da cui copiare gli esempi
+//   onClose()        : chiusura senza copia (Cancel)
+//   onCopied(r)      : chiamata quando l'utente chiude DOPO una copia
+//                      riuscita (r = {examples_copied, languages_skipped, ...}).
+//                      Usata dai flussi delete/deactivate per proseguire.
 
 const modalOverlayStyle = {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -42,16 +50,16 @@ const reactSelectStyles = {
     noOptionsMessage: (base) => ({ ...base, color: 'var(--text-muted)' }),
 };
 
-export default function TransferDataModal({ sourceQuestionId, onClose, onTransferred }) {
+export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied }) {
     const [parameters, setParameters] = useState([]);
     const [allQuestions, setAllQuestions] = useState([]);
     const [dest, setDest] = useState(null);
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
-    // { [language_id]: 'keep' | 'overwrite' } — default 'keep' per ogni conflitto.
-    const [choices, setChoices] = useState({});
     const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    // Esito della copia: quando valorizzato, il modale mostra il riepilogo.
+    const [result, setResult] = useState(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -86,60 +94,87 @@ export default function TransferDataModal({ sourceQuestionId, onClose, onTransfe
     const handleDestChange = async (d) => {
         setDest(d);
         setPreview(null);
-        setChoices({});
         if (!d) return;
         setLoading(true);
         try {
-            const res = await api.get(`/api/admin/questions/${sourceQuestionId}/transfer-preview`, {
+            const res = await api.get(`/api/admin/questions/${sourceQuestionId}/copy-examples-preview`, {
                 params: { dest_id: d.value },
             });
             setPreview(res.data);
-            const c = {};
-            (res.data.conflicts || []).forEach(x => { c[x.language_id] = 'keep'; });
-            setChoices(c);
         } catch (err) {
-            setPreview({ error: getApiErrorMessage(err, 'Could not load the transfer preview.') });
+            setPreview({ error: getApiErrorMessage(err, 'Could not load the copy preview.') });
         } finally {
             setLoading(false);
         }
     };
 
-    const setAll = (v) => {
-        const c = {};
-        (preview?.conflicts || []).forEach(x => { c[x.language_id] = v; });
-        setChoices(c);
-    };
-
     const handleConfirm = async () => {
         if (!dest || !preview || preview.error) return;
-        const overwrite_language_ids = Object.entries(choices)
-            .filter(([, v]) => v === 'overwrite')
-            .map(([k]) => k);
         setSubmitting(true);
         try {
-            const res = await api.post(`/api/admin/questions/${sourceQuestionId}/transfer-data`, {
+            const res = await api.post(`/api/admin/questions/${sourceQuestionId}/copy-examples`, {
                 dest_id: dest.value,
-                overwrite_language_ids,
                 change_note: note,
             });
-            onTransferred?.(res.data);
+            setResult(res.data);
         } catch (err) {
-            alert(getApiErrorMessage(err, 'Transfer failed.'));
+            alert(getApiErrorMessage(err, 'Copy failed.'));
         } finally {
             setSubmitting(false);
         }
     };
 
-    const fmt = (s) => `${s.response_text || '—'} · ${s.examples_count} ex · ${s.motivations_count} mot`;
+    // ==== RIEPILOGO POST-COPIA ====
+    if (result) {
+        return (
+            <div style={modalOverlayStyle}>
+                <div className="card" style={{ width: '560px', maxWidth: '94vw' }}>
+                    <h3 style={{ marginTop: 0 }}>Examples copied</h3>
+                    <div style={{
+                        background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',
+                        borderRadius: '6px', padding: '0.7rem 0.9rem', marginBottom: '1rem', fontSize: '0.88rem', lineHeight: 1.5,
+                    }}>
+                        <div>
+                            <strong>{result.examples_copied}</strong> example{result.examples_copied === 1 ? '' : 's'} copied
+                            {' '}from <strong>{sourceQuestionId}</strong> to <strong>{dest?.value}</strong>
+                            {' '}across <strong>{result.languages_processed}</strong> language{result.languages_processed === 1 ? '' : 's'}.
+                        </div>
+                        {result.duplicates_skipped > 0 && (
+                            <div className="muted">{result.duplicates_skipped} identical example(s) were already present and were skipped.</div>
+                        )}
+                        {(result.languages_skipped || []).length > 0 && (
+                            <div style={{ marginTop: '0.4rem' }}>
+                                ⚠ Skipped (no answer in destination): <strong>{result.languages_skipped.join(', ')}</strong>
+                            </div>
+                        )}
+                    </div>
+                    <p className="small muted" style={{ marginTop: 0 }}>
+                        The source question was not modified: answers, motivations and its own examples are untouched.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            type="button"
+                            className="btn btn--primary"
+                            onClick={() => (onCopied ? onCopied(result) : onClose())}
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
+    // ==== FORM ====
     return (
         <div style={modalOverlayStyle}>
             <div className="card" style={{ width: '640px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }}>
-                <h3 style={{ marginTop: 0 }}>Transfer linked data to another question</h3>
+                <h3 style={{ marginTop: 0 }}>Copy examples to another question</h3>
                 <p style={{ fontSize: '0.9rem', lineHeight: 1.45 }}>
-                    Moves all answers, examples and motivations of <strong>{sourceQuestionId}</strong> (every language)
-                    to the question you pick. A safety snapshot is first saved to the
-                    <strong> Old Questions Archive</strong>, and the source question is left empty.
+                    Copies the examples of <strong>{sourceQuestionId}</strong> into the destination question,
+                    language by language. </p>
+                <p>Languages where the destination has no answer are
+                    skipped (an example must be attached to an answer).
                 </p>
 
                 <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
@@ -165,62 +200,44 @@ export default function TransferDataModal({ sourceQuestionId, onClose, onTransfe
 
                 {!loading && preview && !preview.error && (
                     <>
-                        {preview.source_total === 0 ? (
+                        {(preview.copyable || []).length === 0 && (preview.skipped || []).length === 0 ? (
                             <div className="alert alert-warning" style={{ fontSize: '0.85rem' }}>
-                                This question has no linked data to transfer.
+                                This question has no examples to copy.
                             </div>
                         ) : (
                             <div style={{
                                 background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',
                                 borderRadius: '6px', padding: '0.6rem 0.85rem', marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.85rem',
                             }}>
-                                <strong>{preview.transferable_count}</strong> language{preview.transferable_count === 1 ? '' : 's'} will be transferred directly
-                                {preview.conflict_count > 0 && (
-                                    <> · <strong>{preview.conflict_count}</strong> in conflict (destination already has an answer)</>
+                                <strong>{preview.copyable_examples_total}</strong> example{preview.copyable_examples_total === 1 ? '' : 's'} will be copied
+                                {preview.duplicates_total > 0 && (
+                                    <> · {preview.duplicates_total} already present (skipped)</>
                                 )}.
                             </div>
                         )}
 
-                        {preview.conflict_count > 0 && (
-                            <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                                    <strong style={{ fontSize: '0.85rem' }}>Conflicts — choose per language</strong>
-                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                        <button type="button" className="btn btn--small" onClick={() => setAll('keep')}>All keep destination</button>
-                                        <button type="button" className="btn btn--small" onClick={() => setAll('overwrite')}>All overwrite</button>
+                        {(preview.copyable || []).length > 0 && (
+                            <div style={{ border: '1px solid var(--border)', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', marginBottom: 'var(--form-field-mb, 1rem)' }}>
+                                {preview.copyable.map((c, i) => (
+                                    <div key={c.language_id} style={{
+                                        padding: '0.45rem 0.7rem', fontSize: '0.82rem',
+                                        borderTop: i === 0 ? 'none' : '1px solid var(--border)',
+                                        display: 'flex', justifyContent: 'space-between', gap: '0.5rem',
+                                    }}>
+                                        <span>{c.language_name || c.language_id} <span className="muted">({c.language_id})</span></span>
+                                        <span className="muted">
+                                            {c.examples_count - c.duplicates_count} to copy
+                                            {c.duplicates_count > 0 && <> · {c.duplicates_count} duplicate(s) skipped</>}
+                                        </span>
                                     </div>
-                                </div>
-                                <div style={{ border: '1px solid var(--border)', borderRadius: '6px', maxHeight: '260px', overflowY: 'auto' }}>
-                                    {preview.conflicts.map((c, i) => {
-                                        const choice = choices[c.language_id] || 'keep';
-                                        return (
-                                            <div key={c.language_id} style={{
-                                                padding: '0.5rem 0.7rem',
-                                                borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                                                display: 'flex', flexDirection: 'column', gap: '0.3rem',
-                                            }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                                                    {c.language_name || c.language_id} <span className="muted" style={{ fontWeight: 400 }}>({c.language_id})</span>
-                                                </div>
-                                                <div className="small muted" style={{ fontSize: '0.76rem' }}>
-                                                    destination: {fmt(c.dest)} &nbsp;|&nbsp; source: {fmt(c.source)}
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '1.2rem', fontSize: '0.8rem' }}>
-                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                                                        <input type="radio" name={`conflict-${c.language_id}`} checked={choice === 'keep'}
-                                                            onChange={() => setChoices(prev => ({ ...prev, [c.language_id]: 'keep' }))} />
-                                                        Keep destination
-                                                    </label>
-                                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                                                        <input type="radio" name={`conflict-${c.language_id}`} checked={choice === 'overwrite'}
-                                                            onChange={() => setChoices(prev => ({ ...prev, [c.language_id]: 'overwrite' }))} />
-                                                        Overwrite with source
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {(preview.skipped || []).length > 0 && (
+                            <div className="alert alert-warning" style={{ fontSize: '0.82rem', marginBottom: 'var(--form-field-mb, 1rem)' }}>
+                                <strong>Skipped languages</strong> (the destination has no answer to attach the examples to):{' '}
+                                {preview.skipped.map(s => `${s.language_name || s.language_id} (${s.examples_count} ex)`).join(', ')}.
                             </div>
                         )}
                     </>
@@ -228,14 +245,14 @@ export default function TransferDataModal({ sourceQuestionId, onClose, onTransfe
 
                 <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                     <label className="small" style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>
-                        Change note (required)
+                        Change note (optional)
                     </label>
                     <textarea
                         rows="2"
                         value={note}
                         onChange={e => setNote(e.target.value)}
-                        placeholder="Describe why you are transferring the data…"
-                        style={{ width: '100%', padding: '0.4rem', borderColor: note.trim() ? 'var(--border)' : 'red', borderRadius: '4px' }}
+                        placeholder="Optional note for the change history…"
+                        style={{ width: '100%', padding: '0.4rem', borderColor: 'var(--border)', borderRadius: '4px' }}
                     />
                 </div>
 
@@ -250,10 +267,10 @@ export default function TransferDataModal({ sourceQuestionId, onClose, onTransfe
                         disabled={
                             submitting || loading || !dest
                             || !preview || !!preview.error
-                            || preview.source_total === 0 || !note.trim()
+                            || (preview.copyable_examples_total || 0) === 0
                         }
                     >
-                        {submitting ? 'Transferring…' : 'Transfer data'}
+                        {submitting ? 'Copying…' : 'Copy examples'}
                     </button>
                 </div>
             </div>

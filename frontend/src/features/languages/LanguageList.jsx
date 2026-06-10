@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../../api';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import api, { getApiErrorMessage } from '../../api';
 import { searchMatches } from '../../utils/search';
 import usePersistentState from '../../utils/usePersistentState';
+import ConfirmDialog from '../../components/ConfirmDialog';
+import NoticeToast from '../../components/NoticeToast';
+import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
 import LanguageMap from './LanguageMap';
 
 const STATUS_BADGE = {
@@ -56,8 +59,14 @@ export default function LanguageList() {
     // restano nel set ma sono inerti finché non riappaiono.
     const [excludedIds, setExcludedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
-    const [downloadOpen, setDownloadOpen] = useState(false);
+    const [toolsOpen, setToolsOpen] = useState(false);
     const [globalBackup, setGlobalBackup] = useState(false);
+    // Mappa collassabile: chi lavora sulla tabella la chiude una volta e la
+    // ritrova chiusa (sessionStorage, come i filtri).
+    const [mapOpen, setMapOpen] = usePersistentState('languages:mapOpen', true);
+    // Dialogo di conferma corrente (null = chiuso) e toast esito operazioni.
+    const [dialog, setDialog] = useState(null);
+    const [notice, setNotice] = useState(null);
     // Job di export backup (asincrono): { jobId, state, error }.
     // state è il payload restituito da /status: { phase, phase_label, current,
     // total, finished, error, ... }. Quando finished:true scatta il download.
@@ -67,11 +76,16 @@ export default function LanguageList() {
     // backup ma senza download — finito = success notification.
     const [recomputeJob, setRecomputeJob] = useState(null);
     const [recomputing, setRecomputing] = useState(false);
-    const downloadRef = useRef(null);
+    const toolsRef = useRef(null);
     const mapExportRef = useRef(null);
+    const navigate = useNavigate();
 
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
+
+    // Identità stabile per il timer di auto-dismiss del NoticeToast.
+    const dismissNotice = useCallback(() => setNotice(null), []);
+    const notify = (type, text) => setNotice({ type, text });
 
     const reloadLanguages = async () => {
         const res = await api.get('/api/admin/languages');
@@ -101,76 +115,69 @@ export default function LanguageList() {
         load();
     }, []);
 
-    const onDuplicate = async (lang) => {
+    const onDuplicate = (lang) => {
         // Default suggerito: id/nome senza cifre finali + "2" (stessa logica
         // del fallback automatico lato server). L'admin puo' sovrascriverlo.
         const baseId = (lang.id || '').replace(/\d+$/, '') || lang.id;
         const baseName = (lang.name_full || '').replace(/\d+$/, '') || lang.name_full;
 
-        const newId = window.prompt(
-            `Duplicate "${lang.name_full}" (${lang.id}) with all answers, examples and parameters.\n\n` +
-            `Choose the ID for the new language (max 10 characters).\n` +
-            `You can edit the suggested value below or keep it as is:`,
-            `${baseId}2`
-        );
-        if (newId === null) return; // annullato
-        const trimmedId = newId.trim();
-        if (!trimmedId) {
-            alert('The new language ID cannot be empty.');
-            return;
-        }
-
-        const newName = window.prompt(
-            `Choose the name for the new language.\n` +
-            `You can edit the suggested value below or keep it as is:`,
-            `${baseName}2`
-        );
-        if (newName === null) return; // annullato
-
-        try {
-            const res = await api.post(
-                `/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`,
-                { new_id: trimmedId, new_name: newName.trim() || undefined }
-            );
-            await reloadLanguages();
-            alert(`Created "${res.data.name_full}" (${res.data.id}).`);
-        } catch (err) {
-            const detail = err?.response?.data?.detail || 'Could not duplicate the language.';
-            alert(detail);
-        }
+        setDialog({
+            title: `Duplicate "${lang.name_full}" (${lang.id})`,
+            message: 'Creates a copy of this language with all its answers, examples and parameter values.',
+            fields: [
+                { name: 'id', label: 'New language ID (max 10 characters)', initial: `${baseId}2`, autoFocus: true },
+                { name: 'name', label: 'New language name', initial: `${baseName}2` },
+            ],
+            confirmLabel: 'Duplicate',
+            confirmEnabled: (v) => v.id.trim().length > 0,
+            // Promise: il dialogo resta aperto con "Working…" e mostra
+            // eventuali errori API (es. ID già esistente) senza chiudersi.
+            onConfirm: async (v) => {
+                const res = await api.post(
+                    `/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`,
+                    { new_id: v.id.trim(), new_name: v.name.trim() || undefined }
+                );
+                await reloadLanguages();
+                notify('success', `Created "${res.data.name_full}" (${res.data.id}).`);
+            },
+        });
     };
 
     // Eliminazione "vera" della lingua: rimuove la riga e in cascata tutti i
     // dati operativi (risposte, parametri, backup, alias). Il dizionario
     // Motivations e gli archivi storici non vengono toccati. Doppia conferma:
     // l'admin deve digitare esattamente l'id della lingua per procedere.
-    const onDelete = async (lang) => {
-        const typed = window.prompt(
-            `PERMANENTLY DELETE language "${lang.name_full}" (${lang.id})?\n\n` +
-            `THIS WILL DELETE:\n` +
-            `  • All answers, examples and answer-motivation links of this language\n` +
-            `  • All parameter values, evaluations and "is_unsure" / admin-note statuses\n` +
-            `  • All saved backups (Submissions) of this language and their contents\n` +
-            `  • All historical ID aliases of this language\n\n` +
-            `WHAT WILL NOT BE DELETED:\n` +
-            `  • History audit log (a "delete" event will be added there)\n` +
-            `  • The global Motivations dictionary (shared with other languages)\n` +
-            `  • Archived answers (from removed questions) referring to this id\n\n` +
-            `To confirm, type the language ID exactly: ${lang.id}`
-        );
-        if (typed === null) return;
-        if (typed.trim() !== lang.id) {
-            alert(`Confirmation does not match.\nExpected: "${lang.id}"\nGot: "${typed.trim()}"\nDeletion aborted.`);
-            return;
-        }
-        try {
-            await api.delete(`/api/admin/languages/${encodeURIComponent(lang.id)}`);
-            await reloadLanguages();
-            alert(`Language "${lang.name_full}" (${lang.id}) deleted.`);
-        } catch (err) {
-            const detail = err?.response?.data?.detail || 'Could not delete the language.';
-            alert(detail);
-        }
+    const onDelete = (lang) => {
+        setDialog({
+            title: `Delete "${lang.name_full}" (${lang.id})`,
+            danger: true,
+            message: (
+                <>
+                    <p style={{ margin: '0 0 0.5rem' }}><strong>This will permanently delete:</strong></p>
+                    <ul style={{ margin: '0 0 0.75rem', paddingLeft: '1.2rem' }}>
+                        <li>All answers, examples and answer-motivation links of this language</li>
+                        <li>All parameter values, evaluations and "is_unsure" / admin-note statuses</li>
+                        <li>All saved backups (Submissions) of this language and their contents</li>
+                        <li>All historical ID aliases of this language</li>
+                    </ul>
+                    <p style={{ margin: '0 0 0.5rem' }}><strong>What will NOT be deleted:</strong></p>
+                    <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+                        <li>History audit log (a "delete" event will be added there)</li>
+                        <li>Archived answers (from removed questions) referring to this id</li>
+                    </ul>
+                </>
+            ),
+            fields: [
+                { name: 'confirm', label: `Type the language ID (${lang.id}) to confirm`, placeholder: lang.id, autoFocus: true },
+            ],
+            confirmLabel: 'Delete permanently',
+            confirmEnabled: (v) => v.confirm.trim() === lang.id,
+            onConfirm: async () => {
+                await api.delete(`/api/admin/languages/${encodeURIComponent(lang.id)}`);
+                await reloadLanguages();
+                notify('success', `Language "${lang.name_full}" (${lang.id}) deleted.`);
+            },
+        });
     };
 
     const handleFilter = (e) => {
@@ -326,7 +333,7 @@ export default function LanguageList() {
                 'PCM_languages.xlsx'
             );
         } catch {
-            alert("Error while exporting the metadata.");
+            notify('error', 'Error while exporting the metadata.');
         } finally {
             setExporting(false);
         }
@@ -347,7 +354,7 @@ export default function LanguageList() {
             if (!jobId) throw new Error('Server did not return a job_id.');
             setExportJob({ jobId, state: null, error: null });
         } catch (err) {
-            alert(err.response?.data?.detail || err.message || 'Could not start the backup.');
+            notify('error', getApiErrorMessage(err, 'Could not start the backup.'));
             setExporting(false);
         }
     };
@@ -389,7 +396,7 @@ export default function LanguageList() {
                 document.body.appendChild(a); a.click(); a.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
-                alert(err.response?.data?.detail || 'Could not download the backup file.');
+                notify('error', getApiErrorMessage(err, 'Could not download the backup file.'));
             }
         };
 
@@ -431,13 +438,18 @@ export default function LanguageList() {
 
     // Recompute final values per TUTTE le lingue. Stessa meccanica del job
     // di backup (POST start → polling status → done) ma senza download.
-    const onStartRecompute = async () => {
-        const ok = window.confirm(
-            'Recompute the final values for ALL languages?\n\n' +
-            'This re-runs the parameter DAG and consolidate step on every language. ' +
-            'Can take some minutes on large datasets.'
-        );
-        if (!ok) return;
+    const onStartRecompute = () => {
+        setDialog({
+            title: 'Recompute final values',
+            message: 'Re-runs the parameter DAG and consolidate step on every language. Can take some minutes on large datasets.',
+            confirmLabel: 'Recompute',
+            // Non-Promise: il dialogo si chiude subito, il progresso vive
+            // nel toast di job già esistente.
+            onConfirm: () => { startRecompute(); },
+        });
+    };
+
+    const startRecompute = async () => {
         setRecomputing(true);
         setRecomputeJob(null);
         try {
@@ -446,7 +458,7 @@ export default function LanguageList() {
             if (!jobId) throw new Error('Server did not return a job_id.');
             setRecomputeJob({ jobId, state: null, error: null });
         } catch (err) {
-            alert(err.response?.data?.detail || err.message || 'Could not start recompute.');
+            notify('error', getApiErrorMessage(err, 'Could not start recompute.'));
             setRecomputing(false);
         }
     };
@@ -483,8 +495,12 @@ export default function LanguageList() {
                     } else {
                         const errCount = res.data.report?.errors_count || 0;
                         const total = res.data.report?.languages_processed || 0;
+                        // Notifica anche il successo: senza, il job spariva in
+                        // silenzio e l'utente non sapeva se aveva finito.
                         if (errCount > 0) {
-                            alert(`Recompute completed with ${errCount} error(s) over ${total} language(s). See server logs for details.`);
+                            notify('error', `Recompute completed with ${errCount} error(s) over ${total} language(s). See server logs for details.`);
+                        } else {
+                            notify('success', `Recompute completed on ${total} language(s).`);
                         }
                         setRecomputeJob(null);
                     }
@@ -510,7 +526,7 @@ export default function LanguageList() {
 
     const onExportMap = async () => {
         if (!mapExportRef.current) {
-            alert('Map is not ready yet.');
+            notify('error', 'The map is not ready yet — open it and wait for it to render.');
             return;
         }
         setExporting(true);
@@ -524,10 +540,10 @@ export default function LanguageList() {
             URL.revokeObjectURL(url);
         } catch (err) {
             console.error(err);
-            alert('Could not export the map (rendering not complete or canvas blocked).');
+            notify('error', 'Could not export the map (rendering not complete or canvas blocked).');
         } finally {
             setExporting(false);
-            setDownloadOpen(false);
+            setToolsOpen(false);
         }
     };
 
@@ -542,8 +558,8 @@ export default function LanguageList() {
             const skippedHeader = res.headers['x-skipped-languages'];
             if (skippedHeader) {
                 const ids = skippedHeader.split(',').filter(Boolean);
-                alert(
-                    `Warning: ${ids.length} language(s) have no coordinates and have been excluded from the GCD matrix:\n\n` +
+                notify('warning',
+                    `${ids.length} language(s) have no coordinates and have been excluded from the GCD matrix:\n` +
                     ids.join(', ')
                 );
             }
@@ -567,43 +583,51 @@ export default function LanguageList() {
                     if (json?.detail) msg = json.detail;
                 } catch { /* non-JSON, ignora */ }
             }
-            alert(msg);
+            notify('error', msg);
         } finally {
             setExporting(false);
-            setDownloadOpen(false);
+            setToolsOpen(false);
         }
     };
 
-    const onGlobalBackup = async () => {
-        const note = window.prompt(
-            'Optional note for the global languages backup (leave empty to skip):',
-            ''
-        );
-        if (note === null) return;
-        if (!window.confirm('Start a global backup of every language? This may take a while.')) return;
+    const onGlobalBackup = () => {
+        setDialog({
+            title: 'Full languages backup',
+            message: 'Snapshot of every language (definitions + answers). This may take a while. You will find it in History → Full backups.',
+            fields: [
+                { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
+            ],
+            confirmLabel: 'Start backup',
+            // Fire-and-forget: il dialogo si chiude subito, l'esito arriva
+            // col toast (la voce nel menu Tools resta "Backing up…" intanto).
+            onConfirm: (v) => { runGlobalBackup(v.note); },
+        });
+    };
+
+    const runGlobalBackup = async (note) => {
         setGlobalBackup(true);
         try {
             await api.post('/api/admin/backups/create-all', { note });
-            alert('Global languages backup completed. You can find it in History → Full backups.');
+            notify('success', 'Global languages backup completed. You can find it in History → Full backups.');
         } catch (err) {
             console.error(err);
-            alert(err?.response?.data?.detail || 'Error while creating the languages backup.');
+            notify('error', getApiErrorMessage(err, 'Error while creating the languages backup.'));
         } finally {
             setGlobalBackup(false);
         }
     };
 
-    // Chiusura dropdown al click fuori
+    // Chiusura dropdown Tools al click fuori
     useEffect(() => {
-        if (!downloadOpen) return;
+        if (!toolsOpen) return;
         const onDocClick = (e) => {
-            if (downloadRef.current && !downloadRef.current.contains(e.target)) {
-                setDownloadOpen(false);
+            if (toolsRef.current && !toolsRef.current.contains(e.target)) {
+                setToolsOpen(false);
             }
         };
         document.addEventListener('mousedown', onDocClick);
         return () => document.removeEventListener('mousedown', onDocClick);
-    }, [downloadOpen]);
+    }, [toolsOpen]);
 
     return (
         <div className="container">
@@ -698,75 +722,63 @@ export default function LanguageList() {
                             </button>
                         )}
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        <div ref={downloadRef} style={{ position: 'relative' }}>
-                            <button
-                                type="button"
-                                onClick={() => setDownloadOpen(o => !o)}
-                                disabled={exporting || targetIds.length === 0 || !isAdmin}
-                                className="btn btn--small"
-                                title={!isAdmin ? "Admin only" : ""}
-                                aria-haspopup="menu"
-                                aria-expanded={downloadOpen}
-                            >
-                                Download Data ▾
-                            </button>
-                            {downloadOpen && (
-                                <div
-                                    role="menu"
-                                    style={{
-                                        position: 'absolute',
-                                        top: 'calc(100% + 4px)',
-                                        right: 0,
-                                        minWidth: 260,
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 'var(--radius-sm, 6px)',
-                                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
-                                        zIndex: 50,
-                                        overflow: 'hidden',
-                                    }}
+                        {/* Tools ▾ in tre sezioni: Download (i 4 export coi nomi
+                            storici), Maintenance (recompute + backup globale),
+                            Import. Fuori restano solo Reset e Add Language. */}
+                        {isAdmin && (
+                            <div ref={toolsRef} style={{ position: 'relative' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setToolsOpen(o => !o)}
+                                    className="btn btn--small"
+                                    aria-haspopup="menu"
+                                    aria-expanded={toolsOpen}
                                 >
-                                    <DropdownItem onClick={() => { setDownloadOpen(false); onExportMetadata(); }} disabled={exporting}>
-                                        Export language metadata (.xlsx)
-                                    </DropdownItem>
-                                    <DropdownItem onClick={() => { setDownloadOpen(false); onStartExportZip(); }} disabled={exporting}>
-                                        Export backup (.zip)
-                                    </DropdownItem>
-                                    <DropdownItem onClick={onExportMap} disabled={exporting}>
-                                        Map (.png)
-                                    </DropdownItem>
-                                    <DropdownItem onClick={onExportGcd} disabled={exporting}>
-                                        Geographic distances (.txt)
-                                    </DropdownItem>
-                                </div>
-                            )}
-                        </div>
-                        {isAdmin && (
-                            <button
-                                type="button"
-                                onClick={onGlobalBackup}
-                                disabled={globalBackup}
-                                className="btn btn--small"
-                                title="Snapshot every language (definitions + answers)"
-                            >
-                                {globalBackup ? 'Backing up…' : '+ Full Languages Backup'}
-                            </button>
-                        )}
-                        {isAdmin && (
-                            <button
-                                type="button"
-                                onClick={onStartRecompute}
-                                disabled={recomputing}
-                                className="btn btn--small"
-                                title="Re-run the parameter DAG on every language"
-                            >
-                                {recomputing ? 'Recomputing…' : 'Recompute final values'}
-                            </button>
-                        )}
-                        {isAdmin && (
-                            <Link to="/admin/import-excel" className="btn btn--small">
-                                Import from Excel
-                            </Link>
+                                    Tools ▾
+                                </button>
+                                {toolsOpen && (
+                                    <div
+                                        role="menu"
+                                        style={{
+                                            position: 'absolute',
+                                            top: 'calc(100% + 4px)',
+                                            right: 0,
+                                            minWidth: 280,
+                                            background: 'var(--surface)',
+                                            border: '1px solid var(--border)',
+                                            borderRadius: 'var(--radius-sm, 6px)',
+                                            boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                                            zIndex: 50,
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        <MenuSection label="Download" />
+                                        <DropdownItem onClick={() => { setToolsOpen(false); onExportMetadata(); }} disabled={exporting || targetIds.length === 0}>
+                                            Export language metadata (.xlsx)
+                                        </DropdownItem>
+                                        <DropdownItem onClick={() => { setToolsOpen(false); onStartExportZip(); }} disabled={exporting || targetIds.length === 0}>
+                                            Export backup (.zip)
+                                        </DropdownItem>
+                                        <DropdownItem onClick={onExportMap} disabled={exporting || !mapOpen}>
+                                            {mapOpen ? 'Map (.png)' : 'Map (.png) — open the map first'}
+                                        </DropdownItem>
+                                        <DropdownItem onClick={onExportGcd} disabled={exporting || targetIds.length === 0}>
+                                            Geographic distances (.txt)
+                                        </DropdownItem>
+                                        <MenuSection label="Maintenance" divider />
+                                        <DropdownItem onClick={() => { setToolsOpen(false); onStartRecompute(); }} disabled={recomputing}>
+                                            {recomputing ? 'Recomputing…' : 'Recompute final values'}
+                                        </DropdownItem>
+                                        <DropdownItem onClick={() => { setToolsOpen(false); onGlobalBackup(); }} disabled={globalBackup}>
+                                            {globalBackup ? 'Backing up…' : 'Full Languages Backup'}
+                                        </DropdownItem>
+                                        <MenuSection label="Import" divider />
+                                        <DropdownItem onClick={() => { setToolsOpen(false); navigate('/admin/import-excel'); }}>
+                                            Import from Excel
+                                        </DropdownItem>
+                                    </div>
+                                )}
+                            </div>
                         )}
                         {isAdmin && (
                             <Link to="/languages/add" className="btn btn--primary btn--small">Add Language</Link>
@@ -775,16 +787,49 @@ export default function LanguageList() {
                 </div>
             </div>
 
-            {/* ==== MAPPA ==== */}
+            {/* ==== MAPPA (collassabile) ====
+                La mappa occupa 420px tra filtri e tabella: chi lavora sulle
+                righe la chiude e la preferenza viene ricordata (sessionStorage).
+                Quando è chiusa il componente è smontato (OpenLayers non rende
+                bene in display:none) e l'export PNG nel menu Tools si disabilita. */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1rem' }}>
-                <LanguageMap
-                    ref={mapExportRef}
-                    languages={effectiveLanguages}
-                    filters={filters}
-                    allTopFamilies={options.opt_top_families}
-                    allFamilies={options.opt_families}
-                    allGroups={options.opt_groups}
-                />
+                <button
+                    type="button"
+                    onClick={() => setMapOpen(o => !o)}
+                    aria-expanded={mapOpen}
+                    style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.6rem 1rem',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text)',
+                        font: 'inherit',
+                    }}
+                >
+                    <span style={{
+                        fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase',
+                        letterSpacing: '0.6px', color: 'var(--text-muted)',
+                    }}>
+                        Map · {effectiveLanguages.length} languages
+                    </span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                        {mapOpen ? '▾ Hide' : '▸ Show'}
+                    </span>
+                </button>
+                {mapOpen && (
+                    <LanguageMap
+                        ref={mapExportRef}
+                        languages={effectiveLanguages}
+                        filters={filters}
+                        allTopFamilies={options.opt_top_families}
+                        allFamilies={options.opt_families}
+                        allGroups={options.opt_groups}
+                    />
+                )}
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -792,7 +837,10 @@ export default function LanguageList() {
                 <table className="table">
                     <thead>
                         <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>
+                            <th style={{ width: '56px', textAlign: 'center' }} title="Checked = included in map, distances and exports">
+                                <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                                    Incl.
+                                </span>
                                 <input
                                     type="checkbox"
                                     checked={allFilteredIncluded}
@@ -810,6 +858,11 @@ export default function LanguageList() {
                         </tr>
                     </thead>
                     <tbody>
+                        {loading && (
+                            <tr>
+                                <td colSpan="8" className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading languages…</td>
+                            </tr>
+                        )}
                         {!loading && filteredLanguages.map(lang => (
                             <tr key={lang.id}>
                                 <td style={{ textAlign: 'center' }}>
@@ -827,29 +880,20 @@ export default function LanguageList() {
                                 <td className="muted">{lang.family || '—'}</td>
                                 <td className="muted small">{lang.grp || '—'}</td>
                                 <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
-                                    <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
+                                    {/* Progressive disclosure: visibili solo le azioni
+                                        quotidiane (Data, Edit); Duplicate/Debug/Delete
+                                        nel menu ⋯ — meno rumore e niente Delete a un
+                                        click di distanza su ogni riga. */}
+                                    <div className="row-actions" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                                         <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
                                         {isAdmin && (
                                             <>
-                                                <button
-                                                    type="button"
-                                                    className="btn"
-                                                    onClick={() => onDuplicate(lang)}
-                                                    title="Duplicate this language with all its answers, examples and parameters"
->
-                                                    Duplicate
-                                                </button>
-                                                <Link to={`/languages/${lang.id}/debug`} className="btn">Debug</Link>
                                                 <Link to={`/languages/${lang.id}/edit`} className="btn">Edit</Link>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn--danger"
-                                                    style={{ color: 'red' }}
-                                                    onClick={() => onDelete(lang)}
-                                                    title="Permanently delete this language and all its operative data"
-                                                >
-                                                    Delete
-                                                </button>
+                                                <RowActionsMenu items={[
+                                                    { label: 'Duplicate…', onClick: () => onDuplicate(lang) },
+                                                    { label: 'Debug', onClick: () => navigate(`/languages/${lang.id}/debug`) },
+                                                    { label: 'Delete…', danger: true, onClick: () => onDelete(lang) },
+                                                ]} />
                                             </>
                                         )}
                                     </div>
@@ -886,6 +930,12 @@ export default function LanguageList() {
                     bottom="5rem"
                 />
             )}
+
+            {/* ==== DIALOGO DI CONFERMA (duplicate/delete/backup/recompute) ==== */}
+            {dialog && <ConfirmDialog config={dialog} onClose={() => setDialog(null)} />}
+
+            {/* ==== TOAST ESITO OPERAZIONI ==== */}
+            <NoticeToast notice={notice} onClose={dismissNotice} />
         </div>
     );
 }
@@ -1040,33 +1090,6 @@ function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
                 </div>
             )}
         </div>
-    );
-}
-
-function DropdownItem({ onClick, disabled, children }) {
-    return (
-        <button
-            type="button"
-            role="menuitem"
-            onClick={onClick}
-            disabled={disabled}
-            style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '0.6rem 0.9rem',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text)',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                fontSize: '0.85rem',
-                opacity: disabled ? 0.55 : 1,
-            }}
-            onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--surface-2)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-        >
-            {children}
-        </button>
     );
 }
 
