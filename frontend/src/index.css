@@ -1844,6 +1844,15 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   display: flex;
   flex-direction: column;
 }
+/* L'ultima counter-card assorbe lo spazio residuo della colonna sinistra:
+   senza, restava un buco invisibile sotto di lei e il suo bordo inferiore
+   chiudeva piu' in alto di Latest Changes (bordi "a scaletta" sopra il
+   footer). La lista interna (flex:1 in Dashboard.jsx) usa lo spazio
+   guadagnato e scrolla solo se le lingue flaggate non ci stanno. */
+.admin-counters .counter-card:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .admin-label {
   font-size: 0.68rem;
   font-weight: 700;

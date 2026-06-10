@@ -218,7 +218,11 @@ function RedParamsCard({ total, languages }) {
             </p>
             <div className="admin-big-number">{total || 0}</div>
             {list.length > 0 ? (
-                <div style={{ maxHeight: '140px', overflowY: 'auto', paddingRight: '0.4rem', marginTop: '0.25rem' }}>
+                /* flex:1 + minHeight:0 (non maxHeight fissa): la card e' l'ultima
+                   della colonna e si allunga fino al bordo di Latest Changes
+                   (vedi .admin-counters .counter-card:last-child in index.css);
+                   la lista usa tutto lo spazio e scrolla solo se non basta. */
+                <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '0.4rem', marginTop: '0.25rem' }}>
                     {list.map(l => (
                         <div
                             key={l.language_id}
