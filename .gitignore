@@ -37,6 +37,9 @@ Thumbs.db
 *.log
 logs/
 
+# ---- Report/artefatti generati (NON committare) ----
+eslint-report.txt
+
 # ---- Tooling locale del manuale (NON committare) ----
 # tools/manual/ contiene gli script di generazione manuali (build.mjs,
 # screenshots.mjs) e screenshots.mjs ha credenziali admin in chiaro nel
