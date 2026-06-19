@@ -259,6 +259,14 @@ function truncateWords(text, n) {
 }
 
 function LatestChangesCard({ items }) {
+    const [expanded, setExpanded] = useState(() => new Set());
+
+    const toggle = (id) => setExpanded(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
+
     return (
         <section className="card latest-changes-card">
             <div className="latest-changes-head">
@@ -280,27 +288,51 @@ function LatestChangesCard({ items }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map(c => (
-                                <tr key={c.id}>
-                                    <td style={{ paddingLeft: '1.25rem', fontWeight: 'bold' }}>
-                                        <Link
-                                            to={`/admin/parameters/${c.parameter_id}/edit`}
-                                            style={{ textDecoration: 'none', color: 'inherit' }}
-                                        >
-                                            {c.parameter_id}
-                                        </Link>
-                                    </td>
-                                    <td style={{ maxWidth: '250px' }}>
-                                        {c.change_note ? (
-                                            <span title={c.change_note}>{truncateWords(c.change_note, 10)}</span>
-                                        ) : (
-                                            <span className="muted">—</span>
-                                        )}
-                                    </td>
-                                    <td>{c.user?.name || '—'}</td>
-                                    <td className="muted" style={{ whiteSpace: 'nowrap' }}>{fmtDateShort(c.created_at)}</td>
-                                </tr>
-                            ))}
+                            {items.map(c => {
+                                const truncated = truncateWords(c.change_note, 10);
+                                const isTruncated = c.change_note && truncated !== c.change_note;
+                                const isExpanded = expanded.has(c.id);
+                                return (
+                                    <tr key={c.id}>
+                                        <td style={{ paddingLeft: '1.25rem', fontWeight: 'bold' }}>
+                                            <Link
+                                                to={`/admin/parameters/${c.parameter_id}/edit`}
+                                                style={{ textDecoration: 'none', color: 'inherit' }}
+                                            >
+                                                {c.parameter_id}
+                                            </Link>
+                                        </td>
+                                        <td style={{ maxWidth: '250px' }}>
+                                            {c.change_note ? (
+                                                isTruncated ? (
+                                                    <button
+                                                        type="button"
+                                                        className="latest-change-note"
+                                                        onClick={() => toggle(c.id)}
+                                                        title={isExpanded ? 'Click to collapse' : 'Click to expand'}
+                                                        style={{
+                                                            background: 'none', border: 'none', padding: 0,
+                                                            margin: 0, font: 'inherit', color: 'inherit',
+                                                            textAlign: 'left', cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        {isExpanded ? c.change_note : truncated}
+                                                        <span className="note-caret" aria-hidden="true">
+                                                            {isExpanded ? '▲' : '▼'}
+                                                        </span>
+                                                    </button>
+                                                ) : (
+                                                    <span>{c.change_note}</span>
+                                                )
+                                            ) : (
+                                                <span className="muted">—</span>
+                                            )}
+                                        </td>
+                                        <td>{c.user?.name || '—'}</td>
+                                        <td className="muted" style={{ whiteSpace: 'nowrap' }}>{fmtDateShort(c.created_at)}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}
