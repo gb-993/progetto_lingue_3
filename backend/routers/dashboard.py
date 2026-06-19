@@ -21,7 +21,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     Aggrega tutto il necessario per il pannello admin:
       - to_review: lingue in waiting_for_approval
       - completed: lingue in approved
-      - red_by_language: per ogni lingua attiva, parametri "rossi" (unsure o incompleti)
+      - red_by_language: per ogni lingua (qualsiasi stato) con parametri "rossi" (unsure o incompleti)
       - recent_changes: cronologia ParameterChangeLog (ultime 50, escluse le note di test/DEACTIVATED)
     """
     # ---- 1. Lingue da revisionare ----
@@ -54,12 +54,14 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         "assigned_user": _user_label(l.assigned_user),
     } for l in completed_rows]
 
-    # ---- 3. Parametri rossi per lingua (escludendo le approved che sono già "verdi") ----
-    active_languages = db.query(models.Language).options(
+    # ---- 3. Parametri rossi per lingua ----
+    # Includiamo TUTTE le lingue, anche le approved: di norma una approved e'
+    # "verde", ma puo' capitare (raro) che abbia ancora parametri unsure o
+    # incompleti, e in quel caso vanno mostrati. Ordine alfabetico per nome
+    # (case-insensitive) cosi' la card Flagged/Unsure e' facile da scorrere.
+    red_candidate_languages = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
-    ).filter(
-        models.Language.status != "approved"
-    ).order_by(models.Language.position).all()
+    ).order_by(func.lower(models.Language.name_full)).all()
 
     active_params = db.query(models.ParameterDef).filter(
         models.ParameterDef.is_active == True
@@ -99,7 +101,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     answered_count = {(lang, param): cnt for lang, param, cnt in answered_rows}
 
     red_by_language = []
-    for lang in active_languages:
+    for lang in red_candidate_languages:
         red_params = []
         for p in active_params:
             total_q = qcount_by_param.get(p.id, 0)
