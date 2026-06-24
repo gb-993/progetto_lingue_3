@@ -45,6 +45,10 @@ export default function ParameterList() {
     const [globalBackup, setGlobalBackup] = useState(false);
     const [exportingInfo, setExportingInfo] = useState(false);
 
+    // --- Selezione per l'export (modello a esclusione come LanguageList:
+    //     spuntato = incluso; default tutti inclusi). ---
+    const [excludedIds, setExcludedIds] = useState(new Set());
+
     // --- Tools ▾, dialogo di conferma e toast esiti (stessi pattern di LanguageList) ---
     const [toolsOpen, setToolsOpen] = useState(false);
     const toolsRef = useRef(null);
@@ -121,6 +125,33 @@ export default function ParameterList() {
     // Reorder è abilitato solo se nessun filtro/search è attivo
     const canReorder = activeFilterCount === 0 && !savingOrder;
 
+    // ---- Selezione per l'export "selected" (stesso schema di LanguageList) ----
+    const effectiveParams = useMemo(
+        () => filteredParams.filter(p => !excludedIds.has(p.id)),
+        [filteredParams, excludedIds]
+    );
+    const targetIds = effectiveParams.map(p => p.id);
+    const visibleExcludedCount = filteredParams.reduce(
+        (acc, p) => acc + (excludedIds.has(p.id) ? 1 : 0), 0
+    );
+    const allFilteredIncluded = filteredParams.length > 0 && visibleExcludedCount === 0;
+
+    const toggleRow = (id) => {
+        setExcludedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+    const toggleAll = () => {
+        setExcludedIds(prev => {
+            const next = new Set(prev);
+            if (allFilteredIncluded) filteredParams.forEach(p => next.add(p.id));
+            else filteredParams.forEach(p => next.delete(p.id));
+            return next;
+        });
+    };
+
     // ---- Drag & drop handlers ----
     const handleDragStart = (e, id) => {
         e.dataTransfer.setData('application/x-parameter-row', id);
@@ -158,7 +189,7 @@ export default function ParameterList() {
             await downloadBlob(
                 api.post(
                     '/api/admin/parameters/export/info-pdf',
-                    { param_ids: filteredParams.map(p => p.id) },
+                    { param_ids: targetIds },
                     { responseType: 'blob' }
                 ),
                 'PCM_parameters_info.pdf'
@@ -334,6 +365,7 @@ export default function ParameterList() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div className="small muted">
                         {filteredParams.length} of {parameters.length} parameters
+                        {visibleExcludedCount > 0 && <span> · {targetIds.length} selected for export</span>}
                         {activeFilterCount > 0 && <span> · {activeFilterCount} active filters · reordering disabled while filtering</span>}
                         {savingOrder && <span> · saving order…</span>}
                     </div>
@@ -368,12 +400,12 @@ export default function ParameterList() {
                                         overflow: 'hidden',
                                     }}
                                 >
-                                    <MenuSection label="Export (current filter)" />
+                                    <MenuSection label="Export (selected)" />
                                     <DropdownItem
                                         onClick={() => { setToolsOpen(false); onExportInfoPdf(); }}
-                                        disabled={exportingInfo || filteredParams.length === 0}
+                                        disabled={exportingInfo || targetIds.length === 0}
                                     >
-                                        {exportingInfo ? 'Exporting…' : 'Parameters info (.pdf)'}
+                                        {exportingInfo ? 'Exporting…' : `Parameters Data (${targetIds.length})`}
                                     </DropdownItem>
                                     <MenuSection label="Maintenance" divider />
                                     <DropdownItem
@@ -394,6 +426,17 @@ export default function ParameterList() {
                 <table className="table">
                     <thead>
                         <tr>
+                            <th style={{ width: '56px', textAlign: 'center' }} title="Checked = included in the selected-parameters export">
+                                <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                                    Incl.
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={allFilteredIncluded}
+                                    onChange={toggleAll}
+                                    title="Include / exclude all visible parameters"
+                                />
+                            </th>
                             {canReorder && <th style={{ width: '24px' }} aria-label="Drag handle" />}
                             <th>ID</th>
                             <th>Name</th>
@@ -409,7 +452,7 @@ export default function ParameterList() {
                     <tbody>
                         {loading && (
                             <tr>
-                                <td colSpan={canReorder ? 10 : 9} className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading parameters…</td>
+                                <td colSpan={canReorder ? 11 : 10} className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading parameters…</td>
                             </tr>
                         )}
                         {!loading && filteredParams.map(param => {
@@ -436,6 +479,14 @@ export default function ParameterList() {
                                     }}
                                     {...rowDnDProps}
                                 >
+                                    <td style={{ textAlign: 'center' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!excludedIds.has(param.id)}
+                                            onChange={() => toggleRow(param.id)}
+                                            title="Uncheck to exclude from the selected-parameters export"
+                                        />
+                                    </td>
                                     {canReorder && (
                                         <td
                                             draggable
@@ -492,7 +543,7 @@ export default function ParameterList() {
                         })}
                         {filteredParams.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={canReorder ? 10 : 9} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
+                                <td colSpan={canReorder ? 11 : 10} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
                             </tr>
                         )}
                     </tbody>
