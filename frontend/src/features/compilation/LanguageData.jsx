@@ -47,6 +47,14 @@ export default function LanguageData() {
     const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const statusMenuRef = useRef(null);
 
+    // Ricerca parametro nel wizard: fa lampeggiare il quadratino trovato per
+    // qualche istante, senza cambiare il parametro attivo (niente discard).
+    const [searchTerm, setSearchTerm] = useState('');
+    const [foundId, setFoundId] = useState(null);
+    const [searchMsg, setSearchMsg] = useState('');
+    const foundTimerRef = useRef(null);
+    useEffect(() => () => { if (foundTimerRef.current) clearTimeout(foundTimerRef.current); }, []);
+
     useEffect(() => {
         if (!statusMenuOpen) return;
         const onDocClick = (e) => {
@@ -164,6 +172,33 @@ export default function LanguageData() {
     const handleForceWaiting = () => {
         if (!window.confirm('Force this language to WAITING FOR APPROVAL?')) return;
         callWorkflow('admin_force_waiting');
+    };
+
+    // Cerca un parametro per id (match esatto, poi sottostringa) o per nome e
+    // ne fa lampeggiare il quadratino per ~2,5s. Non apre il parametro.
+    const handleParamSearch = (e) => {
+        if (e) e.preventDefault();
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return;
+        const list = (data && data.parameters) || [];
+        const match =
+            list.find(p => (p.id || '').toLowerCase() === term) ||
+            list.find(p => (p.id || '').toLowerCase().includes(term)) ||
+            list.find(p => (p.name || '').toLowerCase().includes(term));
+        if (!match) {
+            setFoundId(null);
+            setSearchMsg('No parameter found.');
+            return;
+        }
+        setSearchMsg('');
+        if (foundTimerRef.current) clearTimeout(foundTimerRef.current);
+        // Azzera e re-imposta al frame successivo così l'animazione riparte
+        // anche cercando lo stesso parametro due volte di fila.
+        setFoundId(null);
+        requestAnimationFrame(() => {
+            setFoundId(match.id);
+            foundTimerRef.current = setTimeout(() => setFoundId(null), 2500);
+        });
     };
 
     if (loading) return <div className="container" style={{ marginTop: 'var(--form-page-top, 2rem)' }}>Loading...</div>;
@@ -344,6 +379,23 @@ export default function LanguageData() {
                 </div>
             )}
 
+            {/* Ricerca parametro nel wizard (evidenzia il quadratino, non lo apre) */}
+            <form
+                onSubmit={handleParamSearch}
+                style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}
+            >
+                <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => { setSearchTerm(e.target.value); if (searchMsg) setSearchMsg(''); }}
+                    placeholder="Search parameter by id or name…"
+                    aria-label="Search parameter"
+                    style={{ flex: '0 1 260px', padding: 'var(--form-input-pad, 0.5rem)' }}
+                />
+                <button type="submit" className="btn btn--small">Search</button>
+                {searchMsg && <span className="small muted">{searchMsg}</span>}
+            </form>
+
             {/* Navigazione Wizard (Quadratini) */}
             <div ref={wizardTopRef} className="param-nav" style={{ scrollMarginTop: '1rem' }}>
                 {parameters.map((p, idx) => {
@@ -369,7 +421,7 @@ export default function LanguageData() {
                                 setBlockDirty(false);
                                 setActiveIndex(idx);
                             }}
-                            className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}`}
+                            className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}${p.id === foundId ? ' is-found' : ''}`}
                             title={isFlagged ? "Marked as unsure" : `Progress: ${answered}/${total}`}
                         >
                             {p.id}
