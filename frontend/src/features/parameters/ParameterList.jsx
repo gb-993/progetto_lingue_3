@@ -213,6 +213,19 @@ export default function ParameterList() {
         }
     };
 
+    // ---- Download Data .xlsx: matrice lingue × question del parametro,
+    //      celle = frasi d'esempio (voce del menu ⋯ di riga) ----
+    const onDownloadDataXlsx = async (param) => {
+        try {
+            await downloadBlob(
+                api.get(`/api/admin/parameters/${param.id}/data-xlsx`, { responseType: 'blob' }),
+                `Parameter_${param.id}_data.xlsx`
+            );
+        } catch {
+            notify('error', 'Error while downloading the data Excel.');
+        }
+    };
+
     // ---- Backup handlers ----
     const onGlobalBackup = () => {
         setDialog({
@@ -530,6 +543,7 @@ export default function ParameterList() {
                                             <Link to={`/admin/parameters/${param.id}/edit`} className="btn">Edit</Link>
                                             <RowActionsMenu items={[
                                                 { label: 'Download PDF', onClick: () => onDownloadPdf(param) },
+                                                { label: 'Download Data (.xlsx)', onClick: () => onDownloadDataXlsx(param) },
                                                 {
                                                     label: backingUpId === param.id ? 'Backing up…' : 'Backup…',
                                                     disabled: backingUpId === param.id,

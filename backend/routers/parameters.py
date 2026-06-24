@@ -15,6 +15,7 @@ from services.logic_parser import validate_expression, ParseException, rename_pa
 from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
 from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
+from services.excel_export import build_parameter_data_matrix_workbook
 
 import re as _re
 
@@ -483,6 +484,26 @@ def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user:
     return StreamingResponse(
         buf,
         media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{id}/data-xlsx")
+def download_parameter_data_xlsx(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Excel matrice per un parametro: lingue (righe) × question attive (colonne),
+    celle = frasi d'esempio di quella lingua per quella question."""
+    parameter = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
+    if not parameter:
+        raise HTTPException(status_code=404, detail="Parameter not found")
+
+    wb = build_parameter_data_matrix_workbook(db, parameter)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"Parameter_{parameter.id}_data.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 

@@ -18,10 +18,11 @@ import io
 import zipfile
 
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
 import models
 from services.citation import apply_excel_citation
@@ -427,6 +428,108 @@ def _example_sort_key(ex: models.Example):
         return (0, int(ex.number or "0"), ex.id or 0)
     except (ValueError, TypeError):
         return (1, str(ex.number or ""), ex.id or 0)
+
+
+# ============================================================================
+# 1.bis PARAMETER DATA MATRIX (esempi: lingue × question di un parametro)
+# ============================================================================
+
+def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
+    """Matrice degli esempi di un singolo parametro.
+
+    - Righe   = tutte le lingue (ordinate per id), anche quelle senza risposta.
+    - Colonne = le question ATTIVE del parametro.
+    - Cella (lingua, question) = le frasi d'esempio (campo ``textarea``) della
+      risposta di quella lingua a quella question; se più di una, numerate e
+      separate da riga vuota. Vuota se la lingua non ha risposto / non ha esempi.
+
+    Due righe d'intestazione: id question (riga 1) e testo question (riga 2).
+    Prima colonna = lingua ("ID — nome"). Freeze su prima colonna + intestazioni.
+    """
+    questions = (
+        db.query(models.Question)
+        .filter(
+            models.Question.parameter_id == parameter.id,
+            models.Question.is_active == True,  # noqa: E712
+        )
+        .order_by(models.Question.is_stop_question, models.Question.id)
+        .all()
+    )
+    q_ids = [q.id for q in questions]
+
+    languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
+
+    # Esempi per (question_id, language_id): solo i textarea non vuoti, ordinati.
+    examples_by_cell: dict[tuple[str, str], list[str]] = {}
+    if q_ids:
+        answers = (
+            db.query(models.Answer)
+            .options(joinedload(models.Answer.examples))
+            .filter(models.Answer.question_id.in_(q_ids))
+            .all()
+        )
+        for a in answers:
+            texts = [
+                _split_lines_to_str(ex.textarea).strip()
+                for ex in sorted(a.examples, key=_example_sort_key)
+            ]
+            texts = [t for t in texts if t]
+            if texts:
+                examples_by_cell[(a.question_id, a.language_id)] = texts
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Data"
+
+    header_fill = PatternFill("solid", fgColor="4472C4")
+    header_align = Alignment(vertical="center", horizontal="center", wrap_text=True)
+    top_wrap = Alignment(vertical="top", wrap_text=True)
+
+    # Angolo "Language" su due righe unite.
+    ws.merge_cells("A1:A2")
+    corner = ws.cell(row=1, column=1, value="Language")
+    corner.font = _BOLD_WHITE
+    corner.fill = header_fill
+    corner.alignment = header_align
+    ws.cell(row=2, column=1).fill = header_fill
+
+    # Intestazioni: riga 1 = id question, riga 2 = testo question.
+    for j, q in enumerate(questions, start=2):
+        c1 = ws.cell(row=1, column=j, value=q.id)
+        c1.font = _BOLD_WHITE
+        c1.fill = header_fill
+        c1.alignment = header_align
+        c2 = ws.cell(row=2, column=j, value=_split_lines_to_str(q.text))
+        c2.font = Font(bold=True, color="FFFFFF", size=9)
+        c2.fill = header_fill
+        c2.alignment = header_align
+
+    # Righe lingue.
+    for i, lang in enumerate(languages, start=3):
+        name = lang.name_full or ""
+        label = f"{lang.id} — {name}" if name else str(lang.id)
+        lc = ws.cell(row=i, column=1, value=label)
+        lc.font = Font(bold=True)
+        lc.alignment = top_wrap
+        for j, q in enumerate(questions, start=2):
+            texts = examples_by_cell.get((q.id, lang.id))
+            if texts:
+                value = (
+                    "\n\n".join(f"{k}) {t}" for k, t in enumerate(texts, start=1))
+                    if len(texts) > 1 else texts[0]
+                )
+            else:
+                value = ""
+            cell = ws.cell(row=i, column=j, value=value)
+            cell.alignment = top_wrap
+
+    ws.column_dimensions["A"].width = 30
+    for j in range(2, len(questions) + 2):
+        ws.column_dimensions[get_column_letter(j)].width = 40
+    ws.freeze_panes = "B3"
+
+    apply_excel_citation(wb)
+    return wb
 
 
 # ============================================================================

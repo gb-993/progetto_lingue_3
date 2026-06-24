@@ -25,6 +25,7 @@ from openpyxl import Workbook, load_workbook
 import models
 from services.excel_export import (
     build_language_workbook,
+    build_parameter_data_matrix_workbook,
     build_language_list_workbook,
     build_schema_workbook,
     build_glossary_workbook,
@@ -217,6 +218,29 @@ def test_database_model_sheet_headers_and_count(db_session):
     ws = wb2["Database_model"]
     headers = [c.value for c in ws[1]]
     assert headers == _EXPECTED_DATABASE_MODEL_HEADERS
+
+
+def test_parameter_data_matrix_workbook(db_session):
+    """Matrice di un parametro: righe = lingue, colonne = question attive,
+    celle = frasi d'esempio (textarea) numerate e separate da riga vuota."""
+    _seed_basic(db_session)
+    param = db_session.query(models.ParameterDef).filter_by(id="FGM").first()
+    wb = build_parameter_data_matrix_workbook(db_session, param)
+    wb2 = _read_workbook_from_memory(wb)
+
+    assert wb2.sheetnames == ["Data"]
+    ws = wb2["Data"]
+    # Angolo + intestazioni question (ordinate per is_stop_question, id).
+    assert ws["A1"].value == "Language"
+    assert ws["B1"].value == "FGM_01"
+    assert ws["C1"].value == "FGM_02"
+    assert ws["B2"].value == "Does it have FGM marker?"
+    # Riga lingua.
+    assert ws["A3"].value == "ITA — Italiano"
+    # FGM_01 ha 3 esempi → numerati e separati da riga vuota.
+    assert ws["B3"].value == "1) Esempio uno\n\n2) Esempio due\n\n3) Esempio tre"
+    # FGM_02 non ha esempi → cella vuota.
+    assert (ws["C3"].value or "") == ""
 
     # 2 question rows (FGM_01 e FGM_02), entrambe attive
     data_rows = [r for r in ws.iter_rows(min_row=2, values_only=True)]
