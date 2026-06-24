@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy import func
 
 import models
 from database import SessionLocal
@@ -33,7 +34,7 @@ def _run_recompute_all_in_background(job_id: str) -> None:
     try:
         lang_ids = [
             l.id for l in
-            list_db.query(models.Language.id).order_by(models.Language.position, models.Language.id).all()
+            list_db.query(models.Language.id).order_by(func.lower(models.Language.id)).all()
         ]
     finally:
         list_db.close()

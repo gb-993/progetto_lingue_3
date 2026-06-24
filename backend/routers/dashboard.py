@@ -61,7 +61,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     # (case-insensitive) cosi' la card Flagged/Unsure e' facile da scorrere.
     red_candidate_languages = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
-    ).order_by(func.lower(models.Language.name_full)).all()
+    ).order_by(func.lower(models.Language.id)).all()
 
     active_params = db.query(models.ParameterDef).filter(
         models.ParameterDef.is_active == True
@@ -147,7 +147,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         models.Language.id,
         models.Language.name_full,
         models.Language.status,
-    ).order_by(models.Language.position).all()
+    ).order_by(func.lower(models.Language.id)).all()
 
     languages_by_status: dict[str, list[dict]] = {
         "pending": [],
@@ -207,7 +207,7 @@ def get_user_dashboard(db: Session = Depends(get_db), current_user: models.User 
     """
     langs = db.query(models.Language).filter(
         models.Language.assigned_user_id == current_user.id
-    ).order_by(models.Language.position).all()
+    ).order_by(func.lower(models.Language.id)).all()
 
     # Domande attive totali (denominatore comune)
     total_active_q = db.query(func.count(models.Question.id)).filter(

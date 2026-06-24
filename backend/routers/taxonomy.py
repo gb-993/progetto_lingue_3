@@ -116,7 +116,7 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
     ).filter(
         models.Language.grp.isnot(None),
         models.Language.grp != "",
-    ).order_by(models.Language.name_full).all()
+    ).order_by(func.lower(models.Language.id)).all()
     for lang_id, name_full, isocode, grp in lang_rows:
         languages_by_group_name.setdefault(grp, []).append({
             "id": lang_id,

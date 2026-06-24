@@ -98,7 +98,7 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
     elif filters.f_lang_hist == "no": l_query = l_query.filter(models.Language.historical_language == False)
     if filters.f_lang_specific: l_query = l_query.filter(models.Language.id.in_(filters.f_lang_specific))
 
-    languages = l_query.order_by(models.Language.position).all()
+    languages = l_query.order_by(func.lower(models.Language.id)).all()
     lang_ids = [l.id for l in languages]
 
     # 2. Filtro Item (Parametri o Domande)
@@ -186,7 +186,7 @@ def get_tablea_options(db: Session = Depends(get_db), current_user: models.User 
             "family": l.family or "",
             "grp": l.grp or "",
             "historical": bool(l.historical_language),
-        } for l in db.query(models.Language).order_by(models.Language.name_full).all()]
+        } for l in db.query(models.Language).order_by(func.lower(models.Language.id)).all()]
     }
 
 def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, bool]:

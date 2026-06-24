@@ -142,7 +142,7 @@ def search_examples(
             models.Example.gloss.ilike(like),
         ))
 
-    base = base.order_by(models.Language.name_full, models.Example.id)
+    base = base.order_by(func.lower(models.Language.id), models.Example.id)
 
     if language_id:
         if limit is not None:

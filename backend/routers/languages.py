@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -126,7 +127,7 @@ def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
 
 @router.get("/public/languages")
 def get_public_languages(db: Session = Depends(get_db)):
-    langs = db.query(models.Language).all()
+    langs = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
     return [
         {
             "id": l.id,
@@ -151,7 +152,7 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
     if current_user.role != "admin":
         query = query.filter(models.Language.assigned_user_id == current_user.id)
 
-    languages = query.order_by(models.Language.position, models.Language.name_full).all()
+    languages = query.order_by(func.lower(models.Language.id)).all()
     return [{
         "id": l.id,
         "name_full": l.name_full,

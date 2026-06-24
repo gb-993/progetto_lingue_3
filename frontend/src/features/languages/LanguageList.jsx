@@ -267,7 +267,7 @@ export default function LanguageList() {
                 'status', 'rejection_note',
             ]);
         }).sort((a, b) =>
-            (a.name_full || '').localeCompare(b.name_full || '', undefined, { sensitivity: 'base' })
+            (a.id || '').localeCompare(b.id || '', undefined, { sensitivity: 'base' })
         );
     }, [languages, filters, search]);
 

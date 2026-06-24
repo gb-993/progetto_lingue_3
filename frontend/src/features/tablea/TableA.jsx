@@ -102,7 +102,7 @@ export default function TableA() {
                 if (l) map.set(id, l);
             }
         });
-        return [...map.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        return [...map.values()].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
     }, [baseLangs, addedLangs, allLangs]);
 
     // Insieme finale di colonne = candidati non esclusi.

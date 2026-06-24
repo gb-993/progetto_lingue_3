@@ -26,7 +26,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
 import models
 from database import SessionLocal
@@ -135,7 +135,7 @@ def export_language_list(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    q = db.query(models.Language).order_by(models.Language.position, models.Language.name_full)
+    q = db.query(models.Language).order_by(func.lower(models.Language.id))
     if payload.lang_ids:
         q = q.filter(models.Language.id.in_(payload.lang_ids))
     languages = q.all()
@@ -175,7 +175,7 @@ def _run_backup_in_background(payload_lang_ids: Optional[List[str]], job_id: str
     perché quella iniettata via Depends() viene chiusa al ritorno della response."""
     db = SessionLocal()
     try:
-        q = db.query(models.Language).order_by(models.Language.position, models.Language.id)
+        q = db.query(models.Language).order_by(func.lower(models.Language.id))
         if payload_lang_ids:
             q = q.filter(models.Language.id.in_(payload_lang_ids))
         languages = q.all()
@@ -283,7 +283,7 @@ def _run_full_backup_in_background(job_id: str) -> None:
     try:
         languages = (
             db.query(models.Language)
-            .order_by(models.Language.position, models.Language.id)
+            .order_by(func.lower(models.Language.id))
             .all()
         )
         if not languages:
@@ -390,7 +390,7 @@ def export_languages_gcd(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    q = db.query(models.Language).order_by(models.Language.position, models.Language.name_full)
+    q = db.query(models.Language).order_by(func.lower(models.Language.id))
     if payload.lang_ids:
         q = q.filter(models.Language.id.in_(payload.lang_ids))
     languages = q.all()

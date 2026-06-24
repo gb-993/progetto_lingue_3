@@ -717,7 +717,7 @@ def get_parameter_by_language(
     )
     unsure_map = {lid: bool(u) for lid, u in unsure_rows}
 
-    languages = db.query(models.Language).order_by(models.Language.position, models.Language.id).all()
+    languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
     langs_out = [{
         "id": l.id,
         "name_full": l.name_full,

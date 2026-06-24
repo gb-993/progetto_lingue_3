@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Dict, Any
 import models
@@ -407,7 +408,7 @@ def query_by_question(q_id: str, db: Session = Depends(get_db)):
     if not question:
         raise HTTPException(404, "Question not found")
 
-    langs = db.query(models.Language).order_by(models.Language.name_full).all()
+    langs = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
 
     # joinedload su examples evita N+1 (una sola query con join).
     answers = (
