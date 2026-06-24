@@ -962,6 +962,10 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
             # `unsure` e' una risposta valida nell'enum response_types.
             # Allineato a services/excel_import.py per evitare divergenze.
             response = "unsure"
+        elif raw_ans in ("MISSING", "M"):
+            # `missing` = dato non disponibile (neutra come unsure, esempi non
+            # richiesti). Allineato a services/excel_import.py.
+            response = "missing"
         elif raw_ans == "":
             summary.skipped += 1
             continue
@@ -969,7 +973,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
             summary.errors += 1
             report.errors.append(MigrationError(
                 section=section, row=ridx, column="Language_Answer",
-                value=raw_ans, reason="Invalid value (expected YES/NO/UNSURE/empty)"
+                value=raw_ans, reason="Invalid value (expected YES/NO/UNSURE/MISSING/empty)"
             ))
             continue
 

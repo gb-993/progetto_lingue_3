@@ -531,11 +531,12 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
 # `_LanguageReport`, sottoclasse di `_CitationFooterReport`.
 # ============================================================================
 
-_ANSWER_LABELS = {"yes": "YES", "no": "NO", "unsure": "UNSURE"}
+_ANSWER_LABELS = {"yes": "YES", "no": "NO", "unsure": "UNSURE", "missing": "MISSING"}
 _ANSWER_COLORS = {
     "yes": (21, 128, 61),     # green (allineato al frontend)
     "no": (185, 28, 28),      # red
     "unsure": (161, 98, 7),   # orange
+    "missing": (161, 98, 7),  # orange (stesso di unsure, come da richiesta)
 }
 _NOT_ANSWERED_COLOR = (130, 134, 140)  # grigio chiaro
 

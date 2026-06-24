@@ -296,8 +296,9 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             )}
 
             {/* Istruzione condizionale YES/NO. instruction_yes mostrato anche per
-                'unsure' perché il flusso esempi è identico a YES. */}
-            {(value.response_text === 'yes' || value.response_text === 'unsure') && question.instruction_yes && (
+                'unsure' e 'missing' (replicano il flusso di YES; 'missing' senza
+                obbligo di esempi). */}
+            {(value.response_text === 'yes' || value.response_text === 'unsure' || value.response_text === 'missing') && question.instruction_yes && (
                 <div className="info-row instructions-yn instructions-yn--yes">
                     <div className="info-row__label">Instructions (YES)</div>
                     <div className="info-row__content" style={{ whiteSpace: 'pre-wrap' }}>{question.instruction_yes}</div>
@@ -325,6 +326,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                         <option value="yes">YES</option>
                         <option value="no">NO</option>
                         <option value="unsure">UNSURE</option>
+                        <option value="missing">MISSING</option>
                     </select>
                 </div>
             </div>
@@ -357,12 +359,13 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* BLOCCO Esempi: visibile per yes/no/unsure. La validazione "≥2 esempi"
-                vale solo per yes/unsure; per 'no' sono facoltativi (zero o più). */}
-            {(value.response_text === 'yes' || value.response_text === 'no' || value.response_text === 'unsure') && (
+            {/* BLOCCO Esempi: visibile per yes/no/unsure/missing. La validazione
+                "≥2 esempi" vale solo per yes/unsure; per 'no' e 'missing' sono
+                facoltativi (zero o più). */}
+            {(value.response_text === 'yes' || value.response_text === 'no' || value.response_text === 'unsure' || value.response_text === 'missing') && (
                 <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                     <div className="info-row__label">
-                        Examples{value.response_text === 'no' && ' (optional)'}
+                        Examples{(value.response_text === 'no' || value.response_text === 'missing') && ' (optional)'}
                     </div>
                     <div className="info-row__content">
 

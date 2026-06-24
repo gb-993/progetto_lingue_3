@@ -484,7 +484,7 @@ class Answer(Base):
     question_id = Column(String(40), ForeignKey("questions.id", onupdate="CASCADE"), nullable=False, index=True)
 
     status = Column(Enum("pending", "waiting_for_approval", "approved", "rejected", name="answer_status"), default="pending")
-    response_text = Column(Enum("yes", "no", "unsure", name="response_types"), nullable=True)
+    response_text = Column(Enum("yes", "no", "unsure", "missing", name="response_types"), nullable=True)
     comments = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 

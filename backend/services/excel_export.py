@@ -288,6 +288,8 @@ def build_language_workbook(
                     lang_answer = "NO"
                 elif a.response_text == "unsure":
                     lang_answer = "UNSURE"
+                elif a.response_text == "missing":
+                    lang_answer = "MISSING"
                 lang_comments = a.comments or ""
                 # Codici motivazione (non label): identificatore stabile per
                 # round-trip. Separatore "; " coerente col foglio Answers.

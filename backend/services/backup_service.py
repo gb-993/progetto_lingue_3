@@ -251,6 +251,8 @@ def build_submission_workbook(db: Session, sub: models.Submission) -> Workbook:
             resp = "NO"
         elif a.response_text == "unsure":
             resp = "UNSURE"
+        elif a.response_text == "missing":
+            resp = "MISSING"
         elif a.response_text:
             resp = a.response_text
         ws_ans.append([

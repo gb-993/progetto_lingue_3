@@ -475,12 +475,13 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     touched: list[tuple[models.Answer, bool, Optional[dict]]] = []
 
     for ans_payload in payload.answers:
-        # La colonna response_text è Enum("yes","no","unsure") nullable: "" non è valido,
-        # va convertito in None per indicare "non risposta".
-        normalized_response = ans_payload.response_text if ans_payload.response_text in ("yes", "no", "unsure") else None
+        # La colonna response_text è Enum("yes","no","unsure","missing") nullable: "" non è
+        # valido, va convertito in None per indicare "non risposta".
+        normalized_response = ans_payload.response_text if ans_payload.response_text in ("yes", "no", "unsure", "missing") else None
 
         # 'unsure' eredita da 'yes' il vincolo "almeno 2 esempi", perché anche
-        # quando l'utente è incerto deve documentare con esempi reali.
+        # quando l'utente è incerto deve documentare con esempi reali. 'missing'
+        # invece NON richiede esempi (dato genuinamente non disponibile).
         if normalized_response in ("yes", "unsure"):
             valid_ex_count = sum(1 for ex in ans_payload.examples if ex.textarea.strip())
             if valid_ex_count < 2:
@@ -519,10 +520,10 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
                 db.add(models.AnswerMotivation(answer_id=answer.id, motivation_id=mid))
 
         db.query(models.Example).filter(models.Example.answer_id == answer.id).delete()
-        # Esempi salvabili per yes/no/unsure: yes/unsure li richiedono (≥2,
-        # validato sopra), per 'no' sono facoltativi ma vanno comunque
-        # persistiti se il linguista li fornisce a supporto della risposta.
-        if normalized_response in ("yes", "no", "unsure"):
+        # Esempi salvabili per yes/no/unsure/missing: yes/unsure li richiedono
+        # (≥2, validato sopra), per 'no'/'missing' sono facoltativi ma vanno
+        # comunque persistiti se il linguista li fornisce a supporto della risposta.
+        if normalized_response in ("yes", "no", "unsure", "missing"):
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
                     db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))

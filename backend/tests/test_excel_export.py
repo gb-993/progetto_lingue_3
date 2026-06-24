@@ -220,6 +220,28 @@ def test_database_model_sheet_headers_and_count(db_session):
     assert headers == _EXPECTED_DATABASE_MODEL_HEADERS
 
 
+def test_database_model_shows_missing_answer(db_session):
+    """'missing' è un valore valido dell'enum response_types e l'export lo
+    scrive come 'MISSING' nel foglio Database_model (parallelo a UNSURE)."""
+    user = models.User(email="b@test.it", hashed_password="x", name="B", surname="B", role="user")
+    db_session.add(user); db_session.flush()
+    db_session.add(models.Language(id="ENG", name_full="English", position=1))
+    db_session.add(models.ParameterDef(id="P1", position=1, name="P", is_active=True))
+    db_session.add(models.Question(id="P1_01", parameter_id="P1", text="Q?", is_active=True))
+    db_session.add(models.Answer(
+        language_id="ENG", question_id="P1_01", response_text="missing", status="approved",
+    ))
+    db_session.commit()
+
+    lang = db_session.query(models.Language).filter_by(id="ENG").first()
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    wb2 = _read_workbook_from_memory(wb)
+    ws = wb2["Database_model"]
+    headers = [c.value for c in ws[1]]
+    ans_col = headers.index("Language_Answer") + 1
+    assert ws.cell(row=2, column=ans_col).value == "MISSING"
+
+
 def test_parameter_data_matrix_workbook(db_session):
     """Matrice di un parametro: righe = lingue, colonne = question attive,
     celle = frasi d'esempio (textarea) numerate e separate da riga vuota."""

@@ -601,7 +601,7 @@ export default function QueriesDashboard() {
                                     {activeTab === 'q11' && (
                                         <div className="small muted" style={{ marginTop: '0.5rem', fontStyle: 'italic' }}>
                                             Inactive questions and questions belonging to inactive parameters are not shown.
-                                            Answers marked as “unsure” count as given and are not listed here either.
+                                            Answers marked as “unsure” or “missing” count as given and are not listed here either.
                                         </div>
                                     )}
                                 </div>
@@ -834,7 +834,7 @@ function ByQuestionTable({ result }) {
     const rows = result.rows || [];
     const visibleRows = onlyAnswered ? rows.filter(r => r.response) : rows;
     const answeredCount = rows.filter(r => r.response).length;
-    const responseColor = (r) => r === 'yes' ? '#15803d' : r === 'no' ? '#b91c1c' : r === 'unsure' ? '#a16207' : 'var(--text-muted, #888)';
+    const responseColor = (r) => r === 'yes' ? '#15803d' : r === 'no' ? '#b91c1c' : (r === 'unsure' || r === 'missing') ? '#a16207' : 'var(--text-muted, #888)';
 
     return (
         <div>

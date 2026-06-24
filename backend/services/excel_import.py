@@ -1016,6 +1016,10 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             # `unsure` e' una terza risposta valida (vedi enum response_types).
             # Coerente con quello che ora l'export scrive in Database_model.
             response = "unsure"
+        elif raw_ans in ("MISSING", "M"):
+            # `missing` = dato non disponibile: neutra come 'unsure' nel calcolo
+            # ma senza vincolo esempi. Valida nell'enum response_types.
+            response = "missing"
         elif raw_ans == "":
             # Risposta vuota → la domanda resta non risposta. Non è un errore.
             summary.skipped += 1
@@ -1024,7 +1028,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet=COMPILATION_SHEET, row=ridx, column="Language_Answer", value=raw_ans,
-                reason=f"Invalid value (expected YES/NO/UNSURE/empty): '{raw_ans}'"
+                reason=f"Invalid value (expected YES/NO/UNSURE/MISSING/empty): '{raw_ans}'"
             ))
             continue
 

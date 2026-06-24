@@ -118,6 +118,32 @@ def test_roundtrip_no_changes_keeps_state(db_session):
     assert mot.label == "Old label"
 
 
+def test_roundtrip_preserves_missing_response(db_session):
+    """Lingua con risposta missing -> export workbook -> import -> missing preservata.
+
+    Parallelo a test_roundtrip_preserves_unsure_response: senza il branch MISSING
+    in excel_import (e il valore nell'enum) questo test fallirebbe, esattamente
+    il sintomo "l'import non tiene la dicitura" segnalato dai linguisti."""
+    lang, user = _seed_full(db_session)
+
+    a_existing = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_01"
+    ).one()
+    a_existing.response_text = "missing"
+    db_session.commit()
+
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    file_bytes = _wb_to_bytes(wb)
+    report = import_excel(db_session, file_bytes, user.id)
+    db_session.commit()
+
+    assert report.errors == [], f"Nessun errore atteso nel roundtrip: {report.errors}"
+    a_after = db_session.query(models.Answer).filter_by(
+        language_id="ITA", question_id="FGM_01"
+    ).one()
+    assert a_after.response_text == "missing", f"missing perso nell'import: {a_after.response_text}"
+
+
 def test_roundtrip_modify_param_via_schema_excel(db_session):
     """Da 2026-05 lo schema vive solo nel workbook schema dedicato (NON più
     replicato in ogni per-lingua xlsx). Modifico il name del parametro nel
