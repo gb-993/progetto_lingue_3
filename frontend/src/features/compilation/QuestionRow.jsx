@@ -434,7 +434,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                                 onChange={e => handleExampleChange(ex.tempId, 'is_test', e.target.checked)}
                                                 disabled={isReadOnly}
                                             />
-                                            Test example (placeholder — turns the square yellow)
+                                            Mark as test example 
                                         </label>
                                     ) : (ex.is_test && (
                                         <div className="small" style={{ display: 'inline-block', marginBottom: '0.6rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: '#e8a317', color: '#3a2c00', fontWeight: 700 }}>
