@@ -28,7 +28,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     to_review_rows = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
     ).filter(
-        models.Language.status == "waiting_for_approval"
+        models.Language.status == "submitted"
     ).order_by(models.Language.submitted_at.asc().nullslast()).all()
 
     to_review = [{
@@ -43,7 +43,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     completed_rows = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
     ).filter(
-        models.Language.status == "approved"
+        models.Language.status == "validated"
     ).order_by(models.Language.reviewed_at.desc().nullslast()).all()
 
     completed = [{
@@ -150,10 +150,9 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).order_by(func.lower(models.Language.id)).all()
 
     languages_by_status: dict[str, list[dict]] = {
-        "pending": [],
-        "waiting_for_approval": [],
-        "approved": [],
-        "rejected": [],
+        "draft": [],
+        "submitted": [],
+        "validated": [],
     }
     for lid, lname, lstatus in all_langs_rows:
         if lstatus in languages_by_status:
@@ -190,10 +189,9 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
             "languages_with_red": len(red_by_language),
             "total_red_params": sum(g["red_count"] for g in red_by_language),
             "by_status": {
-                "pending": status_counts.get("pending", 0),
-                "waiting_for_approval": status_counts.get("waiting_for_approval", 0),
-                "approved": status_counts.get("approved", 0),
-                "rejected": status_counts.get("rejected", 0),
+                "draft": status_counts.get("draft", 0),
+                "submitted": status_counts.get("submitted", 0),
+                "validated": status_counts.get("validated", 0),
             },
         }
     }

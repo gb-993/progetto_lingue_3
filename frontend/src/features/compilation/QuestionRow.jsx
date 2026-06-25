@@ -61,7 +61,7 @@ const formatExampleOption = (ex) => {
     };
 };
 
-export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId, isHighlighted }) {
+export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId, isHighlighted, isAdmin = false }) {
     const [localError, setLocalError] = useState('');
 
     // Card della question: serve il ref per scrollare in vista quando il
@@ -181,7 +181,8 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                     transliteration: ex.transliteration || '',
                     gloss: ex.gloss || '',
                     translation: ex.translation || '',
-                    reference: ex.reference || ''
+                    reference: ex.reference || '',
+                    is_test: !!ex.is_test,
                 }))
             ]
         });
@@ -422,6 +423,24 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         <button type="button" onClick={() => handleRemoveExample(ex.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
                                     </div>
                                     <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
+
+                                    {/* Esempio "di test"/segnaposto: solo gli admin possono marcarlo.
+                                        Conta per il vincolo dei 2 esempi ma rende giallo il quadratino. */}
+                                    {isAdmin ? (
+                                        <label className="small" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem', cursor: isReadOnly ? 'not-allowed' : 'pointer', color: ex.is_test ? '#a16207' : 'var(--text-muted)', fontWeight: ex.is_test ? 700 : 400 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!ex.is_test}
+                                                onChange={e => handleExampleChange(ex.tempId, 'is_test', e.target.checked)}
+                                                disabled={isReadOnly}
+                                            />
+                                            Test example (placeholder — turns the square yellow)
+                                        </label>
+                                    ) : (ex.is_test && (
+                                        <div className="small" style={{ display: 'inline-block', marginBottom: '0.6rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: '#e8a317', color: '#3a2c00', fontWeight: 700 }}>
+                                            TEST EXAMPLE
+                                        </div>
+                                    ))}
 
                                     {/* In modalità appaiata ogni card occupa metà larghezza,
                                         quindi i 5 campi sono impilati verticalmente per non

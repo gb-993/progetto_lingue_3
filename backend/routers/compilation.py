@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, or_
 import models
 from database import SessionLocal
-from dependencies import get_db, get_current_user, require_admin
+from dependencies import get_db, get_current_user, require_admin, require_super_admin
 from services.logic_parser import evaluate_with_parser
 from services.dag_eval import run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
 from services.versioning import record_version, serialize_entity
+from services.param_state import param_color, language_completion_from_colors
 
 logger = logging.getLogger(__name__)
 
@@ -35,25 +36,22 @@ def _run_dag_in_background(language_id: str) -> None:
         db.close()
 
 
-# Stati in cui la lingua è bloccata in scrittura per gli utenti normali
-LOCKED_STATUSES = ("waiting_for_approval", "approved")
-
-
 def _ensure_can_modify(language: models.Language, current_user: models.User):
     """
-    Permessi di modifica:
-      - admin: SEMPRE, a prescindere dallo status (può fix/edit anche su waiting/approved/rejected)
-      - utente assegnato: solo se la lingua NON è bloccata (pending o rejected)
-      - chiunque altro: 403
+    Permessi di modifica (asse B):
+      - admin: SEMPRE, a prescindere dallo status (anche submitted/validated:
+        l'admin può sempre fixare/editare, senza dover prima riaprire).
+      - utente assegnato: solo in 'draft' (bloccato su submitted/validated).
+      - chiunque altro: 403.
     """
     if current_user.role == "admin":
         return
     if language.assigned_user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You are not authorized to modify this language.")
-    if language.status in LOCKED_STATUSES:
+    if language.status != "draft":
         raise HTTPException(
             status_code=409,
-            detail=f"Language locked (status: {language.status}). Wait for admin review or reopen it."
+            detail=f"Language locked (status: {language.status}). Wait for the admin review.",
         )
 
 
@@ -68,6 +66,9 @@ class ExampleInput(BaseModel):
     gloss: str = ""
     translation: str = ""
     reference: str = ""
+    # Esempio "di test"/segnaposto. Solo gli admin possono settarlo: per i
+    # non-admin il valore in arrivo viene ignorato (forzato a False) al salvataggio.
+    is_test: bool = False
 
 class QuestionAnswerPayload(BaseModel):
     question_id: str
@@ -197,6 +198,7 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     # Carica gli stati "unsure" dei parametri (e admin_note solo per admin)
     statuses = db.query(models.LanguageParameterStatus).filter(models.LanguageParameterStatus.language_id == language.id).all()
     status_dict = {s.parameter_id: s.is_unsure for s in statuses}
+    needs_review_dict = {s.parameter_id: bool(s.needs_review) for s in statuses}
     is_admin = current_user.role == "admin"
     admin_note_dict = {s.parameter_id: (s.admin_note or "") for s in statuses} if is_admin else {}
 
@@ -229,9 +231,15 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "supervisor": language.supervisor,
             "informant": language.informant,
             "source": language.source,
+            # Asse A: override manuale (super-admin) del completamento, o None.
+            "completion_override": language.completion_override,
         },
         "parameters": []
     }
+
+    # Colori dei parametri "rispondibili" (con almeno una question attiva), per
+    # calcolare il completamento della lingua (asse A) dopo il loop.
+    answerable_colors: list[str] = []
 
     for p in parameters:
         # Ordine deterministico: prima le question regolari per id, poi le
@@ -258,12 +266,39 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                 if u is not None and (block_last_modified is None or u > block_last_modified):
                     block_last_modified = u
 
+        # Colore del quadratino (grey/red/yellow/green). Calcolato dai dati
+        # correnti + il flag needs_review. is_flagged (unsure di parametro) NON
+        # entra nel colore: resta solo come dato informativo.
+        qids = [q.id for q in active_questions]
+        response_by_qid = {
+            q.id: (ans_dict[q.id].response_text if q.id in ans_dict else None)
+            for q in active_questions
+        }
+        example_count_by_qid = {}
+        has_test_example = False
+        for q in active_questions:
+            if q.id in ans_dict:
+                exs = ans_dict[q.id].examples
+                example_count_by_qid[q.id] = sum(1 for ex in exs if (ex.textarea or "").strip())
+                if any(ex.is_test for ex in exs):
+                    has_test_example = True
+        color = param_color(
+            qids, response_by_qid, example_count_by_qid,
+            has_test_example, needs_review_dict.get(p.id, False),
+        )
+        if total_q > 0:
+            answerable_colors.append(color)
+
         param_data = {
             "id": p.id,
             "name": p.name,
             "short_description": p.short_description,
             "stats": {"answered": answered_q, "total": total_q},
             "is_flagged": status_dict.get(p.id, False),
+            "color": color,
+            # True se una question del parametro ha subito una modifica seria:
+            # il quadratino è giallo "da ricontrollare" finché non si ri-salva.
+            "needs_review": needs_review_dict.get(p.id, False),
             "last_modified": block_last_modified.isoformat() if block_last_modified else None,
             "questions": []
         }
@@ -295,10 +330,18 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                         "gloss": ex.gloss or "",
                         "translation": ex.translation or "",
                         "reference": ex.reference or "",
+                        "is_test": bool(ex.is_test),
                     } for ex in sorted(ans.examples, key=lambda e: e.id)]
                 }
             param_data["questions"].append(q_data)
         result["parameters"].append(param_data)
+
+    # Completamento della lingua (asse A): override super-admin se presente,
+    # altrimenti calcolato dai colori dei parametri rispondibili.
+    result["language"]["completion"] = (
+        language.completion_override
+        or language_completion_from_colors(answerable_colors)
+    )
     return result
 
 
@@ -403,6 +446,7 @@ def get_param_block_for_language(
                     "gloss": ex.gloss or "",
                     "translation": ex.translation or "",
                     "reference": ex.reference or "",
+                    "is_test": bool(ex.is_test),
                 } for ex in sorted(ans.examples, key=lambda e: e.id)]
             }
         param_data["questions"].append(q_data)
@@ -464,6 +508,9 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         status_entry = models.LanguageParameterStatus(language_id=language.id, parameter_id=param_id)
         db.add(status_entry)
     status_entry.is_unsure = payload.is_unsure
+    # Ri-salvare il parametro = "l'ho ricontrollato": spegne il giallo "da
+    # ricontrollare" eventualmente acceso da una modifica seria a una question.
+    status_entry.needs_review = False
     # admin_note: solo per admin e solo se il client lo passa esplicitamente
     if current_user.role == "admin" and payload.admin_note is not None:
         note = payload.admin_note.strip()
@@ -526,6 +573,9 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         if normalized_response in ("yes", "no", "unsure", "missing"):
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
+                    # is_test arriva dal payload: lo settano solo gli admin (la
+                    # checkbox è admin-only in UI); i non-admin fanno round-trip
+                    # del valore esistente senza poterlo cambiare.
                     db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))
 
         touched.append((answer, was_new, old_snapshot))
@@ -561,160 +611,123 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     }
 
 
-# --- WORKFLOW ENDPOINTS ---
-class RejectPayload(BaseModel):
+# --- WORKFLOW ENDPOINTS (asse B: draft → submitted → validated) ---
+class NotePayload(BaseModel):
     note: Optional[str] = ""
 
 
 @router.post("/{lang_id}/workflow/submit")
 def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
-    pending|rejected -> waiting_for_approval.
-    SOLO l'utente assegnato può inviare. Gli admin non submittano (passano direttamente
-    da approve/reject sulle lingue già in waiting_for_approval).
+    draft -> submitted. SOLO l'utente assegnato conferma la compilazione. Da quel
+    momento la lingua è bloccata per l'utente e l'admin può iniziare la review.
     """
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
     if current_user.role == "admin":
-        raise HTTPException(status_code=403, detail="Submit is reserved for the assigned user. Admins handle this via approve/reject.")
+        raise HTTPException(status_code=403, detail="Confirm is reserved for the assigned user. Admins validate or send back.")
     if language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the user assigned to this language can submit it.")
-    if language.status not in ("pending", "rejected"):
-        raise HTTPException(status_code=409, detail=f"Cannot submit: current status '{language.status}'.")
+        raise HTTPException(status_code=403, detail="Only the user assigned to this language can confirm it.")
+    if language.status != "draft":
+        raise HTTPException(status_code=409, detail=f"Cannot confirm: current status '{language.status}'.")
 
-    language.status = "waiting_for_approval"
+    language.status = "submitted"
     language.submitted_at = utc_now()
-    language.rejection_note = None  # ripuliamo eventuale nota di rifiuto precedente
+    language.rejection_note = None  # ripuliamo eventuale nota di rimando precedente
     db.commit()
-    return {"detail": "Language submitted for approval.", "status": language.status}
+    return {"detail": "Language confirmed and submitted for review.", "status": language.status}
 
 
-@router.post("/{lang_id}/workflow/approve")
-def approve_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    waiting_for_approval -> approved. Solo admin.
-    """
-    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
-    if not language: raise HTTPException(status_code=404, detail="Language not found")
-    if language.status != "waiting_for_approval":
-        raise HTTPException(status_code=409, detail=f"Cannot approve: current status '{language.status}'.")
-
-    language.status = "approved"
-    language.reviewed_at = utc_now()
-    language.rejection_note = None
-    db.commit()
-    return {"detail": "Language approved.", "status": language.status}
-
-
-@router.post("/{lang_id}/workflow/reject")
-def reject_language(lang_id: str, payload: RejectPayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    waiting_for_approval -> rejected (con nota opzionale). Solo admin.
-    """
-    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
-    if not language: raise HTTPException(status_code=404, detail="Language not found")
-    if language.status != "waiting_for_approval":
-        raise HTTPException(status_code=409, detail=f"Cannot reject: current status '{language.status}'.")
-
-    language.status = "rejected"
-    language.reviewed_at = utc_now()
-    language.rejection_note = (payload.note or "").strip() or None
-    db.commit()
-    return {"detail": "Language rejected.", "status": language.status, "rejection_note": language.rejection_note}
-
-
-@router.post("/{lang_id}/workflow/reopen")
-def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    rejected -> pending. Utente assegnato o admin.
-    """
-    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
-    if not language: raise HTTPException(status_code=404, detail="Language not found")
-
-    if current_user.role != "admin" and language.assigned_user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not authorized to reopen this language.")
-    if language.status != "rejected":
-        raise HTTPException(status_code=409, detail=f"Cannot reopen: current status '{language.status}'.")
-
-    language.status = "pending"
-    db.commit()
-    return {"detail": "Language reopened.", "status": language.status}
-
-
-# --- ADMIN FORCE TRANSITIONS ---
-# Permettono all'admin di portare la lingua a qualsiasi stato saltando il flusso
-# normale submit/approve/reject. Utili per fix manuali, lingue importate da bundle,
-# rollback dopo errori. Nessun vincolo di stato sorgente.
-
-@router.post("/{lang_id}/workflow/admin_force_approve")
-def admin_force_approve_language(
+@router.post("/{lang_id}/workflow/validate")
+def validate_language(
     lang_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Admin: porta la lingua ad 'approved' da qualsiasi stato. Esegue il DAG in background."""
+    """
+    submitted -> validated. Tutti gli admin. Esegue il DAG in background (come il
+    vecchio approve). La lingua diventa sola lettura per tutti finché non si riapre.
+    """
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
+    if language.status != "submitted":
+        raise HTTPException(status_code=409, detail=f"Cannot validate: current status '{language.status}'.")
 
-    language.status = "approved"
+    language.status = "validated"
     language.reviewed_at = utc_now()
     language.rejection_note = None
     db.commit()
     background_tasks.add_task(_run_dag_in_background, language.id)
-    return {"detail": "Language forced to approved.", "status": language.status}
+    return {"detail": "Language validated.", "status": language.status}
 
 
-@router.post("/{lang_id}/workflow/admin_force_reject")
-def admin_force_reject_language(
-    lang_id: str,
-    payload: RejectPayload,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin),
-):
-    """Admin: porta la lingua a 'rejected' da qualsiasi stato. Nota opzionale."""
+@router.post("/{lang_id}/workflow/send_back")
+def send_back_language(lang_id: str, payload: NotePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """
+    submitted -> draft (con nota opzionale per l'utente). Tutti gli admin. È il
+    "rimanda indietro": l'utente può ricominciare la compilazione.
+    """
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
+    if language.status != "submitted":
+        raise HTTPException(status_code=409, detail=f"Cannot send back: current status '{language.status}'.")
 
-    language.status = "rejected"
+    language.status = "draft"
     language.reviewed_at = utc_now()
     language.rejection_note = (payload.note or "").strip() or None
     db.commit()
-    return {"detail": "Language forced to rejected.", "status": language.status, "rejection_note": language.rejection_note}
+    return {"detail": "Language sent back to the user.", "status": language.status, "rejection_note": language.rejection_note}
 
 
-@router.post("/{lang_id}/workflow/admin_force_pending")
-def admin_force_pending_language(
+@router.post("/{lang_id}/workflow/reopen")
+def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """
+    validated -> draft. Solo admin. Sblocca una lingua già validata per poterla
+    modificare di nuovo (esce dalla sola lettura).
+    """
+    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
+    if not language: raise HTTPException(status_code=404, detail="Language not found")
+    if language.status != "validated":
+        raise HTTPException(status_code=409, detail=f"Cannot reopen: current status '{language.status}'.")
+
+    language.status = "draft"
+    language.rejection_note = None
+    db.commit()
+    return {"detail": "Language reopened.", "status": language.status}
+
+
+# --- ASSE A: override manuale del completamento (solo super-admin) ---
+class CompletionOverridePayload(BaseModel):
+    # 'empty' | 'incomplete' | 'complete' | None (None = torna al calcolo automatico)
+    override: Optional[str] = None
+
+
+_COMPLETION_VALUES = ("empty", "incomplete", "complete")
+
+
+@router.put("/{lang_id}/completion-override")
+def set_completion_override(
     lang_id: str,
+    payload: CompletionOverridePayload,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_super_admin),
 ):
-    """Admin: porta la lingua a 'pending' da qualsiasi stato (rimette in compilazione)."""
+    """
+    Forza (o azzera) il completamento della lingua (asse A). Riservato al
+    SUPER-ADMIN. override=None rimette il completamento in automatico.
+    """
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
-    language.status = "pending"
-    language.rejection_note = None
+    ov = (payload.override or "").strip().lower() or None
+    if ov is not None and ov not in _COMPLETION_VALUES:
+        raise HTTPException(status_code=422, detail=f"Invalid override '{payload.override}'.")
+
+    language.completion_override = ov
     db.commit()
-    return {"detail": "Language forced to pending.", "status": language.status}
-
-
-@router.post("/{lang_id}/workflow/admin_force_waiting")
-def admin_force_waiting_language(
-    lang_id: str,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin),
-):
-    """Admin: porta la lingua a 'waiting_for_approval' da qualsiasi stato."""
-    language = db.query(models.Language).filter(models.Language.id == lang_id).first()
-    if not language: raise HTTPException(status_code=404, detail="Language not found")
-
-    language.status = "waiting_for_approval"
-    language.submitted_at = utc_now()
-    language.rejection_note = None
-    db.commit()
-    return {"detail": "Language forced to waiting_for_approval.", "status": language.status}
+    return {"detail": "Completion override updated.", "completion_override": language.completion_override}
 
 
 @router.get("/{lang_id}/debug")

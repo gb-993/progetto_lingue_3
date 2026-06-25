@@ -56,6 +56,7 @@ def copy_question_data(db: Session, source_question_id: str, dest_question_id: s
                 gloss=ex.gloss,
                 translation=ex.translation,
                 reference=ex.reference,
+                is_test=bool(ex.is_test),
             ))
             examples_count += 1
 

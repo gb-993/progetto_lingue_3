@@ -127,7 +127,8 @@ def get_submission_detail(submission_id: int, db: Session = Depends(get_db), cur
                 "translation": e.translation,
                 "gloss": e.gloss,
                 "transliteration": e.transliteration,
-                "reference": e.reference
+                "reference": e.reference,
+                "is_test": bool(e.is_test),
             } for e in sub.examples
         ]
     }

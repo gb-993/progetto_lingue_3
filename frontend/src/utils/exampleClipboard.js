@@ -23,13 +23,17 @@ const STORAGE_KEY = 'pcm_example_clipboard';
 // pagina non lo saprebbero mai senza questo broadcast intra-tab.
 const LOCAL_EVENT = 'pcm:exampleClipboardChange';
 
-// Riduce un esempio ai soli 5 campi linguistici (scarta tempId/id e altro).
+// Riduce un esempio ai soli campi linguistici + il flag is_test (scarta
+// tempId/id e altro). is_test viene preservato così copiare un esempio "di
+// test" e incollarlo crea un'altra copia ancora marcata test: workflow comune
+// per soddisfare il vincolo dei 2 esempi senza riscrivere a mano i segnaposto.
 const normalizeExample = (ex) => ({
     textarea: ex?.textarea || '',
     transliteration: ex?.transliteration || '',
     gloss: ex?.gloss || '',
     translation: ex?.translation || '',
     reference: ex?.reference || '',
+    is_test: !!ex?.is_test,
 });
 
 const readFromStorage = () => {

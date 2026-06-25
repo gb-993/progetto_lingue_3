@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, joinedload
 import models
 from dependencies import get_db, require_admin
 from services.versioning import record_version
+from services.param_state import flag_parameter_needs_review
 from services import archive_service
 from services import question_transfer
 from services.question_copy import copy_question_data
@@ -269,6 +270,16 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
             change_note=f"[Question {new_id}] {' '.join(note_parts)}"
         )
         db.add(log)
+
+    # Modifica SERIA (non marcata "Test edit") → segna il parametro come "da
+    # ricontrollare" per le lingue che hanno già del lavoro su di esso, così il
+    # quadratino diventa giallo finché non risalvano. Le modifiche leggere
+    # ("Test edit", estetiche) non allertano nessuno.
+    is_test_edit = (item.change_note or "").strip().startswith("Test edit")
+    if not is_test_edit:
+        flag_parameter_needs_review(db, item.parameter_id)
+        if old_parameter_id != item.parameter_id:
+            flag_parameter_needs_review(db, old_parameter_id)
 
     try:
         db.commit()

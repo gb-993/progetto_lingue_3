@@ -26,7 +26,7 @@ def _seed_full(db_session):
         isocode="it", glottocode="ital1282",
         informant="Mario Rossi", supervisor="Cristina Guardiano",
         source="Various sources", location="Italia",
-        status="approved",
+        status="validated",
     )
     db_session.add(lang)
 
@@ -163,7 +163,8 @@ def _seed_extras(db_session, user):
         models.SubmissionAnswer(submission_id=sub.id, question_code="FGM_01",
                                 response_text="yes", comments="ok"),
         models.SubmissionExample(submission_id=sub.id, question_code="FGM_01",
-                                 textarea="Esempio sub", gloss="g", translation="t"),
+                                 textarea="Esempio sub", gloss="g", translation="t",
+                                 is_test=True),
         models.SubmissionAnswerMotivation(submission_id=sub.id, question_code="FGM_02",
                                           motivation_code="MOT_X", motivation_label="Not applicable"),
         models.SubmissionParam(submission_id=sub.id, parameter_id="FGM",
@@ -216,6 +217,23 @@ def _seed_extras(db_session, user):
     db_session.commit()
 
 
+def test_create_language_submission_copies_is_test(db_session):
+    """Lo snapshot di backup copia il flag is_test dall'Example originale."""
+    from services.backup_service import create_language_submission
+    user = _seed_full(db_session)
+    ex = db_session.query(models.Example).first()
+    ex.is_test = True
+    db_session.commit()
+
+    lang = db_session.query(models.Language).filter_by(id="ITA").one()
+    sub, _ = create_language_submission(db_session, lang, user.id, note="snap")
+    db_session.commit()
+
+    sub_exs = db_session.query(models.SubmissionExample).filter_by(submission_id=sub.id).all()
+    assert len(sub_exs) == 1
+    assert sub_exs[0].is_test is True
+
+
 def test_full_backup_restore_roundtrip(db_session):
     """Bundle full → wipe → restore: anche le tabelle extras tornano identiche."""
     user = _seed_full(db_session)
@@ -255,6 +273,7 @@ def test_full_backup_restore_roundtrip(db_session):
     assert sub.answers[0].response_text == "yes"
     assert len(sub.examples) == 1
     assert sub.examples[0].textarea == "Esempio sub"
+    assert sub.examples[0].is_test is True  # il flag esempio-di-test sopravvive al round-trip zip
     assert len(sub.answer_motivations) == 1
     assert sub.answer_motivations[0].motivation_code == "MOT_X"
     assert len(sub.params) == 1

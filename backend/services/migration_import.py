@@ -741,8 +741,8 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 existing.latitude = latitude
                 existing.longitude = longitude
                 existing.historical_language = historical
-                # workflow: tutte le lingue importate partono in pending
-                existing.status = "pending"
+                # workflow (asse B): tutte le lingue importate partono in draft
+                existing.status = "draft"
                 summary.updated += 1
             else:
                 kwargs = {ca[1]: ca[2](_get(row, hmap, ca[0])) for ca in LANGUAGE_FIELDS}
@@ -754,7 +754,7 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                     group_id=grp.id if grp else None,
                     latitude=latitude, longitude=longitude,
                     historical_language=historical,
-                    status="pending",
+                    status="draft",
                     **{k: v for k, v in kwargs.items() if k != "name_full"},
                 )
                 db.add(obj)

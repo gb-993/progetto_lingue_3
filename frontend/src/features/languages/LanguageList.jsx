@@ -8,18 +8,38 @@ import NoticeToast from '../../components/NoticeToast';
 import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
 import LanguageMap from './LanguageMap';
 
+// ASSE B — Compilazione/review. NEUTRO (niente colori): i colori restano all'asse A.
 const STATUS_BADGE = {
-    pending: { label: 'Pending', cls: '' },
-    waiting_for_approval: { label: 'Waiting', cls: 'warn' },
-    approved: { label: 'Approved', cls: 'ok' },
-    rejected: { label: 'Rejected', cls: 'bad' },
+    draft: { label: 'Draft', cls: '' },
+    submitted: { label: 'Under review', cls: '' },
+    validated: { label: 'Validated', cls: '' },
 };
 
 function StatusBadge({ status }) {
-    const meta = STATUS_BADGE[status] || STATUS_BADGE.pending;
+    const meta = STATUS_BADGE[status] || STATUS_BADGE.draft;
     return (
         <span className={`status ${meta.cls}`} style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem' }}>
             {meta.label}
+        </span>
+    );
+}
+
+// ASSE A — Completamento. Colori come i quadratini: vuoto→grigio, incompleto→giallo, completo→verde.
+const COMPLETION_BADGE = {
+    empty: { label: 'Empty', cls: '' },
+    incomplete: { label: 'Incomplete', cls: 'warn' },
+    complete: { label: 'Complete', cls: 'ok' },
+};
+
+function CompletionBadge({ completion, forced }) {
+    const meta = COMPLETION_BADGE[completion] || COMPLETION_BADGE.empty;
+    return (
+        <span
+            className={`status ${meta.cls}`}
+            style={{ fontSize: '0.75rem', padding: '0.15rem 0.55rem' }}
+            title={forced ? 'Forced by a super-admin' : 'Computed from the parameter squares'}
+        >
+            {meta.label}{forced ? ' *' : ''}
         </span>
     );
 }
@@ -29,7 +49,8 @@ const INITIAL_FILTERS = {
     family: [],            // multi-select: [] significa tutte
     grp: [],               // multi-select: [] significa tutti
     historical: 'all',     // 'all' | 'yes' | 'no'
-    status: 'all',         // 'all' | pending | waiting_for_approval | approved | rejected
+    status: 'all',         // ASSE B: 'all' | draft | submitted | validated
+    completion: 'all',     // ASSE A: 'all' | empty | incomplete | complete
 };
 
 // Download helper: forza il browser a scaricare la blob ricevuta
@@ -261,10 +282,11 @@ export default function LanguageList() {
             if (filters.historical === 'yes' && !lang.historical_language) return false;
             if (filters.historical === 'no' && lang.historical_language) return false;
             if (filters.status !== 'all' && lang.status !== filters.status) return false;
+            if (filters.completion !== 'all' && lang.completion !== filters.completion) return false;
             // ricerca testuale su tutti i campi rilevanti
             return searchMatches(lang, search, [
                 'id', 'name_full', 'family', 'top_level_family', 'grp',
-                'status', 'rejection_note',
+                'status', 'completion', 'rejection_note',
             ]);
         }).sort((a, b) =>
             (a.id || '').localeCompare(b.id || '', undefined, { sensitivity: 'base' })
@@ -277,6 +299,7 @@ export default function LanguageList() {
         (filters.grp.length > 0 ? 1 : 0) +
         (filters.historical !== 'all' ? 1 : 0) +
         (filters.status !== 'all' ? 1 : 0) +
+        (filters.completion !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
 
     // Set effettivo (fonte di verità unica): filtri − esclusioni manuali.
@@ -689,13 +712,20 @@ export default function LanguageList() {
                             <option value="no">Only Non-Historical</option>
                         </select>
                     </FilterField>
-                    <FilterField label="Status">
+                    <FilterField label="Completion">
+                        <select name="completion" value={filters.completion} onChange={handleFilter} style={inputStyle}>
+                            <option value="all">Any completion</option>
+                            <option value="empty">Empty</option>
+                            <option value="incomplete">Incomplete</option>
+                            <option value="complete">Complete</option>
+                        </select>
+                    </FilterField>
+                    <FilterField label="Compilation">
                         <select name="status" value={filters.status} onChange={handleFilter} style={inputStyle}>
                             <option value="all">Any status</option>
-                            <option value="pending">Pending</option>
-                            <option value="waiting_for_approval">Waiting</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
+                            <option value="draft">Draft</option>
+                            <option value="submitted">Under review</option>
+                            <option value="validated">Validated</option>
                         </select>
                     </FilterField>
                 </div>
@@ -850,7 +880,8 @@ export default function LanguageList() {
                             </th>
                             <th>ID</th>
                             <th style={{ width: '14%' }}>Name</th>
-                            <th>Status</th>
+                            <th title="Completion of the parameter squares (automatic)">Completion</th>
+                            <th title="Compilation/review status">Compilation</th>
                             <th>Top family</th>
                             <th>Subfamily</th>
                             <th>Group</th>
@@ -860,7 +891,7 @@ export default function LanguageList() {
                     <tbody>
                         {loading && (
                             <tr>
-                                <td colSpan="8" className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading languages…</td>
+                                <td colSpan="9" className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading languages…</td>
                             </tr>
                         )}
                         {!loading && filteredLanguages.map(lang => (
@@ -875,6 +906,7 @@ export default function LanguageList() {
                                 </td>
                                 <td style={{ fontWeight: 'bold' }}>{lang.id}</td>
                                 <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{lang.name_full}</td>
+                                <td><CompletionBadge completion={lang.completion} forced={!!lang.completion_override} /></td>
                                 <td><StatusBadge status={lang.status} /></td>
                                 <td className="muted">{lang.top_level_family || '—'}</td>
                                 <td className="muted">{lang.family || '—'}</td>
@@ -902,7 +934,7 @@ export default function LanguageList() {
                         ))}
                         {filteredLanguages.length === 0 && !loading && (
                             <tr>
-                                <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>No language found.</td>
+                                <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>No language found.</td>
                             </tr>
                         )}
                     </tbody>

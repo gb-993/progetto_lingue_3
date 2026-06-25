@@ -668,7 +668,7 @@ def build_language_pdf(db, lang) -> bytes:
         coords = f"{float(lang.latitude):.4f}, {float(lang.longitude):.4f}"
     meta_row("Coordinates (lat, lng):", coords)
     meta_row("Historical:", "Yes" if lang.historical_language else "No")
-    meta_row("Status:", (lang.status or "pending").replace("_", " ").title())
+    meta_row("Status:", (lang.status or "draft").replace("_", " ").title())
     meta_row("Supervisor:", lang.supervisor)
     meta_row("Informant:", lang.informant)
     meta_row("Source:", lang.source)

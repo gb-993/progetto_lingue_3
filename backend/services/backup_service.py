@@ -64,7 +64,8 @@ def create_language_submission(db: Session, language: models.Language, user_id: 
                 transliteration=ex.transliteration or "",
                 gloss=ex.gloss or "",
                 translation=ex.translation or "",
-                reference=ex.reference or ""
+                reference=ex.reference or "",
+                is_test=bool(ex.is_test),
             ))
 
     # 3. Estrazione e copia dei Parametri + Eval (DAG)
@@ -179,7 +180,7 @@ def _style_table(ws, name: str, n_cols: int, widths) -> None:
 _INFO_HEADERS = ["Field", "Value"]
 _PARAMS_HEADERS = ["Parameter", "Initial value", "Warning init", "Final value", "Warning final"]
 _ANSWERS_HEADERS = ["Question", "Answer", "Motivations", "Comments"]
-_EXAMPLES_HEADERS = ["Question", "Example text", "Transliteration", "Gloss", "Translation", "Reference"]
+_EXAMPLES_HEADERS = ["Question", "Example text", "Transliteration", "Gloss", "Translation", "Reference", "Is Test"]
 
 
 def build_submission_workbook(db: Session, sub: models.Submission) -> Workbook:
@@ -276,8 +277,9 @@ def build_submission_workbook(db: Session, sub: models.Submission) -> Workbook:
             e.gloss or "",
             e.translation or "",
             e.reference or "",
+            "TEST" if e.is_test else "",
         ])
-    _style_table(ws_ex, "BackupExamples", len(_EXAMPLES_HEADERS), [14, 36, 22, 22, 26, 22])
+    _style_table(ws_ex, "BackupExamples", len(_EXAMPLES_HEADERS), [14, 36, 22, 22, 26, 22, 8])
 
     apply_excel_citation(wb)
     return wb

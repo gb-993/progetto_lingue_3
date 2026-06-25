@@ -118,6 +118,26 @@ def test_roundtrip_no_changes_keeps_state(db_session):
     assert mot.label == "Old label"
 
 
+def test_roundtrip_preserves_example_is_test(db_session):
+    """Export → import deve preservare il flag is_test degli esempi (foglio
+    Database_model, colonna Language_Example_Is_Test)."""
+    lang, user = _seed_full(db_session)
+    # marca uno dei due esempi come "di test"
+    ex = db_session.query(models.Example).order_by(models.Example.id).first()
+    ex.is_test = True
+    db_session.commit()
+
+    wb = build_language_workbook(db_session, lang, is_admin=True)
+    file_bytes = _wb_to_bytes(wb)
+    report = import_excel(db_session, file_bytes, user.id)
+    db_session.commit()
+
+    assert report.errors == [], f"Errori inattesi: {report.errors}"
+    examples = db_session.query(models.Example).all()
+    assert len(examples) == 2, f"esempi attesi 2, trovati {len(examples)}"
+    assert sum(1 for e in examples if e.is_test) == 1, "il flag is_test non è stato preservato nel round-trip"
+
+
 def test_roundtrip_preserves_missing_response(db_session):
     """Lingua con risposta missing -> export workbook -> import -> missing preservata.
 

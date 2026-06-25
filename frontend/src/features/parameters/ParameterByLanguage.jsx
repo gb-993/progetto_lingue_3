@@ -83,15 +83,10 @@ export default function ParameterByLanguage() {
 
     const total = meta?.total_questions ?? 0;
 
-    // Colore del quadratino: stessa logica del wizard di Language Data.
-    //  - is-complete (verde): tutte le question risposte yes/no
-    //  - is-incomplete (rosso): flag unsure oppure parzialmente risposto
-    //  - is-empty (grigio): nessuna risposta
-    const squareState = (l) => {
-        if (l.is_unsure || (l.answered > 0 && l.answered < total)) return 'is-incomplete';
-        if (total > 0 && l.answered >= total) return 'is-complete';
-        return 'is-empty';
-    };
+    // Colore del quadratino: calcolato dal backend (grey/red/yellow/green),
+    // stessa logica di Language Data.
+    const COLOR_CLASS = { green: 'is-complete', red: 'is-incomplete', yellow: 'is-warning', grey: 'is-empty' };
+    const squareState = (l) => COLOR_CLASS[l.color] || 'is-empty';
 
     // Tassonomia per il filtro "Data" (più fine del colore del quadratino).
     const completionOf = (l) => {

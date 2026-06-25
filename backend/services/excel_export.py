@@ -47,6 +47,11 @@ DATABASE_MODEL_HEADERS = [
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
+    # Flag "esempio di test" per esempio, impilato con "\n" come le altre colonne
+    # esempio: "TEST" se l'esempio è un segnaposto, "" altrimenti. Allineato per
+    # indice di riga alle colonne Language_Examples/... così il round-trip lo
+    # preserva. File vecchi senza questa colonna → tutti gli esempi non-test.
+    "Language_Example_Is_Test",
     # Aggiunte per backup lossless: senza queste, round-trip export → import
     # perdeva motivazioni e admin notes. Codici motivazione separati da "; ".
     # Admin_Note è duplicato su tutte le righe dello stesso parametro perché
@@ -64,6 +69,7 @@ EXAMPLES_HEADERS = [
     "Gloss",
     "English translation",
     "Reference",
+    "Is Test",
 ]
 
 ANSWERS_HEADERS = [
@@ -261,9 +267,10 @@ def build_language_workbook(
                     ex.gloss or "",
                     ex.translation or "",
                     ex.reference or "",
+                    "TEST" if ex.is_test else "",
                 ])
 
-    _style_table(ws_examples, "Examples", len(EXAMPLES_HEADERS), [14, 14, 10, 36, 22, 22, 26, 24])
+    _style_table(ws_examples, "Examples", len(EXAMPLES_HEADERS), [14, 14, 10, 36, 22, 22, 26, 24, 8])
 
     if not is_admin:
         apply_excel_citation(wb)
@@ -306,6 +313,7 @@ def build_language_workbook(
             cell_gloss = "\n".join((ex.gloss or "") for ex in ex_list) if ex_list else ""
             cell_transl = "\n".join((ex.translation or "") for ex in ex_list) if ex_list else ""
             cell_refs = "\n".join((ex.reference or "") for ex in ex_list) if ex_list else ""
+            cell_is_test = "\n".join(("TEST" if ex.is_test else "") for ex in ex_list) if ex_list else ""
 
             ws_db.append([
                 lang.name_full,
@@ -318,13 +326,14 @@ def build_language_workbook(
                 cell_gloss,
                 cell_transl,
                 cell_refs,
+                cell_is_test,
                 mot_codes_str,
                 param_admin_note,
             ])
 
     _style_table(
         ws_db, "DatabaseModel", len(DATABASE_MODEL_HEADERS),
-        [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 22, 30],
+        [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 10, 22, 30],
     )
 
     # Le colonne testuali contengono valori multilinea (esempi/gloss/traduzioni/
@@ -335,7 +344,7 @@ def build_language_workbook(
     _MULTILINE_COLS = (
         "Language_Comments", "Language_Examples", "Language_Example_Transliteration",
         "Language_Example_Gloss", "Language_Example_Translation",
-        "Language_References", "Admin_Note",
+        "Language_References", "Language_Example_Is_Test", "Admin_Note",
     )
     _wrap_top = Alignment(wrap_text=True, vertical="top")
     _col_idx = {name: i + 1 for i, name in enumerate(DATABASE_MODEL_HEADERS)}
@@ -587,7 +596,7 @@ def build_language_list_workbook(
             _xlsx_sanitize(L.informant),
             _xlsx_sanitize(L.historical_language),
             _xlsx_sanitize(L.source),
-            _xlsx_sanitize(L.status or "pending"),
+            _xlsx_sanitize(L.status or "draft"),
             _xlsx_sanitize(assigned_name),
             _xlsx_sanitize(assigned_email),
             L.updated_at if L.updated_at is not None else None,
@@ -745,7 +754,7 @@ SUBMISSION_ANSWERS_HEADERS = [
 ]
 SUBMISSION_EXAMPLES_HEADERS = [
     "ID", "Submission ID", "Question Code",
-    "Textarea", "Transliteration", "Gloss", "Translation", "Reference",
+    "Textarea", "Transliteration", "Gloss", "Translation", "Reference", "Is Test",
 ]
 SUBMISSION_ANSWER_MOTIVATIONS_HEADERS = [
     "ID", "Submission ID", "Question Code", "Motivation Code", "Motivation Label",
@@ -870,8 +879,9 @@ def build_submissions_workbook(db: Session) -> Workbook:
             se.id, se.submission_id, se.question_code,
             se.textarea or "", se.transliteration or "",
             se.gloss or "", se.translation or "", se.reference or "",
+            "TEST" if se.is_test else "",
         ])
-    _style_table(ws, "SubmissionExamples", len(SUBMISSION_EXAMPLES_HEADERS), [10, 14, 14, 36, 22, 22, 26, 24])
+    _style_table(ws, "SubmissionExamples", len(SUBMISSION_EXAMPLES_HEADERS), [10, 14, 14, 36, 22, 22, 26, 24, 8])
 
     ws = wb.create_sheet("SubmissionAnswerMotivations")
     ws.append(SUBMISSION_ANSWER_MOTIVATIONS_HEADERS)

@@ -434,6 +434,7 @@ def _restore_submissions(
                 gloss=d.get("Gloss"),
                 translation=d.get("Translation"),
                 reference=d.get("Reference"),
+                is_test=str(d.get("Is Test") or "").strip().upper() in ("TEST", "YES", "Y", "TRUE", "1", "X"),
             ))
             n_ex += 1
 

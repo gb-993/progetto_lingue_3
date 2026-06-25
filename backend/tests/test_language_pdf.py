@@ -24,7 +24,7 @@ def _seed_minimal(db):
         family="Germanic", top_level_family="Indo-European", grp="West Germanic",
         glottocode="stan1293", isocode="eng", location="UK",
         supervisor="Cristina Guardiano", informant="John Smith",
-        source="Various", historical_language=False, status="approved",
+        source="Various", historical_language=False, status="validated",
     )
     db.add(lang)
     db.commit()

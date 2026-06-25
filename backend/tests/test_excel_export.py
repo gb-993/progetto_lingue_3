@@ -65,6 +65,7 @@ _EXPECTED_DATABASE_MODEL_HEADERS = [
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
+    "Language_Example_Is_Test",
     "Motivations",
     "Admin_Note",
 ]
@@ -72,6 +73,7 @@ _EXPECTED_DATABASE_MODEL_HEADERS = [
 _OLD_EXAMPLES_HEADERS = [
     "Language ID", "Question ID", "Example #",
     "Example text", "Transliteration", "Gloss", "English translation", "Reference",
+    "Is Test",
 ]
 
 _OLD_ANSWERS_HEADERS = [
@@ -98,11 +100,11 @@ def test_answers_headers_match_legacy():
 
 
 def test_database_model_headers_count():
-    assert len(DATABASE_MODEL_HEADERS) == 12
+    assert len(DATABASE_MODEL_HEADERS) == 13
 
 
 def test_examples_headers_count():
-    assert len(EXAMPLES_HEADERS) == 8
+    assert len(EXAMPLES_HEADERS) == 9
 
 
 def test_answers_headers_count():
@@ -372,7 +374,7 @@ def test_language_list_workbook(db_session):
     assert rows[0][1] == "ITA"       # ID
     assert rows[0][5] == "it"        # ISO code
     assert rows[0][12] == "No"       # Historical (mapped to "Yes"/"No")
-    assert rows[0][14] == "pending"  # Status
+    assert rows[0][14] == "draft"  # Status
 
 
 def test_language_list_user_metadata_export_works_with_zero_languages(db_session):

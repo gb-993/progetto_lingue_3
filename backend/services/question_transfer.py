@@ -148,6 +148,7 @@ def copy_examples_only(db: Session, source_id: str, dest_id: str) -> dict:
                 gloss=e.gloss,
                 translation=e.translation,
                 reference=e.reference,
+                is_test=bool(e.is_test),
             ))
             dest_fps.add(fp)
             next_n += 1

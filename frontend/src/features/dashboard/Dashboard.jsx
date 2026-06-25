@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-// ===== Palette status (coerente con LanguageList / LanguageData) =====
+// ===== Status di compilazione — ASSE B (coerente con LanguageList / LanguageData).
+// Neutro (niente colori): i colori restano all'asse A (completamento). =====
 const STATUS_BADGE = {
-    pending: { label: 'Pending', cls: '' },
-    waiting_for_approval: { label: 'Waiting', cls: 'warn' },
-    approved: { label: 'Approved', cls: 'ok' },
-    rejected: { label: 'Rejected', cls: 'bad' },
+    draft: { label: 'Draft', cls: '' },
+    submitted: { label: 'Under review', cls: '' },
+    validated: { label: 'Validated', cls: '' },
 };
 
 function StatusBadge({ status }) {
-    const meta = STATUS_BADGE[status] || STATUS_BADGE.pending;
+    const meta = STATUS_BADGE[status] || STATUS_BADGE.draft;
     return (
         <span className={`status ${meta.cls}`} style={{ fontSize: '0.72rem', padding: '0.1rem 0.5rem' }}>
             {meta.label}
@@ -78,7 +78,7 @@ function AdminDashboard() {
 function PendingApprovalsCard({ count, items }) {
     return (
         <div className="card counter-card">
-            <h3 className="admin-label">Waiting for Approval</h3>
+            <h3 className="admin-label">Awaiting Review</h3>
             <div className="admin-big-number">{count}</div>
             {items.length > 0 ? (
                 <div style={{ marginTop: '0.3rem', maxHeight: '120px', overflowY: 'auto', paddingRight: '0.25rem' }}>
@@ -107,16 +107,15 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
     const [expanded, setExpanded] = useState(null);
 
     const total =
-        (safe.pending || 0) +
-        (safe.waiting_for_approval || 0) +
-        (safe.approved || 0) +
-        (safe.rejected || 0);
+        (safe.draft || 0) +
+        (safe.submitted || 0) +
+        (safe.validated || 0);
 
+    // Colori "neutri" (asse B): niente verde/giallo/rosso, che restano all'asse A.
     const cells = [
-        { key: 'pending', label: 'Pending', color: 'var(--text-muted)' },
-        { key: 'waiting_for_approval', label: 'Waiting', color: '#92400e' },
-        { key: 'approved', label: 'Approved', color: 'var(--ok)' },
-        { key: 'rejected', label: 'Rejected', color: 'var(--bad)' },
+        { key: 'draft', label: 'Draft', color: 'var(--text-muted)' },
+        { key: 'submitted', label: 'Under review', color: 'var(--brand)' },
+        { key: 'validated', label: 'Validated', color: 'var(--text)' },
     ];
 
     const toggle = (key) => setExpanded(prev => (prev === key ? null : key));
@@ -382,7 +381,7 @@ function UserDashboard() {
                                     <StatusBadge status={l.status} />
                                 </div>
                                 <Link to={`/languages/${l.id}/data`} className="btn btn--primary btn--small">
-                                    {l.status === 'rejected' ? 'View rejection and reopen' : 'Fill in'}
+                                    {l.status === 'draft' ? 'Fill in' : 'View'}
                                 </Link>
                             </div>
                             <div>
@@ -393,13 +392,13 @@ function UserDashboard() {
                                 <div style={{ height: '8px', background: 'var(--surface-2)', borderRadius: '4px', overflow: 'hidden' }}>
                                     <div style={{
                                         width: `${l.progress_pct}%`, height: '100%',
-                                        background: l.status === 'approved' ? '#16a34a' : (l.status === 'rejected' ? '#dc2626' : '#3b82f6')
+                                        background: l.status === 'validated' ? '#16a34a' : '#3b82f6'
                                     }}/>
                                 </div>
                             </div>
-                            {l.status === 'rejected' && l.rejection_note && (
+                            {l.status === 'draft' && l.rejection_note && (
                                 <div className="lang-rejection-note">
-                                    <strong>Admin note:</strong> {l.rejection_note}
+                                    <strong>Admin feedback:</strong> {l.rejection_note}
                                 </div>
                             )}
                         </div>

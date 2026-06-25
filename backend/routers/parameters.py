@@ -16,6 +16,7 @@ from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
 from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
 from services.excel_export import build_parameter_data_matrix_workbook
+from services.param_state import compute_colors
 
 import re as _re
 
@@ -739,6 +740,9 @@ def get_parameter_by_language(
     unsure_map = {lid: bool(u) for lid, u in unsure_rows}
 
     languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
+    # Colore del quadratino (grey/red/yellow/green) per ogni lingua, stessa
+    # logica di Language Data.
+    colors = compute_colors(db, [l.id for l in languages], {param_id: active_qids})
     langs_out = [{
         "id": l.id,
         "name_full": l.name_full,
@@ -749,6 +753,7 @@ def get_parameter_by_language(
         "answered": answered_map.get(l.id, 0),
         "with_response": with_response_map.get(l.id, 0),
         "is_unsure": unsure_map.get(l.id, False),
+        "color": colors.get((l.id, param_id), "grey"),
     } for l in languages]
 
     return {

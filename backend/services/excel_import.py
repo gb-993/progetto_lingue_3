@@ -1040,6 +1040,9 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         gloss_lines = _split_lines(_get(row, hmap, "Language_Example_Gloss"))
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
+        # Flag "esempio di test" per esempio. Colonna opzionale (assente nei file
+        # vecchi → tutti non-test). Allineata per indice alle altre colonne esempio.
+        is_test_lines = _split_lines(_get(row, hmap, "Language_Example_Is_Test"))
 
         # Motivations (colonna opzionale, presente nei file dal 2026-05).
         # Codici separati da `;` o `,`. Codici sconosciuti: errore non bloccante,
@@ -1097,6 +1100,8 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                     gloss=(gloss_lines[i] if i < len(gloss_lines) else None) or None,
                     translation=(transl_lines[i] if i < len(transl_lines) else None) or None,
                     reference=(ref_lines[i] if i < len(ref_lines) else None) or None,
+                    is_test=(is_test_lines[i] if i < len(is_test_lines) else "").strip().upper()
+                            in ("TEST", "YES", "Y", "TRUE", "1", "X"),
                 )
                 db.add(ex)
 
@@ -1165,9 +1170,6 @@ def _float_or_none(v: Any) -> Optional[float]:
         return None
 
 
-_LANGUAGE_VALID_STATUSES = {"pending", "waiting_for_approval", "approved", "rejected"}
-
-
 def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport) -> None:
     summary = SheetSummary()
     report.sheets_processed.append("Languages")
@@ -1204,8 +1206,9 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
             ))
             continue
 
-        status_raw = _str(_get(row, hmap, "Status")).lower()
-        status = status_raw if status_raw in _LANGUAGE_VALID_STATUSES else "pending"
+        # Accetta sia i nuovi valori (draft/submitted/validated) sia i vecchi
+        # (pending/waiting_for_approval/approved/rejected) di file pre-redesign.
+        status = models.normalize_language_status(_str(_get(row, hmap, "Status")))
 
         top_str = _str(_get(row, hmap, "Top-level family")) or ""
         fam_str = _str(_get(row, hmap, "Family")) or ""

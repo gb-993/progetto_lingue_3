@@ -1,40 +1,57 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import ParameterBlock from './ParameterBlock';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
 
-// Mappa etichette/descrizioni per lo status della lingua.
-// I colori sono gestiti via CSS (.status-banner.is-<status>) per supportare dark mode.
+// ASSE B — Stato di compilazione/review (draft → submitted → validated).
+// Volutamente NEUTRO (niente colori traffico): i colori restano all'asse A
+// (completamento) per non confondere i due assi.
 const STATUS_META = {
-    pending: {
-        label: 'Pending',
+    draft: {
+        label: 'Draft',
         description: 'You are filling in this language. Changes persist between sessions.'
     },
-    waiting_for_approval: {
-        label: 'Waiting for approval',
-        description: 'Awaiting admin review. The form is locked until a decision is made (except for admins).'
+    submitted: {
+        label: 'Under review',
+        description: 'Confirmed and awaiting admin review. The form is locked until an admin decides (except for admins).'
     },
-    approved: {
-        label: 'Approved',
-        description: 'Approved. The form is locked (except for admins).'
+    validated: {
+        label: 'Validated',
+        description: 'Validated by an admin. Read-only for users; admins can still edit it.'
     },
-    rejected: {
-        label: 'Rejected',
-        description: 'Rejected. Reopen to edit and resubmit it.'
-    },
+};
+
+// ASSE A — Completamento della lingua (calcolato dai quadratini). I colori
+// rispecchiano i quadratini: vuoto→grigio, incompleto→giallo, completo→verde.
+const COMPLETION_META = {
+    empty: { label: 'Empty', cls: '' },
+    incomplete: { label: 'Incomplete', cls: 'warn' },
+    complete: { label: 'Complete', cls: 'ok' },
+};
+
+// Mappa il colore calcolato dal backend (grey/red/yellow/green) alla classe CSS
+// del quadratino e a un tooltip leggibile.
+const COLOR_CLASS = { green: 'is-complete', red: 'is-incomplete', yellow: 'is-warning', grey: 'is-empty' };
+const COLOR_TITLE = {
+    green: 'Complete',
+    red: 'Incomplete / missing answers',
+    yellow: 'Needs attention (missing examples, test example, or edited question)',
+    grey: 'Empty',
 };
 
 export default function LanguageData() {
     const { id } = useParams();
+    const { user } = useAuth();
     const [data, setData] = useState(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [actionInProgress, setActionInProgress] = useState(false);
-    const [showRejectModal, setShowRejectModal] = useState(false);
-    const [rejectNote, setRejectNote] = useState('');
+    const [showSendBackModal, setShowSendBackModal] = useState(false);
+    const [sendBackNote, setSendBackNote] = useState('');
     // Tracciamento delle modifiche non salvate del parametro corrente, sollevate
     // entrambe dal ParameterBlock:
     //  - adminNoteDirty: solo per admin, copre il textarea della admin note
@@ -44,8 +61,8 @@ export default function LanguageData() {
     const [adminNoteDirty, setAdminNoteDirty] = useState(false);
     const [blockDirty, setBlockDirty] = useState(false);
     const anyDirty = adminNoteDirty || blockDirty;
-    const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-    const statusMenuRef = useRef(null);
+    const [overrideMenuOpen, setOverrideMenuOpen] = useState(false);
+    const overrideMenuRef = useRef(null);
 
     // Ricerca parametro nel wizard: fa lampeggiare il quadratino trovato per
     // qualche istante, senza cambiare il parametro attivo (niente discard).
@@ -56,15 +73,15 @@ export default function LanguageData() {
     useEffect(() => () => { if (foundTimerRef.current) clearTimeout(foundTimerRef.current); }, []);
 
     useEffect(() => {
-        if (!statusMenuOpen) return;
+        if (!overrideMenuOpen) return;
         const onDocClick = (e) => {
-            if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
-                setStatusMenuOpen(false);
+            if (overrideMenuRef.current && !overrideMenuRef.current.contains(e.target)) {
+                setOverrideMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', onDocClick);
         return () => document.removeEventListener('mousedown', onDocClick);
-    }, [statusMenuOpen]);
+    }, [overrideMenuOpen]);
 
     // Guard unificato: copre chiusura tab/refresh (beforeunload) e navigazione
     // interna React Router (Link, breadcrumb, back-button). Sostituisce il
@@ -138,40 +155,47 @@ export default function LanguageData() {
         }
     };
 
+    // Utente assegnato: conferma la compilazione (draft → submitted)
     const handleSubmit = () => {
-        if (!window.confirm("Submit this language for approval? Once submitted, you will not be able to edit it until an admin reviews it.")) return;
+        if (!window.confirm("Confirm this language? Once confirmed you will not be able to edit it until an admin reviews it.")) return;
         callWorkflow('submit');
     };
 
+    // Admin: valida (submitted → validated). Diventa sola lettura per tutti; fa girare il DAG.
+    const handleValidate = () => {
+        if (!window.confirm('Validate this language? It becomes read-only for everyone until an admin reopens it. The DAG will run in background.')) return;
+        callWorkflow('validate');
+    };
+
+    // Admin: rimanda indietro (submitted → draft) con nota opzionale per l'utente
+    const handleSendBack = () => {
+        setSendBackNote('');
+        setShowSendBackModal(true);
+    };
+
+    const submitSendBack = async () => {
+        await callWorkflow('send_back', { note: sendBackNote });
+        setShowSendBackModal(false);
+    };
+
+    // Admin: riapre una lingua validata (validated → draft)
     const handleReopen = () => {
-        if (!window.confirm("Reopen the form? The status will go back to 'pending' and you will be able to edit it.")) return;
+        if (!window.confirm("Reopen this validated language? It goes back to draft and becomes editable again.")) return;
         callWorkflow('reopen');
     };
 
-    // Admin: force transitions su qualsiasi stato corrente
-    const handleForceApprove = () => {
-        if (!window.confirm('Force this language to APPROVED? The DAG will run in background.')) return;
-        callWorkflow('admin_force_approve');
-    };
-
-    const handleForceReject = () => {
-        setRejectNote('');
-        setShowRejectModal(true);
-    };
-
-    const submitReject = async () => {
-        await callWorkflow('admin_force_reject', { note: rejectNote });
-        setShowRejectModal(false);
-    };
-
-    const handleForcePending = () => {
-        if (!window.confirm("Force this language to PENDING? Users will be able to edit it again.")) return;
-        callWorkflow('admin_force_pending');
-    };
-
-    const handleForceWaiting = () => {
-        if (!window.confirm('Force this language to WAITING FOR APPROVAL?')) return;
-        callWorkflow('admin_force_waiting');
+    // Super-admin: forza/azzera il completamento (asse A). value: 'empty' | 'incomplete' | 'complete' | null (auto)
+    const handleSetCompletionOverride = async (value) => {
+        setOverrideMenuOpen(false);
+        try {
+            setActionInProgress(true);
+            await api.put(`/api/languages/${id}/completion-override`, { override: value });
+            await fetchCompilationData();
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Error updating the completion override.');
+        } finally {
+            setActionInProgress(false);
+        }
     };
 
     // Cerca un parametro per id (match esatto, poi sottostringa) o per nome e
@@ -207,13 +231,19 @@ export default function LanguageData() {
 
     const { language, parameters } = data;
     const currentParam = parameters[activeIndex];
-    const isAdmin = localStorage.getItem('role') === 'admin';
+    const isAdmin = user?.role === 'admin';
+    const isSuperAdmin = !!user?.is_super_admin;
 
-    const status = language.status || 'pending';
-    const meta = STATUS_META[status] || STATUS_META.pending;
-    const isLocked = status === 'waiting_for_approval' || status === 'approved';
-    // Admin può sempre editare a prescindere dallo status; utenti normali vedono il lock.
-    const isReadOnly = isAdmin ? false : isLocked;
+    // Asse B (review)
+    const status = language.status || 'draft';
+    const meta = STATUS_META[status] || STATUS_META.draft;
+    // Asse A (completamento, calcolato dal backend; può essere forzato dal super-admin)
+    const completion = language.completion || 'empty';
+    const completionMeta = COMPLETION_META[completion] || COMPLETION_META.empty;
+    const hasOverride = !!language.completion_override;
+    // Lock di scrittura: l'admin può SEMPRE editare (anche submitted/validated);
+    // l'utente assegnato solo in draft.
+    const isReadOnly = isAdmin ? false : status !== 'draft';
 
     return (
         <main className="container" style={{ marginTop: 'var(--form-page-top, 2rem)', paddingBottom: '10rem' }}>
@@ -241,52 +271,81 @@ export default function LanguageData() {
                 flexWrap: 'wrap',
             }}>
                 <div style={{ flex: '1 1 300px' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
-                        {meta.label}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>{meta.label}</span>
+                        <span
+                            className={`status ${completionMeta.cls}`}
+                            style={{ fontSize: '0.72rem', padding: '0.1rem 0.5rem' }}
+                            title={hasOverride ? 'Completion forced by a super-admin' : 'Computed from the parameter squares'}
+                        >
+                            {completionMeta.label}{hasOverride ? ' (forced)' : ''}
+                        </span>
                     </div>
                     <div style={{ fontSize: '0.9rem', marginTop: '0.25rem' }}>{meta.description}</div>
-                    {status === 'rejected' && language.rejection_note && (
+                    {status === 'draft' && language.rejection_note && (
                         <div className="status-banner__note">
-                            <strong>Admin note:</strong> {language.rejection_note}
+                            <strong>Admin feedback:</strong> {language.rejection_note}
                         </div>
                     )}
                 </div>
 
                 {/* Bottoni di workflow */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                    {/* --- UTENTE NON ADMIN --- */}
-                    {!isAdmin && status === 'pending' && (
+                    {/* --- UTENTE ASSEGNATO: conferma (draft → submitted) --- */}
+                    {!isAdmin && status === 'draft' && (
                         <button className="btn btn--primary" disabled={actionInProgress} onClick={handleSubmit}>
-                            {actionInProgress ? '...' : 'Submit for approval'}
-                        </button>
-                    )}
-                    {!isAdmin && status === 'rejected' && (
-                        <button className="btn btn--primary" disabled={actionInProgress} onClick={handleReopen}>
-                            {actionInProgress ? '...' : 'Reopen'}
+                            {actionInProgress ? '...' : 'Confirm'}
                         </button>
                     )}
 
-                    {/* --- ADMIN: dropdown status + apply implication --- */}
+                    {/* --- ADMIN (tutti): review asse B + (super-admin) override asse A --- */}
                     {isAdmin && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
                             <span className="small muted">Admin actions</span>
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                <Link
-                                    to={`/languages/${language.id}/debug`}
-                                    className="btn"
-                                >
+                                <Link to={`/languages/${language.id}/debug`} className="btn">
                                     Apply implicational condition(s)
                                 </Link>
-                                <div ref={statusMenuRef} style={{ position: 'relative' }}>
+                                {status === 'submitted' && (
+                                    <>
+                                        <button
+                                            className="btn"
+                                            style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d' }}
+                                            disabled={actionInProgress}
+                                            onClick={handleValidate}
+                                        >
+                                            {actionInProgress ? '...' : 'Validate'}
+                                        </button>
+                                        <button
+                                            className="btn"
+                                            style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c' }}
+                                            disabled={actionInProgress}
+                                            onClick={handleSendBack}
+                                        >
+                                            {actionInProgress ? '...' : 'Send back'}
+                                        </button>
+                                    </>
+                                )}
+                                {status === 'validated' && (
+                                    <button className="btn" disabled={actionInProgress} onClick={handleReopen}>
+                                        {actionInProgress ? '...' : 'Reopen'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Solo super-admin: forza/azzera il completamento (asse A) */}
+                            {isSuperAdmin && (
+                                <div ref={overrideMenuRef} style={{ position: 'relative' }}>
                                     <button
                                         type="button"
-                                        className="btn"
+                                        className="btn btn--small"
                                         disabled={actionInProgress}
-                                        onClick={() => setStatusMenuOpen(o => !o)}
+                                        onClick={() => setOverrideMenuOpen(o => !o)}
+                                        title="Force or reset the completion (super-admin only)"
                                     >
-                                        {actionInProgress ? '...' : 'Change Status ▾'}
+                                        {actionInProgress ? '...' : `Completion: ${hasOverride ? completionMeta.label + ' (forced)' : 'Auto'} ▾`}
                                     </button>
-                                    {statusMenuOpen && (
+                                    {overrideMenuOpen && (
                                         <div style={{
                                             position: 'absolute',
                                             right: 0,
@@ -296,83 +355,48 @@ export default function LanguageData() {
                                             borderRadius: '6px',
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                             zIndex: 100,
-                                            minWidth: '200px',
+                                            minWidth: '210px',
                                             padding: '0.4rem',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: '0.3rem',
                                         }}>
-                                            {status !== 'approved' && (
-                                                <button
-                                                    className="btn"
-                                                    style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d', width: '100%' }}
-                                                    disabled={actionInProgress}
-                                                    onClick={() => { setStatusMenuOpen(false); handleForceApprove(); }}
-                                                >
-                                                    Approve
-                                                </button>
-                                            )}
-                                            {status !== 'rejected' && (
-                                                <button
-                                                    className="btn"
-                                                    style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c', width: '100%' }}
-                                                    disabled={actionInProgress}
-                                                    onClick={() => { setStatusMenuOpen(false); handleForceReject(); }}
-                                                >
-                                                    Reject
-                                                </button>
-                                            )}
-                                            {status !== 'pending' && (
-                                                <button
-                                                    className="btn"
-                                                    style={{ width: '100%' }}
-                                                    disabled={actionInProgress}
-                                                    onClick={() => { setStatusMenuOpen(false); handleForcePending(); }}
-                                                >
-                                                    Mark as Pending
-                                                </button>
-                                            )}
-                                            {status !== 'waiting_for_approval' && (
-                                                <button
-                                                    className="btn"
-                                                    style={{ width: '100%' }}
-                                                    disabled={actionInProgress}
-                                                    onClick={() => { setStatusMenuOpen(false); handleForceWaiting(); }}
-                                                >
-                                                    Mark as Waiting
-                                                </button>
-                                            )}
+                                            <span className="small muted" style={{ padding: '0 0.2rem' }}>Force completion (super-admin)</span>
+                                            <button className="btn" style={{ width: '100%' }} disabled={actionInProgress} onClick={() => handleSetCompletionOverride('empty')}>Empty</button>
+                                            <button className="btn" style={{ width: '100%' }} disabled={actionInProgress} onClick={() => handleSetCompletionOverride('incomplete')}>Incomplete</button>
+                                            <button className="btn" style={{ width: '100%' }} disabled={actionInProgress} onClick={() => handleSetCompletionOverride('complete')}>Complete</button>
+                                            <button className="btn" style={{ width: '100%' }} disabled={actionInProgress || !hasOverride} onClick={() => handleSetCompletionOverride(null)}>Reset to automatic</button>
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Modal Reject */}
-            {showRejectModal && (
+            {/* Modal Send back */}
+            {showSendBackModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="card" style={{ width: '500px', padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
-                        <h3 style={{ marginTop: 0, color: 'var(--bad)' }}>Reject Language</h3>
-                        <p className="small muted">Enter a note (optional) that will be shown to the assigned user.</p>
+                        <h3 style={{ marginTop: 0, color: 'var(--bad)' }}>Send back to the user</h3>
+                        <p className="small muted">The language goes back to draft and the user can edit it again. Enter a note (optional) that will be shown to them.</p>
                         <textarea
                             rows="4"
-                            value={rejectNote}
-                            onChange={e => setRejectNote(e.target.value)}
+                            value={sendBackNote}
+                            onChange={e => setSendBackNote(e.target.value)}
                             placeholder="E.g.: section X is incomplete, please review the answers for parameters Y..."
                             style={{ width: '100%', padding: 'var(--form-input-pad, 0.5rem)', resize: 'vertical' }}
                         />
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                            <button className="btn" onClick={() => setShowRejectModal(false)}>Cancel</button>
+                            <button className="btn" onClick={() => setShowSendBackModal(false)}>Cancel</button>
                             <button
                                 className="btn"
                                 style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c' }}
                                 disabled={actionInProgress}
-                                onClick={submitReject}
+                                onClick={submitSendBack}
                             >
-                                {actionInProgress ? '...' : 'Confirm Reject'}
+                                {actionInProgress ? '...' : 'Confirm send back'}
                             </button>
                         </div>
                     </div>
@@ -400,14 +424,10 @@ export default function LanguageData() {
             <div ref={wizardTopRef} className="param-nav" style={{ scrollMarginTop: '1rem' }}>
                 {parameters.map((p, idx) => {
                     const { answered = 0, total = 0 } = p.stats || {};
-                    const isFlagged = p.is_flagged || false;
-
-                    let stateClass = 'is-empty';
-                    if (isFlagged || (answered > 0 && answered < total)) {
-                        stateClass = 'is-incomplete';
-                    } else if (answered === total && total > 0) {
-                        stateClass = 'is-complete';
-                    }
+                    // Colore calcolato dal backend: grey/red/yellow/green.
+                    const stateClass = COLOR_CLASS[p.color] || 'is-empty';
+                    // Giallo "da ricontrollare": una question è stata modificata.
+                    const needsReview = !!p.needs_review;
 
                     const isActive = idx === activeIndex;
 
@@ -422,9 +442,17 @@ export default function LanguageData() {
                                 setActiveIndex(idx);
                             }}
                             className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}${p.id === foundId ? ' is-found' : ''}`}
-                            title={isFlagged ? "Marked as unsure" : `Progress: ${answered}/${total}`}
+                            title={`${COLOR_TITLE[p.color] || ''} — ${answered}/${total} answered${needsReview ? ' — ✎ a modified question needs re-check & re-save' : ''}`}
                         >
                             {p.id}
+                            {needsReview && (
+                                <span
+                                    className="badge-review"
+                                    title="A question was modified — re-check and re-save this parameter"
+                                >
+                                    ✎
+                                </span>
+                            )}
                         </button>
                     );
                 })}

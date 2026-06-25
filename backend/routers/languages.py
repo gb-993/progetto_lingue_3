@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 import models
 from dependencies import get_db, require_admin, get_current_user
 from services.versioning import record_version
+from services.param_state import active_param_questions, compute_language_completion
 
 ID_MAX_LEN = 10  # Length(Language.id) — vincolo schema
 
@@ -153,6 +154,17 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
         query = query.filter(models.Language.assigned_user_id == current_user.id)
 
     languages = query.order_by(func.lower(models.Language.id)).all()
+
+    # Completamento (asse A: empty/incomplete/complete) per ogni lingua, in batch.
+    # Rispetta l'override super-admin. Indipendente dallo status (asse B).
+    pq = active_param_questions(db)
+    completion_by_lang = compute_language_completion(
+        db,
+        [l.id for l in languages],
+        pq,
+        {l.id: l.completion_override for l in languages},
+    )
+
     return [{
         "id": l.id,
         "name_full": l.name_full,
@@ -174,6 +186,8 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
         "source": l.source or "",
         "location": l.location or "",
         "status": l.status,
+        "completion": completion_by_lang.get(l.id, "empty"),
+        "completion_override": l.completion_override,
         "rejection_note": l.rejection_note,
         "submitted_at": l.submitted_at.isoformat() if l.submitted_at else None,
         "reviewed_at": l.reviewed_at.isoformat() if l.reviewed_at else None,
@@ -499,6 +513,7 @@ def duplicate_admin_language(
         location=src.location,
         assigned_user_id=src.assigned_user_id,
         status=src.status,
+        completion_override=src.completion_override,
         rejection_note=src.rejection_note,
         submitted_at=src.submitted_at,
         reviewed_at=src.reviewed_at,

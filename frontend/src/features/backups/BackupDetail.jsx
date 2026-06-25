@@ -221,11 +221,12 @@ export default function BackupDetail() {
                                 <th>Gloss</th>
                                 <th>Translation</th>
                                 <th>Ref</th>
+                                <th>Test</th>
                             </tr>
                             </thead>
                             <tbody>
                             {sub.examples.length === 0 ? (
-                                <tr><td colSpan="6" className="p-3 text-muted">No examples provided.</td></tr>
+                                <tr><td colSpan="7" className="p-3 text-muted">No examples provided.</td></tr>
                             ) : (
                                 sub.examples.map((e, idx) => (
                                     <tr key={idx}>
@@ -235,6 +236,7 @@ export default function BackupDetail() {
                                         <td><small className="muted">{e.gloss}</small></td>
                                         <td>{e.translation}</td>
                                         <td><small>{e.reference}</small></td>
+                                        <td>{e.is_test ? <span style={{ padding: '0.05rem 0.4rem', borderRadius: '4px', background: '#e8a317', color: '#3a2c00', fontWeight: 700, fontSize: '0.75rem' }}>TEST</span> : ''}</td>
                                     </tr>
                                 ))
                             )}

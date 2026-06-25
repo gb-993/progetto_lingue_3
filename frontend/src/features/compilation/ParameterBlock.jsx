@@ -241,6 +241,7 @@ export default function ParameterBlock({
                         isReadOnly={isReadOnly}
                         currentLangId={langId}
                         isHighlighted={highlightedQuestionId === q.id}
+                        isAdmin={isAdmin}
                     />
                 ))}
             </div>

@@ -218,6 +218,27 @@ class Consent(Base):
 # ==========================================
 # 2. LINGUE (Languages)
 # ==========================================
+
+# Mappa i VECCHI valori di status lingua (pre-redesign asse A/B) verso i nuovi.
+# Serve a import Excel e restore backup per accettare file/snapshot prodotti
+# prima della migrazione senza rifiutarli. I valori nuovi passano invariati.
+LEGACY_LANGUAGE_STATUS_MAP = {
+    "pending": "draft",
+    "rejected": "draft",
+    "waiting_for_approval": "submitted",
+    "approved": "validated",
+    "draft": "draft",
+    "submitted": "submitted",
+    "validated": "validated",
+}
+
+
+def normalize_language_status(raw) -> str:
+    """Normalizza un valore di status lingua (vecchio o nuovo) a uno nuovo valido.
+    Sconosciuto/None → 'draft'."""
+    return LEGACY_LANGUAGE_STATUS_MAP.get((raw or "").strip().lower(), "draft")
+
+
 class Language(Base):
     __tablename__ = "languages"
     id = Column(String(10), primary_key=True)
@@ -245,12 +266,27 @@ class Language(Base):
 
     assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # Workflow di compilazione (a livello di lingua intera)
+    # Workflow di compilazione — ASSE B (consegna/review, guidato da umani).
+    #   draft     : l'utente compila, può editare
+    #   submitted : l'utente ha confermato → bloccato per l'utente, l'admin rivede
+    #   validated : l'admin ha chiuso → sola lettura per tutti finché non riapre
+    # NB: il "completamento" (asse A: empty/incomplete/complete) NON sta qui: è
+    # calcolato live dai colori dei quadratini (vedi services/param_state). Questo
+    # campo è solo il dialogo utente↔admin. Il vecchio enum
+    # (pending/waiting_for_approval/approved/rejected) mescolava i due assi.
     status = Column(
-        Enum("pending", "waiting_for_approval", "approved", "rejected", name="language_status"),
+        Enum("draft", "submitted", "validated", name="language_status"),
         nullable=False,
-        default="pending",
-        server_default="pending",
+        default="draft",
+        server_default="draft",
+    )
+    # Override manuale del completamento (asse A), riservato al SUPER-ADMIN.
+    # NULL = completamento automatico (calcolato dai colori dei quadratini). Se
+    # valorizzato, "pinna" la pillola di completamento della lingua scavalcando
+    # il calcolo (uscita di sicurezza per casi limite).
+    completion_override = Column(
+        Enum("empty", "incomplete", "complete", name="language_completion"),
+        nullable=True,
     )
     rejection_note = Column(Text, nullable=True)
     submitted_at = Column(DateTime, nullable=True)
@@ -423,6 +459,11 @@ class LanguageParameterStatus(Base):
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
+    # "Da ricontrollare": acceso quando una question del parametro viene
+    # modificata seriamente (non "Test edit"); rende GIALLO il quadratino per
+    # questa lingua finché il parametro non viene ri-salvato. Solo per le lingue
+    # che hanno già del lavoro su questo parametro.
+    needs_review = Column(Boolean, nullable=False, default=False, server_default="false")
 
     __table_args__ = (UniqueConstraint('language_id', 'parameter_id', name='uq_lang_param_status'),)
 
@@ -505,6 +546,10 @@ class Example(Base):
     gloss = Column(Text, nullable=True)
     translation = Column(Text, nullable=True)
     reference = Column(Text, nullable=True)
+    # Esempio "di test"/segnaposto, marcabile solo dagli admin. Conta come esempio
+    # valido (per il vincolo dei 2), ma rende GIALLO il quadratino del parametro
+    # finché non viene sostituito con un esempio reale.
+    is_test = Column(Boolean, nullable=False, default=False, server_default="false")
 
     answer = relationship("Answer", back_populates="examples")
 
@@ -651,6 +696,9 @@ class SubmissionExample(Base):
     gloss = Column(Text, nullable=True)
     translation = Column(Text, nullable=True)
     reference = Column(Text, nullable=True)
+    # Copia del flag "esempio di test" dall'Example originale, così lo snapshot
+    # di backup lo conserva (e sopravvive a export/restore del backup completo).
+    is_test = Column(Boolean, nullable=False, default=False, server_default="false")
 
     submission = relationship("Submission", back_populates="examples")
 
