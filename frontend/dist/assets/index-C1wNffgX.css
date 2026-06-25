@@ -2082,6 +2082,32 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   border-color: #135f3d;
 }
 
+/* Evidenziazione temporanea del quadratino trovato via ricerca: anello blu
+   lampeggiante (--focus) visibile su qualsiasi stato/tema. L'outline sta fuori
+   dal bordo, quindi non sposta il layout né litiga col bordo .is-active. */
+.param-nav .param-btn.is-found {
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+  animation: param-found-blink 0.8s ease-in-out 3;
+}
+@keyframes param-found-blink {
+  0%, 100% {
+    outline-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    outline-color: var(--focus);
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--focus) 45%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .param-nav .param-btn.is-found {
+    animation: none;
+    outline-color: var(--focus);
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--focus) 45%, transparent);
+  }
+}
+
 /* Variante "wide" del wizard: stessi colori/stati di .param-btn ma larghezza
    adattiva, così i quadratini possono ospitare un id più lungo del quadrato
    fisso 2.5rem (es. l'id della lingua nella vista parametro → lingue). */
