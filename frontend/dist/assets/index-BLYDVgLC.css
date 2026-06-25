@@ -1987,31 +1987,20 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
    aggiorna automaticamente.
    ========================================================= */
 
-/* Banner di status (Pending / Waiting / Approved / Rejected) */
+/* Banner di status — ASSE B (Draft / Under review / Validated).
+   Volutamente NEUTRO: i colori "traffico" restano all'asse A (completamento),
+   così le due dimensioni non si confondono. */
 .status-banner {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
 }
-.status-banner.is-pending {
+.status-banner.is-draft,
+.status-banner.is-submitted,
+.status-banner.is-validated {
   background: var(--surface-2);
   color: var(--text);
   border-color: var(--border);
-}
-.status-banner.is-waiting_for_approval {
-  background: var(--pill-warn-bg);
-  color: var(--warn);
-  border-color: color-mix(in oklab, var(--warn) 25%, var(--border));
-}
-.status-banner.is-approved {
-  background: var(--pill-ok-bg);
-  color: var(--ok);
-  border-color: color-mix(in oklab, var(--ok) 25%, var(--border));
-}
-.status-banner.is-rejected {
-  background: var(--pill-bad-bg);
-  color: var(--bad);
-  border-color: color-mix(in oklab, var(--bad) 25%, var(--border));
 }
 
 /* Note dell'admin nel banner Rejected */
@@ -2070,6 +2059,13 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   color: #fff;
   border-color: #0f5132;
 }
+/* Giallo/ambra: "da rivedere" (esempi mancanti, esempio di test, o question
+   modificata). Distinto da verde/rosso/grigio e leggibile in light e dark. */
+.param-nav .param-btn.is-warning {
+  background: #e8a317;
+  color: #3a2c00;
+  border-color: #b3801a;
+}
 .param-nav .param-btn.is-active {
   border-bottom: 3px solid var(--text);
 }
@@ -2080,6 +2076,11 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 :root[data-theme="dark"] .param-nav .param-btn.is-complete {
   background: #1f9b62;
   border-color: #135f3d;
+}
+:root[data-theme="dark"] .param-nav .param-btn.is-warning {
+  background: #c98a14;
+  border-color: #8f6510;
+  color: #221900;
 }
 
 /* Evidenziazione temporanea del quadratino trovato via ricerca: anello blu
