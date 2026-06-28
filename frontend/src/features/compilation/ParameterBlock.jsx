@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../api';
 import QuestionRow from './QuestionRow';
+import usePresence from '../../utils/usePresence';
 
 // Costruisce lo stato iniziale di `localAnswers` partendo dalle questions del
 // parametro. Estratto come funzione standalone così è riutilizzabile sia per
@@ -38,6 +39,16 @@ export default function ParameterBlock({
     isAdmin = false, onAdminNoteDirtyChange, onBlockDirtyChange,
 }) {
     const [isSaving, setIsSaving] = useState(false);
+
+    // Presence anonima per la sezione Data, scopo per (lingua, parametro).
+    // ParameterBlock si rimonta a ogni cambio parametro nel wizard (key=param.id
+    // in LanguageData), quindi l'heartbeat segue automaticamente il parametro
+    // attivo: cambiando parametro lo slot vecchio viene liberato e si apre quello
+    // nuovo. Attivo solo se la pagina e' editabile (un lettore in sola lettura non
+    // puo' generare conflitti al salvataggio).
+    const othersEditing = usePresence(
+        'language_parameter', `${langId}:${parameter.id}`, !isReadOnly
+    );
 
     // Admin-only: nota libera per (lingua, parametro). Il valore originale viene
     // dal payload /compilation (solo se admin). Viene persistita insieme al
@@ -155,9 +166,29 @@ export default function ParameterBlock({
 
     return (
         <section className="card parameter-block" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
-            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                {parameter.id} — {parameter.name}
-            </h3>
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                gap: '1rem', flexWrap: 'wrap',
+                borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem',
+            }}>
+                <h3 style={{ margin: 0 }}>
+                    {parameter.id} — {parameter.name}
+                </h3>
+                {othersEditing > 0 && (
+                    <span
+                        title="Another user is working on this parameter for this language right now. If you both save, one of you will be asked to reload — coordinate to avoid losing work."
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                            fontSize: '0.76rem', color: '#664d03',
+                            background: '#fff3cd', border: '1px solid #ffe69c',
+                            borderRadius: '999px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
+                        }}
+                    >
+                        <span className="presence-dot" aria-hidden="true" />
+                        {othersEditing > 1 ? `${othersEditing} others editing` : 'Another user editing'}
+                    </span>
+                )}
+            </div>
             <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{parameter.short_description}</p>
 
             {isAdmin && (

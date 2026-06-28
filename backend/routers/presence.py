@@ -31,7 +31,12 @@ router = APIRouter(prefix="/api/presence", tags=["Presence"])
 PRESENCE_TTL_SECONDS = 50
 
 # Allowlist dei tipi tracciabili (evita di accettare stringhe arbitrarie).
-_ALLOWED_ENTITY_TYPES = {"question", "parameter"}
+#   - "question" / "parameter": form di modifica admin (scheda question/parametro).
+#   - "language_parameter": sezione Data della compilazione, scopo per
+#     (lingua, parametro). entity_id = "<langId>:<paramId>" (max 10+1+10 = 21,
+#     entro il limite di 40 del validator sotto). Avverte quando due persone
+#     stanno compilando lo STESSO parametro della STESSA lingua.
+_ALLOWED_ENTITY_TYPES = {"question", "parameter", "language_parameter"}
 
 
 class PresencePayload(BaseModel):
