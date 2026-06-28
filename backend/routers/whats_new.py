@@ -18,9 +18,10 @@ Permessi: la modifica del contenuto e' riservata al super-admin (come
 Migration Import / Backup Restore); la lettura e' per qualsiasi utente loggato.
 """
 import re
+from typing import Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 import models
@@ -30,6 +31,13 @@ from time_utils import utc_now
 router = APIRouter(tags=["What's New"])
 
 WHATS_NEW_KEY = "whats_new"
+# Audience del What's New, salvata come riga site_contents separata (stesso
+# pattern key-value di Instructions/whats_new): 'all' = tutti gli utenti loggati,
+# 'admins' = solo gli admin. Tenerla separata dal contenuto fa si' che cambiare
+# SOLO la visibilita' non bumpi la "versione" (updated_at) dell'annuncio.
+WHATS_NEW_AUDIENCE_KEY = "whats_new_audience"
+_VALID_AUDIENCES = ("all", "admins")
+_DEFAULT_AUDIENCE = "all"
 
 # Toglie i tag HTML e i &nbsp; per capire se resta testo reale. Specchio
 # lato server di hasRealText() nel frontend (WhatsNewModal.jsx): una casella
@@ -48,6 +56,18 @@ def _has_real_text(html: str) -> bool:
 
 class WhatsNewUpdate(BaseModel):
     content: str
+    # 'all' | 'admins'. None = non modificare l'audience corrente.
+    audience: Optional[str] = None
+
+    @field_validator("audience")
+    @classmethod
+    def _valid_audience(cls, v):
+        if v is None:
+            return None
+        v = (v or "").strip().lower()
+        if v not in _VALID_AUDIENCES:
+            raise ValueError("audience must be 'all' or 'admins'")
+        return v
 
 
 def _get_row(db: Session):
@@ -56,6 +76,22 @@ def _get_row(db: Session):
         .filter(models.SiteContent.key == WHATS_NEW_KEY)
         .first()
     )
+
+
+def _get_audience(db: Session) -> str:
+    """Audience corrente ('all'|'admins'). Default 'all' (comportamento storico)."""
+    row = (
+        db.query(models.SiteContent)
+        .filter(models.SiteContent.key == WHATS_NEW_AUDIENCE_KEY)
+        .first()
+    )
+    val = (row.content or "").strip().lower() if row else ""
+    return val if val in _VALID_AUDIENCES else _DEFAULT_AUDIENCE
+
+
+def _content_visible_to(is_admin: bool, audience: str) -> bool:
+    """True se un utente con quel ruolo puo' vedere il What's New con questa audience."""
+    return is_admin or audience == "all"
 
 
 def _user_should_see(db: Session, user_id: int, updated_at) -> bool:
@@ -92,17 +128,23 @@ def get_whats_new(
     nessuno, indipendentemente dalla versione.
     """
     row = _get_row(db)
+    audience = _get_audience(db)
+    is_admin = current_user.role == "admin"
+    visible = _content_visible_to(is_admin, audience)
     if not row:
-        return {"content": "", "updated_at": None, "should_show": False}
+        return {"content": "", "updated_at": None, "should_show": False, "audience": audience}
     content = row.content or ""
     should_show = (
-        _has_real_text(content)
+        visible
+        and _has_real_text(content)
         and _user_should_see(db, current_user.id, row.updated_at)
     )
     return {
-        "content": content,
+        # Audience 'admins': non far trapelare il contenuto agli utenti non-admin.
+        "content": content if visible else "",
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         "should_show": should_show,
+        "audience": audience,
     }
 
 
@@ -163,5 +205,25 @@ def update_whats_new(
         # Bump esplicito: garantisce la "ripubblicazione" anche se il testo
         # non cambia (onupdate non scatterebbe senza modifiche ai campi).
         row.updated_at = now
+
+    # Audience: aggiornata solo se passata esplicitamente. Riga site_contents
+    # separata: cambiarla non tocca updated_at dell'annuncio (no ripubblicazione).
+    if data.audience is not None:
+        arow = (
+            db.query(models.SiteContent)
+            .filter(models.SiteContent.key == WHATS_NEW_AUDIENCE_KEY)
+            .first()
+        )
+        if not arow:
+            db.add(models.SiteContent(
+                key=WHATS_NEW_AUDIENCE_KEY,
+                page="whats_new",
+                content=data.audience,
+                updated_by_id=current_user.id,
+            ))
+        else:
+            arow.content = data.audience
+            arow.updated_by_id = current_user.id
+
     db.commit()
     return {"detail": "What's New updated."}

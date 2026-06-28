@@ -11,6 +11,10 @@ const InstructionsEditor = lazy(() => import('../instructions/InstructionsEditor
 export default function WhatsNew() {
     const [content, setContent] = useState('');
     const [draft, setDraft] = useState('');
+    // Visibilità dell'annuncio: 'all' = tutti gli utenti, 'admins' = solo admin.
+    // `audience` è il valore persistito, `draftAudience` quello in modifica.
+    const [audience, setAudience] = useState('all');
+    const [draftAudience, setDraftAudience] = useState('all');
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -19,13 +23,17 @@ export default function WhatsNew() {
 
     useEffect(() => {
         api.get('/api/whats-new')
-            .then(res => setContent(res.data?.content || ''))
+            .then(res => {
+                setContent(res.data?.content || '');
+                setAudience(res.data?.audience === 'admins' ? 'admins' : 'all');
+            })
             .catch(() => setContent(''))
             .finally(() => setLoading(false));
     }, []);
 
     const startEditing = () => {
         setDraft(content);
+        setDraftAudience(audience);
         setError('');
         setIsEditing(true);
     };
@@ -41,8 +49,9 @@ export default function WhatsNew() {
         setError('');
         try {
             const html = editorRef.current ? editorRef.current.getContent() : draft;
-            await api.put('/api/admin/whats-new', { content: html });
+            await api.put('/api/admin/whats-new', { content: html, audience: draftAudience });
             setContent(html);
+            setAudience(draftAudience);
             setIsEditing(false);
         } catch (err) {
             console.error(err);
@@ -77,9 +86,12 @@ export default function WhatsNew() {
             </header>
 
             <p className="muted" style={{ marginTop: '.25rem' }}>
-                Annuncio mostrato una volta agli utenti (admin e user) nel modale di benvenuto.
-                <strong> Salvare = pubblicare:</strong> se il contenuto è diverso dal precedente, tutti lo rivedranno una volta.
+                Annuncio mostrato una volta agli utenti nel modale di benvenuto.
+                <strong> Salvare = pubblicare:</strong> se il contenuto è diverso dal precedente, chi rientra nella visibilità lo rivedrà una volta.
                 Lasciandolo <strong>vuoto</strong> non viene mostrato nessun annuncio.
+                {!isEditing && (
+                    <> Visibile attualmente a: <strong>{audience === 'admins' ? 'solo amministratori' : 'tutti gli utenti'}</strong>.</>
+                )}
             </p>
 
             {error && (
@@ -97,6 +109,32 @@ export default function WhatsNew() {
                                 onReady={(editor) => { editorRef.current = editor; }}
                             />
                         </Suspense>
+
+                        <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '.9rem' }}>Visibile a:</strong>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="wn-audience"
+                                    value="all"
+                                    checked={draftAudience === 'all'}
+                                    onChange={() => setDraftAudience('all')}
+                                    disabled={saving}
+                                />
+                                Tutti gli utenti
+                            </label>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="wn-audience"
+                                    value="admins"
+                                    checked={draftAudience === 'admins'}
+                                    onChange={() => setDraftAudience('admins')}
+                                    disabled={saving}
+                                />
+                                Solo amministratori
+                            </label>
+                        </div>
 
                         <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '.5rem' }}>
                             <button type="button" className="btn" onClick={cancelEditing} disabled={saving}>
