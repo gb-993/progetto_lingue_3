@@ -90,15 +90,6 @@ export default function OldQuestionsTab() {
         <>
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="card" style={{ padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
-                <p className="small muted" style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.45 }}>
-                    Each row groups the archived versions of a single question. A new version
-                    is created whenever an admin saves a question with the
-                    <strong> "Save and delete the linked data" </strong>
-                    button: the previous answers/examples for every language are moved here
-                    and stay downloadable.
-                </p>
-            </div>
 
             <div className="card" style={{ padding: 'var(--filter-card-pad, 0.75rem 1rem)', marginBottom: 'var(--form-field-mb, 1rem)' }}>
                 <input
@@ -119,7 +110,6 @@ export default function OldQuestionsTab() {
                             <th>Parameter</th>
                             <th>Archived versions</th>
                             <th>Latest archive</th>
-                            <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -151,14 +141,7 @@ export default function OldQuestionsTab() {
                                                 {latest && <> by <em>{latest.archived_by}</em></>}
                                             </small>
                                         </td>
-                                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                className="btn btn-sm"
-                                                onClick={() => toggleExpanded(key)}
-                                            >
-                                                {isOpen ? 'Hide versions' : 'Show versions'}
-                                            </button>
-                                        </td>
+
                                     </tr>
                                     {isOpen && g.versions.map((v) => (
                                         <tr key={v.id} style={{ background: 'var(--surface-2, #f8fafc)' }}>
