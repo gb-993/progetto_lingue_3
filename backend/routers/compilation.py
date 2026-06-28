@@ -462,12 +462,21 @@ def get_param_block_for_language(
 
 
 def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Optional[str]:
-    """MAX(answer.updated_at) per le risposte di questo (lingua, parametro), in ISO 8601."""
+    """MAX(answer.updated_at) per le risposte di questo (lingua, parametro), in ISO 8601.
+
+    SOLO question attive: il blocco mostra ed edita unicamente le question attive,
+    quindi il fingerprint di concorrenza deve essere calcolato sullo stesso insieme
+    del reader (get_language_compilation_data). Senza il filtro is_active, la
+    risposta di una question disattivata di recente resterebbe nel MAX lato-save ma
+    non lato-lettura: il confronto fallirebbe SEMPRE con un 409 fasullo, impedendo
+    di salvare le altre question del parametro.
+    """
     current_max = db.query(func.max(models.Answer.updated_at)).join(
         models.Question, models.Question.id == models.Answer.question_id
     ).filter(
         models.Answer.language_id == language_id,
         models.Question.parameter_id == param_id,
+        models.Question.is_active == True,
     ).scalar()
     return current_max.isoformat() if current_max else None
 
