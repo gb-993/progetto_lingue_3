@@ -761,7 +761,26 @@ export default function QuestionForm({ mode = 'page' }) {
     return (
         <div className="container" style={{ maxWidth: '760px', marginTop: isDrawerMode ? 0 : 'var(--form-page-top, 2rem)', position: 'relative' }}>
             <div className="card">
-                <header style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                <header style={{
+                    marginBottom: 'var(--form-card-header-mb, 1.5rem)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '1rem', flexWrap: 'wrap',
+                    // Come Edit Parameter: header sticky col badge quando c'è un altro
+                    // utente. SOLO in modalità pagina: nel drawer no, perché lo scroll è
+                    // quello interno del pannello e l'header si scontrerebbe con la × di
+                    // chiusura in alto a destra.
+                    ...(othersEditing > 0 && !isDrawerMode ? {
+                        position: 'sticky',
+                        top: 'var(--topbar-height)',
+                        zIndex: 5,
+                        marginBottom: 0,
+                        paddingTop: '0.5rem',
+                        paddingBottom: '0.75rem',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'var(--surface, #fff)',
+                        boxShadow: '0 4px 8px -6px rgba(0,0,0,0.35)',
+                    } : {}),
+                }}>
                     <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Question: ${id}` : 'Add New Question'}</h2>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                         {othersEditing > 0 && (

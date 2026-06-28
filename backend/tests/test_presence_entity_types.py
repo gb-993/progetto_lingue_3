@@ -23,6 +23,14 @@ def test_combined_lang_param_id_fits_validator():
     assert p.entity_id == "Lang012345:Param01234"
 
 
+def test_language_type_is_allowed():
+    # Scheda di modifica metadati lingua (LanguageForm).
+    assert "language" in _ALLOWED_ENTITY_TYPES
+    p = PresencePayload(entity_type="language", entity_id="ITA")
+    assert p.entity_type == "language"
+    assert p.entity_id == "ITA"
+
+
 def test_unknown_entity_type_is_rejected():
     with pytest.raises(ValidationError):
         PresencePayload(entity_type="bogus", entity_id="x")
@@ -30,4 +38,4 @@ def test_unknown_entity_type_is_rejected():
 
 def test_existing_types_still_allowed():
     # Non regredire i tipi preesistenti.
-    assert {"question", "parameter"} <= _ALLOWED_ENTITY_TYPES
+    assert {"question", "parameter", "language", "language_parameter"} <= _ALLOWED_ENTITY_TYPES

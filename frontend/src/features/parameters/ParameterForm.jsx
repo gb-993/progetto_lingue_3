@@ -448,7 +448,26 @@ export default function ParameterForm() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.5rem)', minWidth: 0 }}>
                 <div className="card">
-                    <header style={{marginBottom: 'var(--form-card-header-mb, 1.5rem)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'}}>
+                    <header style={{
+                        marginBottom: 'var(--form-card-header-mb, 1.5rem)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: '1rem', flexWrap: 'wrap',
+                        // Come nella sezione Data: con un altro utente presente l'header
+                        // (titolo + badge) si aggancia sotto la topbar scrollando, così
+                        // l'avviso resta visibile. Sfondo opaco + bordo/ombra perché il
+                        // form non traspaia dietro. Senza altri utenti: header normale.
+                        ...(othersEditing > 0 ? {
+                            position: 'sticky',
+                            top: 'var(--topbar-height)',
+                            zIndex: 5,
+                            marginBottom: 0,
+                            paddingTop: '0.5rem',
+                            paddingBottom: '0.75rem',
+                            borderBottom: '1px solid var(--border)',
+                            background: 'var(--surface, #fff)',
+                            boxShadow: '0 4px 8px -6px rgba(0,0,0,0.35)',
+                        } : {}),
+                    }}>
                         <h2 style={{margin: 0}}>{isEditMode ? `Edit Parameter: ${id}` : 'Add New Parameter'}</h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                             {othersEditing > 0 && (

@@ -35,11 +35,12 @@ PRESENCE_TTL_SECONDS = 25
 
 # Allowlist dei tipi tracciabili (evita di accettare stringhe arbitrarie).
 #   - "question" / "parameter": form di modifica admin (scheda question/parametro).
+#   - "language": scheda di modifica metadati lingua (LanguageForm).
 #   - "language_parameter": sezione Data della compilazione, scopo per
 #     (lingua, parametro). entity_id = "<langId>:<paramId>" (max 10+1+10 = 21,
 #     entro il limite di 40 del validator sotto). Avverte quando due persone
 #     stanno compilando lo STESSO parametro della STESSA lingua.
-_ALLOWED_ENTITY_TYPES = {"question", "parameter", "language_parameter"}
+_ALLOWED_ENTITY_TYPES = {"question", "parameter", "language", "language_parameter"}
 
 
 class PresencePayload(BaseModel):

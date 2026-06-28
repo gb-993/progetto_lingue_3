@@ -1,11 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../api';
+import usePresence from '../../utils/usePresence';
 
 export default function LanguageForm() {
     const { id } = useParams();
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
+
+    // Presence anonima: numero di ALTRI utenti che stanno modificando questa
+    // stessa scheda lingua adesso (solo in edit). Pill discreta in header,
+    // coerente con Edit Parameter/Question.
+    const othersEditing = usePresence('language', id, isEditMode && !!id);
 
     const [formData, setFormData] = useState({
         id: '', name_full: '', position: 0,
@@ -200,8 +206,40 @@ export default function LanguageForm() {
     return (
         <div className="container" style={{maxWidth: '800px', marginTop: '2rem'}}>
             <div className="card">
-                <header style={{marginBottom: '1.5rem'}}>
-                    <h2>{isEditMode ? `Edit Language: ${id}` : 'Add New Language'}</h2>
+                <header style={{
+                    marginBottom: '1.5rem',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    gap: '1rem', flexWrap: 'wrap',
+                    // Coerenza con Edit Parameter/Question: con un altro utente presente
+                    // l'header (titolo + badge) si aggancia sotto la topbar scrollando,
+                    // così l'avviso resta visibile. Senza altri utenti: header normale.
+                    ...(othersEditing > 0 ? {
+                        position: 'sticky',
+                        top: 'var(--topbar-height)',
+                        zIndex: 5,
+                        marginBottom: 0,
+                        paddingTop: '0.5rem',
+                        paddingBottom: '0.75rem',
+                        borderBottom: '1px solid var(--border)',
+                        background: 'var(--surface, #fff)',
+                        boxShadow: '0 4px 8px -6px rgba(0,0,0,0.35)',
+                    } : {}),
+                }}>
+                    <h2 style={{ margin: 0 }}>{isEditMode ? `Edit Language: ${id}` : 'Add New Language'}</h2>
+                    {othersEditing > 0 && (
+                        <span
+                            title="Another user is editing this language's details right now. The last save wins, so coordinate to avoid overwriting each other."
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                fontSize: '0.76rem', color: '#664d03',
+                                background: '#fff3cd', border: '1px solid #ffe69c',
+                                borderRadius: '999px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <span className="presence-dot" aria-hidden="true" />
+                            {othersEditing > 1 ? `${othersEditing} others editing` : 'Another user editing'}
+                        </span>
+                    )}
                 </header>
 
                 {error && <div className="alert alert-error" style={{marginBottom: '1rem'}}>{error}</div>}

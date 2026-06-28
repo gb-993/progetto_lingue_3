@@ -170,6 +170,18 @@ export default function ParameterBlock({
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 gap: '1rem', flexWrap: 'wrap',
                 borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem',
+                // Quando c'e' un altro utente, l'header (titolo + badge) si aggancia
+                // sotto la topbar scrollando, cosi' l'avviso resta sempre visibile
+                // mentre si scorre la lista di question. Sfondo opaco + ombra: le
+                // question non traspaiono dietro. Senza altri utenti: scroll normale.
+                ...(othersEditing > 0 ? {
+                    position: 'sticky',
+                    top: 'var(--topbar-height)',
+                    zIndex: 5,
+                    paddingTop: '0.5rem',
+                    background: 'var(--surface, #fff)',
+                    boxShadow: '0 4px 8px -6px rgba(0,0,0,0.35)',
+                } : {}),
             }}>
                 <h3 style={{ margin: 0 }}>
                     {parameter.id} — {parameter.name}
