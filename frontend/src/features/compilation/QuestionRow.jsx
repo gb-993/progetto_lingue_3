@@ -54,10 +54,11 @@ const clipboardFieldStyle = {
 const formatExampleOption = (ex) => {
     // I linguisti lavorano spesso su lingue che non conoscono: la frase originale
     // (textarea) non li aiuta a riconoscere quale esempio stanno cercando. Mostriamo
-    // quindi la GLOSSA come identificatore nei risultati di "Import from". Fallback
-    // a translation e infine textarea quando la glossa manca, così l'etichetta non
-    // resta mai vuota (la ricerca lato server copre comunque textarea/translation/gloss).
-    const primary = (ex.gloss || ex.translation || ex.textarea || '').trim();
+    // quindi la GLOSSA come identificatore nei risultati di "Import from". Se la
+    // glossa manca, si ripiega direttamente sulla frase originale (textarea), così
+    // l'etichetta non resta mai vuota (la ricerca lato server copre comunque
+    // textarea/translation/gloss).
+    const primary = (ex.gloss || ex.textarea || '').trim();
     const snippet = primary.length > 70 ? `${primary.slice(0, 70)}…` : primary;
     return {
         value: ex.id,
