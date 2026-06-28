@@ -2,7 +2,7 @@
 Presence effimera per l'avviso di modifica concorrente.
 
 Quando un utente apre un form di modifica, il client batte un heartbeat ogni
-~20s. L'endpoint /heartbeat aggiorna la riga (entity_type, entity_id, user_id)
+~8s. L'endpoint /heartbeat aggiorna la riga (entity_type, entity_id, user_id)
 e risponde con il numero di ALTRI utenti attivi sulla stessa entita'. Il
 frontend mostra un banner anonimo ("un altro utente sta modificando"): qui non
 viene mai restituita l'identita' di nessuno, solo un conteggio.
@@ -27,8 +27,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/presence", tags=["Presence"])
 
 # Un utente e' "attivo" su un'entita' se ha battuto un heartbeat negli ultimi
-# TTL secondi. Il client batte ogni ~20s, quindi 50s tollera un battito perso.
-PRESENCE_TTL_SECONDS = 50
+# TTL secondi. Il client batte ogni ~8s (HEARTBEAT_MS in usePresence.js): 25s
+# lascia ~17s di margine, cioe' tollera DUE battiti persi senza falsi "uscito".
+# Margine generoso voluto: gli utenti si connettono via VPN e su WiFi
+# universitario, dove latenza e battiti irregolari sono frequenti.
+PRESENCE_TTL_SECONDS = 25
 
 # Allowlist dei tipi tracciabili (evita di accettare stringhe arbitrarie).
 #   - "question" / "parameter": form di modifica admin (scheda question/parametro).

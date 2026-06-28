@@ -12,7 +12,11 @@ import api from '../api';
 //
 // Uso: const others = usePresence('question', id, isEditMode && !!id);
 
-const HEARTBEAT_MS = 20000;
+// Battito ogni 8s. Deve restare ben sotto il TTL lato server
+// (PRESENCE_TTL_SECONDS=25 in routers/presence.py): il margine TTL−heartbeat
+// (~17s) assorbe un paio di battiti in ritardo/persi senza far lampeggiare il
+// badge — utenti su VPN e WiFi universitario hanno battiti irregolari.
+const HEARTBEAT_MS = 8000;
 
 export default function usePresence(entityType, entityId, enabled = true) {
     const [others, setOthers] = useState(0);
