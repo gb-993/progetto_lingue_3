@@ -6,6 +6,7 @@ import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import Drawer from '../../components/Drawer';
 import DeactivateQuestionDialog from '../questions/DeactivateQuestionDialog';
+import DeleteQuestionDialog from '../questions/DeleteQuestionDialog';
 import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
@@ -344,6 +345,9 @@ export default function ParameterForm() {
     // Disattivazione question: tutto delegato al dialogo condiviso
     // DeactivateQuestionDialog (stesso identico comportamento in QuestionList).
     const [deactivateCandidate, setDeactivateCandidate] = useState(null);
+    // Eliminazione definitiva: solo per question gia' disattivate (cestino
+    // accanto a Reactivate). Delegata al dialogo condiviso DeleteQuestionDialog.
+    const [deleteCandidate, setDeleteCandidate] = useState(null);
 
     // Presence anonima: numero di ALTRI utenti che stanno modificando questo
     // stesso parametro adesso (solo in edit). Pill discreta in header.
@@ -748,6 +752,18 @@ export default function ParameterForm() {
                                                     >
                                                         {q.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
+                                                    {!q.is_active && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeleteCandidate(q.id)}
+                                                            className="btn btn--small btn--danger"
+                                                            style={{ color: 'red', borderColor: 'red' }}
+                                                            title="Delete permanently (linked data is archived first)"
+                                                            aria-label={`Delete question ${q.id} permanently`}
+                                                        >
+                                                            🗑
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -778,6 +794,18 @@ export default function ParameterForm() {
                                                     >
                                                         {q.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
+                                                    {!q.is_active && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeleteCandidate(q.id)}
+                                                            className="btn btn--small btn--danger"
+                                                            style={{ color: 'red', borderColor: 'red' }}
+                                                            title="Delete permanently (linked data is archived first)"
+                                                            aria-label={`Delete question ${q.id} permanently`}
+                                                        >
+                                                            🗑
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -857,6 +885,20 @@ export default function ParameterForm() {
                 onClose={() => setDeactivateCandidate(null)}
                 onDeactivated={async () => {
                     setDeactivateCandidate(null);
+                    // Ricarica la lista question del parametro.
+                    const paramRes = await api.get(`/api/admin/parameters/${id}`);
+                    setQuestions(paramRes.data.questions || []);
+                }}
+            />
+        )}
+
+        {/* Dialogo di eliminazione definitiva condiviso (identico in QuestionList). */}
+        {deleteCandidate && (
+            <DeleteQuestionDialog
+                questionId={deleteCandidate}
+                onClose={() => setDeleteCandidate(null)}
+                onDeleted={async () => {
+                    setDeleteCandidate(null);
                     // Ricarica la lista question del parametro.
                     const paramRes = await api.get(`/api/admin/parameters/${id}`);
                     setQuestions(paramRes.data.questions || []);

@@ -13,6 +13,7 @@ from services.param_state import flag_parameter_needs_review
 from services import archive_service
 from services import question_transfer
 from services.question_copy import copy_question_data
+from services.question_delete import delete_question_permanently
 from services.recompute import recompute_parameter_for_all_languages
 
 ID_MAX_LEN = 40  # Length(Question.id) — vincolo schema
@@ -433,3 +434,40 @@ def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Sessi
     background_tasks.add_task(recompute_parameter_for_all_languages, parameter_id)
 
     return {"detail": "Question status updated", "is_active": db_item.is_active}
+
+
+@router.delete("/{id}")
+def delete_admin_question(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Eliminazione DEFINITIVA di una Question gia' disattivata.
+
+    Consentita SOLO dopo la disattivazione (409 altrimenti): coerente con la UI,
+    dove il cestino compare solo accanto a Reactivate. I dati linguistici
+    collegati (Answer/Example/AnswerMotivation di tutte le lingue) vengono
+    archiviati PRIMA della rimozione, cosi' nulla va perso (vedi
+    services/question_delete). Lo storico immutabile (entity_versions,
+    archived_*, parameter_change_logs) non viene toccato dalla delete.
+    """
+    db_item = db.query(models.Question).filter(models.Question.id == id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Question not found")
+    if db_item.is_active:
+        raise HTTPException(
+            status_code=409,
+            detail="Deactivate the question before deleting it permanently.",
+        )
+
+    parameter_id = db_item.parameter_id
+    try:
+        archived_id = delete_question_permanently(db, db_item, current_user.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Could not delete the question.")
+
+    # Ricalcolo di sicurezza: una question disattivata non concorre gia' al
+    # consolidate (param_consolidate filtra is_active), quindi i valori non
+    # cambiano; manteniamo comunque la stessa disciplina di toggle-active per
+    # coerenza con DAG/cache.
+    background_tasks.add_task(recompute_parameter_for_all_languages, parameter_id)
+
+    return {"detail": "Question deleted permanently", "archived_question_id": archived_id}

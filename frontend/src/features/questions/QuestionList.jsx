@@ -4,6 +4,7 @@ import api from '../../api';
 import { searchMatches } from '../../utils/search';
 import usePersistentState from '../../utils/usePersistentState';
 import DeactivateQuestionDialog from './DeactivateQuestionDialog';
+import DeleteQuestionDialog from './DeleteQuestionDialog';
 
 function truncate(text, n = 70) {
     if (!text) return '';
@@ -37,6 +38,9 @@ export default function QuestionList() {
     // Flusso di disattivazione: tutto delegato al dialogo condiviso
     // DeactivateQuestionDialog (stesso identico comportamento in ParameterForm).
     const [deactivateCandidate, setDeactivateCandidate] = useState(null);
+    // Eliminazione definitiva: disponibile solo per le question gia' disattivate
+    // (cestino accanto a Restore). Delegata al dialogo condiviso DeleteQuestionDialog.
+    const [deleteCandidate, setDeleteCandidate] = useState(null);
 
     const doToggle = async (questionId) => {
         try {
@@ -145,10 +149,22 @@ export default function QuestionList() {
                                                 className={`btn ${isActive ? 'btn--danger' : ''}`}
                                                 style={{ color: isActive ? 'red' : 'green' }}
                                                 onClick={() => handleToggleActive(q)}
-                                                title={isActive ? 'Soft-delete (deactivate)' : 'Restore (reactivate)'}
+                                                title={isActive ? 'Deactivate (soft-delete: keeps the data, hides the question)' : 'Restore (reactivate)'}
                                             >
-                                                {isActive ? 'Delete' : 'Restore'}
+                                                {isActive ? 'Deactivate' : 'Restore'}
                                             </button>
+                                            {!isActive && (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn--danger"
+                                                    style={{ color: 'red' }}
+                                                    onClick={() => setDeleteCandidate(q.id)}
+                                                    title="Delete permanently (linked data is archived first)"
+                                                    aria-label={`Delete question ${q.id} permanently`}
+                                                >
+                                                    🗑
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -169,6 +185,15 @@ export default function QuestionList() {
                     questionId={deactivateCandidate}
                     onClose={() => setDeactivateCandidate(null)}
                     onDeactivated={async () => { setDeactivateCandidate(null); await fetchQuestions(); }}
+                />
+            )}
+
+            {/* Dialogo di eliminazione definitiva condiviso (identico in ParameterForm). */}
+            {deleteCandidate && (
+                <DeleteQuestionDialog
+                    questionId={deleteCandidate}
+                    onClose={() => setDeleteCandidate(null)}
+                    onDeleted={async () => { setDeleteCandidate(null); await fetchQuestions(); }}
                 />
             )}
         </div>
