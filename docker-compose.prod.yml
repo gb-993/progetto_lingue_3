@@ -37,6 +37,13 @@ services:
       retries: 10
       start_period: 10s
     restart: unless-stopped
+    # Tetto RAM. La VM ha solo 4GB totali e finora nessun container aveva un
+    # limite: bastava un singolo spike a prendersi tutta la RAM e gelare
+    # l'intera macchina (OOM del kernel su un processo a caso). Con mem_limit
+    # Docker uccide e riavvia SOLO il container colpevole, il resto sopravvive.
+    # Postgres su questo dataset piccolo sta comodo in 1g.
+    mem_limit: 1g
+    mem_reservation: 256m
     logging:
       driver: "json-file"
       options:
@@ -97,6 +104,12 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    # Tetto RAM. Il backend e' il container piu' esposto: costruisce gli export
+    # Excel/PDF in memoria e gira il recompute su tutte le lingue. 1.5g gli
+    # lasciano margine per un export medio; se sfora viene ucciso e riparte da
+    # solo (restart: unless-stopped) senza trascinare giu' tutta la VM.
+    mem_limit: 1500m
+    mem_reservation: 256m
     logging:
       driver: "json-file"
       options:
@@ -124,6 +137,8 @@ services:
       # Caddy serve i file ma non li puo' modificare.
       - legal_archive:/srv/legal_documents:ro
     restart: unless-stopped
+    # Reverse proxy + file statici: leggero. 192m con margine.
+    mem_limit: 192m
     logging:
       driver: "json-file"
       options:
@@ -233,6 +248,8 @@ services:
           sleep 604800
         done
     restart: unless-stopped
+    # pg_dump streamma su stdout (uso RAM modesto). 256m bastano.
+    mem_limit: 256m
     logging:
       driver: "json-file"
       options:
@@ -285,6 +302,8 @@ services:
           echo "[cleaner] $$(date -Iseconds) fatto. Prossimo giro tra 24h."
           sleep 86400
         done
+    # docker:cli e' minuscolo. 96m bastano.
+    mem_limit: 96m
     logging:
       driver: "json-file"
       options:

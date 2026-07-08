@@ -19,25 +19,40 @@ logger = logging.getLogger(__name__)
 
 
 def recompute_parameter_for_all_languages(parameter_id: str) -> None:
-    """Ricalcola value_orig + DAG di un parametro per tutte le lingue.
+    """Ricalcola value_orig + DAG di un parametro per TUTTE le lingue.
 
-    Apre una propria sessione DB perche' gira come BackgroundTask. Errori
-    loggati ma mai propagati: il task vive fuori dal ciclo request/response e
-    non puo' restituire 500.
+    Gira come BackgroundTask (fuori dal ciclo request/response), quindi apre
+    sessioni proprie ed eventuali errori vengono loggati ma mai propagati.
+
+    Una sessione + commit PER LINGUA (stesso schema del recompute "all" admin,
+    routers/recompute.py). Le lingue vengono comunque processate tutte, ma:
+      - il picco di RAM resta di una lingua alla volta, invece di accumulare
+        l'intera transazione multi-lingua in memoria (la VM ha solo 4GB);
+      - il lock di riga (with_for_update) si libera a ogni lingua, invece di
+        restare preso fino alla fine;
+      - se una lingua fallisce, o il processo viene ucciso a meta' per RAM, le
+        lingue gia' fatte restano salvate (niente rollback totale) e le altre
+        proseguono. Il ricalcolo e' idempotente e ogni lingua e' indipendente,
+        quindi un eventuale stato parziale si completa semplicemente rilanciando.
     """
-    db = SessionLocal()
+    # Elenco lingue in una sessione dedicata e breve, subito chiusa.
+    list_db = SessionLocal()
     try:
-        language_ids = [r[0] for r in db.query(models.Language.id).all()]
-        for lang_id in language_ids:
+        language_ids = [r[0] for r in list_db.query(models.Language.id).all()]
+    finally:
+        list_db.close()
+
+    for lang_id in language_ids:
+        db = SessionLocal()
+        try:
             recompute_and_persist_language_parameter(lang_id, parameter_id, db)
             run_dag_for_language(lang_id, db)
-            db.flush()
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.error(
-            "background recompute failed for parameter %s: %s",
-            parameter_id, e, exc_info=True,
-        )
-    finally:
-        db.close()
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(
+                "background recompute failed for parameter %s, language %s: %s",
+                parameter_id, lang_id, e, exc_info=True,
+            )
+        finally:
+            db.close()
