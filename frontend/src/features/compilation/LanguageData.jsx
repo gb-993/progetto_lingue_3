@@ -514,15 +514,20 @@ function LanguageMetaGrid({ language, isAdmin }) {
 
     return (
         <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
+            display: 'flex',
+            flexWrap: 'wrap',
             columnGap: 'var(--ld-meta-colgap, 4rem)',
             rowGap: '0.8rem',
-            alignItems: 'start',
+            alignItems: 'flex-start',
         }}>
             {/* Colonna sinistra: classificazione linguistica + identificatori.
-                Colonna destra: geografia + persone + provenienza. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                Ha solo valori corti, quindi prende lo spazio dei suoi contenuti
+                (con un tetto): tutto il resto va alla colonna destra, che
+                contiene i campi lunghi (Source) e arriva fino al margine
+                destro della card. Prima erano due colonne al 50% e le fonti,
+                strette, si allungavano in verticale lasciando un grande vuoto
+                sotto la colonna sinistra. */}
+            <div style={{ flex: '0 1 auto', minWidth: 'min(300px, 100%)', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Top-level family" value={language.top_level_family} />
                 <MetaRow label="Subfamily" value={language.family} />
                 <MetaRow label="Group" value={language.grp} />
@@ -530,7 +535,8 @@ function LanguageMetaGrid({ language, isAdmin }) {
                 <MetaRow label="ISO code" value={language.isocode} />
                 <MetaRow label="Glottocode" value={language.glottocode} />
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            {/* Colonna destra: geografia + persone + provenienza. */}
+            <div style={{ flex: '1 1 400px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Location" value={language.location} />
                 <MetaRow label="Latitude" value={fmtCoord(language.latitude)} />
                 <MetaRow label="Longitude" value={fmtCoord(language.longitude)} />
