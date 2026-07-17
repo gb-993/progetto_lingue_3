@@ -146,7 +146,7 @@ export default function Taxonomy() {
 
             <div className="taxonomy-columns" style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
                 gap: 'var(--form-grid-gap, 1rem)',
                 alignItems: 'start',
                 marginBottom: 'var(--form-col-gap, 1.5rem)',
@@ -654,7 +654,7 @@ function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
 
     return (
         <div style={modalOverlayStyle}>
-            <div className="card" style={{ width: '420px' }}>
+            <div className="card" style={{ width: '420px', maxWidth: '92vw' }}>
                 <h3 style={{ marginTop: 0 }}>{title}</h3>
                 <form onSubmit={handleSave}>
                     <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>

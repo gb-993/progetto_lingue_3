@@ -920,7 +920,7 @@ export default function QuestionForm({ mode = 'page' }) {
                             <textarea name="instruction" value={formData.instruction} onChange={handleChange} rows="2" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} placeholder="Shown to users regardless of their answer..." />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1rem)' }}>
                             <div>
                                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'green' }}>Instruction for YES</label>
                                 <textarea name="instruction_yes" value={formData.instruction_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid green' }} placeholder="Specific instruction if the user answers YES..." />
@@ -1005,7 +1005,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                     : 'No changes detected. Edit at least one field to enable saving and to add a note. The note will be saved in the history of the parent parameter.')}
                         </p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1.5rem)' }}>
                             <div>
                                 <textarea
                                     value={changeNote}
@@ -1122,7 +1122,7 @@ export default function QuestionForm({ mode = 'page' }) {
             {/* MODAL CREAZIONE AL VOLO (Invariato) */}
             {showCreator && (
                 <div style={modalOverlayStyle}>
-                    <div className="card" style={{ width: '400px' }}>
+                    <div className="card" style={{ width: '400px', maxWidth: '92vw' }}>
                         <h3>New Motivation</h3>
                         <div style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             <label className="small">Code</label>
@@ -1253,7 +1253,7 @@ export default function QuestionForm({ mode = 'page' }) {
                 const linkedOthers = (m?.linked_questions || []).filter(qid => qid !== id);
                 return (
                     <div style={modalOverlayStyle}>
-                        <div className="card" style={{ width: '460px' }}>
+                        <div className="card" style={{ width: '460px', maxWidth: '92vw' }}>
                             <h3 style={{ marginTop: 0 }}>Modifica motivation</h3>
                             <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.82rem' }}>
                                 <strong>Attenzione.</strong> Le modifiche al <em>code</em> o al <em>label</em>

@@ -285,7 +285,7 @@ export default function QueriesDashboard() {
             }}>
 
                 {/* SIDEBAR NAVIGATION */}
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         justifyContent: menuCollapsed ? 'center' : 'space-between',
@@ -530,7 +530,7 @@ export default function QueriesDashboard() {
                                     <h3 style={{ marginBottom: '1rem' }}>
                                         <Link to={`/languages/${langId}/data`}>{langId}</Link> ⇄ <Link to={`/languages/${langIdB}/data`}>{langIdB}</Link>
                                     </h3>
-                                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                                    <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                                         <table className="table table-hover" style={{ margin: 0 }}>
                                             <thead className="table-light">
                                             <tr>
@@ -563,7 +563,7 @@ export default function QueriesDashboard() {
                             {['q8', 'q9', 'q11'].includes(activeTab) && (
                                 <div>
                                     <h3 style={{ marginBottom: '1rem' }}><Link to={`/languages/${results.language.id}/data`}>{results.language.id} — {results.language.name}</Link></h3>
-                                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                                    <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                                         <table className="table table-hover" style={{ margin: 0 }}>
                                             <thead className="table-light">
                                             <tr>
@@ -663,7 +663,7 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
     const colCount = activeTab === 'q6' ? 5 : 3;
 
     return (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
             <table className="table table-hover" style={{ margin: 0 }}>
                 <thead className="table-light">
                     <tr>
@@ -865,7 +865,7 @@ function ByQuestionTable({ result }) {
                 </div>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table" style={{ margin: 0 }}>
                     <thead className="table-light">
                         <tr>

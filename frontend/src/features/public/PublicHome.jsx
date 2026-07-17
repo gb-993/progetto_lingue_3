@@ -241,7 +241,7 @@ export default function PublicHome() {
                 )}
             </div>
 
-            <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-col-gap, 2rem)' }}>
+            <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--form-col-gap, 2rem)' }}>
                 <section className="card page-card" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="p-6" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', flexGrow: 1 }}>
                         <h3>How to cite</h3>

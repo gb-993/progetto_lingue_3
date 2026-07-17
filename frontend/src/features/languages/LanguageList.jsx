@@ -85,6 +85,9 @@ export default function LanguageList() {
     // Mappa collassabile: chi lavora sulla tabella la chiude una volta e la
     // ritrova chiusa (sessionStorage, come i filtri).
     const [mapOpen, setMapOpen] = usePersistentState('languages:mapOpen', true);
+    // Solo mobile (<=960px): filter card chiusa di default, si apre col toggle.
+    // Su desktop lo stato e' ignorato (la barra-toggle e' display:none).
+    const [filtersOpen, setFiltersOpen] = useState(false);
     // Dialogo di conferma corrente (null = chiuso) e toast esito operazioni.
     const [dialog, setDialog] = useState(null);
     const [notice, setNotice] = useState(null);
@@ -659,7 +662,7 @@ export default function LanguageList() {
             </header>
 
             {/* ==== FILTRI ==== */}
-            <div className="card" style={{
+            <div className={`card filter-card${filtersOpen ? '' : ' is-collapsed'}`} style={{
                 padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
                 border: '1px solid var(--border)',
@@ -671,6 +674,16 @@ export default function LanguageList() {
                 WebkitBackdropFilter: 'blur(10px)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
             }}>
+                <button
+                    type="button"
+                    className="filter-card-toggle"
+                    onClick={() => setFiltersOpen(o => !o)}
+                    aria-expanded={filtersOpen}
+                >
+                    <span>{filtersOpen ? '▾' : '▸'} Filters</span>
+                    {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+                </button>
+                <div className="filter-card-body">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 'var(--filter-card-gap, 0.75rem)', alignItems: 'end' }}>
                     <FilterField label="Search">
                         <input
@@ -815,6 +828,7 @@ export default function LanguageList() {
                         )}
                     </div>
                 </div>
+                </div>
             </div>
 
             {/* ==== MAPPA (collassabile) ====
@@ -862,7 +876,7 @@ export default function LanguageList() {
                 )}
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 {error && <div style={{ color: 'red', padding: '1rem' }}>{error}</div>}
                 <table className="table">
                     <thead>
@@ -880,11 +894,11 @@ export default function LanguageList() {
                             </th>
                             <th>ID</th>
                             <th style={{ width: '14%' }}>Name</th>
-                            <th title="Completion of the parameter squares (automatic)">Completion</th>
-                            <th title="Compilation/review status">Compilation</th>
-                            <th>Top family</th>
-                            <th>Subfamily</th>
-                            <th>Group</th>
+                            <th className="hide-mobile" title="Completion of the parameter squares (automatic)">Completion</th>
+                            <th className="hide-mobile" title="Compilation/review status">Compilation</th>
+                            <th className="hide-mobile">Top family</th>
+                            <th className="hide-mobile">Subfamily</th>
+                            <th className="hide-mobile">Group</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -906,11 +920,11 @@ export default function LanguageList() {
                                 </td>
                                 <td style={{ fontWeight: 'bold' }}>{lang.id}</td>
                                 <td style={{ whiteSpace: 'normal', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{lang.name_full}</td>
-                                <td><CompletionBadge completion={lang.completion} forced={!!lang.completion_override} /></td>
-                                <td><StatusBadge status={lang.status} /></td>
-                                <td className="muted">{lang.top_level_family || '—'}</td>
-                                <td className="muted">{lang.family || '—'}</td>
-                                <td className="muted small">{lang.grp || '—'}</td>
+                                <td className="hide-mobile"><CompletionBadge completion={lang.completion} forced={!!lang.completion_override} /></td>
+                                <td className="hide-mobile"><StatusBadge status={lang.status} /></td>
+                                <td className="muted hide-mobile">{lang.top_level_family || '—'}</td>
+                                <td className="muted hide-mobile">{lang.family || '—'}</td>
+                                <td className="muted small hide-mobile">{lang.grp || '—'}</td>
                                 <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                     {/* Progressive disclosure: visibili solo le azioni
                                         quotidiane (Data, Edit); Duplicate/Debug/Delete

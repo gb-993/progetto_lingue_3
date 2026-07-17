@@ -506,7 +506,7 @@ export default function TableA() {
                     <div style={{ flex: '1 1 340px' }}>
                         <span style={sectionTitleStyle}>Language Selection</span>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
                             <div>
                                 <label style={labelStyle}>Top Family</label>
                                 <Select

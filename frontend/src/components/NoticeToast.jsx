@@ -67,6 +67,8 @@ export default function NoticeToast({ notice, onClose }) {
                 style={{
                     background: 'transparent', border: 'none', color: 'var(--text-muted)',
                     cursor: 'pointer', fontSize: '1rem', lineHeight: 1, flexShrink: 0,
+                    // Area di tocco allargata senza spostare la × visivamente
+                    padding: '0.5rem', margin: '-0.5rem -0.5rem -0.5rem 0',
                 }}
             >
                 ×

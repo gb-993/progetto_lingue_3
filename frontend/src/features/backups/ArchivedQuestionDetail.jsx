@@ -114,7 +114,7 @@ export default function ArchivedQuestionDetail() {
             </section>
 
             {/* TABELLA RISPOSTE */}
-            <section className="card" style={{ padding: 0 }}>
+            <section className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <header style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)' }}>
                     <h3 style={{ margin: 0 }}>
                         Linked data: {data.answers.length} language{data.answers.length === 1 ? '' : 's'},{' '}

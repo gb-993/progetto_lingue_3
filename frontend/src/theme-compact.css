@@ -425,3 +425,27 @@
 :root[data-density="compact"] .footer-bottom {
   padding-top: .8rem;     /* era 2rem */
 }
+
+/* ---------------------------------------------------------
+   13) Touch (dito): in compact i controlli sono tarati per il
+   mouse (quadratini 1.85rem, paginazione 1.55rem, voci sidebar
+   ~29px). Su schermi touch li riportiamo a misura di dito;
+   su desktop con mouse non cambia nulla.
+   --------------------------------------------------------- */
+@media (pointer: coarse){
+  :root[data-density="compact"] .param-nav .param-btn{
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+  :root[data-density="compact"] .pagination a,
+  :root[data-density="compact"] .pagination .current{
+    min-width: 2.2rem;
+    height: 2.2rem;
+  }
+}
+@media (max-width: 960px) and (pointer: coarse){
+  :root[data-density="compact"] .sidebar-nav .nav-list .btn{
+    min-height: 2.5rem;
+    padding: .45rem .7rem;
+  }
+}

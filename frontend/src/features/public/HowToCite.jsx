@@ -43,7 +43,7 @@ export default function HowToCite() {
                 <h1>Citation Guidelines</h1>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-col-gap, 2rem)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--form-col-gap, 2rem)' }}>
 
                 {/* CARD 1: PARAMETERS */}
                 <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', display: 'flex', flexDirection: 'column' }}>

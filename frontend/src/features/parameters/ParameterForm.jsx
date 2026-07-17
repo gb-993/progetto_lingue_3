@@ -420,12 +420,12 @@ export default function ParameterForm() {
 
     return (
         <>
-        <div className="container" style={{maxWidth: '1200px', marginTop: 'var(--form-page-top, 2rem)', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 'var(--form-aside-gap, 2rem)'}}>
+        <div className="container form-layout" style={{maxWidth: '1200px', marginTop: 'var(--form-page-top, 2rem)'}}>
 
             {/* MODAL DISATTIVAZIONE */}
             {showDeactivateModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '400px', padding: 'var(--modal-pad, 2rem)' }}>
+                    <div className="card" style={{ width: '400px', maxWidth: '92vw', padding: 'var(--modal-pad, 2rem)' }}>
                         <h3 style={{ color: 'var(--bad)', marginTop: 0 }}>Deactivate Parameter</h3>
                         <p className="small muted">Enter your admin password to confirm the operation.</p>
                         <form onSubmit={submitDeactivation}>
@@ -525,7 +525,7 @@ export default function ParameterForm() {
                             <input type="text" name="name" value={formData.name} onChange={handleChange} required style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
                         </div>
 
-                        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px'}}>
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px'}}>
                             <LookupField
                                 label="Schema"
                                 name="schema"
@@ -658,7 +658,7 @@ export default function ParameterForm() {
                                         : 'No changes detected. Edit at least one field to enable saving and to add a note.'}
                                 </p>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1.5rem)' }}>
                                     <div>
                                         <textarea
                                             value={changeNote}
@@ -749,7 +749,7 @@ export default function ParameterForm() {
                 {isEditMode && (
                     <div className="card">
                         <h3>Questions</h3>
-                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1.5rem)', marginTop: 'var(--form-field-mb, 1rem)' }}>
+                        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1.5rem)', marginTop: 'var(--form-field-mb, 1rem)' }}>
                             {/* Colonna Domande Normali */}
                             <div style={{ minWidth: 0 }}>
                                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Questions</label>

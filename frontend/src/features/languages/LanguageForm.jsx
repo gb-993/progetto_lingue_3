@@ -245,7 +245,7 @@ export default function LanguageForm() {
                 {error && <div className="alert alert-error" style={{marginBottom: '1rem'}}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem'}}>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>Language ID (e.g. eng)</label>
                             <input type="text" name="id" value={formData.id} onChange={handleChange} required maxLength={10} style={{width: '100%', padding: '0.5rem'}} />
@@ -276,7 +276,7 @@ export default function LanguageForm() {
                             <Link to="/admin/taxonomy" className="small" style={{ fontSize: '0.78rem' }}>Manage taxonomy →</Link>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
                             <div>
                                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem' }}>Top-Family</label>
                                 <select
@@ -331,7 +331,7 @@ export default function LanguageForm() {
                         )}
                     </div>
 
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem'}}>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>ISO code</label>
                             <input type="text" name="isocode" value={formData.isocode} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
@@ -347,7 +347,7 @@ export default function LanguageForm() {
                         <input type="text" name="location" value={formData.location} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
                     </div>
 
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem'}}>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>Latitude</label>
                             <input type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />
@@ -358,7 +358,7 @@ export default function LanguageForm() {
                         </div>
                     </div>
 
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem'}}>
                         <div>
                             <label style={{display: 'block', fontWeight: 'bold'}}>Supervisor</label>
                             <input type="text" name="supervisor" value={formData.supervisor} onChange={handleChange} style={{width: '100%', padding: '0.5rem'}} />

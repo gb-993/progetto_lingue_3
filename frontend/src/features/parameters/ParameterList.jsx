@@ -51,6 +51,9 @@ export default function ParameterList() {
 
     // --- Tools ▾, dialogo di conferma e toast esiti (stessi pattern di LanguageList) ---
     const [toolsOpen, setToolsOpen] = useState(false);
+    // Solo mobile (<=960px): filter card chiusa di default, si apre col toggle.
+    // Su desktop lo stato e' ignorato (la barra-toggle e' display:none).
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const toolsRef = useRef(null);
     const [dialog, setDialog] = useState(null);
     const [notice, setNotice] = useState(null);
@@ -326,7 +329,7 @@ export default function ParameterList() {
             </header>
 
             {/* ==== FILTRI ==== */}
-            <div className="card" style={{
+            <div className={`card filter-card${filtersOpen ? '' : ' is-collapsed'}`} style={{
                 padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
                 border: '1px solid var(--border)',
@@ -338,6 +341,16 @@ export default function ParameterList() {
                 WebkitBackdropFilter: 'blur(10px)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
             }}>
+                <button
+                    type="button"
+                    className="filter-card-toggle"
+                    onClick={() => setFiltersOpen(o => !o)}
+                    aria-expanded={filtersOpen}
+                >
+                    <span>{filtersOpen ? '▾' : '▸'} Filters</span>
+                    {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+                </button>
+                <div className="filter-card-body">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 'var(--filter-card-gap, 0.75rem)', alignItems: 'end' }}>
                     <FilterField label="Search">
                         <input
@@ -433,9 +446,10 @@ export default function ParameterList() {
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
                 </div>
+                </div>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table">
                     <thead>
                         <tr>
@@ -453,12 +467,12 @@ export default function ParameterList() {
                             {canReorder && <th style={{ width: '24px' }} aria-label="Drag handle" />}
                             <th>ID</th>
                             <th>Name</th>
-                            <th>Schema</th>
-                            <th>Type</th>
-                            <th>Level</th>
-                            <th title="Number of non-stop questions" style={{ textAlign: 'center' }}>#Q</th>
-                            <th title="Number of stop questions" style={{ textAlign: 'center' }}>#QS</th>
-                            <th>Status</th>
+                            <th className="hide-mobile">Schema</th>
+                            <th className="hide-mobile">Type</th>
+                            <th className="hide-mobile">Level</th>
+                            <th className="hide-mobile" title="Number of non-stop questions" style={{ textAlign: 'center' }}>#Q</th>
+                            <th className="hide-mobile" title="Number of stop questions" style={{ textAlign: 'center' }}>#QS</th>
+                            <th className="hide-mobile">Status</th>
                             <th style={{ textAlign: 'right' }}>Actions</th>
                         </tr>
                     </thead>
@@ -519,12 +533,12 @@ export default function ParameterList() {
                                     )}
                                     <td style={{ fontWeight: 'bold' }}>{param.id}</td>
                                     <td>{param.name}</td>
-                                    <td className="muted small">{param.schema || '—'}</td>
-                                    <td>{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
-                                    <td className="muted small">{param.level_of_comparison || '—'}</td>
-                                    <td style={{ textAlign: 'center' }}>{param.questions_count ?? 0}</td>
-                                    <td style={{ textAlign: 'center' }}>{param.stop_count ?? 0}</td>
-                                    <td>
+                                    <td className="muted small hide-mobile">{param.schema || '—'}</td>
+                                    <td className="hide-mobile">{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
+                                    <td className="muted small hide-mobile">{param.level_of_comparison || '—'}</td>
+                                    <td className="hide-mobile" style={{ textAlign: 'center' }}>{param.questions_count ?? 0}</td>
+                                    <td className="hide-mobile" style={{ textAlign: 'center' }}>{param.stop_count ?? 0}</td>
+                                    <td className="hide-mobile">
                                         <span className={`status ${param.is_active ? 'ok' : 'bad'}`}>
                                             {param.is_active ? 'Active' : 'Disabled'}
                                         </span>

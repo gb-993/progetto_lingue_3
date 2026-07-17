@@ -263,7 +263,7 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
             {/* Tabella */}
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table" style={{ marginBottom: 0 }}>
                     <thead>
                         <tr>
@@ -451,7 +451,7 @@ function VersionDiffView({ data, onClose }) {
             {changedFields.length > 0 && (
                 <>
                     <h3 style={{ marginBottom: '0.5rem' }}>Modified fields ({changedFields.length})</h3>
-                    <div style={{ marginBottom: '1.5rem', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ marginBottom: '1.5rem', border: '1px solid var(--border)', borderRadius: '6px', overflowX: 'auto' }}>
                         <table className="table" style={{ marginBottom: 0 }}>
                             <thead>
                                 <tr>
@@ -497,7 +497,7 @@ function VersionDiffView({ data, onClose }) {
                 <h3 style={{ margin: 0 }}>Full snapshot ({allFields.length} fields)</h3>
             </button>
             {snapshotOpen && (
-                <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '6px', overflowX: 'auto' }}>
                     <table className="table" style={{ marginBottom: 0, fontSize: '0.85rem' }}>
                         <thead>
                             <tr>

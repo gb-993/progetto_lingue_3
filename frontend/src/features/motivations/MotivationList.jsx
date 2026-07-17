@@ -120,7 +120,7 @@ export default function MotivationList() {
 
             {error && <div className="alert alert-error">{error}</div>}
 
-            <div className="card" style={{padding: 0, overflow: 'hidden'}}>
+            <div className="card" style={{padding: 0, overflowX: 'auto'}}>
                 <table className="table">
                     <thead>
                     <tr>
@@ -177,7 +177,7 @@ export default function MotivationList() {
             {/* MODALE CREAZIONE/MODIFICA */}
             {showModal && (
                 <div style={modalOverlayStyle}>
-                    <div className="card" style={{ width: '460px' }}>
+                    <div className="card" style={{ width: '460px', maxWidth: '92vw' }}>
                         <h3 style={{ marginTop: 0, marginBottom: 'var(--form-field-mb, 1rem)' }}>
                             {editingId ? 'Edit Motivation' : 'New Motivation'}
                         </h3>

@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Quote, Languages, SlidersHorizontal, HelpCircle,
     MessageSquareQuote, Network, Table, Filter, Users, History,
     DatabaseZap, Upload, BookOpen, BookA, PanelLeftClose, PanelLeftOpen, Workflow,
-    FileText, BookMarked, Megaphone,
+    FileText, BookMarked, Megaphone, Menu,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
@@ -253,6 +253,16 @@ export default function Layout({ children }) {
     const [collapsed, setCollapsed] = useState(() =>
         typeof window !== 'undefined' && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
     );
+    // Menu mobile (hamburger ☰): la sidebar diventa un pannello off-canvas.
+    // Si chiude toccando una voce (delega sul <nav>), il backdrop o Esc;
+    // su desktop il bottone non esiste e lo stato resta inerte.
+    const [navOpen, setNavOpen] = useState(false);
+    useEffect(() => {
+        if (!navOpen) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setNavOpen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [navOpen]);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
@@ -304,6 +314,16 @@ export default function Layout({ children }) {
                     ristretta ed e' cliccabile per tornare alla dashboard. */}
                 <header className="top-bar">
                     <div className="top-bar-left">
+                        <button
+                            type="button"
+                            className="nav-burger"
+                            onClick={() => setNavOpen(o => !o)}
+                            aria-label={navOpen ? 'Close menu' : 'Open menu'}
+                            aria-expanded={navOpen}
+                            aria-controls="main-sidebar"
+                        >
+                            <Menu size={20} />
+                        </button>
                         <Link to="/dashboard" className="brand" title="Dashboard">The PCM Hub</Link>
                         <Breadcrumb pathname={location.pathname} />
                     </div>
@@ -335,8 +355,11 @@ export default function Layout({ children }) {
                     </div>
                 </header>
 
-                {/* SIDEBAR */}
-                <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}`} id="main-sidebar">
+                {/* SIDEBAR (desktop: colonna fissa; mobile: pannello off-canvas via ☰) */}
+                {navOpen && (
+                    <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
+                )}
+                <aside className={`sidebar${collapsed ? ' is-collapsed' : ''}${navOpen ? ' is-open' : ''}`} id="main-sidebar">
                     <div className="sidebar-header">
                         <button
                             type="button"
@@ -349,7 +372,10 @@ export default function Layout({ children }) {
                             {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
                         </button>
                     </div>
-                    <nav className="sidebar-nav">
+                    <nav
+                        className="sidebar-nav"
+                        onClick={(e) => { if (navOpen && e.target.closest('a')) setNavOpen(false); }}
+                    >
                         <ul className="nav-list">
                             <li>
                                 <Link className={`btn ${location.pathname === '/dashboard' ? 'is-current' : ''}`} to="/dashboard" title="Dashboard">

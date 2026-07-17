@@ -41,7 +41,7 @@ export default function AccountList() {
     const renderTable = (userList, title, showAssignBtn = false) => (
         <div style={{marginBottom: 'var(--form-col-gap, 2rem)'}}>
             <h3>{title}</h3>
-            <div className="card" style={{padding: 0, overflow: 'hidden'}}>
+            <div className="card" style={{padding: 0, overflowX: 'auto'}}>
                 <table className="table">
                     <thead>
                     <tr>

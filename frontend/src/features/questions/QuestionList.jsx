@@ -98,14 +98,14 @@ export default function QuestionList() {
                 </div>
             </section>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table">
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Text Snippet</th>
-                            <th>Type</th>
-                            <th>
+                            <th className="hide-mobile">Type</th>
+                            <th className="hide-mobile">
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <span>Is Active</span>
                                     <label
@@ -131,12 +131,12 @@ export default function QuestionList() {
                                 <tr key={q.id} style={{ opacity: isActive ? 1 : 0.5 }}>
                                     <td style={{ fontWeight: 'bold' }}>{q.id}</td>
                                     <td>{truncate(q.text, 70)}</td>
-                                    <td>
+                                    <td className="hide-mobile">
                                         {q.is_stop_question
                                             ? <span style={{ color: 'var(--bad, #d9534f)', fontWeight: 700 }}>Stop</span>
                                             : <span className="muted">Standard</span>}
                                     </td>
-                                    <td>
+                                    <td className="hide-mobile">
                                         {isActive
                                             ? <span className="status ok">Yes</span>
                                             : <span className="status bad">No</span>}

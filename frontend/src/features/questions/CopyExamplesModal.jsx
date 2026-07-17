@@ -128,7 +128,7 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
     if (result) {
         return (
             <div style={modalOverlayStyle}>
-                <div className="card" style={{ width: '560px', maxWidth: '94vw' }}>
+                <div className="card" style={{ width: '560px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }}>
                     <h3 style={{ marginTop: 0 }}>Examples copied</h3>
                     <div style={{
                         background: 'var(--surface-2, #f8fafc)', border: '1px solid var(--border)',

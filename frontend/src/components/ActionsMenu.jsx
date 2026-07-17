@@ -70,7 +70,16 @@ export function RowActionsMenu({ items, title = 'More actions' }) {
     const toggle = () => {
         if (!open && wrapRef.current) {
             const r = wrapRef.current.getBoundingClientRect();
-            setPos({ top: r.bottom + 4, right: Math.max(8, window.innerWidth - r.right) });
+            // Se sotto il bottone resta poco spazio (righe in fondo a finestre
+            // basse), il menu si apre verso l'alto: chiudendosi allo scroll,
+            // le voci fuori viewport sarebbero irraggiungibili.
+            const spaceBelow = window.innerHeight - r.bottom;
+            const openUp = spaceBelow < 240 && r.top > spaceBelow;
+            setPos({
+                top: openUp ? undefined : r.bottom + 4,
+                bottom: openUp ? window.innerHeight - r.top + 4 : undefined,
+                right: Math.max(8, window.innerWidth - r.right),
+            });
         }
         setOpen(o => !o);
     };
@@ -110,14 +119,16 @@ export function RowActionsMenu({ items, title = 'More actions' }) {
                     style={{
                         position: 'fixed',
                         top: pos.top,
+                        bottom: pos.bottom,
                         right: pos.right,
                         minWidth: 180,
+                        maxHeight: 'calc(100vh - 16px)',
+                        overflowY: 'auto',
                         background: 'var(--surface)',
                         border: '1px solid var(--border)',
                         borderRadius: '6px',
                         boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
                         zIndex: 120,
-                        overflow: 'hidden',
                     }}
                 >
                     {items.map((it) => (

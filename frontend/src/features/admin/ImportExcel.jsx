@@ -222,7 +222,7 @@ function ImportReport({ report, onDownloadErrors }) {
                 <>
                     <h4 style={{ marginBottom: '0.5rem' }}>Errors ({totalErrors})</h4>
                     <div style={{
-                        maxHeight: '500px', overflowY: 'auto',
+                        maxHeight: '500px', overflowY: 'auto', overflowX: 'auto',
                         border: '1px solid var(--border)', borderRadius: '6px',
                     }}>
                         <table className="table" style={{ marginBottom: 0 }}>

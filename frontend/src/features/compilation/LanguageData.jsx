@@ -378,7 +378,7 @@ export default function LanguageData() {
             {/* Modal Send back */}
             {showSendBackModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-                    <div className="card" style={{ width: '500px', padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
+                    <div className="card" style={{ width: '500px', maxWidth: '92vw', padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
                         <h3 style={{ marginTop: 0, color: 'var(--bad)' }}>Send back to the user</h3>
                         <p className="small muted">The language goes back to draft and the user can edit it again. Enter a note (optional) that will be shown to them.</p>
                         <textarea

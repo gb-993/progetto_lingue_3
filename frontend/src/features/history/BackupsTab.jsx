@@ -144,7 +144,7 @@ function LanguagesBackupsPanel() {
 
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table">
                     <thead>
                         <tr>
@@ -259,7 +259,7 @@ function ParametersBackupsPanel() {
 
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table">
                     <thead>
                         <tr>

@@ -522,7 +522,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                 {/* Un solo esempio: anteprima completa a 5 campi. Più esempi:
                                     lista compatta numerata col solo testo, per non gonfiare il banner. */}
                                 {copied.examples.length === 1 ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--form-grid-gap, 1rem)' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--form-grid-gap, 1rem)' }}>
                                         <div>
                                             <label className="small">Example text</label>
                                             <div style={clipboardFieldStyle}>{copied.examples[0].textarea || <span className="muted" style={{ fontStyle: 'italic' }}>—</span>}</div>

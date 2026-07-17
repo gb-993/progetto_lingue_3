@@ -466,21 +466,82 @@ a:hover{text-decoration:underline}
    tabelle dense) margin:auto e' un no-op, quindi restano a tutta larghezza. */
 .container{ margin-left:auto; margin-right:auto; }
 
+/* Hamburger e backdrop del menu mobile: esistono solo sotto i 960px. */
+.nav-burger,
+.sidebar-backdrop{ display: none; }
+
 /* Layout responsive */
 @media (max-width: 960px){
   .app-wrapper{
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
+    /* top-bar | contenuto (la sidebar qui e' un pannello fisso off-canvas,
+       fuori dal flusso). Il residuo di viewport va alla riga del contenuto. */
+    grid-template-rows: auto 1fr;
   }
+  /* Sidebar off-canvas: pannello fisso che scorre da sinistra quando si
+     tocca l'hamburger (☰) nella top-bar. Chiusa non occupa alcuno spazio;
+     aperta mostra la stessa lista verticale del desktop (etichette
+     complete, niente troncamenti). */
   .sidebar{
-    grid-column: 1;
+    grid-column: auto;
     grid-row: auto;
-    position: relative;
-    top: auto;
-    height: auto;
-    min-height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 85vw);
+    height: 100%;
+    min-height: 0;
+    padding: var(--sp-4);
+    border-right: 1px solid var(--border);
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
+    z-index: 2000;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform .2s ease, visibility .2s;
+  }
+  .sidebar.is-open{
+    transform: translateX(0);
+    visibility: visible;
+  }
+  .sidebar-backdrop{
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1999;
+  }
+  .nav-burger{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    flex-shrink: 0;
+    margin-right: var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+  /* Stato "collassato" (persistito da desktop) neutralizzato: qui non c'e'
+     piu' una colonna da stringere, quindi niente icone-senza-etichetta e
+     niente toggle. */
+  .sidebar-header{
+    display: none;
+  }
+  .sidebar.is-collapsed{
+    padding: var(--sp-4);
+  }
+  .sidebar.is-collapsed .nav-list .nav-label{
+    display: inline;
+  }
+  .sidebar.is-collapsed .nav-list .btn{
+    width: 100%;
+    justify-content: flex-start;
+    padding: .6rem .85rem;
+    gap: .65rem;
   }
   .main-layout{
     grid-column: 1;
@@ -491,6 +552,18 @@ a:hover{text-decoration:underline}
     position: relative;
     top: auto;
   }
+  /* Il logo perde la larghezza agganciata alla colonna sidebar (che qui non
+     esiste piu'): breadcrumb subito dopo il logo, a capo se non ci sta. */
+  .top-bar .brand{
+    width: auto;
+  }
+  .top-bar-left{
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 960px) and (prefers-reduced-motion: reduce){
+  .sidebar{ transition: none; }
 }
 
 /* Pagine pubbliche / auth */
@@ -789,6 +862,61 @@ body.page-graph .card {
 .grid{display:grid; gap:var(--sp-4)}
 .grid-2{grid-template-columns:1fr 1fr}
 .grid-3{grid-template-columns:repeat(3, 1fr)}
+@media (max-width: 768px){
+  .grid-2, .grid-3{ grid-template-columns: 1fr; }
+}
+
+/* Layout form + aside 300px (Add/Edit Parameter): sotto i 900px l'aside
+   scende sotto il form invece di schiacciarlo. */
+.form-layout{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--form-aside-gap, 2rem);
+}
+@media (max-width: 900px){
+  .form-layout{ grid-template-columns: 1fr; }
+}
+
+/* =========================================================
+   Filter card collassabile (Languages / Parameters).
+   Sopra i 960px la barra-toggle non esiste e la card resta
+   identica al desktop. Sotto, la card parte chiusa: una riga
+   "Filters (n)" sticky che si espande al tocco, cosi' i filtri
+   non mangiano un terzo dello schermo.
+   ========================================================= */
+.filter-card-toggle{ display: none; }
+@media (max-width: 960px){
+  .filter-card-toggle{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    width: 100%;
+    min-height: 2.2rem;
+    padding: .1rem 0;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+  }
+  .filter-card.is-collapsed .filter-card-body{ display: none; }
+  .filter-card:not(.is-collapsed) .filter-card-body{ margin-top: .35rem; }
+}
+.filter-card-toggle .filter-count{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 .45rem;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: .8rem;
+}
 
 /* Split + Sidebar */
 .split{display:grid; grid-template-columns:280px 1fr; gap:var(--sp-6)}
@@ -1010,6 +1138,25 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
 
 /* Migliora la leggibilità quando c'è molto scroll */
 .table-scroll{ background: linear-gradient(to right, transparent 30%, rgba(0,0,0,0.03) 100%) }
+
+/* Wrapper leggero per lo scroll orizzontale delle tabelle larghe: quando la
+   tabella non ci sta, scrolla lei invece di allargare (o tagliare) la pagina.
+   Molte pagine (backup, debug, old questions) usavano gia' questa classe
+   bootstrap-style che pero' non era mai stata definita. */
+.table-responsive{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tabelle dentro Instructions: arrivano dall'HTML salvato dall'admin, quindi
+   non possono essere avvolte in un wrapper. Su schermi stretti la tabella
+   scrolla da sola invece di allargare la pagina. */
+@media (max-width: 960px){
+  .instructions-view table{
+    display: block;
+    overflow-x: auto;
+  }
+}
 
 
 
@@ -1647,6 +1794,15 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   display: none !important;
 }
 
+/* Colonne secondarie delle tabelle-lista (Languages, Parameters): nascoste
+   su schermi stretti, cosi' ID, nome e bottoni Actions restano visibili
+   senza scroll orizzontale. Su desktop non cambia nulla. */
+@media (max-width: 960px){
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
 /* =========================================================
    Instructions page – rendered HTML + Quill editor
    ========================================================= */
@@ -1939,6 +2095,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 .latest-changes-body {
   flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: auto;
   min-height: 0;
 }
 .latest-changes-body table.table thead th {
@@ -2382,5 +2539,36 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 @media (prefers-reduced-motion: reduce) {
   .spin {
     animation: none;
+  }
+}
+
+/* =========================================================
+   Touch (tablet/telefono): bersagli comodi e niente auto-zoom.
+   Attivo SOLO su puntatori "coarse" (dito): con mouse/trackpad
+   non cambia assolutamente nulla.
+   ========================================================= */
+@media (pointer: coarse){
+  /* Safari iOS zooma l'intera pagina al focus di campi con font < 16px.
+     !important: deve scavalcare anche i font-size inline dei filtri. */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea{
+    font-size: max(16px, 1em) !important;
+  }
+  /* Chiusura del Drawer: hit-area da 44px (il glifo resta uguale). */
+  .drawer-close{
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Telefoni: il Drawer lascia una striscia di overlay tappabile di almeno
+   48px per chiudere toccando fuori (92vw ne lasciava ~30px). */
+@media (max-width: 600px){
+  .drawer-panel{
+    width: calc(100vw - 48px);
   }
 }

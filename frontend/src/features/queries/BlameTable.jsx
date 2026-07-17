@@ -236,7 +236,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                     ? 'Parameters responsible for the neutralization'
                     : 'Parameters that satisfy the condition'}
             </h4>
-            <div className="card" style={{ padding: 0, marginBottom: '0.75rem' }}>
+            <div className="card" style={{ padding: 0, marginBottom: '0.75rem', overflowX: 'auto' }}>
                 <table className="table" style={{ margin: 0 }}>
                     <thead className="table-light">
                         <tr>
@@ -281,7 +281,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                         {showOther ? '▾' : '▸'} Other tokens in condition ({other.length})
                     </button>
                     {showOther && (
-                        <div className="card" style={{ padding: 0, marginTop: '0.5rem' }}>
+                        <div className="card" style={{ padding: 0, marginTop: '0.5rem', overflowX: 'auto' }}>
                             <table className="table" style={{ margin: 0 }}>
                                 <thead className="table-light">
                                     <tr>
@@ -377,7 +377,7 @@ export function AnswersList({ answers, languageId, title, emptyMessage, embedded
     return (
         <div style={{ marginTop: embedded ? '0.75rem' : 0 }}>
             {title && <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>{title}</h4>}
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table" style={{ margin: 0 }}>
                     <thead className="table-light">
                         <tr>
@@ -417,7 +417,7 @@ function ParentsList({ parents, canExpand, nested, loading, error, onExpand, lan
     return (
         <div>
             <h4 style={{ fontSize: '0.95rem', margin: '0 0 0.5rem 0' }}>Parent parameters with warnings</h4>
-            <div className="card" style={{ padding: 0 }}>
+            <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <table className="table" style={{ margin: 0 }}>
                     <thead className="table-light">
                         <tr>
