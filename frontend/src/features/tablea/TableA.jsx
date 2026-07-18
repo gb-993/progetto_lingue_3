@@ -18,6 +18,17 @@ const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 700, mar
 const sectionTitleStyle = { fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' };
 const toOpts = (arr) => (arr || []).map(v => ({ value: v, label: v }));
 
+// Risposte su parametri azzerati dall'implicazione: il backend le conta solo
+// in vista questions (vedi _orphan_answers_report), qui il default neutro.
+const EMPTY_ORPHANS = { count: 0, languages: [], parameters: [] };
+
+// Tronca le liste lunghe di ID nel warning, per non farlo esplodere in altezza.
+const summariseIds = (ids, max = 12) => (
+    (ids || []).length <= max
+        ? (ids || []).join(', ')
+        : `${ids.slice(0, max).join(', ')} +${ids.length - max} more`
+);
+
 export default function TableA() {
     const [view, setView] = usePersistentState('tablea:view', 'params'); // 'params' o 'questions'
 
@@ -61,7 +72,7 @@ export default function TableA() {
     const [selectedRows, setSelectedRows] = useState([]);
 
     // Dati della matrice
-    const [matrixData, setMatrixData] = useState({ languages: [], rows: [] });
+    const [matrixData, setMatrixData] = useState({ languages: [], rows: [], orphan_answers: EMPTY_ORPHANS });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -149,7 +160,7 @@ export default function TableA() {
             // Intento di selezione lingue che risolve a 0 colonne: non chiamiamo il
             // backend (f_lang_specific=[] significherebbe "tutte"). Mostriamo vuoto.
             if (langSelectionEmpty) {
-                setMatrixData({ languages: [], rows: [] });
+                setMatrixData({ languages: [], rows: [], orphan_answers: EMPTY_ORPHANS });
                 return;
             }
             const payload = {
@@ -727,6 +738,27 @@ export default function TableA() {
 
             {/* ================= TABELLA RISULTATI ================= */}
             {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
+
+            {/* Risposte compilate su parametri che l'implicazione azzera: in questa
+                vista continuano a pesare, in vista Parameters no. Non e' un errore,
+                ma spiega perche' le due viste possono dare distanze diverse. */}
+            {view === 'questions' && matrixData.orphan_answers?.count > 0 && (
+                <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
+                    <strong>
+                        {matrixData.orphan_answers.count} answer{matrixData.orphan_answers.count === 1 ? '' : 's'} in
+                        this selection belong to parameters that are neutralised by an implicational condition.
+                    </strong>{' '}
+                    The Questions view shows raw answers and does not apply implicational neutralisation, so these
+                    answers are counted both in the table below and in every computation started from this page
+                    (distances, dendrograms, cluster map, PCA, Mantel). In the Parameters view the same cells are{' '}
+                    <code>0</code> and are skipped &mdash; which is why the two views can return different distances
+                    for the languages involved.
+                    <div className="small" style={{ marginTop: '0.45rem' }}>
+                        Languages: {summariseIds(matrixData.orphan_answers.languages)} &mdash;{' '}
+                        Parameters: {summariseIds(matrixData.orphan_answers.parameters)}
+                    </div>
+                </div>
+            )}
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{

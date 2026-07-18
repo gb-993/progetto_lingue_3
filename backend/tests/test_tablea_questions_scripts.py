@@ -41,6 +41,8 @@ from routers.tablea import (
     ClusterMapRequest,
     _get_filtered_data,
     _get_symbol_data,
+    _orphan_answers_report,
+    get_tablea_matrix,
     export_distances_txt,
     export_geo_distances_zip,
     export_dendrograms_png,
@@ -48,6 +50,8 @@ from routers.tablea import (
     export_pca_png,
     export_mantel_zip,
 )
+from services.param_consolidate import recompute_and_persist_language_parameter
+from services.dag_eval import run_dag_for_language
 
 PNG_MAGIC = b"\x89PNG"
 
@@ -264,3 +268,79 @@ def test_mantel_questions_view(db_session):
     # 3 coppie × 3 metodi = 9 righe risultato (+ header, + citazione '#').
     data_lines = [ln for ln in results.splitlines() if ln.strip() and not ln.startswith("#")]
     assert len(data_lines) == 1 + 9
+
+
+# ---------------------------------------------------------------------------
+# Risposte su parametri azzerati dall'implicazione (warning UI)
+# ---------------------------------------------------------------------------
+
+def _seed_implication(db):
+    """P1 senza condizione, P2 con condizione '+P1' (1 domanda ciascuno).
+
+        AAA: P1 no  -> P1 '-' -> P2 azzerato,  ma ha risposto 'no' a P2  -> ORFANA
+        BBB: P1 yes -> P1 '+' -> P2 attivo,    ha risposto 'yes' a P2    -> regolare
+        CCC: P1 no  -> P1 '-' -> P2 azzerato,  nessuna risposta su P2    -> nulla
+    """
+    db.add_all([
+        models.Language(id="AAA", name_full="Lang A", position=1),
+        models.Language(id="BBB", name_full="Lang B", position=2),
+        models.Language(id="CCC", name_full="Lang C", position=3),
+    ])
+    db.add_all([
+        models.ParameterDef(id="P1", position=1, name="Parent", is_active=True),
+        models.ParameterDef(id="P2", position=2, name="Child", is_active=True,
+                            implicational_condition="+P1"),
+    ])
+    db.add_all([
+        models.Question(id="P1_01", parameter_id="P1", text="P1?",
+                        is_stop_question=False, is_active=True),
+        models.Question(id="P2_01", parameter_id="P2", text="P2?",
+                        is_stop_question=False, is_active=True),
+    ])
+    for lid, q, resp in [("AAA", "P1_01", "no"), ("AAA", "P2_01", "no"),
+                         ("BBB", "P1_01", "yes"), ("BBB", "P2_01", "yes"),
+                         ("CCC", "P1_01", "no")]:
+        db.add(models.Answer(language_id=lid, question_id=q,
+                             response_text=resp, status="approved"))
+    db.commit()
+
+    for lid in ("AAA", "BBB", "CCC"):
+        for pid in ("P1", "P2"):
+            recompute_and_persist_language_parameter(lid, pid, db)
+    db.commit()
+    for lid in ("AAA", "BBB", "CCC"):
+        run_dag_for_language(lid, db)
+    db.commit()
+
+
+def test_orphan_answers_detected(db_session):
+    """Solo AAA ha risposto a un parametro che l'implicazione azzera."""
+    _seed_implication(db_session)
+    # Precondizione: P2 di AAA e' davvero '0', quello di BBB no.
+    _, rows = _get_symbol_data(db_session, TableAFilterRequest(view="params"))
+    p2 = next(r for r in rows if r["id"] == "P2")
+    assert p2["cells"] == ["0", "+", "0"]
+
+    rep = _orphan_answers_report(db_session, ["AAA", "BBB", "CCC"], ["P1_01", "P2_01"])
+    assert rep["count"] == 1
+    assert rep["languages"] == ["AAA"]
+    assert rep["parameters"] == ["P2"]
+
+
+def test_orphan_answers_exposed_only_in_questions_view(db_session):
+    """/matrix riporta il conteggio in vista questions, mai in vista params."""
+    _seed_implication(db_session)
+
+    q = get_tablea_matrix(TableAFilterRequest(view="questions"), db_session)
+    assert q["orphan_answers"]["count"] == 1
+    assert q["orphan_answers"]["languages"] == ["AAA"]
+
+    p = get_tablea_matrix(TableAFilterRequest(view="params"), db_session)
+    assert p["orphan_answers"] == {"count": 0, "languages": [], "parameters": []}
+
+
+def test_orphan_answers_none_when_no_implication(db_session):
+    """Dataset senza condizioni implicazionali: nessuna risposta orfana."""
+    _seed_questions(db_session)
+    res = get_tablea_matrix(TableAFilterRequest(view="questions"), db_session)
+    assert res["orphan_answers"]["count"] == 0

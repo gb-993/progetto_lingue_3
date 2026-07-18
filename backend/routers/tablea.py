@@ -278,6 +278,71 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
     return result
 
 
+def _orphan_answers_report(db: Session, lang_ids: List[str], question_ids: List[str]) -> Dict[str, Any]:
+    """Risposte yes/no su domande di parametri neutralizzati dall'implicazione.
+
+    La vista questions legge le Answer grezze e NON applica l'azzeramento
+    implicazionale. Se un compilatore ha risposto alle domande di un parametro
+    che poi risulta azzerato (il genitore cambia valore, oppure la condizione
+    viene aggiunta dopo), quelle risposte restano nella tabella e pesano in
+    tutti i calcoli; in vista params la stessa cella è '0' e viene saltata dai
+    core di distanza. Le due viste divergono quindi sulle lingue interessate.
+
+    Comportamento voluto (la vista questions mostra il dato grezzo): qui lo
+    quantifichiamo soltanto, per poterlo segnalare in UI.
+
+    `value_eval == '0'` identifica esattamente il caso: dag_eval assegna '0'
+    solo nel ramo "condizione falsa".
+
+    3 query batch, niente N+1.
+    """
+    empty: Dict[str, Any] = {"count": 0, "languages": [], "parameters": []}
+    if not lang_ids or not question_ids:
+        return empty
+
+    qid_to_param: Dict[str, str] = {
+        q_id: p_id for q_id, p_id in db.query(
+            models.Question.id, models.Question.parameter_id,
+        ).filter(models.Question.id.in_(question_ids)).all()
+    }
+    if not qid_to_param:
+        return empty
+
+    zeroed = {
+        (p_id, l_id) for p_id, l_id in db.query(
+            models.LanguageParameter.parameter_id,
+            models.LanguageParameter.language_id,
+        ).join(
+            models.LanguageParameterEval,
+            models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id,
+        ).filter(
+            models.LanguageParameter.parameter_id.in_(list(set(qid_to_param.values()))),
+            models.LanguageParameter.language_id.in_(lang_ids),
+            models.LanguageParameterEval.value_eval == "0",
+        ).all()
+    }
+    if not zeroed:
+        return empty
+
+    count = 0
+    langs_hit: set = set()
+    params_hit: set = set()
+    for l_id, q_id in db.query(
+        models.Answer.language_id, models.Answer.question_id,
+    ).filter(
+        models.Answer.language_id.in_(lang_ids),
+        models.Answer.question_id.in_(list(qid_to_param.keys())),
+        models.Answer.response_text.in_(["yes", "no"]),
+    ).all():
+        p_id = qid_to_param.get(q_id)
+        if p_id and (p_id, l_id) in zeroed:
+            count += 1
+            langs_hit.add(l_id)
+            params_hit.add(p_id)
+
+    return {"count": count, "languages": sorted(langs_hit), "parameters": sorted(params_hit)}
+
+
 def _value_orig_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, str]:
     """Mappa (param_id, lang_id) -> value_orig (valore "iniziale"), sola lettura.
 
@@ -324,8 +389,18 @@ def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db
         incomplete_map = _compute_param_incomplete_map(db, lang_ids, param_ids)
         init_map = _value_orig_map(db, lang_ids, param_ids)
 
+    # Vista questions: quantifica le risposte su parametri azzerati
+    # dall'implicazione, che qui continuano a pesare (vedi
+    # _orphan_answers_report). Serve al warning in UI, non altera i dati.
+    orphan_answers = (
+        _orphan_answers_report(db, lang_ids, [r["id"] for r in rows])
+        if filters.view == "questions"
+        else {"count": 0, "languages": [], "parameters": []}
+    )
+
     return {
         "languages": [{"id": l.id, "name": l.name_full} for l in langs],
+        "orphan_answers": orphan_answers,
         "rows": [{
             "item": {"id": r["id"], "name": r["name"], "extra": r["extra"]},
             "cells": [
