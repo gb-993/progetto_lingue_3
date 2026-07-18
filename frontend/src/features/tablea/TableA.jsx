@@ -22,12 +22,7 @@ const toOpts = (arr) => (arr || []).map(v => ({ value: v, label: v }));
 // in vista questions (vedi _orphan_answers_report), qui il default neutro.
 const EMPTY_ORPHANS = { count: 0, languages: [], parameters: [] };
 
-// Tronca le liste lunghe di ID nel warning, per non farlo esplodere in altezza.
-const summariseIds = (ids, max = 12) => (
-    (ids || []).length <= max
-        ? (ids || []).join(', ')
-        : `${ids.slice(0, max).join(', ')} +${ids.length - max} more`
-);
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export default function TableA() {
     const [view, setView] = usePersistentState('tablea:view', 'params'); // 'params' o 'questions'
@@ -744,18 +739,32 @@ export default function TableA() {
                 ma spiega perche' le due viste possono dare distanze diverse. */}
             {view === 'questions' && matrixData.orphan_answers?.count > 0 && (
                 <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
-                    <strong>
-                        {matrixData.orphan_answers.count} answer{matrixData.orphan_answers.count === 1 ? '' : 's'} in
-                        this selection belong to parameters that are neutralised by an implicational condition.
-                    </strong>{' '}
-                    The Questions view shows raw answers and does not apply implicational neutralisation, so these
-                    answers are counted both in the table below and in every computation started from this page
-                    (distances, dendrograms, cluster map, PCA, Mantel). In the Parameters view the same cells are{' '}
-                    <code>0</code> and are skipped &mdash; which is why the two views can return different distances
-                    for the languages involved.
-                    <div className="small" style={{ marginTop: '0.45rem' }}>
-                        Languages: {summariseIds(matrixData.orphan_answers.languages)} &mdash;{' '}
-                        Parameters: {summariseIds(matrixData.orphan_answers.parameters)}
+                    {/* Figlio UNICO: .alert e' display:flex (serve alle flash col pulsante
+                        di chiusura), quindi senza wrapper ogni nodo di testo diventerebbe
+                        una colonna flex a se'. */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong>
+                            {matrixData.orphan_answers.count.toLocaleString('en-US')} answer
+                            {matrixData.orphan_answers.count === 1 ? '' : 's'} in this selection belong to
+                            parameters neutralised by an implicational condition.
+                        </strong>
+                        <div style={{ marginTop: '0.35rem' }}>
+                            The Questions view shows raw answers and does not apply implicational
+                            neutralisation, so these answers are counted both in the table below and in every
+                            computation started from this page (distances, dendrograms, cluster map, PCA,
+                            Mantel). In the Parameters view the same cells are <code>0</code> and are skipped,
+                            which is why the two views can return different distances for the languages
+                            involved.
+                        </div>
+                        <div className="small" style={{ marginTop: '0.35rem' }}>
+                            Affects {plural(matrixData.orphan_answers.languages.length, 'language')} and{' '}
+                            {plural(matrixData.orphan_answers.parameters.length, 'parameter')}.
+                            {matrixData.orphan_answers.languages.length <= 12
+                                && matrixData.orphan_answers.parameters.length <= 12 && (
+                                <> Languages: {matrixData.orphan_answers.languages.join(', ')} &mdash;{' '}
+                                Parameters: {matrixData.orphan_answers.parameters.join(', ')}</>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
