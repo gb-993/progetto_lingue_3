@@ -155,6 +155,25 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
 
     return languages, matrix
 
+# Mappatura vista questions → simboli degli script (concordata con C. Guardiano
+# via email, giugno 2026): yes→'+', no→'-'; unsure/missing/vuoto diventano '0'
+# (missing character) e quindi vengono saltati da _hamming_core/_jaccard_core
+# esattamente come gli 0/?/vuoto dei parametri. Ogni question è un item
+# indipendente: NESSUNA ri-pesatura per parametro, quindi un parametro con più
+# domande pesa di più nelle distanze (comportamento voluto, non un bug).
+_ANSWER_TO_SYMBOL = {"YES": "+", "NO": "-"}
+
+def _get_symbol_data(db: Session, filters: TableAFilterRequest):
+    """Come _get_filtered_data, ma con celle già in simboli +/-/0 per ENTRAMBE
+    le viste. Da usare in tutti gli endpoint computazionali (distanze,
+    dendrogrammi, cluster map, PCA, Mantel); matrix/xlsx/csv continuano invece
+    a mostrare i valori grezzi delle risposte (YES/NO/...)."""
+    langs, rows = _get_filtered_data(db, filters)
+    if filters.view == "questions":
+        for r in rows:
+            r["cells"] = [_ANSWER_TO_SYMBOL.get(c, "0") for c in r["cells"]]
+    return langs, rows
+
 # ==========================================
 # ENDPOINT: VISUALIZZAZIONE E TENDINE
 # ==========================================
@@ -378,8 +397,7 @@ def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db
 @router.post("/export/distances")
 def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Genera le matrici di distanza tabulari in formato .txt."""
-    if filters.view != "params": raise HTTPException(400, "Distances only for Parameters View")
-    langs, rows = _get_filtered_data(db, filters)
+    langs, rows = _get_symbol_data(db, filters)
 
     lang_vectors = [[r["cells"][i] for r in rows] for i in range(len(langs))]
     ids = [l.id for l in langs]
@@ -398,7 +416,7 @@ def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get
 
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
-                             headers={"Content-Disposition": "attachment; filename=distances_txt.zip"})
+                             headers={"Content-Disposition": f"attachment; filename=distances_txt_{filters.view}.zip"})
 
 @router.post("/export/geo_distances")
 def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
@@ -408,10 +426,8 @@ def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends
       - gcd_km.txt        : Great Circle Distance, modello sferico (R = 6371.0088 km)
       - crow_flies_km.txt : Geodesic su ellissoide WGS-84 via Vincenty inverso
     Lingue senza coordinate vengono escluse e segnalate.
+    Disponibile in entrambe le viste: l'output dipende solo dalle lingue.
     """
-    if filters.view != "params":
-        raise HTTPException(400, "Geo distances only available for Parameters View")
-
     langs, _rows = _get_filtered_data(db, filters)
 
     keep = [(l, l.latitude, l.longitude) for l in langs
@@ -455,7 +471,7 @@ def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends
 @router.post("/export/dendrograms")
 def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Genera i Dendrogrammi con metodo 'average'."""
-    langs, rows = _get_filtered_data(db, filters)
+    langs, rows = _get_symbol_data(db, filters)
     lang_vectors = [[r["cells"][i] for r in rows] for i in range(len(langs))]
     labels = [l.id for l in langs]
 
@@ -483,27 +499,26 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
 
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
-                             headers={"Content-Disposition": "attachment; filename=dendrograms.zip"})
+                             headers={"Content-Disposition": f"attachment; filename=dendrograms_{filters.view}.zip"})
 
 @router.post("/export/cluster_map")
 def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Mappa interattiva HTML dei cluster UPGMA (porting di 02_carta_italia.py).
 
     Pipeline (replicata da 01_plot_clusters.py + 02_carta_italia.py):
-      1. matrice di distanza (hamming default, oppure jaccard[+]) sui parametri filtrati
+      1. matrice di distanza (hamming default, oppure jaccard[+]) sugli item
+         filtrati (parametri o questions a seconda della vista)
       2. linkage UPGMA (average)
       3. cluster ottenuti tagliando il dendrogramma a threshold_coeff * max(linkage_distance)
       4. plot scatter_geo (plotly) con un colore per cluster; singletoni → "No Cluster"
     Lingue senza coordinate vengono escluse e segnalate via header X-Skipped-Languages.
     """
-    if filters.view != "params":
-        raise HTTPException(400, "Cluster map only available for Parameters View")
     if filters.distance not in ("hamming", "jaccard"):
         raise HTTPException(400, "distance must be 'hamming' or 'jaccard'")
     if not (0.0 < filters.threshold_coeff <= 1.0):
         raise HTTPException(400, "threshold_coeff must be in (0, 1]")
 
-    langs, rows = _get_filtered_data(db, filters)
+    langs, rows = _get_symbol_data(db, filters)
     if not langs or not rows:
         raise HTTPException(400, "No data available with the current filters.")
 
@@ -563,7 +578,7 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
                       legend=dict(title="Cluster"))
 
     html = inject_html_citation(fig.to_html(include_plotlyjs="cdn"))
-    headers = {"Content-Disposition": "attachment; filename=cluster_map.html"}
+    headers = {"Content-Disposition": f"attachment; filename=cluster_map_{filters.view}.html"}
     if skipped:
         headers["X-Skipped-Languages"] = ",".join(skipped)
     return Response(content=html, media_type="text/html", headers=headers)
@@ -571,7 +586,7 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
 @router.post("/export/pca")
 def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Analisi PCA via sklearn.decomposition.PCA, allineata a pca1.py."""
-    langs, rows = _get_filtered_data(db, filters)
+    langs, rows = _get_symbol_data(db, filters)
     if not langs or len(rows) < 2: raise HTTPException(400, "Insufficient data for PCA")
 
     # Conversione numerica: + -> 1.0, altrimenti 0.0
@@ -743,9 +758,6 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
     HTML interattivi (plotly), e mantel_results.csv (pearson/spearman/kendalltau
     con permutation test 999 perm, seed=42, two-sided).
     """
-    if filters.view != "params":
-        raise HTTPException(400, "Mantel test only available for Parameters View")
-
     selected = []
     if filters.include_gcd: selected.append("gcd")
     if filters.include_hamming: selected.append("hamming")
@@ -753,7 +765,7 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
     if len(selected) < 2:
         raise HTTPException(400, "Select at least 2 distances for the Mantel test.")
 
-    langs, rows = _get_filtered_data(db, filters)
+    langs, rows = _get_symbol_data(db, filters)
     if not langs or not rows:
         raise HTTPException(400, "No data available with the current filters.")
 
@@ -854,7 +866,7 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
             )
 
     zip_buf.seek(0)
-    headers = {"Content-Disposition": "attachment; filename=mantel_test.zip"}
+    headers = {"Content-Disposition": f"attachment; filename=mantel_test_{filters.view}.zip"}
     if skipped:
         headers["X-Skipped-Languages"] = ",".join(skipped)
     return StreamingResponse(zip_buf, media_type="application/zip", headers=headers)

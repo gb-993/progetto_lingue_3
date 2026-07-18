@@ -391,7 +391,7 @@ export default function TableA() {
 
             const cd = res.headers['content-disposition'] || '';
             const m = cd.match(/filename="?([^";]+)"?/);
-            const filename = m ? m[1] : 'mantel_test.zip';
+            const filename = m ? m[1] : `mantel_test_${view}.zip`;
             const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }));
             const a = document.createElement('a');
             a.href = url; a.download = filename;
@@ -448,7 +448,7 @@ export default function TableA() {
 
             const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }));
             const a = document.createElement('a');
-            a.href = url; a.download = 'cluster_map.html';
+            a.href = url; a.download = `cluster_map_${view}.html`;
             document.body.appendChild(a); a.click(); a.remove();
             URL.revokeObjectURL(url);
 
@@ -697,29 +697,28 @@ export default function TableA() {
                                 <DropItem onClick={() => { setDownloadOpen(false); handleDownload('csv', `tableA_${view}_transposed.csv`, 'text/csv'); }}>
                                     Export .csv (Transposed)
                                 </DropItem>
-                                {view === 'params' && (
-                                    <>
-                                        <div style={{ borderTop: '1px solid var(--border)' }} />
-                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('distances', 'distances_txt.zip', 'application/zip'); }}>
-                                            Distances (.txt zip)
-                                        </DropItem>
-                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('geo_distances', 'geo_distances_km.zip', 'application/zip'); }}>
-                                            Geographic distances km (.txt zip)
-                                        </DropItem>
-                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('dendrograms', 'dendrograms.zip', 'application/zip'); }}>
-                                            Dendrograms (.png zip)
-                                        </DropItem>
-                                        <DropItem onClick={() => { setDownloadOpen(false); setClusterMapOpen(true); }}>
-                                            Cluster map (.html)
-                                        </DropItem>
-                                        <DropItem onClick={() => { setDownloadOpen(false); handleDownload('pca', `pca_scatterplot_${view}.png`, 'image/png'); }}>
-                                            PCA Scatterplot (.png)
-                                        </DropItem>
-                                        <DropItem onClick={() => { setDownloadOpen(false); setMantelOpen(true); }}>
-                                            Mantel test (.zip)
-                                        </DropItem>
-                                    </>
-                                )}
+                                {/* Script computazionali: disponibili in ENTRAMBE le viste.
+                                    In Questions View il backend mappa yes→+, no→- e salta
+                                    unsure/missing/vuoto (come gli 0/? dei parametri). */}
+                                <div style={{ borderTop: '1px solid var(--border)' }} />
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('distances', `distances_txt_${view}.zip`, 'application/zip'); }}>
+                                    Distances (.txt zip)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('geo_distances', 'geo_distances_km.zip', 'application/zip'); }}>
+                                    Geographic distances km (.txt zip)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('dendrograms', `dendrograms_${view}.zip`, 'application/zip'); }}>
+                                    Dendrograms (.png zip)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); setClusterMapOpen(true); }}>
+                                    Cluster map (.html)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); handleDownload('pca', `pca_scatterplot_${view}.png`, 'image/png'); }}>
+                                    PCA Scatterplot (.png)
+                                </DropItem>
+                                <DropItem onClick={() => { setDownloadOpen(false); setMantelOpen(true); }}>
+                                    Mantel test (.zip)
+                                </DropItem>
                             </div>
                         )}
                     </div>
