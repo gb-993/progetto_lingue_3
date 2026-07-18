@@ -15,6 +15,8 @@ from __future__ import annotations
 from typing import Iterable, List, Optional
 from datetime import datetime
 import io
+import json
+import os
 import zipfile
 
 from openpyxl import Workbook
@@ -25,6 +27,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 import models
+from config import LEGAL_DOCUMENTS_DIR
 from services.citation import apply_excel_citation
 
 
@@ -803,6 +806,32 @@ ARCHIVED_ANSWER_MOTIVATIONS_HEADERS = [
     "ID", "Archived Answer ID", "Motivation Code", "Motivation Label",
 ]
 
+PARAMETER_CHANGE_LOGS_HEADERS = [
+    "ID", "Parameter ID", "User Email", "Change Note", "Created At",
+]
+PARAMETER_FLAGS_HEADERS = [
+    "Language ID", "Parameter ID", "Is Unsure", "Needs Review",
+]
+
+LANGUAGE_ALIASES_HEADERS = ["Old ID", "Language ID", "Created At"]
+PARAMETER_ALIASES_HEADERS = ["Old ID", "Parameter ID", "Created At"]
+QUESTION_ALIASES_HEADERS = ["Old ID", "Question ID", "Created At"]
+
+USERS_HEADERS = [
+    "ID", "Email", "Name", "Surname", "Role", "Is Active",
+    "Terms Accepted", "Terms Accepted At", "Date Joined", "Assigned Languages",
+]
+
+LEGAL_DOCUMENTS_HEADERS = [
+    "ID", "Type", "Version", "File Path", "SHA256",
+    "Published At", "Is Current", "Vexatious Clauses", "Note",
+]
+CONSENTS_HEADERS = [
+    "ID", "User Email", "Document Type", "Document Version",
+    "Accepted At", "IP Address", "User Agent", "Method",
+    "Vexatious Clauses Approved", "Revoked At", "Revocation Reason",
+]
+
 
 def _user_email_map(db: Session) -> dict:
     """{user.id: user.email} per denormalizzare gli FK utente nei file extras.
@@ -1063,6 +1092,218 @@ def build_archived_questions_workbook(db: Session) -> Workbook:
     return wb
 
 
+def build_parameter_change_logs_workbook(db: Session) -> Workbook:
+    """1 sheet: il log 'ultima modifica' dei parametri (nota + autore + data)."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "ParameterChangeLogs"
+    ws.append(PARAMETER_CHANGE_LOGS_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_CHANGE_LOGS_HEADERS))
+
+    user_email = _user_email_map(db)
+    for cl in (
+        db.query(models.ParameterChangeLog)
+        .order_by(models.ParameterChangeLog.parameter_id, models.ParameterChangeLog.id)
+        .all()
+    ):
+        ws.append([
+            cl.id,
+            cl.parameter_id,
+            user_email.get(cl.user_id, "") if cl.user_id else "",
+            _xlsx_sanitize(cl.change_note),
+            _xlsx_sanitize(cl.created_at),
+        ])
+    _style_table(ws, "ParameterChangeLogs", len(PARAMETER_CHANGE_LOGS_HEADERS),
+                 [8, 12, 26, 50, 18])
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_parameter_flags_workbook(db: Session) -> Workbook:
+    """1 sheet: flag per (lingua, parametro) — is_unsure e needs_review.
+
+    Le admin note viaggiano già nei file languages/<id>.xlsx (sheet Admin
+    Notes); i due flag booleani invece non avevano posto nel bundle e un
+    wipe+restore li azzerava. Esportiamo TUTTE le righe di status (anche coi
+    flag spenti) così il restore riallinea fedelmente pure i flag disattivati
+    dopo l'export."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "ParameterFlags"
+    ws.append(PARAMETER_FLAGS_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_FLAGS_HEADERS))
+
+    for s in (
+        db.query(models.LanguageParameterStatus)
+        .order_by(models.LanguageParameterStatus.language_id,
+                  models.LanguageParameterStatus.parameter_id)
+        .all()
+    ):
+        ws.append([
+            s.language_id,
+            s.parameter_id,
+            "Yes" if s.is_unsure else "",
+            "Yes" if s.needs_review else "",
+        ])
+    _style_table(ws, "ParameterFlags", len(PARAMETER_FLAGS_HEADERS), [14, 14, 10, 13])
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_aliases_workbook(db: Session) -> Workbook:
+    """3 sheet: alias storici di lingue, parametri e question.
+
+    Senza di loro un wipe+restore perde la mappa "vecchio id -> id corrente"
+    (le tabelle alias si svuotano in cascata con le entità) e i restore
+    successivi di bundle più vecchi non risolvono più gli id rinominati."""
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    ws = wb.create_sheet("LanguageAliases")
+    ws.append(LANGUAGE_ALIASES_HEADERS)
+    _bold_header_row(ws, len(LANGUAGE_ALIASES_HEADERS))
+    for a in db.query(models.LanguageAlias).order_by(models.LanguageAlias.old_id).all():
+        ws.append([a.old_id, a.language_id, _xlsx_sanitize(a.created_at)])
+    _style_table(ws, "LanguageAliases", len(LANGUAGE_ALIASES_HEADERS), [14, 14, 18])
+
+    ws = wb.create_sheet("ParameterAliases")
+    ws.append(PARAMETER_ALIASES_HEADERS)
+    _bold_header_row(ws, len(PARAMETER_ALIASES_HEADERS))
+    for a in db.query(models.ParameterAlias).order_by(models.ParameterAlias.old_id).all():
+        ws.append([a.old_id, a.parameter_id, _xlsx_sanitize(a.created_at)])
+    _style_table(ws, "ParameterAliases", len(PARAMETER_ALIASES_HEADERS), [14, 14, 18])
+
+    ws = wb.create_sheet("QuestionAliases")
+    ws.append(QUESTION_ALIASES_HEADERS)
+    _bold_header_row(ws, len(QUESTION_ALIASES_HEADERS))
+    for a in db.query(models.QuestionAlias).order_by(models.QuestionAlias.old_id).all():
+        ws.append([a.old_id, a.question_id, _xlsx_sanitize(a.created_at)])
+    _style_table(ws, "QuestionAliases", len(QUESTION_ALIASES_HEADERS), [16, 16, 18])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_users_workbook(db: Session) -> Workbook:
+    """1 sheet: utenti SENZA hash password.
+
+    Scelta deliberata: lo zip non deve diventare materiale da cassaforte.
+    Dopo un restore su DB nuovo gli utenti rientrano via "password
+    dimenticata" (i nuovi record vengono creati con password random
+    inutilizzabile). `Assigned Languages` replica Language.assigned_user_id
+    visto dal lato utente (CSV di id lingua): l'import dei metadati lingue
+    non ripristina l'assegnazione, la rimette il restore di questo file."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Users"
+    ws.append(USERS_HEADERS)
+    _bold_header_row(ws, len(USERS_HEADERS))
+
+    assigned_by_user: dict[int, list[str]] = {}
+    for L in db.query(models.Language).filter(models.Language.assigned_user_id.isnot(None)).all():
+        assigned_by_user.setdefault(L.assigned_user_id, []).append(L.id)
+
+    for u in db.query(models.User).order_by(models.User.id).all():
+        ws.append([
+            u.id,
+            u.email or "",
+            u.name or "",
+            u.surname or "",
+            u.role or "public",
+            "Yes" if u.is_active else "No",
+            "Yes" if u.terms_accepted else "No",
+            _xlsx_sanitize(u.terms_accepted_at),
+            _xlsx_sanitize(u.date_joined),
+            ", ".join(sorted(assigned_by_user.get(u.id, []))),
+        ])
+    _style_table(ws, "Users", len(USERS_HEADERS), [8, 30, 16, 16, 10, 10, 13, 18, 18, 30])
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_legal_documents_workbook(db: Session) -> Workbook:
+    """2 sheet: LegalDocuments (archivio versioni ToU/Privacy) + Consents.
+
+    I consensi referenziano il documento per (Type, Version) e l'utente per
+    email: chiavi naturali stabili fra DB diversi. I PDF veri viaggiano a
+    parte nel bundle sotto extras/legal_pdfs/ (vedi builder zip): qui ci
+    sono solo i metadati, incluso lo sha256 che permette di verificare
+    l'integrità dei file rimaterializzati."""
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    ws = wb.create_sheet("LegalDocuments")
+    ws.append(LEGAL_DOCUMENTS_HEADERS)
+    _bold_header_row(ws, len(LEGAL_DOCUMENTS_HEADERS))
+    for doc in (
+        db.query(models.LegalDocument)
+        .order_by(models.LegalDocument.type, models.LegalDocument.id)
+        .all()
+    ):
+        ws.append([
+            doc.id, doc.type, doc.version, doc.file_path, doc.sha256,
+            _xlsx_sanitize(doc.published_at),
+            "Yes" if doc.is_current else "",
+            json.dumps(doc.vexatious_clauses) if doc.vexatious_clauses is not None else "",
+            doc.note or "",
+        ])
+    _style_table(ws, "LegalDocuments", len(LEGAL_DOCUMENTS_HEADERS),
+                 [8, 16, 10, 44, 40, 18, 10, 24, 30])
+
+    ws = wb.create_sheet("Consents")
+    ws.append(CONSENTS_HEADERS)
+    _bold_header_row(ws, len(CONSENTS_HEADERS))
+    user_email = _user_email_map(db)
+    doc_key = {
+        d.id: (d.type, d.version)
+        for d in db.query(models.LegalDocument.id, models.LegalDocument.type,
+                          models.LegalDocument.version).all()
+    }
+    for c in db.query(models.Consent).order_by(models.Consent.id).all():
+        dtype, dversion = doc_key.get(c.legal_document_id, ("", ""))
+        ws.append([
+            c.id,
+            user_email.get(c.user_id, "") if c.user_id else "",
+            dtype, dversion,
+            _xlsx_sanitize(c.accepted_at),
+            c.ip_address or "",
+            _xlsx_sanitize(c.user_agent),
+            c.method or "",
+            "Yes" if c.vexatious_clauses_approved else "",
+            _xlsx_sanitize(c.revoked_at),
+            c.revocation_reason or "",
+        ])
+    _style_table(ws, "Consents", len(CONSENTS_HEADERS),
+                 [8, 26, 16, 10, 18, 16, 40, 20, 10, 18, 24])
+
+    apply_excel_citation(wb)
+    return wb
+
+
+def build_entity_versions_jsonl_bytes(db: Session) -> bytes:
+    """History (entity_versions) in JSON Lines: un record per riga.
+
+    NON è un xlsx di proposito: gli snapshot JSON possono superare il limite
+    di 32.767 caratteri di una cella Excel, e il jsonl preserva il dato senza
+    conversioni di tipo. L'utente è denormalizzato per email come negli altri
+    file del bundle."""
+    user_email = _user_email_map(db)
+    lines = []
+    for v in db.query(models.EntityVersion).order_by(models.EntityVersion.id).all():
+        lines.append(json.dumps({
+            "id": v.id,
+            "entity_type": v.entity_type,
+            "entity_id": v.entity_id,
+            "snapshot": v.snapshot,
+            "operation": v.operation,
+            "source": v.source,
+            "note": v.note,
+            "user_email": user_email.get(v.user_id) if v.user_id else None,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
+        }, ensure_ascii=False))
+    return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
+
+
 # ============================================================================
 # 6. BACKUP ZIP BUILDER
 # ============================================================================
@@ -1079,10 +1320,18 @@ def build_archived_questions_workbook(db: Session) -> Workbook:
 #
 # Bundle full (`PCM_full_backup.zip`, prodotto da `build_full_backup_zip_bytes`):
 # stesso contenuto del bundle base + cartella `extras/` con:
+#   ├── extras/aliases.xlsx          (per primo: i restore successivi lo usano)
+#   ├── extras/users.xlsx            (senza hash password; prima di consensi
+#   │                                 e submissions che risolvono per email)
 #   ├── extras/site_content.xlsx
 #   ├── extras/submissions.xlsx
 #   ├── extras/parameter_submissions.xlsx
-#   └── extras/archived_questions.xlsx
+#   ├── extras/archived_questions.xlsx
+#   ├── extras/parameter_change_logs.xlsx
+#   ├── extras/parameter_flags.xlsx
+#   ├── extras/legal_documents.xlsx  (metadati versioni ToU/Privacy + consensi)
+#   ├── extras/legal_pdfs/<file>.pdf (i PDF veri dell'archivio legale)
+#   └── extras/entity_versions.jsonl (History; jsonl per gli snapshot >32k char)
 #
 # Il restore (services/backup_restore.py) riconosce entrambi i formati: se la
 # cartella extras/ è assente processa solo i file base (compat. piena).
@@ -1162,8 +1411,30 @@ def build_full_backup_zip_bytes(
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         _write_base_bundle(zf, db, languages, on_language=on_language)
+        # aliases per primo: gli extras vengono restorati in ordine di zip e
+        # gli handler successivi (submissions, flags) risolvono gli id anche
+        # via alias — meglio averli già in DB.
+        zf.writestr("extras/aliases.xlsx", _wb_to_bytes(build_aliases_workbook(db)))
+        # users prima di submissions/legal_documents: quegli handler risolvono
+        # gli utenti per email e devono trovarli gia' upsertati.
+        zf.writestr("extras/users.xlsx", _wb_to_bytes(build_users_workbook(db)))
         zf.writestr("extras/site_content.xlsx", _wb_to_bytes(build_site_content_workbook(db)))
         zf.writestr("extras/submissions.xlsx", _wb_to_bytes(build_submissions_workbook(db)))
         zf.writestr("extras/parameter_submissions.xlsx", _wb_to_bytes(build_parameter_submissions_workbook(db)))
         zf.writestr("extras/archived_questions.xlsx", _wb_to_bytes(build_archived_questions_workbook(db)))
+        zf.writestr("extras/parameter_change_logs.xlsx", _wb_to_bytes(build_parameter_change_logs_workbook(db)))
+        zf.writestr("extras/parameter_flags.xlsx", _wb_to_bytes(build_parameter_flags_workbook(db)))
+        zf.writestr("extras/legal_documents.xlsx", _wb_to_bytes(build_legal_documents_workbook(db)))
+        # PDF dell'archivio legale: file binari, imbarcati così come sono.
+        # file_path e' un filename semplice dentro LEGAL_DOCUMENTS_DIR (vedi
+        # legal_document_service._build_filename); basename per sicurezza.
+        for doc in db.query(models.LegalDocument).all():
+            fname = os.path.basename(doc.file_path or "")
+            if not fname:
+                continue
+            pdf_path = os.path.join(LEGAL_DOCUMENTS_DIR, fname)
+            if os.path.isfile(pdf_path):
+                with open(pdf_path, "rb") as f:
+                    zf.writestr(f"extras/legal_pdfs/{fname}", f.read())
+        zf.writestr("extras/entity_versions.jsonl", build_entity_versions_jsonl_bytes(db))
     return buf.getvalue()
