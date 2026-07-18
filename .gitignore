@@ -68,3 +68,8 @@ modifiche_suggerite.*
 # Documents). Sono file di test, non devono finire in git: in prod
 # vivono in un volume Docker dedicato (legal_archive in compose).
 backend/legal_documents_local/
+
+# ---- Note di implementazione locali ----
+# Il "perche'" dietro scelte di codice, estratto dai commenti. Note di lavoro
+# personali, non documentazione pubblica.
+DEV-NOTES.md

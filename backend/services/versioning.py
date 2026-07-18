@@ -1,14 +1,4 @@
-"""
-Servizio di versionamento entità.
-
-API principale:
-  record_version(db, entity, operation, source, user_id, note) -> EntityVersion
-
-Salva uno snapshot completo dell'entità in `entity_versions`. La timeline è
-ricostruibile ordinando per (entity_type, entity_id, created_at).
-
-Usato sia da modifiche manuali (UI) che da import Excel.
-"""
+"""Versionamento entità: snapshot JSON in `entity_versions`, usato da UI e import Excel."""
 from __future__ import annotations
 from typing import Any, Optional
 from datetime import datetime, date
@@ -20,10 +10,7 @@ from sqlalchemy.orm import Session
 import models
 
 
-# ============================================================================
-# Mapping classe modello -> nome "type" usato in entity_versions.entity_type
-# ============================================================================
-
+# Nome classe modello -> valore di entity_versions.entity_type
 ENTITY_TYPE_MAP = {
     "ParameterDef": "parameter",
     "Question": "question",
@@ -32,7 +19,6 @@ ENTITY_TYPE_MAP = {
     "Answer": "answer",
 }
 
-# Inverso per recuperare la classe modello da entity_type
 MODEL_BY_TYPE = {v: k for k, v in ENTITY_TYPE_MAP.items()}
 
 
@@ -40,10 +26,6 @@ def _entity_type_for(entity: Any) -> str:
     """Ritorna il valore canonico di `entity_type` per un'istanza modello."""
     return ENTITY_TYPE_MAP.get(type(entity).__name__, type(entity).__name__.lower())
 
-
-# ============================================================================
-# Serializzazione di un'entità in dict JSON-friendly
-# ============================================================================
 
 def _coerce(v: Any) -> Any:
     """Converte un valore SQLAlchemy in qualcosa di JSON-serializzabile."""
@@ -59,19 +41,14 @@ def _coerce(v: Any) -> Any:
 
 
 def serialize_entity(entity: Any) -> dict:
-    """
-    Snapshot dei campi colonna dell'entità (no relationship, no internal state).
-
-    Per Answer includiamo anche examples e motivation_codes come liste dentro lo
-    snapshot: cambiamenti a esempi/motivazioni vanno tracciati come parte della
-    Answer stessa, non come entità separate.
-    """
+    """Snapshot dei soli campi colonna dell'entità."""
     state = inspect(entity)
     out = {}
     for col in state.mapper.columns:
         name = col.key
         out[name] = _coerce(getattr(entity, name))
 
+    # Esempi e motivazioni fanno parte dello snapshot della Answer, non sono entità versionate a sé
     if type(entity).__name__ == "Answer":
         examples = []
         for ex in sorted(entity.examples, key=lambda e: (e.number or "", e.id or 0)):
@@ -103,10 +80,6 @@ def _entity_id_for(entity: Any, snapshot: dict) -> str:
     return str(snapshot.get("id", ""))
 
 
-# ============================================================================
-# API principale
-# ============================================================================
-
 def record_version(
     db: Session,
     entity: Any,
@@ -116,15 +89,7 @@ def record_version(
     note: Optional[str] = None,
     flush: bool = True,
 ) -> "models.EntityVersion":
-    """
-    Aggiunge una EntityVersion per `entity`. NON committa: chi chiama
-    decide quando committare (all'interno della stessa transazione del save).
-
-    Parametri:
-      operation: 'create' | 'update' | 'delete'
-      source:    'manual' | 'excel_import' | 'system' | …
-      note:      annotazione opzionale dell'admin (es. "Pre-rilascio v2")
-    """
+    """Aggiunge una EntityVersion per `entity`; non committa, lo fa il chiamante nella stessa transazione."""
     snapshot = serialize_entity(entity)
     entity_type = _entity_type_for(entity)
     entity_id = _entity_id_for(entity, snapshot)
@@ -161,11 +126,7 @@ def get_previous_version(
 
 
 def compute_diff(prev: Optional[dict], curr: dict) -> dict:
-    """
-    Calcola un diff campo-per-campo tra due snapshot.
-    Ritorna dict {campo: {"old": ..., "new": ...}} per i campi cambiati.
-    Se prev è None, tutti i campi non-null sono considerati 'new'.
-    """
+    """Diff campo-per-campo fra due snapshot: {campo: {"old": ..., "new": ...}}."""
     diff = {}
     if prev is None:
         for k, v in curr.items():

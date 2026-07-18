@@ -33,9 +33,7 @@ def _extract_refs(cond: str) -> Set[str]:
     return {m.upper() for m in TOKEN_RE.findall(cond or "")}
 
 def _build_graph_active_scope(db: Session, active_ids: Set[str]) -> Tuple[Dict[str, List[str]], Dict[str, str]]:
-    """
-    Crea il grafo ref -> target SOLO per param attivi e solo se tutte le condizioni sono valide.
-    """
+    """Costruisce il grafo ref -> target sui soli parametri attivi."""
     params = db.query(models.ParameterDef.id, models.ParameterDef.implicational_condition).filter(
         models.ParameterDef.is_active == True
     ).all()
@@ -50,7 +48,7 @@ def _build_graph_active_scope(db: Session, active_ids: Set[str]) -> Tuple[Dict[s
         refs = _extract_refs(cond)
         if not refs:
             continue
-        # Se la cond cita parametri fuori scope, ignora completamente la regola
+        # Se la condizione cita parametri non attivi, la regola viene ignorata
         if not refs.issubset(active_ids):
             continue
 
@@ -62,10 +60,7 @@ def _build_graph_active_scope(db: Session, active_ids: Set[str]) -> Tuple[Dict[s
     return graph, conditions
 
 def _topo_sort(graph: Dict[str, List[str]]) -> List[str]:
-    """
-    Ripristinato rigorosamente l'algoritmo originale di sort topologico
-    per garantire il medesimo ordine di esecuzione.
-    """
+    """Ordina i nodi del grafo con l'algoritmo di Kahn."""
     indeg = {n: 0 for n in graph}
     for u, outs in graph.items():
         for v in outs:
@@ -81,16 +76,15 @@ def _topo_sort(graph: Dict[str, List[str]]) -> List[str]:
             if indeg[v] == 0:
                 q.append(v)
 
+    # I nodi rimasti fuori appartengono a un ciclo: li accoda in fondo
     if len(order) < len(indeg):
         order.extend([n for n in indeg if n not in order])
     return order
 
 
 def run_dag_for_language(language_id: str, db: Session) -> DagReport:
-    """
-    Valuta il DAG per una lingua. Logica originale rigorosamente ripristinata.
-    """
-    # 1. Lock della riga lingua a livello DB (equivalente a select_for_update)
+    """Valuta le condizioni implicazionali di tutti i parametri attivi per una lingua."""
+    # Lock della riga lingua per serializzare valutazioni concorrenti
     try:
         lang = db.query(models.Language).with_for_update().filter(models.Language.id == language_id).one()
     except NoResultFound:
@@ -98,11 +92,9 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
 
     active_ids = _active_parameter_ids(db)
 
-    # 2. Crea il grafo e l'ordine topologico
     graph, cond_map = _build_graph_active_scope(db, active_ids)
     order = _topo_sort(graph)
 
-    # 3. Precarica mappa param_id -> (lp_id, value_orig)
     lp_list = db.query(models.LanguageParameter).filter(
         models.LanguageParameter.language_id == language_id,
         models.LanguageParameter.parameter_id.in_(active_ids)
@@ -110,7 +102,7 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
 
     lp_dict = {lp.parameter_id: lp for lp in lp_list}
 
-    # Precarica gli eval esistenti in un'unica query per evitare N+1 nel loop
+    # Precarica gli eval in un'unica query per evitare N+1 nel loop
     lp_ids_existing = [lp.id for lp in lp_list if lp.id is not None]
     if lp_ids_existing:
         lpe_list = db.query(models.LanguageParameterEval).filter(
@@ -120,8 +112,8 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
     else:
         lpe_by_lp_id = {}
 
-    # 4. Setup variabili per il tracciamento
-    cond_values: Dict[str, str] = {} # RIPRISTINO: Inizializzato a vuoto!
+    # Popolato durante il loop: ogni nodo vede solo i valori dei nodi già valutati
+    cond_values: Dict[str, str] = {}
     warnings: Set[str] = set()
     missing_orig: List[str] = []
 
@@ -140,13 +132,12 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
     warnings_propagated: set[str] = set()
     parse_errors: list[tuple[str, str, str]] = []
 
-    # 5. Esecuzione nodi in ordine topologico
     for target in order:
         lp = lp_dict.get(target)
         if not lp:
             lp = models.LanguageParameter(language_id=language_id, parameter_id=target, value_orig=None, warning_orig=False)
             db.add(lp)
-            db.flush() # Salva a DB per avere l'ID senza chiudere la transazione
+            db.flush()  # Serve l'ID per creare l'eval collegato
             lp_dict[target] = lp
 
         lpe = lpe_by_lp_id.get(lp.id)
@@ -158,14 +149,12 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
         v_orig = lp.value_orig
         cond = (cond_map.get(target) or "").strip()
 
-        # --- INIZIO LOGICA DI VALUTAZIONE ---
+        # Parametro senza condizione: il valore eval segue direttamente quello originale
         if not cond:
-            # Se manca la risposta, forziamo '?' e attiviamo il warning
             if v_orig is None:
                 new_eval = "?"
                 if target not in warnings:
                     warnings.add(target)
-            # Se c'è già un warning (conflitto), il valore diventa '?'
             elif target in warnings:
                 new_eval = "?"
             else:
@@ -175,7 +164,6 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             lpe.warning_eval = (target in warnings)
             db.flush()
 
-            # Aggiornamento cond_values progressivo (non pre-caricato!)
             if new_eval in ("+", "-", "0", "?"):
                 cond_values[target] = new_eval
 
@@ -184,7 +172,7 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
 
         refs = _extract_refs(cond)
 
-        # Short-circuit se i "padri" hanno un warning
+        # Un warning su un parametro referenziato si propaga al figlio come '?'
         if any(r in warnings for r in refs):
             if target not in warnings:
                 warnings.add(target)
@@ -208,10 +196,8 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
         cond_ok = parsed_ok if parse_error is None else None
 
         if cond_ok is False:
-            # Cond falsa: il parametro vale 0 in modo deterministico, indipendentemente dalle answers.
-            # Un eventuale warning_orig (conflitto question/stop-question) resta visibile sulla colonna
-            # input lato UI (arancione), ma non blocca lo 0 e non si propaga ai figli: rimuoviamo
-            # quindi target dal set warnings cosi' i discendenti non short-circuitano.
+            # Condizione falsa: vale 0 a prescindere dalle risposte, quindi un eventuale
+            # warning_orig non si propaga ai figli (vedi DEV-NOTES.md)
             lpe.value_eval = "0"
             lpe.warning_eval = False
             warnings.discard(target)
@@ -240,7 +226,6 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
         lpe.warning_eval = (target in warnings)
         db.flush()
 
-        # Registrazione del valore per i parametri successivi nel DAG
         if lpe.value_eval:
             cond_values[target] = lpe.value_eval
 
