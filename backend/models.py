@@ -7,8 +7,6 @@ class Base(DeclarativeBase):
     pass
 
 # ==========================================
-# 1. UTENTI E AUTENTICAZIONE
-# ==========================================
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -27,46 +25,21 @@ class User(Base):
 
 
 class PasswordResetToken(Base):
-    """Token monouso per il flusso 'password dimenticata'.
 
-    Memorizziamo SOLO l'hash sha256 del token, non il token in chiaro:
-    se qualcuno facesse dump del DB non potrebbe riutilizzare i token.
-    Il token in chiaro vive solo nel link inviato per email all'utente
-    (e nel momento della generazione, in memoria).
-
-    Manteniamo storico: una volta consumato o scaduto, il record resta
-    in tabella per audit (quante richieste reset fa un utente, in che
-    finestra temporale, ecc.). Un cleanup periodico dei record vecchi
-    si puo' aggiungere in futuro come job batch.
-    """
     __tablename__ = "password_reset_tokens"
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    # sha256 del token in clear -> stringa hex lunga 64 caratteri.
     token_hash = Column(String(64), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=utc_now, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True)
-    # IP del client che ha richiesto il reset (audit / spot bruteforce).
     request_ip = Column(String(45), nullable=True)
 
     user = relationship("User")
 
 
 class EditingSession(Base):
-    """Presence effimera per l'avviso "qualcun altro sta modificando".
-
-    Una riga per (entity_type, entity_id, user_id): quando un utente apre un
-    form di modifica, il client batte un heartbeat che aggiorna `last_heartbeat`.
-    Un utente e' considerato "attivo" su un'entita' se il suo heartbeat e'
-    recente (entro un TTL di pochi decine di secondi).
-
-    GDPR/privacy: la tabella e' deliberatamente EFFIMERA e ANONIMA verso gli
-    altri utenti. `user_id` serve solo lato server per non contare l'utente
-    stesso e per deduplicare: l'identita' NON viene mai esposta agli altri (gli
-    endpoint restituiscono solo un conteggio). Le righe scadute vengono ripulite
-    a ogni heartbeat, quindi non resta uno storico di "chi-editava-cosa-quando".
-    """
+    
     __tablename__ = "editing_sessions"
     id = Column(Integer, primary_key=True)
     entity_type = Column(String(20), nullable=False)
@@ -81,70 +54,20 @@ class EditingSession(Base):
 
 
 # ==========================================
-# 1.bis DOCUMENTI LEGALI E TRACCIAMENTO ACCETTAZIONI (GDPR + art. 1341 c.c.)
-#
-# Due tabelle accoppiate:
-#
-#   - `legal_documents`: archivio immutabile di TUTTE le versioni dei
-#     documenti legali (Terms of Use, Privacy Notice). Una sola riga per
-#     (type, version). La versione "viva" e' marcata da `is_current=true`;
-#     le versioni precedenti restano nella tabella per tracciare le
-#     accettazioni storiche degli utenti.
-#
-#   - `consents`: una riga per ogni evento di accettazione di un documento
-#     da parte di un utente. FK a `legal_documents.id` (non a un type/version
-#     come stringhe, cosi' non puo' esistere un consenso "fantasma" che
-#     punta a un documento non in archivio).
-#
-# Vedi PRIVACY_TODO_DPO.md (file locale, gitignored) per il razionale
-# legale e la conferma DPO sulle clausole vessatorie.
-# ==========================================
 class LegalDocument(Base):
-    """Versione storica di un documento legale (Terms of Use o Privacy Notice).
-
-    Vincolo logico: per ogni `type`, una sola riga puo' avere `is_current=True`.
-    Garantito a livello DB da un partial unique index (vedi migrazione).
-    Quando si carica una nuova versione, il flag sulla vecchia viene messo
-    a False nella stessa transazione (vedi router admin).
-
-    `vexatious_clauses` e' un array JSON di stringhe che elenca le sezioni
-    del documento da sottoporre a specifica approvazione ai sensi dell'art.
-    1341 c.c. (es. ["7", "8", "9.2", "11"]). La sorgente di verita' viene
-    da `config.VEXATIOUS_CLAUSES_DEFAULT`: l'upload admin la copia qui,
-    cosi' resta congelata per quella specifica versione anche se in futuro
-    il default cambia.
-    """
+    
     __tablename__ = "legal_documents"
     id = Column(Integer, primary_key=True)
-    # "terms_of_use" | "privacy_notice". Enum stringa coerente con gli altri
-    # enum del progetto (vedi User.role, Language.status, ecc.).
     type = Column(
         Enum("terms_of_use", "privacy_notice", name="legal_document_type"),
         nullable=False,
     )
-    # Es. "v1.0", "v1.1", "v2.0". Estratta automaticamente dal testo del PDF
-    # (header/footer "version X.Y, Month DD YYYY"); l'admin non la digita.
     version = Column(String(20), nullable=False)
-    # Path relativo alla cartella servita da Caddy (es.
-    # "docs/archive/Terms_of_use_v1.0_2026-05-18.pdf"). I file vivono in
-    # frontend/public/docs/archive/ — pubblicamente scaricabili, perche'
-    # i documenti legali sono per natura conoscibili da chi li sottoscrive.
     file_path = Column(String(500), nullable=False)
-    # sha256 hex del file PDF (64 caratteri). Impronta digitale: protegge da
-    # modifiche "silenziose" del PDF senza bump di versione (es. fix refuso
-    # senza nuovo numero). In giudizio: prova che il file accettato e'
-    # esattamente quello in archivio.
     sha256 = Column(String(64), nullable=False)
     published_at = Column(DateTime, default=utc_now, nullable=False)
-    # True solo sull'ultima versione di ciascun `type`. Usato per: a) il
-    # check "l'utente deve ancora accettare questa versione?", b) la pagina
-    # admin per mostrare la versione corrente.
     is_current = Column(Boolean, default=True, nullable=False)
-    # Snapshot delle clausole vessatorie congelato al momento dell'upload.
-    # Es. ["7", "8", "9.2", "11"]. Null per documenti che non ne hanno
-    # (es. Privacy Notice). Vedi `config.VEXATIOUS_CLAUSES_DEFAULT`.
     vexatious_clauses = Column(JSON, nullable=True)
-    # Note libere dell'admin (opzionale). Es. "fix refuso sez. 7".
     note = Column(Text, nullable=True)
 
     consents = relationship("Consent", back_populates="legal_document")
@@ -155,72 +78,30 @@ class LegalDocument(Base):
 
 
 class Consent(Base):
-    """Evento di accettazione di un documento legale da parte di un utente.
-
-    Una riga per (user, legal_document). Se l'utente accetta sia ToU che
-    Privacy Notice nello stesso modal, si scrivono DUE righe distinte con
-    lo stesso timestamp.
-
-    `vexatious_clauses_approved`: True se l'utente ha spuntato la seconda
-    checkbox del modal (art. 1341 c.c.). Per documenti senza clausole
-    vessatorie (es. Privacy Notice) il campo resta False e nel modal la
-    seconda checkbox non appare proprio.
-
-    `revoked_at`: null finche' il consenso e' attivo. Valorizzato se in
-    futuro implementiamo recesso/cancellazione account: lo storico resta,
-    ma il flag "currently valid?" e' computato da `revoked_at IS NULL`.
-    """
+    
     __tablename__ = "consents"
     id = Column(Integer, primary_key=True)
-    # SET NULL on delete: se cancello un utente (GDPR right to be forgotten),
-    # la riga in consents resta come prova storica ma perde il link verso
-    # l'utente. Se serve audit con identita' anche dopo cancellazione, in
-    # futuro si puo' aggiungere user_email_snapshot.
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True, index=True,
     )
-    # RESTRICT on delete: un documento legale NON deve mai essere cancellato
-    # se ci sono accettazioni che lo referenziano (perderemmo la prova del
-    # contenuto accettato). In pratica i legal_documents non vengono mai
-    # cancellati: si sostituisce solo il flag is_current.
     legal_document_id = Column(
         Integer, ForeignKey("legal_documents.id", ondelete="RESTRICT"),
         nullable=False, index=True,
     )
     accepted_at = Column(DateTime, default=utc_now, nullable=False)
-    # IP del client al momento dell'accettazione. IPv6 max 45 char (stesso
-    # pattern di PasswordResetToken.request_ip). In chiaro: l'utente ha
-    # accettato di vedere questo dato (lo dichiariamo nell'informativa).
     ip_address = Column(String(45), nullable=True)
-    # User agent del browser. Text (non String) perche' alcuni UA superano
-    # facilmente i 255 caratteri (browser mobile, embedded webview, ecc.).
     user_agent = Column(Text, nullable=True)
-    # Contesto in cui l'accettazione e' avvenuta. Valori previsti:
-    #   - "first_login_modal": utente al primo login, accetta per la prima volta
-    #   - "version_update_modal": utente che aveva gia' accettato una versione
-    #     precedente, ora accetta una nuova versione
-    #   - "admin_bootstrap": riservato a flussi di sistema (oggi inutilizzato)
     method = Column(String(50), nullable=False)
-    # True se l'utente ha spuntato la seconda checkbox del modal (approvazione
-    # specifica ex art. 1341 c.c.). False per documenti senza clausole vessatorie.
     vexatious_clauses_approved = Column(Boolean, default=False, nullable=False)
-    # Null finche' il consenso e' attivo.
     revoked_at = Column(DateTime, nullable=True)
-    # Motivo della revoca (opzionale, libero). Es. "account deleted",
-    # "user withdrew", "superseded by newer version".
     revocation_reason = Column(String(100), nullable=True)
 
     user = relationship("User")
     legal_document = relationship("LegalDocument", back_populates="consents")
 
 
-# ==========================================
-# 2. LINGUE (Languages)
-# ==========================================
 
-# Mappa i VECCHI valori di status lingua (pre-redesign asse A/B) verso i nuovi.
-# Serve a import Excel e restore backup per accettare file/snapshot prodotti
 # prima della migrazione senza rifiutarli. I valori nuovi passano invariati.
 LEGACY_LANGUAGE_STATUS_MAP = {
     "pending": "draft",
@@ -234,8 +115,7 @@ LEGACY_LANGUAGE_STATUS_MAP = {
 
 
 def normalize_language_status(raw) -> str:
-    """Normalizza un valore di status lingua (vecchio o nuovo) a uno nuovo valido.
-    Sconosciuto/None → 'draft'."""
+    
     return LEGACY_LANGUAGE_STATUS_MAP.get((raw or "").strip().lower(), "draft")
 
 
@@ -248,7 +128,6 @@ class Language(Base):
     family = Column(String(255), default="")
     top_level_family = Column(String(255), default="")
     grp = Column(String(255), default="")
-    # FK alla tassonomia (parallele alle stringhe sopra, mantenute sincronizzate al save)
     top_family_id = Column(Integer, ForeignKey("top_families.id", ondelete="SET NULL"), nullable=True)
     family_id = Column(Integer, ForeignKey("families.id", ondelete="SET NULL"), nullable=True)
     group_id = Column(Integer, ForeignKey("groups.id", ondelete="SET NULL"), nullable=True)
@@ -256,7 +135,6 @@ class Language(Base):
     longitude = Column(Numeric(precision=11, scale=6), nullable=True)
     historical_language = Column(Boolean, default=False)
 
-    # Campi metadata aggiuntivi (allineamento con vecchio progetto)
     isocode = Column(String(20), default="")
     glottocode = Column(String(20), default="")
     informant = Column(String(255), default="")
@@ -266,24 +144,12 @@ class Language(Base):
 
     assigned_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    # Workflow di compilazione — ASSE B (consegna/review, guidato da umani).
-    #   draft     : l'utente compila, può editare
-    #   submitted : l'utente ha confermato → bloccato per l'utente, l'admin rivede
-    #   validated : l'admin ha chiuso → sola lettura per tutti finché non riapre
-    # NB: il "completamento" (asse A: empty/incomplete/complete) NON sta qui: è
-    # calcolato live dai colori dei quadratini (vedi services/param_state). Questo
-    # campo è solo il dialogo utente↔admin. Il vecchio enum
-    # (pending/waiting_for_approval/approved/rejected) mescolava i due assi.
     status = Column(
         Enum("draft", "submitted", "validated", name="language_status"),
         nullable=False,
         default="draft",
         server_default="draft",
     )
-    # Override manuale del completamento (asse A), riservato al SUPER-ADMIN.
-    # NULL = completamento automatico (calcolato dai colori dei quadratini). Se
-    # valorizzato, "pinna" la pillola di completamento della lingua scavalcando
-    # il calcolo (uscita di sicurezza per casi limite).
     completion_override = Column(
         Enum("empty", "incomplete", "complete", name="language_completion"),
         nullable=True,
@@ -292,18 +158,9 @@ class Language(Base):
     submitted_at = Column(DateTime, nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
 
-    # Bumpato automaticamente da SQLAlchemy ad ogni UPDATE della riga Language
-    # (vedi `onupdate`). Cattura solo modifiche ai metadati della lingua: per
-    # cambi alle answers/examples occorrerebbe estendere il bump da quei
-    # service. La colonna è popolata dalla migrazione su righe pre-esistenti.
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=True)
 
     assigned_user = relationship("User", back_populates="assigned_languages")
-    # passive_deletes=True: alla cancellazione della Language l'ORM NON emette
-    # UPDATE nullify ne' DELETE individuali sulle answers/aliases — si fida
-    # del cascade DB (ON DELETE CASCADE definito sulle FK figlie). Senza
-    # questo, SQLAlchemy proverebbe a settare answers.language_id=NULL prima
-    # del delete, violando la constraint NOT NULL.
     answers = relationship(
         "Answer", back_populates="language",
         cascade="all, delete-orphan", passive_deletes=True,
@@ -315,17 +172,7 @@ class Language(Base):
 
 
 class LanguageAlias(Base):
-    """Storico degli id passati di una Language.
-
-    Ogni volta che `Language.id` viene rinominato (via PUT admin), il vecchio
-    id viene salvato qui. Il restore di backup e l'import Excel usano questa
-    tabella come fallback quando non trovano la lingua per id corrente:
-    cercano per `old_id` e, se trovato, lavorano sulla lingua puntata.
-
-    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due lingue diverse
-    (l'incoerenza renderebbe ambigui restore e import). Il vincolo viene
-    presidiato anche a livello applicativo nel PUT.
-    """
+    
     __tablename__ = "language_aliases"
     id = Column(Integer, primary_key=True)
     language_id = Column(
@@ -340,11 +187,6 @@ class LanguageAlias(Base):
     language = relationship("Language", back_populates="aliases")
 
 
-# ==========================================
-# 2.bis TASSONOMIA: top-family > family > group
-# I campi stringa su Language (top_level_family, family, grp) restano come
-# fonte di verità per filtri/export; queste tabelle sono il dizionario
-# gerarchico modificabile dall'admin via /admin/taxonomy.
 # ==========================================
 class TopFamily(Base):
     __tablename__ = "top_families"
@@ -377,17 +219,12 @@ class Group(Base):
 
 
 # ==========================================
-# 3. PARAMETRI E DOMANDE
-# ==========================================
 class ParameterDef(Base):
     __tablename__ = "parameter_defs"
     id = Column(String(10), primary_key=True)
     name = Column(String(200), nullable=False)
     short_description = Column(Text, default="")
     long_description = Column(Text, default="")
-    # Nota libera interna per gli admin sul parametro (non esportata). Distinta
-    # dalla admin_note di LanguageParameterStatus, che e' per (lingua, parametro).
-    # server_default="" così le righe esistenti non restano NULL al deploy.
     admin_remarks = Column(Text, default="", server_default="")
     implicational_condition = Column(String(255), nullable=True)
     description_of_the_implicational_condition = Column(Text, default="")
@@ -403,17 +240,7 @@ class ParameterDef(Base):
 
 
 class ParameterAlias(Base):
-    """Storico degli id passati di un ParameterDef.
-
-    Ogni volta che `ParameterDef.id` viene rinominato (via PUT admin), il vecchio
-    id viene salvato qui. Il restore di backup e l'import Excel usano questa
-    tabella come fallback quando non trovano il parametro per id corrente.
-
-    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due parametri diversi.
-    Speculare a [[LanguageAlias]] e QuestionAlias. NOTA: a differenza di lingue e
-    question, i parametri si citano per id dentro le formule `implicational_condition`
-    di altri parametri; il rename riscrive anche quelle (vedi router parameters).
-    """
+    
     __tablename__ = "parameter_aliases"
     id = Column(Integer, primary_key=True)
     parameter_id = Column(
@@ -445,24 +272,13 @@ class ParamLevelOfComparison(Base):
 
 
 class LanguageParameterStatus(Base):
-    """Traccia lo stato di completamento/revisione di un parametro per una lingua.
-
-    Contiene anche la `admin_note`: un testo libero per (lingua, parametro)
-    visibile e modificabile solo dagli admin.
-    """
+    
     __tablename__ = "language_parameter_statuses"
     id = Column(Integer, primary_key=True)
-    # `language_id` è leftmost della UniqueConstraint sotto: già indicizzato.
-    # `parameter_id` invece serve un indice esplicito per query "tutti i record
-    # di questo parametro" (es. consolidate, dashboard cross-language).
     language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     parameter_id = Column(String(10), ForeignKey("parameter_defs.id", onupdate="CASCADE"), nullable=False, index=True)
     is_unsure = Column(Boolean, default=False)
     admin_note = Column(Text, nullable=True)
-    # "Da ricontrollare": acceso quando una question del parametro viene
-    # modificata seriamente (non "Test edit"); rende GIALLO il quadratino per
-    # questa lingua finché il parametro non viene ri-salvato. Solo per le lingue
-    # che hanno già del lavoro su questo parametro.
     needs_review = Column(Boolean, nullable=False, default=False, server_default="false")
 
     __table_args__ = (UniqueConstraint('language_id', 'parameter_id', name='uq_lang_param_status'),)
@@ -488,17 +304,7 @@ class Question(Base):
 
 
 class QuestionAlias(Base):
-    """Storico degli id passati di una Question.
-
-    Ogni volta che `Question.id` viene rinominato (via PUT admin), il vecchio
-    id viene salvato qui. Il restore di backup e l'import Excel usano questa
-    tabella come fallback quando non trovano la domanda per id corrente:
-    cercano per `old_id` e, se trovato, lavorano sulla domanda puntata.
-
-    `old_id` è UNIQUE: non puo' esistere lo stesso alias su due domande diverse
-    (l'incoerenza renderebbe ambigui restore e import). Il vincolo viene
-    presidiato anche a livello applicativo nel PUT. Speculare a [[LanguageAlias]].
-    """
+    
     __tablename__ = "question_aliases"
     id = Column(Integer, primary_key=True)
     question_id = Column(
@@ -513,14 +319,9 @@ class QuestionAlias(Base):
     question = relationship("Question", back_populates="aliases")
 
 # ==========================================
-# 4. RISPOSTE ED ESEMPI
-# ==========================================
 class Answer(Base):
     __tablename__ = "answers"
     id = Column(Integer, primary_key=True)
-    # `language_id` leftmost della UniqueConstraint -> già indicizzato.
-    # `question_id` ha bisogno di un indice esplicito per query "tutte le
-    # risposte a questa domanda" (export, history, consolidate cross-language).
     language_id = Column(String(10), ForeignKey("languages.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     question_id = Column(String(40), ForeignKey("questions.id", onupdate="CASCADE"), nullable=False, index=True)
 
@@ -546,9 +347,6 @@ class Example(Base):
     gloss = Column(Text, nullable=True)
     translation = Column(Text, nullable=True)
     reference = Column(Text, nullable=True)
-    # Esempio "di test"/segnaposto, marcabile solo dagli admin. Conta come esempio
-    # valido (per il vincolo dei 2), ma rende GIALLO il quadratino del parametro
-    # finché non viene sostituito con un esempio reale.
     is_test = Column(Boolean, nullable=False, default=False, server_default="false")
 
     answer = relationship("Answer", back_populates="examples")
@@ -575,8 +373,6 @@ class AnswerMotivation(Base):
     answer = relationship("Answer", back_populates="answer_motivations")
     motivation = relationship("Motivation")
 
-# ==========================================
-# RESTO DEL FILE (Glossario, Log, DAG)
 # ==========================================
 class Glossary(Base):
     __tablename__ = "glossary"
@@ -615,8 +411,6 @@ class LanguageParameterEval(Base):
 
 
 # ==========================================
-# 5. CONTENUTI DINAMICI DEL SITO
-# ==========================================
 class SiteContent(Base):
     __tablename__ = "site_contents"
     key = Column(String(50), primary_key=True)  # Es: "instr_body"
@@ -629,21 +423,7 @@ class SiteContent(Base):
 
 
 class WhatsNewView(Base):
-    """Traccia, per utente, l'ultima versione di "What's New" gia' vista.
-
-    La "versione" del contenuto e' `site_contents.updated_at` della riga con
-    key='whats_new' (bumpato a ogni ripubblicazione del super-admin). Qui
-    salviamo, per ciascun utente, l'updated_at dell'ultima versione su cui ha
-    cliccato "OK" (`seen_version`). Il banner ricompare solo se la versione
-    corrente e' piu' recente di quella vista -> esattamente "una volta" per
-    utente, su qualsiasi dispositivo (a differenza del vecchio localStorage,
-    che era per-browser).
-
-    Tabella separata da `users` (come `consents`) per non toccare la tabella
-    piu' sensibile dell'app. Una riga per utente (PK = user_id, upsert).
-    ondelete CASCADE: e' un dato informativo, niente audit legale, quindi alla
-    cancellazione dell'utente la riga sparisce.
-    """
+    
     __tablename__ = "whats_new_views"
     user_id = Column(
         Integer,
@@ -655,8 +435,6 @@ class WhatsNewView(Base):
 
 
 # ==========================================
-# 6. BACKUP E SNAPSHOT (Submissions)
-# ==========================================
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, index=True)
@@ -665,7 +443,6 @@ class Submission(Base):
     submitted_at = Column(DateTime, default=utc_now, index=True)
     note = Column(Text, default="")
 
-    # Relazioni
     language = relationship("Language")
     submitted_by = relationship("User")
     answers = relationship("SubmissionAnswer", back_populates="submission", cascade="all, delete-orphan")
@@ -678,7 +455,6 @@ class SubmissionAnswer(Base):
     id = Column(Integer, primary_key=True, index=True)
     submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
 
-    # Salviamo solo il codice, senza FK rigida verso 'questions' per preservare lo storico
     question_code = Column(String(40), nullable=False)
     response_text = Column(String(50), nullable=True) # "yes", "no", ecc.
     comments = Column(Text, nullable=True)
@@ -696,8 +472,6 @@ class SubmissionExample(Base):
     gloss = Column(Text, nullable=True)
     translation = Column(Text, nullable=True)
     reference = Column(Text, nullable=True)
-    # Copia del flag "esempio di test" dall'Example originale, così lo snapshot
-    # di backup lo conserva (e sopravvive a export/restore del backup completo).
     is_test = Column(Boolean, nullable=False, default=False, server_default="false")
 
     submission = relationship("Submission", back_populates="examples")
@@ -709,9 +483,6 @@ class SubmissionAnswerMotivation(Base):
 
     question_code = Column(String(40), nullable=False)
     motivation_code = Column(String(50), nullable=False)
-    # Snapshot del testo della motivazione al momento del backup: il code da
-    # solo non basta perché la motivazione potrebbe essere modificata o
-    # eliminata dopo il backup, perdendo il significato dello storico.
     motivation_label = Column(Text, nullable=True)
 
     submission = relationship("Submission", back_populates="answer_motivations")
@@ -732,23 +503,15 @@ class SubmissionParam(Base):
 
 
 # ==========================================
-# 6.bis BACKUP DEI PARAMETRI (snapshot della definizione)
-# Tabelle separate dalle Submissions: qui si congela la *definizione* del
-# parametro (ParameterDef + Questions + motivations ammesse), non i dati
-# linguistici (quelli sono nel backup lingue).
-# ==========================================
 class ParameterSubmission(Base):
     __tablename__ = "parameter_submissions"
     id = Column(Integer, primary_key=True, index=True)
-    # Salvato come stringa: lo snapshot resta valido anche se il parametro
-    # viene poi cancellato/rinominato.
     parameter_id = Column(String(10), nullable=False, index=True)
     parameter_name = Column(String(200), nullable=False, default="")
     submitted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     submitted_at = Column(DateTime, default=utc_now, index=True)
     note = Column(Text, default="")
 
-    # Snapshot dei campi del ParameterDef
     short_description = Column(Text, default="")
     long_description = Column(Text, default="")
     implicational_condition = Column(String(255), nullable=True)
@@ -775,7 +538,6 @@ class ParameterSubmissionQuestion(Base):
         ForeignKey("parameter_submissions.id", ondelete="CASCADE"),
         nullable=False,
     )
-    # Codice della question (string), niente FK rigida verso `questions`
     question_code = Column(String(40), nullable=False)
     text = Column(Text, nullable=False, default="")
     template_type = Column(String(100), default="")
@@ -812,22 +574,8 @@ class ParameterSubmissionAllowedMotivation(Base):
 
 
 # ==========================================
-# 7. CRONOLOGIA VERSIONI (per rollback / audit granulare)
-# ==========================================
 class EntityVersion(Base):
-    """
-    Snapshot di un'entità a un certo istante. Usato come "salvataggio prima/dopo
-    modifica" per Parameters/Questions/Motivations/Languages.
-
-    Ogni record contiene:
-      - lo snapshot completo dell'entità DOPO la modifica (campo `snapshot`),
-      - l'operazione (`create`/`update`/`delete`),
-      - la sorgente (`manual` UI / `excel_import` / `system`),
-      - chi e quando.
-
-    Per ottenere il "prima" si guarda alla versione precedente con stesso
-    (entity_type, entity_id) ordinata per created_at.
-    """
+    
     __tablename__ = "entity_versions"
     id = Column(Integer, primary_key=True)
     entity_type = Column(String(40), nullable=False, index=True)
@@ -846,14 +594,6 @@ class EntityVersion(Base):
     )
 
 
-# ==========================================
-# 8. ARCHIVIO DOMANDE OBSOLETE
-# Quando una Question viene modificata in modo non compatibile con i dati
-# raccolti, le Answer/Example/AnswerMotivation collegate vengono spostate
-# qui (insieme a uno snapshot della question stessa al momento del wipe).
-# Le motivations e le lingue sono denormalizzate (code/label/name salvati
-# come stringhe), così l'archivio resta consistente anche se in seguito
-# vengono rinominate o eliminate. Stesso pattern di ParameterSubmission.
 # ==========================================
 class ArchivedQuestion(Base):
     __tablename__ = "archived_questions"

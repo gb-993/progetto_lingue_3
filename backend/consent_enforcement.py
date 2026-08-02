@@ -1,5 +1,4 @@
 """
-Middleware per enforcement dei consensi legali.
 Blocca con 403 le richieste autenticate di utenti che non hanno accettato
 """
 from __future__ import annotations

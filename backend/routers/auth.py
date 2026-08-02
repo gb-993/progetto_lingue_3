@@ -113,7 +113,7 @@ def forgot_password(
         body_text=body_text,
     )
 
-    return {"detail": "Se l'email e' registrata, riceverai un link per reimpostare la password."}
+    return {"detail": "If the email is registered, you will receive a link to reset your password."}
 
 
 @router.post("/reset-password")
