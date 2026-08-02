@@ -1,10 +1,4 @@
-"""
-Router di import Excel (admin only).
 
-Endpoint:
-  POST /api/admin/import/excel              -> upload xlsx, ritorna ImportReport JSON
-  POST /api/admin/import/error-report/xlsx  -> genera xlsx scaricabile con i soli errori
-"""
 from __future__ import annotations
 from typing import List
 from datetime import datetime
@@ -36,12 +30,6 @@ def post_import_excel(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """
-    Riceve un file .xlsx e lo importa secondo la strategia configurata.
-    Ritorna sempre 200 con il report (anche se ci sono errori — il client
-    decide cosa fare). Solo i casi catastrofici (file non leggibile,
-    errori di sistema) ritornano 4xx/5xx.
-    """
     fname = (file.filename or "").lower()
     if not fname.endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
         raise HTTPException(status_code=400,
@@ -61,9 +49,6 @@ def post_import_excel(
     return report.to_dict()
 
 
-# ============================================================================
-# Error report download
-# ============================================================================
 
 class ImportErrorRow(BaseModel):
     sheet: str
@@ -84,7 +69,6 @@ def post_error_report_xlsx(
     payload: ImportErrorPayload,
     current_user: models.User = Depends(require_admin),
 ):
-    """Genera un xlsx scaricabile con un sheet 'Errors' contenente l'elenco completo."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Errors"
@@ -103,7 +87,6 @@ def post_error_report_xlsx(
             e.reason,
         ])
 
-    # Larghezze indicative
     widths = [22, 8, 22, 40, 60]
     from openpyxl.utils import get_column_letter
     for i, w in enumerate(widths, start=1):
@@ -111,7 +94,6 @@ def post_error_report_xlsx(
     if ws.max_row >= 2:
         ws.freeze_panes = "A2"
 
-    # Sheet "Summary"
     if payload.target_language_name:
         ws_s = wb.create_sheet("Summary")
         ws_s.append(["Target language", payload.target_language_name, payload.target_language_id])

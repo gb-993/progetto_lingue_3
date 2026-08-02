@@ -1,15 +1,6 @@
 """
 Tracking in-memory dello stato di avanzamento dei job di migration import.
 
-Usato da `migration_import.import_migration_bundle` per pubblicare la fase
-corrente, e dall'endpoint `GET /api/admin/migration/status/{job_id}` per
-mostrare al client la progressione.
-
-Storage: dict modulo-livello protetto da Lock. Adeguato per single-process
-(uvicorn --workers=1, default in dev/staging). In produzione multi-worker
-servirebbe un backend condiviso (Redis/DB).
-
-I job completati vengono purgati automaticamente dopo 1h dal termine.
 """
 from __future__ import annotations
 import threading

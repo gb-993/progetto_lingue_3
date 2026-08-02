@@ -36,20 +36,12 @@ class QuestionBase(BaseModel):
 
 class QuestionUpdate(QuestionBase):
     change_note: Optional[str] = ""
-    # Se True, prima di applicare le modifiche le Answer/Example/AnswerMotivation
-    # collegate vengono spostate in archived_* (con snapshot della question
-    # *vecchia*) e poi cancellate dai tavoli attivi. La question viva resta
-    # con il nuovo testo e zero dati.
     wipe_data: bool = False
 
 class QuestionCreate(QuestionBase):
     change_note: Optional[str] = ""
-    # Se valorizzato, dopo aver creato la question vengono clonati tutti i dati
-    # linguistici (Answer/Example/AnswerMotivation) della question sorgente
-    # indicata. È il "Duplicate WITH data": la sorgente resta intatta.
     copy_data_from: Optional[str] = None
 
-# --- ENDPOINT ---
 @router.get("")
 def get_admin_questions(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     questions = (
@@ -88,9 +80,6 @@ def create_admin_question(item: QuestionCreate, background_tasks: BackgroundTask
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
-    # Duplicate WITH data: la sorgente da clonare deve esistere. La validiamo
-    # qui (prima di creare la nuova question) così un id sbagliato non lascia
-    # una question vuota a metà.
     if item.copy_data_from:
         source_q = db.query(models.Question).filter(models.Question.id == item.copy_data_from).first()
         if not source_q:
@@ -117,14 +106,10 @@ def create_admin_question(item: QuestionCreate, background_tasks: BackgroundTask
             for mot_id in item.allowed_motivations:
                 db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
 
-        # Duplicate WITH data: clona Answer/Example/AnswerMotivation dalla
-        # sorgente. Avviene dopo il primo commit, così il FK question_id punta
-        # a una question già persistita.
         copied = None
         if item.copy_data_from:
             copied = copy_question_data(db, item.copy_data_from, db_item.id)
 
-        # Registra il log di creazione nel parametro genitore (stessa logica del PUT)
         if item.change_note and item.change_note.strip():
             note = f"[Question {item.id}] New: {item.change_note.strip()}"
             if copied:
@@ -141,8 +126,6 @@ def create_admin_question(item: QuestionCreate, background_tasks: BackgroundTask
                        user_id=current_user.id, note=(item.change_note or None))
         db.commit()
 
-        # Se sono stati copiati dati, il consolidate del parametro cambia:
-        # schedula il ricalcolo per tutte le lingue (come toggle-active).
         if copied and copied["answers"]:
             background_tasks.add_task(recompute_parameter_for_all_languages, item.parameter_id)
 
@@ -162,16 +145,8 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     if not param:
         raise HTTPException(status_code=400, detail="The associated parameter does not exist.")
 
-    # Snapshot del parameter_id prima dell'update: se cambia parent, dobbiamo
-    # ricalcolare anche il parametro vecchio (oltre a quello nuovo, sempre).
     old_parameter_id = db_item.parameter_id
 
-    # --- Rename dell'id: validazioni + gestione alias (speculare a languages) ---
-    # Il DB ha ON UPDATE CASCADE su tutte le FK verso questions.id (answers,
-    # question_allowed_motivations), quindi i record collegati vengono aggiornati
-    # nella stessa transazione. Le tabelle storiche con question_id denormalizzato
-    # senza FK (archived_questions.original_question_id, entity_versions) NON
-    # seguono: per design conservano il valore al momento dell'archiviazione/log.
     new_id = (item.id or "").strip()
     if not new_id:
         raise HTTPException(status_code=422, detail="Question ID cannot be empty.")
@@ -186,8 +161,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     if renaming:
         if db.query(models.Question.id).filter(models.Question.id == new_id).first():
             raise HTTPException(status_code=409, detail=f"Question ID '{new_id}' is already in use.")
-        # Il nuovo id non puo' collidere con un alias di un'altra domanda,
-        # altrimenti il resolver di restore/import diventerebbe ambiguo.
         conflicting_alias = (
             db.query(models.QuestionAlias)
             .filter(
@@ -205,9 +178,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
                 ),
             )
 
-    # Wipe + snapshot dei dati nelle tabelle archive PRIMA di applicare le
-    # modifiche (testo o rename): lo snapshot deve riflettere la versione vecchia
-    # e l'archivio registra il vecchio id.
     archived_id = None
     if item.wipe_data:
         archived = archive_service.archive_and_wipe(
@@ -219,15 +189,10 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
         archived_id = archived.id
 
     if renaming:
-        # Se il nuovo id era un alias di QUESTA stessa domanda (rename A->B->A),
-        # rimuovi quell'alias adesso: tra poco l'id ridiventa "corrente".
         db.query(models.QuestionAlias).filter(
             models.QuestionAlias.old_id == new_id,
             models.QuestionAlias.question_id == old_id,
         ).delete(synchronize_session=False)
-        # Applica il rename PRIMA di registrare l'alias: la cascade DB sposta
-        # answers/question_allowed_motivations sul nuovo id nella stessa
-        # transazione, ed evitiamo dipendenze sull'ordine di flush.
         db_item.id = new_id
         db.flush()
         existing_alias = (
@@ -256,7 +221,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     for mot_id in item.allowed_motivations:
         db.add(models.QuestionAllowedMotivation(question_id=db_item.id, motivation_id=mot_id))
 
-    # Registra il log di modifica nel parametro genitore (segna anche rename/wipe).
     note_parts = []
     if item.change_note and item.change_note.strip():
         note_parts.append(item.change_note.strip())
@@ -272,10 +236,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
         )
         db.add(log)
 
-    # Modifica SERIA (non marcata "Test edit") → segna il parametro come "da
-    # ricontrollare" per le lingue che hanno già del lavoro su di esso, così il
-    # quadratino diventa giallo finché non risalvano. Le modifiche leggere
-    # ("Test edit", estetiche) non allertano nessuno.
     is_test_edit = (item.change_note or "").strip().startswith("Test edit")
     if not is_test_edit:
         flag_parameter_needs_review(db, item.parameter_id)
@@ -288,9 +248,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
                        user_id=current_user.id, note=(rename_note or item.change_note or None))
         db.commit()
 
-        # Recompute sempre per il parametro corrente (qualunque modifica alla
-        # question, anche solo cosmetica, scatena il ricalcolo). Se la question
-        # ha cambiato parent, ricalcoliamo anche il vecchio parametro.
         impacted_param_ids = {item.parameter_id}
         if old_parameter_id and old_parameter_id != item.parameter_id:
             impacted_param_ids.add(old_parameter_id)
@@ -313,7 +270,6 @@ def get_question_data_stats(
     current_user: models.User = Depends(require_admin),
 ):
     """Quante Answer/Example/lingue sono collegate alla question.
-
     Usato dal frontend per mostrare il preview prima del wipe.
     """
     if not db.query(models.Question.id).filter(models.Question.id == id).first():
@@ -321,15 +277,6 @@ def get_question_data_stats(
     return archive_service.count_linked_data(db, id)
 
 
-# --- COPIA SOLO ESEMPI VERSO UN'ALTRA QUESTION ---
-# NB storico: qui vivevano anche /transfer-preview e /transfer-data ("Move
-# data": spostamento delle risposte intere con conflitti keep/overwrite).
-# Rimossi a giugno 2026 su richiesta: l'unico caso d'uso reale era
-# consolidare gli esempi, coperto dalla copia qui sotto senza perdita di dati.
-# Variante "leggera" del transfer (richiesta linguisti): duplica SOLO gli
-# esempi sulla destinazione, lingua per lingua. Risposte, motivazioni e testi
-# restano intatti su entrambe le question; la sorgente non viene svuotata.
-# Niente snapshot d'archivio (la sorgente non perde nulla) e niente recompute
 # (gli esempi non influenzano i valori dei parametri).
 class CopyExamplesPayload(BaseModel):
     dest_id: str
@@ -343,9 +290,7 @@ def get_copy_examples_preview(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Anteprima della copia esempi da `id` a `dest_id`: lingue copiabili
-    (con conteggio esempi e duplicati gia' presenti) e lingue saltate
-    (destinazione senza risposta a cui agganciare gli esempi)."""
+
     source = db.query(models.Question).filter(models.Question.id == id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -407,7 +352,6 @@ def copy_examples_endpoint(
 
 @router.patch("/{id}/toggle-active")
 def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Disattiva o riattiva una domanda senza eliminarla dal DB"""
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -415,7 +359,6 @@ def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Sessi
     db_item.is_active = not db_item.is_active
     parameter_id = db_item.parameter_id
 
-    # Logga automaticamente l'azione sul parametro
     azione = "Reactivated" if db_item.is_active else "Deactivated"
     log = models.ParameterChangeLog(
         parameter_id=parameter_id,
@@ -429,8 +372,6 @@ def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Sessi
                    user_id=current_user.id, note=azione)
     db.commit()
 
-    # Cambiare is_active fa cambiare il consolidate del parametro padre, e di
-    # conseguenza il DAG: schedula il ricalcolo per tutte le lingue.
     background_tasks.add_task(recompute_parameter_for_all_languages, parameter_id)
 
     return {"detail": "Question status updated", "is_active": db_item.is_active}
@@ -438,15 +379,6 @@ def toggle_question_active(id: str, background_tasks: BackgroundTasks, db: Sessi
 
 @router.delete("/{id}")
 def delete_admin_question(id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Eliminazione DEFINITIVA di una Question gia' disattivata.
-
-    Consentita SOLO dopo la disattivazione (409 altrimenti): coerente con la UI,
-    dove il cestino compare solo accanto a Reactivate. I dati linguistici
-    collegati (Answer/Example/AnswerMotivation di tutte le lingue) vengono
-    archiviati PRIMA della rimozione, cosi' nulla va perso (vedi
-    services/question_delete). Lo storico immutabile (entity_versions,
-    archived_*, parameter_change_logs) non viene toccato dalla delete.
-    """
     db_item = db.query(models.Question).filter(models.Question.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -464,10 +396,6 @@ def delete_admin_question(id: str, background_tasks: BackgroundTasks, db: Sessio
         db.rollback()
         raise HTTPException(status_code=400, detail="Could not delete the question.")
 
-    # Ricalcolo di sicurezza: una question disattivata non concorre gia' al
-    # consolidate (param_consolidate filtra is_active), quindi i valori non
-    # cambiano; manteniamo comunque la stessa disciplina di toggle-active per
-    # coerenza con DAG/cache.
     background_tasks.add_task(recompute_parameter_for_all_languages, parameter_id)
 
     return {"detail": "Question deleted permanently", "archived_question_id": archived_id}

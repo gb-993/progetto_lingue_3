@@ -1,17 +1,4 @@
-"""
-Router di export Excel.
 
-Endpoint:
-  GET  /api/export/language/{lang_id}/xlsx                       -> singola lingua (admin: 4 sheet, user: 1 sheet)
-  POST /api/admin/export/languages-list/xlsx                     -> metadata di lingue selezionate (admin)
-  POST /api/admin/export/languages/zip                           -> AVVIA backup zip async, ritorna {job_id}
-  GET  /api/admin/export/languages/zip/status/{job_id}           -> stato del job (phase, current, total, finished, error)
-  GET  /api/admin/export/languages/zip/download/{job_id}         -> scarica il file pronto (one-shot, poi cleanup)
-  POST /api/admin/export/full-backup/zip                         -> AVVIA full backup async (lingue + extras)
-  GET  /api/admin/export/full-backup/zip/status/{job_id}         -> stato del job
-  GET  /api/admin/export/full-backup/zip/download/{job_id}       -> scarica il full backup pronto
-  GET  /api/admin/export/schema/xlsx                             -> schema only (parametri/domande/motivazioni) (admin)
-"""
 from __future__ import annotations
 from typing import List, Optional
 from datetime import datetime
@@ -69,9 +56,6 @@ def _ts() -> str:
     return utc_now().strftime("%Y%m%d")
 
 
-# ============================================================================
-# 1. Single language export (admin: full, user: examples-only)
-# ============================================================================
 
 @router.get("/export/language/{lang_id}/xlsx")
 def export_single_language(
@@ -98,14 +82,7 @@ def export_single_language_pdf(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """PDF parametric data della lingua (admin only).
 
-    A differenza dell'export Excel — che ha una variante 'examples-only' per
-    gli utenti assegnati alla lingua — il PDF e' un report aggregato di
-    risposte/parametri/note: ha senso solo per admin. Layout: cover con
-    metadati lingua, poi una scheda per ogni parametro attivo (page break
-    dopo ogni parametro).
-    """
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not lang:
         raise HTTPException(status_code=404, detail="Language not found")
@@ -119,13 +96,8 @@ def export_single_language_pdf(
     )
 
 
-# ============================================================================
-# 2. Languages list export (admin only, supporta selezione + filtri lato client)
-# ============================================================================
 
 class LanguageListExportPayload(BaseModel):
-    # IDs selezionati (vuoto = tutte). I filtri lato client sono già applicati alla
-    # selezione, quindi qui basta la lista degli ID.
     lang_ids: List[str] = []
 
 
@@ -144,35 +116,9 @@ def export_language_list(
     return _xlsx_response(wb, f"PCM_languages_{_ts()}.xlsx")
 
 
-# ============================================================================
-# 3. BACKUP ZIP (admin only) — flusso asincrono con barra di progresso
-#
-#    Pensato come metodo di backup completo dei dati: contiene lo schema globale
-#    una volta sola (non più replicato in ogni xlsx per-lingua), i metadati di
-#    tutte le lingue selezionate, il glossario, e un xlsx per lingua col
-#    Database_model esteso (lossless: motivations + admin_note inclusi).
-#
-#    Struttura prodotta:
-#        PCM_backup_<ts>.zip
-#        ├── schema.xlsx              (Motivations / Parameters / Questions / QAM)
-#        ├── languages_metadata.xlsx  (lista lingue con metadata)
-#        ├── glossary.xlsx
-#        └── languages/
-#            ├── <ID>.xlsx            (Database_model + Answers + Examples + Admin Notes)
-#            └── ...
-#
-#    Flusso:
-#    1) Client POSTa la selezione → ritorna {job_id} subito
-#    2) Client polla GET status/{job_id} → mostra barra di progresso
-#    3) A fine job, client GET download/{job_id} → riceve il file (one-shot)
-#
-#    L'import totale (Fase 5) riconosce questa struttura.
-# ============================================================================
 
 
 def _run_backup_in_background(payload_lang_ids: Optional[List[str]], job_id: str) -> None:
-    """Eseguito dal threadpool di BackgroundTasks. Apre la propria DB session
-    perché quella iniettata via Depends() viene chiusa al ritorno della response."""
     db = SessionLocal()
     try:
         q = db.query(models.Language).order_by(func.lower(models.Language.id))
@@ -214,8 +160,6 @@ def start_export_languages_zip(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    # Validazione rapida prima di lanciare il job: count senza materializzare
-    # gli oggetti, così rispondiamo subito con 400 se la selezione è vuota.
     q = db.query(models.Language.id)
     if payload.lang_ids:
         q = q.filter(models.Language.id.in_(payload.lang_ids))
@@ -257,8 +201,6 @@ def download_export(
         raise HTTPException(status_code=410, detail="File already downloaded or expired")
 
     fname = f"PCM_backup_{_ts()}.zip"
-    # Cleanup post-invio: BackgroundTasks gira DOPO che la response è stata
-    # spedita, quindi il file resta integro per tutta la durata dello stream.
     background_tasks.add_task(export_jobs.cleanup_file, path)
     return FileResponse(
         path=path,
@@ -267,15 +209,6 @@ def download_export(
     )
 
 
-# ============================================================================
-# 3.bis FULL BACKUP ZIP (admin only) — backup completo per disaster recovery
-#
-#    Stesso flusso async del backup standard, ma include la cartella `extras/`
-#    con site_content, submissions, parameter_submissions, archived_questions.
-#    Esporta SEMPRE tutte le lingue: la pagina di restore è il posto giusto
-#    per un "tutto il sito", non c'è motivo di filtrare per selezione qui.
-#    Gli utenti NON sono inclusi (vanno gestiti separatamente).
-# ============================================================================
 
 
 def _run_full_backup_in_background(job_id: str) -> None:
@@ -365,18 +298,10 @@ def download_full_backup(
     )
 
 
-# ============================================================================
-# 4. Geographic distances export (GCD matrix, admin only)
-# ============================================================================
 
 
 def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance in nautical miles via law of cosines.
 
-    Porting esatto da gcd.py (Ceolin, Boundaries repo): conversione gradi→radianti,
-    arrotondamento a 5 decimali per evitare argomenti >1 di acos dovuti al floating
-    point, conversione finale gradi×60 (ogni grado = 60 miglia nautiche).
-    """
     x1, y1 = math.radians(lat1), math.radians(lon1)
     x2, y2 = math.radians(lat2), math.radians(lon2)
     cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
@@ -423,9 +348,6 @@ def export_languages_gcd(
     return Response(content=content, media_type="text/plain; charset=utf-8", headers=headers)
 
 
-# ============================================================================
-# 5. Schema export (admin, da ParameterList)
-# ============================================================================
 
 @router.get("/admin/export/schema/xlsx")
 def export_schema(

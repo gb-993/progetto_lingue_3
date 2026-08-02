@@ -10,7 +10,6 @@ from services.versioning import record_version
 
 router = APIRouter(prefix="/api/admin/motivations", tags=["Motivations"])
 
-# --- SCHEMA PYDANTIC ---
 class MotivationBase(BaseModel):
     code: str
     label: str
@@ -21,7 +20,6 @@ class MotivationRead(MotivationBase):
     class Config:
         from_attributes = True
 
-# --- ENDPOINT ---
 @router.get("", response_model=List[MotivationRead])
 def get_motivations(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Recupera la lista delle motivazioni."""
@@ -80,7 +78,6 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
 
-    # Rileva le modifiche per creare un log automatico
     changes = []
     if db_item.code != item.code:
         changes.append(f"code changed from '{db_item.code}' to '{item.code}'")
@@ -90,9 +87,7 @@ def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_d
     db_item.code = item.code
     db_item.label = item.label
 
-    # Se ci sono state modifiche effettive, loggale sui parametri associati specificando la domanda
     if changes:
-        # Trova le coppie (parameter_id, question_id) univoche collegate a questa motivazione
         affected_questions = db.query(
             models.Question.parameter_id,
             models.Question.id
@@ -129,8 +124,6 @@ def delete_motivation(id: int, db: Session = Depends(get_db), current_user: mode
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
 
-    # Snapshot finale registrato PRIMA del delete: dopo db.delete + commit
-    # l'entità non è più caricabile e perderemmo lo storico.
     record_version(db, db_item, operation="delete", source="manual", user_id=current_user.id)
     db.delete(db_item)
     try:

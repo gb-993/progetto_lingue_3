@@ -1,3 +1,7 @@
+"""Backup 'submission': 
+snapshot storico di una o tutte le lingue (Answer/Example/Motivation/Parametri congelati in tabelle Submission*) 
+con pruning automatico, più l'export xlsx di una submission salvata."""
+
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from time_utils import utc_now
@@ -11,124 +15,107 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 import models
 from services.citation import apply_excel_citation
 
-# Massimo numero di salvataggi storici mantenuti per ogni lingua
 MAX_PER_LANGUAGE = 10
 
 def create_language_submission(db: Session, language: models.Language, user_id: int, note: str = "", fixed_time: datetime = None):
-    """
-    Crea uno snapshot 'full' per una singola lingua.
-    Equivalente al vecchio services.py di Django.
-    """
+    """Crea uno snapshot 'full' di una lingua (Submission + risposte/motivazioni/esempi/parametri), con pruning automatico oltre MAX_PER_LANGUAGE."""
     now = fixed_time or utc_now()
 
-    # 1. Creazione record principale Submission
-    sub = models.Submission(
+    submission = models.Submission(
         language_id=language.id,
         submitted_by_id=user_id,
         submitted_at=now,
         note=note or ""
     )
-    db.add(sub)
-    db.flush() # Fa l'insert nel DB per ottenere l'ID della submission, ma senza committare
+    db.add(submission)
+    db.flush()
 
-    # 2. Estrazione e copia delle Answers (con Motivations e Examples)
-    # Usiamo joinedload per evitare il problema query N+1, come faceva select_related/prefetch_related
     answers = db.query(models.Answer).options(
         joinedload(models.Answer.examples),
         joinedload(models.Answer.answer_motivations).joinedload(models.AnswerMotivation.motivation)
     ).filter(models.Answer.language_id == language.id).all()
 
-    sub_answers = []
-    sub_mots = []
-    sub_ex = []
+    submission_answers = []
+    submission_motivations = []
+    submission_examples = []
 
-    for a in answers:
-        sub_answers.append(models.SubmissionAnswer(
-            submission_id=sub.id,
-            question_code=a.question_id,
-            response_text=a.response_text,
-            comments=a.comments or ""
+    for answer in answers:
+        submission_answers.append(models.SubmissionAnswer(
+            submission_id=submission.id,
+            question_code=answer.question_id,
+            response_text=answer.response_text,
+            comments=answer.comments or ""
         ))
-        for am in a.answer_motivations:
-            sub_mots.append(models.SubmissionAnswerMotivation(
-                submission_id=sub.id,
-                question_code=a.question_id,
-                motivation_code=am.motivation.code,
-                motivation_label=am.motivation.label,
+        for answer_motivation in answer.answer_motivations:
+            submission_motivations.append(models.SubmissionAnswerMotivation(
+                submission_id=submission.id,
+                question_code=answer.question_id,
+                motivation_code=answer_motivation.motivation.code,
+                motivation_label=answer_motivation.motivation.label,
             ))
-        for ex in a.examples:
-            sub_ex.append(models.SubmissionExample(
-                submission_id=sub.id,
-                question_code=a.question_id,
-                textarea=ex.textarea or "",
-                transliteration=ex.transliteration or "",
-                gloss=ex.gloss or "",
-                translation=ex.translation or "",
-                reference=ex.reference or "",
-                is_test=bool(ex.is_test),
+        for example in answer.examples:
+            submission_examples.append(models.SubmissionExample(
+                submission_id=submission.id,
+                question_code=answer.question_id,
+                textarea=example.textarea or "",
+                transliteration=example.transliteration or "",
+                gloss=example.gloss or "",
+                translation=example.translation or "",
+                reference=example.reference or "",
+                is_test=bool(example.is_test),
             ))
 
-    # 3. Estrazione e copia dei Parametri + Eval (DAG)
-    lparams = db.query(models.LanguageParameter).options(
+    language_parameters = db.query(models.LanguageParameter).options(
         joinedload(models.LanguageParameter.eval)
     ).filter(models.LanguageParameter.language_id == language.id).all()
 
-    sub_params = []
-    for lp in lparams:
-        eval_obj = lp.eval
-        sub_params.append(models.SubmissionParam(
-            submission_id=sub.id,
-            parameter_id=lp.parameter_id,
-            value_orig=lp.value_orig,
-            warning_orig=lp.warning_orig,
-            value_eval=eval_obj.value_eval if eval_obj else "0",
-            warning_eval=eval_obj.warning_eval if eval_obj else False,
+    submission_params = []
+    for language_parameter in language_parameters:
+        evaluation = language_parameter.eval
+        submission_params.append(models.SubmissionParam(
+            submission_id=submission.id,
+            parameter_id=language_parameter.parameter_id,
+            value_orig=language_parameter.value_orig,
+            warning_orig=language_parameter.warning_orig,
+            value_eval=evaluation.value_eval if evaluation else "0",
+            warning_eval=evaluation.warning_eval if evaluation else False,
             evaluated_at=now
         ))
 
-    # Inserimento massivo stile bulk_create
-    db.add_all(sub_answers)
-    db.add_all(sub_mots)
-    db.add_all(sub_ex)
-    db.add_all(sub_params)
+    db.add_all(submission_answers)
+    db.add_all(submission_motivations)
+    db.add_all(submission_examples)
+    db.add_all(submission_params)
     db.flush()
 
-    # 4. Pruning automatico per limitare lo storage
-    subs = db.query(models.Submission.id).filter(
+    existing_submissions = db.query(models.Submission.id).filter(
         models.Submission.language_id == language.id
     ).order_by(models.Submission.submitted_at.desc(), models.Submission.id.desc()).all()
 
     pruned_count = 0
-    if len(subs) > MAX_PER_LANGUAGE:
-        # Teniamo solo i primi N ID
-        ids_to_keep = [s[0] for s in subs[:MAX_PER_LANGUAGE]]
+    if len(existing_submissions) > MAX_PER_LANGUAGE:
+        ids_to_keep = [s[0] for s in existing_submissions[:MAX_PER_LANGUAGE]]
         deleted = db.query(models.Submission).filter(
             models.Submission.language_id == language.id,
             models.Submission.id.notin_(ids_to_keep)
         ).delete(synchronize_session=False)
         pruned_count = deleted
 
-    return sub, pruned_count
+    return submission, pruned_count
 
 def create_all_languages_backup(db: Session, user_id: int, note: str = "Global backup"):
-    """
-    Forza un backup globale sincronizzato per tutte le lingue.
-    Tutte le query condividono una singola transazione.
-    """
     languages = db.query(models.Language).all()
 
-    # Trucco fondamentale: azzeriamo i microsecondi per far sì che
-    # tutto il backup appartenga alla stessa identica data (la nostra "cartella")
+    # Azzeriamo i microsecondi così tutto il backup appartiene alla stessa identica data.
     fixed_time = utc_now().replace(microsecond=0)
 
     total_pruned = 0
 
     try:
-        for lang in languages:
-            _, pruned = create_language_submission(db, lang, user_id, note, fixed_time)
+        for language in languages:
+            _, pruned = create_language_submission(db, language, user_id, note, fixed_time)
             total_pruned += pruned
 
-        # Confermiamo l'intera transazione solo se tutte le lingue sono state processate con successo
         db.commit()
 
         return {
@@ -137,44 +124,35 @@ def create_all_languages_backup(db: Session, user_id: int, note: str = "Global b
             "pruned": total_pruned,
             "timestamp": fixed_time
         }
-    except Exception as e:
-        # Se anche un solo elemento fallisce, annulliamo tutto (equivalente di with transaction.atomic() in Django)
+    except Exception as exception:
         db.rollback()
-        raise e
+        raise exception
 
-
-# ============================================================================
-# Export di una Submission in xlsx (download dei backup, equivalente al
-# download "Old questions archive"). Riusa lo snapshot in DB: niente lookup
-# sui dati vivi, così il file riflette esattamente lo stato salvato.
-# ============================================================================
 
 _BOLD_WHITE = Font(bold=True, color="FFFFFF")
 
 
-def _bold_header_row(ws, n_cols: int) -> None:
-    for i in range(1, n_cols + 1):
-        ws.cell(row=1, column=i).font = _BOLD_WHITE
+def _bold_header_row(worksheet, column_count: int) -> None:
+    for column_index in range(1, column_count + 1):
+        worksheet.cell(row=1, column=column_index).font = _BOLD_WHITE
 
 
-def _style_table(ws, name: str, n_cols: int, widths) -> None:
-    """Tabella stile TableStyleMedium2 con header su fondo blu (richiesto
-    perché _bold_header_row mette font bianco): senza il fill l'header sarebbe
-    invisibile su fondo bianco."""
-    if ws.max_row >= 2:
-        ref = f"A1:{get_column_letter(n_cols)}{ws.max_row}"
-        tbl = Table(displayName=name, ref=ref)
-        tbl.tableStyleInfo = TableStyleInfo(
+def _style_table(worksheet, name: str, column_count: int, column_widths) -> None:
+    """TableStyleMedium2 ha fondo header blu: necessario perché _bold_header_row imposta font bianco, altrimenti illeggibile."""
+    if worksheet.max_row >= 2:
+        table_range = f"A1:{get_column_letter(column_count)}{worksheet.max_row}"
+        table = Table(displayName=name, ref=table_range)
+        table.tableStyleInfo = TableStyleInfo(
             name="TableStyleMedium2",
             showFirstColumn=False, showLastColumn=False,
             showRowStripes=True, showColumnStripes=False,
         )
-        ws.add_table(tbl)
-        ws.freeze_panes = "A2"
-    for idx, w in enumerate(widths, start=1):
-        if idx > n_cols:
+        worksheet.add_table(table)
+        worksheet.freeze_panes = "A2"
+    for column_index, width in enumerate(column_widths, start=1):
+        if column_index > column_count:
             break
-        ws.column_dimensions[get_column_letter(idx)].width = w
+        worksheet.column_dimensions[get_column_letter(column_index)].width = width
 
 
 _INFO_HEADERS = ["Field", "Value"]
@@ -183,110 +161,95 @@ _ANSWERS_HEADERS = ["Question", "Answer", "Motivations", "Comments"]
 _EXAMPLES_HEADERS = ["Question", "Example text", "Transliteration", "Gloss", "Translation", "Reference", "Is Test"]
 
 
-def build_submission_workbook(db: Session, sub: models.Submission) -> Workbook:
-    """Workbook per una singola Submission (backup di una lingua).
+def build_submission_workbook(db: Session, submission: models.Submission) -> Workbook:
+    """Workbook con 4 sheet (Info, Parameters, Answers, Examples) per il backup di una lingua; tutti i dati vengono dallo snapshot Submission, niente lookup sulle tabelle vive."""
+    workbook = Workbook()
 
-    Sheet:
-      - Info       : Language id/name, Backup date, Submitted by, Note
-      - Parameters : value_orig, warning_orig, value_eval, warning_eval
-      - Answers    : question_code, response, motivazioni, comments
-      - Examples   : question_code, textarea, transliteration, gloss, translation, ref
+    info_sheet = workbook.active
+    info_sheet.title = "Info"
+    info_sheet.append(_INFO_HEADERS)
+    _bold_header_row(info_sheet, len(_INFO_HEADERS))
 
-    Tutti i dati derivano dallo snapshot Submission*: niente lookup sulle
-    tabelle vive — il file riflette lo stato congelato del backup.
-    """
-    wb = Workbook()
-
-    # === Info ===
-    ws_info = wb.active
-    ws_info.title = "Info"
-    ws_info.append(_INFO_HEADERS)
-    _bold_header_row(ws_info, len(_INFO_HEADERS))
-
-    lang = sub.language
+    language = submission.language
     submitter = (
-        f"{sub.submitted_by.name or ''} {sub.submitted_by.surname or ''}".strip()
-        or (sub.submitted_by.email if sub.submitted_by else "")
-    ) if sub.submitted_by_id else "System"
-    submitted_at_str = sub.submitted_at.strftime("%Y-%m-%d %H:%M UTC") if sub.submitted_at else ""
+        f"{submission.submitted_by.name or ''} {submission.submitted_by.surname or ''}".strip()
+        or (submission.submitted_by.email if submission.submitted_by else "")
+    ) if submission.submitted_by_id else "System"
+    submitted_at_str = submission.submitted_at.strftime("%Y-%m-%d %H:%M UTC") if submission.submitted_at else ""
 
-    ws_info.append(["Language ID", lang.id if lang else (sub.language_id or "")])
-    ws_info.append(["Language name", lang.name_full if lang else ""])
-    ws_info.append(["Backup date (UTC)", submitted_at_str])
-    ws_info.append(["Submitted by", submitter])
-    ws_info.append(["Note", sub.note or ""])
-    _style_table(ws_info, "BackupInfo", len(_INFO_HEADERS), [22, 60])
+    info_sheet.append(["Language ID", language.id if language else (submission.language_id or "")])
+    info_sheet.append(["Language name", language.name_full if language else ""])
+    info_sheet.append(["Backup date (UTC)", submitted_at_str])
+    info_sheet.append(["Submitted by", submitter])
+    info_sheet.append(["Note", submission.note or ""])
+    _style_table(info_sheet, "BackupInfo", len(_INFO_HEADERS), [22, 60])
 
-    # === Parameters ===
-    ws_par = wb.create_sheet("Parameters")
-    ws_par.append(_PARAMS_HEADERS)
-    _bold_header_row(ws_par, len(_PARAMS_HEADERS))
-    params_sorted = sorted(sub.params, key=lambda p: p.parameter_id or "")
-    for p in params_sorted:
-        ws_par.append([
-            p.parameter_id or "",
-            p.value_orig or "",
-            "Yes" if p.warning_orig else "",
-            p.value_eval or "",
-            "Yes" if p.warning_eval else "",
+    parameters_sheet = workbook.create_sheet("Parameters")
+    parameters_sheet.append(_PARAMS_HEADERS)
+    _bold_header_row(parameters_sheet, len(_PARAMS_HEADERS))
+    params_sorted = sorted(submission.params, key=lambda p: p.parameter_id or "")
+    for submission_param in params_sorted:
+        parameters_sheet.append([
+            submission_param.parameter_id or "",
+            submission_param.value_orig or "",
+            "Yes" if submission_param.warning_orig else "",
+            submission_param.value_eval or "",
+            "Yes" if submission_param.warning_eval else "",
         ])
-    _style_table(ws_par, "BackupParameters", len(_PARAMS_HEADERS), [16, 14, 14, 14, 14])
+    _style_table(parameters_sheet, "BackupParameters", len(_PARAMS_HEADERS), [16, 14, 14, 14, 14])
 
-    # Pre-aggrega le motivations per question_code (label fallback su code)
-    mots_by_q: dict[str, list[str]] = {}
-    for m in sub.answer_motivations:
-        text = m.motivation_label or m.motivation_code or ""
-        if text:
-            mots_by_q.setdefault(m.question_code, []).append(text)
+    # Label delle motivations per question_code, con fallback su code se manca la label.
+    motivations_by_question_code: dict[str, list[str]] = {}
+    for answer_motivation in submission.answer_motivations:
+        label = answer_motivation.motivation_label or answer_motivation.motivation_code or ""
+        if label:
+            motivations_by_question_code.setdefault(answer_motivation.question_code, []).append(label)
 
-    # === Answers ===
-    ws_ans = wb.create_sheet("Answers")
-    ws_ans.append(_ANSWERS_HEADERS)
-    _bold_header_row(ws_ans, len(_ANSWERS_HEADERS))
-    answers_sorted = sorted(sub.answers, key=lambda a: a.question_code or "")
-    for a in answers_sorted:
-        resp = ""
-        if a.response_text == "yes":
-            resp = "YES"
-        elif a.response_text == "no":
-            resp = "NO"
-        elif a.response_text == "unsure":
-            resp = "UNSURE"
-        elif a.response_text == "missing":
-            resp = "MISSING"
-        elif a.response_text:
-            resp = a.response_text
-        ws_ans.append([
-            a.question_code or "",
-            resp,
-            "; ".join(mots_by_q.get(a.question_code, [])),
-            a.comments or "",
+    answers_sheet = workbook.create_sheet("Answers")
+    answers_sheet.append(_ANSWERS_HEADERS)
+    _bold_header_row(answers_sheet, len(_ANSWERS_HEADERS))
+    answers_sorted = sorted(submission.answers, key=lambda a: a.question_code or "")
+    for answer in answers_sorted:
+        response_label = ""
+        if answer.response_text == "yes":
+            response_label = "YES"
+        elif answer.response_text == "no":
+            response_label = "NO"
+        elif answer.response_text == "unsure":
+            response_label = "UNSURE"
+        elif answer.response_text == "missing":
+            response_label = "MISSING"
+        elif answer.response_text:
+            response_label = answer.response_text
+        answers_sheet.append([
+            answer.question_code or "",
+            response_label,
+            "; ".join(motivations_by_question_code.get(answer.question_code, [])),
+            answer.comments or "",
         ])
-    _style_table(ws_ans, "BackupAnswers", len(_ANSWERS_HEADERS), [16, 10, 30, 36])
+    _style_table(answers_sheet, "BackupAnswers", len(_ANSWERS_HEADERS), [16, 10, 30, 36])
 
-    # === Examples ===
-    ws_ex = wb.create_sheet("Examples")
-    ws_ex.append(_EXAMPLES_HEADERS)
-    _bold_header_row(ws_ex, len(_EXAMPLES_HEADERS))
-    examples_sorted = sorted(sub.examples, key=lambda e: (e.question_code or "", e.id or 0))
-    for e in examples_sorted:
-        ws_ex.append([
-            e.question_code or "",
-            e.textarea or "",
-            e.transliteration or "",
-            e.gloss or "",
-            e.translation or "",
-            e.reference or "",
-            "TEST" if e.is_test else "",
+    examples_sheet = workbook.create_sheet("Examples")
+    examples_sheet.append(_EXAMPLES_HEADERS)
+    _bold_header_row(examples_sheet, len(_EXAMPLES_HEADERS))
+    examples_sorted = sorted(submission.examples, key=lambda e: (e.question_code or "", e.id or 0))
+    for example in examples_sorted:
+        examples_sheet.append([
+            example.question_code or "",
+            example.textarea or "",
+            example.transliteration or "",
+            example.gloss or "",
+            example.translation or "",
+            example.reference or "",
+            "TEST" if example.is_test else "",
         ])
-    _style_table(ws_ex, "BackupExamples", len(_EXAMPLES_HEADERS), [14, 36, 22, 22, 26, 22, 8])
+    _style_table(examples_sheet, "BackupExamples", len(_EXAMPLES_HEADERS), [14, 36, 22, 22, 26, 22, 8])
 
-    apply_excel_citation(wb)
-    return wb
+    apply_excel_citation(workbook)
+    return workbook
 
 
 def workbook_to_bytes(wb: Workbook) -> bytes:
-    buf = io.BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
-    
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()

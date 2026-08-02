@@ -1,24 +1,5 @@
 """
-Servizio "copia esempi" tra question (richiesta linguisti, 2026-06: "copiare
-solo gli esempi di PSC_Qb in PSC_Qa, senza la domanda o la risposta o le
-motivazioni").
-
-Gli esempi della sorgente vengono DUPLICATI in coda a quelli della
-destinazione, lingua per lingua. Risposte, motivazioni e testi non vengono
-toccati, e la sorgente resta intatta (potra' poi essere disattivata
-normalmente).
-
-Vincolo strutturale: un Example vive agganciato a una Answer. Le lingue per
-cui la destinazione NON ha una risposta vengono saltate e segnalate nel
-report: creare una risposta "vuota" solo per attaccarci esempi inquinerebbe
-la compilazione.
-
-NB storico: qui viveva anche il "Move data" (spostamento delle risposte
-intere con risoluzione conflitti keep/overwrite). Rimosso a giugno 2026 su
-richiesta: l'unico caso d'uso reale era consolidare gli esempi, e la copia
-lo copre senza perdita di dati.
-
-Nessuna funzione qui committa: la transazione la gestisce il chiamante (router).
+Servizio "copia esempi" tra question 
 """
 from __future__ import annotations
 
@@ -26,32 +7,24 @@ from sqlalchemy.orm import Session, selectinload
 
 import models
 
-def _example_fingerprint(e: models.Example) -> tuple:
-    """Identita' di contenuto di un esempio, per la dedup in copia.
-
-    Confronta i campi testuali (trim): rilanciare la copia due volte non deve
-    duplicare esempi gia' presenti in destinazione. `number` e' escluso
-    apposta: e' solo un'etichetta d'ordine.
-    """
+def _example_fingerprint(example: models.Example) -> tuple:
     return (
-        (e.textarea or "").strip(),
-        (e.transliteration or "").strip(),
-        (e.gloss or "").strip(),
-        (e.translation or "").strip(),
-        (e.reference or "").strip(),
+        (example.textarea or "").strip(),
+        (example.transliteration or "").strip(),
+        (example.gloss or "").strip(),
+        (example.translation or "").strip(),
+        (example.reference or "").strip(),
     )
 
 
 def _next_example_number(dest_examples: list) -> int:
-    """Primo numero libero per gli esempi copiati: max dei `number` numerici
-    esistenti (fallback: quanti esempi ci sono) + 1."""
-    best = len(dest_examples)
-    for e in dest_examples:
+    highest_number = len(dest_examples)
+    for example in dest_examples:
         try:
-            best = max(best, int((e.number or "").strip()))
+            highest_number = max(highest_number, int((example.number or "").strip()))
         except ValueError:
             pass
-    return best + 1
+    return highest_number + 1
 
 
 def _load_answers_with_examples(db: Session, question_id: str) -> list:
@@ -64,42 +37,39 @@ def _load_answers_with_examples(db: Session, question_id: str) -> list:
 
 
 def preview_examples_copy(db: Session, source_id: str, dest_id: str) -> dict:
-    """Anteprima della copia esempi: per ogni lingua dice quanti esempi
-    verrebbero copiati, quanti sono gia' presenti identici (duplicati,
-    saltati) e quali lingue verrebbero saltate perche' la destinazione non
-    ha una risposta a cui agganciarli."""
-    src_answers = _load_answers_with_examples(db, source_id)
-    dst_by_lang = {a.language_id: a for a in _load_answers_with_examples(db, dest_id)}
-    lang_name = {
-        l.id: l.name_full
-        for l in db.query(models.Language.id, models.Language.name_full).all()
+
+    source_answers = _load_answers_with_examples(db, source_id)
+    dest_answer_by_lang = {answer.language_id: answer for answer in _load_answers_with_examples(db, dest_id)}
+    language_name_by_id = {
+        language.id: language.name_full
+        for language in db.query(models.Language.id, models.Language.name_full).all()
     }
 
     copyable, skipped = [], []
-    for a in src_answers:
-        if not a.examples:
+    for source_answer in source_answers:
+        if not source_answer.examples:
             continue
         entry = {
-            "language_id": a.language_id,
-            "language_name": lang_name.get(a.language_id, "") or "",
-            "examples_count": len(a.examples),
+            "language_id": source_answer.language_id,
+            "language_name": language_name_by_id.get(source_answer.language_id, "") or "",
+            "examples_count": len(source_answer.examples),
         }
-        dest_a = dst_by_lang.get(a.language_id)
-        if dest_a is None:
+        dest_answer = dest_answer_by_lang.get(source_answer.language_id)
+        if dest_answer is None:
             skipped.append(entry)
         else:
-            dest_fps = {_example_fingerprint(e) for e in dest_a.examples}
-            dup = sum(1 for e in a.examples if _example_fingerprint(e) in dest_fps)
-            entry["duplicates_count"] = dup
+            dest_fingerprints = {_example_fingerprint(example) for example in dest_answer.examples}
+            duplicates_count = sum(1 for example in source_answer.examples if _example_fingerprint(example) in dest_fingerprints)
+            entry["duplicates_count"] = duplicates_count
             copyable.append(entry)
 
-    copyable.sort(key=lambda c: (c["language_name"] or c["language_id"]))
-    skipped.sort(key=lambda c: (c["language_name"] or c["language_id"]))
+    copyable.sort(key=lambda entry: (entry["language_name"] or entry["language_id"]))
+    skipped.sort(key=lambda entry: (entry["language_name"] or entry["language_id"]))
     return {
         "copyable": copyable,
         "skipped": skipped,
-        "copyable_examples_total": sum(c["examples_count"] - c["duplicates_count"] for c in copyable),
-        "duplicates_total": sum(c["duplicates_count"] for c in copyable),
+        "copyable_examples_total": sum(entry["examples_count"] - entry["duplicates_count"] for entry in copyable),
+        "duplicates_total": sum(entry["duplicates_count"] for entry in copyable),
     }
 
 
@@ -116,46 +86,46 @@ def copy_examples_only(db: Session, source_id: str, dest_id: str) -> dict:
     linguisti): la tracciabilita' sta nel ParameterChangeLog del chiamante.
     Ritorna i conteggi. NON committa.
     """
-    src_answers = _load_answers_with_examples(db, source_id)
-    dst_by_lang = {a.language_id: a for a in _load_answers_with_examples(db, dest_id)}
+    source_answers = _load_answers_with_examples(db, source_id)
+    dest_answer_by_lang = {answer.language_id: answer for answer in _load_answers_with_examples(db, dest_id)}
 
     languages_processed = 0
     examples_copied = 0
     duplicates_skipped = 0
     languages_skipped: list[str] = []
 
-    for a in src_answers:
-        if not a.examples:
+    for source_answer in source_answers:
+        if not source_answer.examples:
             continue
-        dest_a = dst_by_lang.get(a.language_id)
-        if dest_a is None:
-            languages_skipped.append(a.language_id)
+        dest_answer = dest_answer_by_lang.get(source_answer.language_id)
+        if dest_answer is None:
+            languages_skipped.append(source_answer.language_id)
             continue
 
-        dest_fps = {_example_fingerprint(e) for e in dest_a.examples}
-        next_n = _next_example_number(dest_a.examples)
-        copied_here = 0
-        for e in a.examples:
-            fp = _example_fingerprint(e)
-            if fp in dest_fps:
+        dest_fingerprints = {_example_fingerprint(example) for example in dest_answer.examples}
+        next_number = _next_example_number(dest_answer.examples)
+        copied_count = 0
+        for example in source_answer.examples:
+            fingerprint = _example_fingerprint(example)
+            if fingerprint in dest_fingerprints:
                 duplicates_skipped += 1
                 continue
             db.add(models.Example(
-                answer_id=dest_a.id,
-                number=str(next_n),
-                textarea=e.textarea,
-                transliteration=e.transliteration,
-                gloss=e.gloss,
-                translation=e.translation,
-                reference=e.reference,
-                is_test=bool(e.is_test),
+                answer_id=dest_answer.id,
+                number=str(next_number),
+                textarea=example.textarea,
+                transliteration=example.transliteration,
+                gloss=example.gloss,
+                translation=example.translation,
+                reference=example.reference,
+                is_test=bool(example.is_test),
             ))
-            dest_fps.add(fp)
-            next_n += 1
-            copied_here += 1
-        if copied_here > 0:
+            dest_fingerprints.add(fingerprint)
+            next_number += 1
+            copied_count += 1
+        if copied_count > 0:
             languages_processed += 1
-        examples_copied += copied_here
+        examples_copied += copied_count
 
     db.flush()
     languages_skipped.sort()

@@ -13,10 +13,8 @@ class ContentUpdate(BaseModel):
 
 @router.get("/{key}")
 def get_site_content(key: str, db: Session = Depends(get_db)):
-    """Recupera un contenuto per chiave (es: instr_body)"""
     item = db.query(models.SiteContent).filter(models.SiteContent.key == key).first()
     if not item:
-        # Se non esiste, restituiamo un default vuoto o errore gestito dal front
         return {"key": key, "content": ""}
     return item
 

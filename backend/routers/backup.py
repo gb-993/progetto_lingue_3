@@ -22,9 +22,7 @@ class BackupCreatePayload(BaseModel):
 
 @router.get("")
 def get_backup_folders(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Raggruppa le submission per 'submitted_at' simulando una "Cartella di backup".
-    """
+
     results = db.query(
         models.Submission.submitted_at,
         models.Submission.note,
@@ -50,9 +48,7 @@ def get_backup_folders(db: Session = Depends(get_db), current_user: models.User 
 
 @router.get("/folder")
 def get_backup_folder_details(timestamp: datetime, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Recupera l'elenco delle lingue salvate in un preciso timestamp (dentro una cartella).
-    """
+
     submissions = db.query(models.Submission).options(
         joinedload(models.Submission.language)
     ).filter(models.Submission.submitted_at == timestamp).all()
@@ -84,10 +80,6 @@ def get_submission_detail(submission_id: int, db: Session = Depends(get_db), cur
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")
 
-    # Raggruppiamo le motivazioni per question_code come faceva Django.
-    # Esponiamo sia il code che il label snapshot: il frontend preferisce il
-    # label (testo leggibile congelato al momento del backup) e usa il code
-    # come fallback per i record vecchi creati prima dello snapshot.
     mots_by_q = {}
     for m in sub.answer_motivations:
         mots_by_q.setdefault(m.question_code, []).append({
@@ -135,8 +127,7 @@ def get_submission_detail(submission_id: int, db: Session = Depends(get_db), cur
 
 @router.get("/submissions/{submission_id}/xlsx")
 def export_submission_xlsx(submission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Scarica il backup di una lingua come xlsx (4 sheet: Info, Parameters,
-    Answers, Examples). Equivalente al download .xlsx di Old questions archive."""
+
     sub = db.query(models.Submission).options(
         joinedload(models.Submission.language),
         joinedload(models.Submission.submitted_by),
@@ -163,9 +154,7 @@ def export_submission_xlsx(submission_id: int, db: Session = Depends(get_db), cu
 
 @router.post("/create-all", status_code=status.HTTP_201_CREATED)
 def trigger_global_backup(payload: BackupCreatePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Genera un backup globale per tutte le lingue.
-    """
+
     try:
         result = backup_service.create_all_languages_backup(db, current_user.id, payload.note)
         return result
@@ -174,9 +163,7 @@ def trigger_global_backup(payload: BackupCreatePayload, db: Session = Depends(ge
 
 @router.delete("/{timestamp}")
 def delete_backup_folder(timestamp: datetime, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Elimina tutti i salvataggi associati a un preciso timestamp (elimina la cartella).
-    """
+
     deleted = db.query(models.Submission).filter(models.Submission.submitted_at == timestamp).delete()
     db.commit()
 

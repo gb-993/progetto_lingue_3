@@ -1,18 +1,4 @@
-"""
-Servizio archivio domande obsolete.
-
-Quando una Question viene modificata in modo non compatibile con i dati
-linguistici raccolti, l'admin puo' richiedere il "wipe": le Answer/Example/
-AnswerMotivation della question vengono spostate in tabelle archive
-(insieme a uno snapshot della question stessa) e cancellate dalle tabelle
-attive. La Question resta viva con il nuovo testo, pronta a raccogliere
-nuovi dati.
-
-API principali:
-  - archive_and_wipe(db, question, user_id, archive_note) -> ArchivedQuestion
-  - count_linked_data(db, question_id) -> dict {answers, examples, languages}
-  - build_archived_question_workbook(db, archived_question) -> Workbook
-"""
+"""Servizio archivio domande obsolete: sposta Answer/Example/AnswerMotivation in tabelle archive quando una Question cambia in modo incompatibile con i dati raccolti."""
 from __future__ import annotations
 from typing import Dict
 from datetime import datetime
@@ -29,10 +15,6 @@ from sqlalchemy import func
 import models
 from services.citation import apply_excel_citation
 
-
-# ============================================================================
-# STATS: contatore per la conferma pre-wipe (mostrato in UI)
-# ============================================================================
 
 def count_linked_data(db: Session, question_id: str) -> Dict[str, int]:
     """Quante Answer/Example/lingue sarebbero archiviate dal wipe."""
@@ -62,34 +44,22 @@ def count_linked_data(db: Session, question_id: str) -> Dict[str, int]:
     }
 
 
-# ============================================================================
-# WIPE: snapshot + sposta dati nell'archivio + cancella dai tavoli attivi
-# ============================================================================
-
 def snapshot_question_data(
     db: Session,
     question: models.Question,
     user_id: int | None,
     archive_note: str | None = None,
 ) -> models.ArchivedQuestion:
-    """
-    Crea una ArchivedQuestion con lo snapshot della question e copia tutte le
-    Answer/Example/AnswerMotivation collegate nelle tabelle archive, SENZA
-    cancellare i dati attivi.
-
-    Usato sia dal wipe (che subito dopo cancella le righe vive) sia dal transfer
-    (che invece le sposta su un'altra question). NON committa.
-    """
-    # Lookup nome del parametro per lo snapshot (denormalizzato).
-    param = (
+    """Snapshot della question e copia di Answer/Example/AnswerMotivation nelle tabelle archive, senza cancellare i dati attivi (non committa)."""
+    # Nome parametro congelato nello snapshot (denormalizzato).
+    parameter_def = (
         db.query(models.ParameterDef)
         .filter(models.ParameterDef.id == question.parameter_id)
         .first()
     )
-    param_name = param.name if param else ""
+    param_name = parameter_def.name if parameter_def else ""
 
-    # Crea il record archive con lo snapshot della question.
-    archived = models.ArchivedQuestion(
+    archived_question = models.ArchivedQuestion(
         original_question_id=question.id,
         parameter_id=question.parameter_id,
         parameter_name=param_name,
@@ -106,30 +76,29 @@ def snapshot_question_data(
         archived_by_id=user_id,
         archive_note=(archive_note or "").strip(),
     )
-    db.add(archived)
+    db.add(archived_question)
     db.flush()
 
-    # Allowed motivations snapshot (code + label congelati).
-    allowed = (
+    # Code e label delle motivazioni congelati nello snapshot.
+    allowed_motivations = (
         db.query(models.QuestionAllowedMotivation, models.Motivation)
         .join(models.Motivation, models.QuestionAllowedMotivation.motivation_id == models.Motivation.id)
         .filter(models.QuestionAllowedMotivation.question_id == question.id)
         .all()
     )
-    for _qam, mot in allowed:
+    for _qam, motivation in allowed_motivations:
         db.add(models.ArchivedQuestionMotivation(
-            archived_question_id=archived.id,
-            motivation_code=mot.code or "",
-            motivation_label=mot.label or "",
+            archived_question_id=archived_question.id,
+            motivation_code=motivation.code or "",
+            motivation_label=motivation.label or "",
         ))
 
-    # Lookup denormalizzato del nome lingua per ogni Answer.
-    lang_name_by_id: Dict[str, str] = {
-        l.id: l.name_full
-        for l in db.query(models.Language.id, models.Language.name_full).all()
+    # Nome lingua denormalizzato per ogni Answer.
+    language_name_by_id: Dict[str, str] = {
+        language.id: language.name_full
+        for language in db.query(models.Language.id, models.Language.name_full).all()
     }
 
-    # Copia tutte le Answer + Example + AnswerMotivation collegate.
     answers = (
         db.query(models.Answer)
         .filter(models.Answer.question_id == question.id)
@@ -137,45 +106,45 @@ def snapshot_question_data(
     )
     answers_count = 0
     examples_count = 0
-    for a in answers:
-        arch_a = models.ArchivedAnswer(
-            archived_question_id=archived.id,
-            language_id=a.language_id,
-            language_name_full=lang_name_by_id.get(a.language_id, "") or "",
-            status=a.status,
-            response_text=a.response_text,
-            comments=a.comments,
-            original_updated_at=a.updated_at,
+    for answer in answers:
+        archived_answer = models.ArchivedAnswer(
+            archived_question_id=archived_question.id,
+            language_id=answer.language_id,
+            language_name_full=language_name_by_id.get(answer.language_id, "") or "",
+            status=answer.status,
+            response_text=answer.response_text,
+            comments=answer.comments,
+            original_updated_at=answer.updated_at,
         )
-        db.add(arch_a)
+        db.add(archived_answer)
         db.flush()
         answers_count += 1
 
-        for ex in a.examples:
+        for example in answer.examples:
             db.add(models.ArchivedExample(
-                archived_answer_id=arch_a.id,
-                number=ex.number or "",
-                textarea=ex.textarea,
-                transliteration=ex.transliteration,
-                gloss=ex.gloss,
-                translation=ex.translation,
-                reference=ex.reference,
+                archived_answer_id=archived_answer.id,
+                number=example.number or "",
+                textarea=example.textarea,
+                transliteration=example.transliteration,
+                gloss=example.gloss,
+                translation=example.translation,
+                reference=example.reference,
             ))
             examples_count += 1
 
-        for am in a.answer_motivations:
-            mot = am.motivation
+        for answer_motivation in answer.answer_motivations:
+            motivation = answer_motivation.motivation
             db.add(models.ArchivedAnswerMotivation(
-                archived_answer_id=arch_a.id,
-                motivation_code=(mot.code if mot else "") or "",
-                motivation_label=(mot.label if mot else "") or "",
+                archived_answer_id=archived_answer.id,
+                motivation_code=(motivation.code if motivation else "") or "",
+                motivation_label=(motivation.label if motivation else "") or "",
             ))
 
-    archived.answers_count = answers_count
-    archived.examples_count = examples_count
+    archived_question.answers_count = answers_count
+    archived_question.examples_count = examples_count
 
     db.flush()
-    return archived
+    return archived_question
 
 
 def archive_and_wipe(
@@ -184,31 +153,21 @@ def archive_and_wipe(
     user_id: int | None,
     archive_note: str | None = None,
 ) -> models.ArchivedQuestion:
-    """
-    Snapshot della question PRIMA della modifica (chi chiama deve invocarla
-    *prima* di applicare le modifiche al testo) + cancellazione dei dati attivi.
+    """Snapshot della question (va chiamata PRIMA di modificarne il testo) + cancellazione dei dati attivi; non committa."""
+    archived_question = snapshot_question_data(db, question, user_id, archive_note)
 
-    NON committa: chi chiama gestisce la transazione.
-    """
-    archived = snapshot_question_data(db, question, user_id, archive_note)
-
-    # Cancella i dati attivi. Le cascate "all, delete-orphan" su Answer.examples
-    # e Answer.answer_motivations gestiscono Example/AnswerMotivation.
+    # Le cascade "all, delete-orphan" gestiscono Example/AnswerMotivation.
     answers = (
         db.query(models.Answer)
         .filter(models.Answer.question_id == question.id)
         .all()
     )
-    for a in answers:
-        db.delete(a)
+    for answer in answers:
+        db.delete(answer)
 
     db.flush()
-    return archived
+    return archived_question
 
-
-# ============================================================================
-# EXPORT XLSX (singolo "Database_model" come da richiesta linguisti)
-# ============================================================================
 
 ARCHIVED_DB_HEADERS = [
     "Language",
@@ -232,99 +191,94 @@ ARCHIVED_DB_HEADERS = [
 _BOLD_WHITE = Font(bold=True, color="FFFFFF")
 
 
-def _bold_header_row(ws, n_cols: int):
-    for i in range(1, n_cols + 1):
-        ws.cell(row=1, column=i).font = _BOLD_WHITE
+def _bold_header_row(worksheet, column_count: int):
+    for column_index in range(1, column_count + 1):
+        worksheet.cell(row=1, column=column_index).font = _BOLD_WHITE
 
 
-def _style_table(ws, name: str, n_cols: int, widths):
-    if ws.max_row < 2:
-        for idx, w in enumerate(widths, start=1):
-            if idx > n_cols:
+def _style_table(worksheet, name: str, column_count: int, column_widths):
+    if worksheet.max_row < 2:
+        for column_index, width in enumerate(column_widths, start=1):
+            if column_index > column_count:
                 break
-            ws.column_dimensions[get_column_letter(idx)].width = w
+            worksheet.column_dimensions[get_column_letter(column_index)].width = width
         return
-    ref = f"A1:{get_column_letter(n_cols)}{ws.max_row}"
-    tbl = Table(displayName=name, ref=ref)
-    tbl.tableStyleInfo = TableStyleInfo(
+    table_range = f"A1:{get_column_letter(column_count)}{worksheet.max_row}"
+    table = Table(displayName=name, ref=table_range)
+    table.tableStyleInfo = TableStyleInfo(
         name="TableStyleMedium2",
         showFirstColumn=False, showLastColumn=False,
         showRowStripes=True, showColumnStripes=False,
     )
-    ws.add_table(tbl)
-    ws.freeze_panes = "A2"
-    for idx, w in enumerate(widths, start=1):
-        if idx > n_cols:
+    worksheet.add_table(table)
+    worksheet.freeze_panes = "A2"
+    for column_index, width in enumerate(column_widths, start=1):
+        if column_index > column_count:
             break
-        ws.column_dimensions[get_column_letter(idx)].width = w
+        worksheet.column_dimensions[get_column_letter(column_index)].width = width
 
 
 def build_archived_question_workbook(
-    db: Session, archived: models.ArchivedQuestion
+    db: Session, archived_question: models.ArchivedQuestion
 ) -> Workbook:
-    """
-    Workbook con un singolo sheet "Database_model": una riga per lingua
-    archiviata, con esempi/glosse/traduzioni concatenati per cella (\\n).
-    Tutte le info derivano dallo snapshot archive: niente lookup vivi.
-    """
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Database_model"
-    ws.append(ARCHIVED_DB_HEADERS)
-    _bold_header_row(ws, len(ARCHIVED_DB_HEADERS))
+    """Workbook con un solo sheet "Database_model": una riga per lingua, tutta l'info dallo snapshot archive (niente lookup vivi)."""
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Database_model"
+    worksheet.append(ARCHIVED_DB_HEADERS)
+    _bold_header_row(worksheet, len(ARCHIVED_DB_HEADERS))
 
-    answers = sorted(archived.answers, key=lambda a: a.language_id)
-    for a in answers:
-        # Risposta: stringa stile vecchio progetto (YES/NO)
-        if a.response_text == "yes":
-            lang_answer = "YES"
-        elif a.response_text == "no":
-            lang_answer = "NO"
+    answers = sorted(archived_question.answers, key=lambda a: a.language_id)
+    for answer in answers:
+        # Stringa in stile vecchio progetto (YES/NO).
+        if answer.response_text == "yes":
+            answer_label = "YES"
+        elif answer.response_text == "no":
+            answer_label = "NO"
         else:
-            lang_answer = ""
+            answer_label = ""
 
-        ex_list = sorted(a.examples, key=lambda e: (e.number or "", e.id or 0))
-        cell_examples = "\n".join((ex.textarea or "") for ex in ex_list) if ex_list else ""
-        cell_translit = "\n".join((ex.transliteration or "") for ex in ex_list) if ex_list else ""
-        cell_gloss = "\n".join((ex.gloss or "") for ex in ex_list) if ex_list else ""
-        cell_transl = "\n".join((ex.translation or "") for ex in ex_list) if ex_list else ""
-        cell_refs = "\n".join((ex.reference or "") for ex in ex_list) if ex_list else ""
+        examples = sorted(answer.examples, key=lambda e: (e.number or "", e.id or 0))
+        cell_examples = "\n".join((example.textarea or "") for example in examples) if examples else ""
+        cell_transliteration = "\n".join((example.transliteration or "") for example in examples) if examples else ""
+        cell_gloss = "\n".join((example.gloss or "") for example in examples) if examples else ""
+        cell_translation = "\n".join((example.translation or "") for example in examples) if examples else ""
+        cell_refs = "\n".join((example.reference or "") for example in examples) if examples else ""
 
-        # Motivations selezionate: code + label per leggibilita'.
-        mots_str = ", ".join(
+        motivations_label = ", ".join(
             f"{m.motivation_code} ({m.motivation_label})" if m.motivation_label else m.motivation_code
-            for m in a.answer_motivations
+            for m in answer.answer_motivations
         )
 
-        ws.append([
-            a.language_name_full or "",
-            a.language_id or "",
-            archived.parameter_id or "",
-            archived.parameter_name or "",
-            archived.original_question_id or "",
-            archived.text or "",
-            archived.example_yes or "",
-            archived.instruction or "",
-            lang_answer,
-            a.comments or "",
-            mots_str,
+        worksheet.append([
+            answer.language_name_full or "",
+            answer.language_id or "",
+            archived_question.parameter_id or "",
+            archived_question.parameter_name or "",
+            archived_question.original_question_id or "",
+            archived_question.text or "",
+            archived_question.example_yes or "",
+            archived_question.instruction or "",
+            answer_label,
+            answer.comments or "",
+            motivations_label,
             cell_examples,
-            cell_translit,
+            cell_transliteration,
             cell_gloss,
-            cell_transl,
+            cell_translation,
             cell_refs,
         ])
 
     _style_table(
-        ws, "ArchivedDatabaseModel", len(ARCHIVED_DB_HEADERS),
+        worksheet, "ArchivedDatabaseModel", len(ARCHIVED_DB_HEADERS),
         [22, 12, 12, 22, 14, 36, 26, 26, 12, 22, 26, 30, 24, 22, 26, 24],
     )
-    apply_excel_citation(wb)
-    return wb
+    apply_excel_citation(workbook)
+    return workbook
 
 
-def workbook_to_bytes(wb: Workbook) -> bytes:
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return buf.getvalue()
+def workbook_to_bytes(workbook: Workbook) -> bytes:
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()

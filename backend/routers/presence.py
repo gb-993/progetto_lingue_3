@@ -1,14 +1,5 @@
 """
-Presence effimera per l'avviso di modifica concorrente.
-
-Quando un utente apre un form di modifica, il client batte un heartbeat ogni
-~4s. L'endpoint /heartbeat aggiorna la riga (entity_type, entity_id, user_id)
-e risponde con il numero di ALTRI utenti attivi sulla stessa entita'. Il
-frontend mostra un banner anonimo ("un altro utente sta modificando"): qui non
-viene mai restituita l'identita' di nessuno, solo un conteggio.
-
-Privacy: dati effimeri (TTL di pochi decine di secondi), nessuno storico. Le
-righe scadute vengono cancellate a ogni heartbeat. Vedi models.EditingSession.
+avviso di modifica concorrente.
 """
 import logging
 from datetime import timedelta
@@ -26,20 +17,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/presence", tags=["Presence"])
 
-# Un utente e' "attivo" su un'entita' se ha battuto un heartbeat negli ultimi
-# TTL secondi. Il client batte ogni ~4s (HEARTBEAT_MS in usePresence.js): 25s
-# lascia ~21s di margine, cioe' tollera piu' battiti persi senza falsi "uscito".
-# Margine generoso voluto: gli utenti si connettono via VPN e su WiFi
-# universitario, dove latenza e battiti irregolari sono frequenti.
 PRESENCE_TTL_SECONDS = 25
 
-# Allowlist dei tipi tracciabili (evita di accettare stringhe arbitrarie).
-#   - "question" / "parameter": form di modifica admin (scheda question/parametro).
-#   - "language": scheda di modifica metadati lingua (LanguageForm).
-#   - "language_parameter": sezione Data della compilazione, scopo per
-#     (lingua, parametro). entity_id = "<langId>:<paramId>" (max 10+1+10 = 21,
-#     entro il limite di 40 del validator sotto). Avverte quando due persone
-#     stanno compilando lo STESSO parametro della STESSA lingua.
 _ALLOWED_ENTITY_TYPES = {"question", "parameter", "language", "language_parameter"}
 
 
@@ -70,8 +49,6 @@ def heartbeat(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Aggiorna/crea la presence dell'utente e ritorna quanti ALTRI utenti sono
-    attivi sulla stessa entita' (solo conteggio, mai identita')."""
     now = utc_now()
     cutoff = now - timedelta(seconds=PRESENCE_TTL_SECONDS)
 
@@ -90,7 +67,6 @@ def heartbeat(
             last_heartbeat=now,
         ))
 
-    # Pulizia delle righe scadute per questa entita': niente storico.
     db.query(models.EditingSession).filter(
         models.EditingSession.entity_type == payload.entity_type,
         models.EditingSession.entity_id == payload.entity_id,
@@ -115,8 +91,7 @@ def leave(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Rimuove subito la presence dell'utente (best-effort all'uscita dal form).
-    Se non viene chiamata, la riga scade comunque per TTL."""
+
     db.query(models.EditingSession).filter(
         models.EditingSession.entity_type == payload.entity_type,
         models.EditingSession.entity_id == payload.entity_id,

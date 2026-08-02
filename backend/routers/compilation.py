@@ -19,12 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _run_dag_in_background(language_id: str) -> None:
-    """Esegue run_dag_for_language su una sessione DB dedicata.
 
-    La dependency `db` di FastAPI viene chiusa appena la response parte, quindi i
-    BackgroundTasks devono aprirsi una loro sessione. Errori loggati ma mai
-    propagati (il task gira fuori dal ciclo request/response).
-    """
     db = SessionLocal()
     try:
         run_dag_for_language(language_id, db)
@@ -37,13 +32,7 @@ def _run_dag_in_background(language_id: str) -> None:
 
 
 def _ensure_can_modify(language: models.Language, current_user: models.User):
-    """
-    Permessi di modifica (asse B):
-      - admin: SEMPRE, a prescindere dallo status (anche submitted/validated:
-        l'admin può sempre fixare/editare, senza dover prima riaprire).
-      - utente assegnato: solo in 'draft' (bloccato su submitted/validated).
-      - chiunque altro: 403.
-    """
+
     if current_user.role == "admin":
         return
     if language.assigned_user_id != current_user.id:
@@ -66,8 +55,6 @@ class ExampleInput(BaseModel):
     gloss: str = ""
     translation: str = ""
     reference: str = ""
-    # Esempio "di test"/segnaposto. Solo gli admin possono settarlo: per i
-    # non-admin il valore in arrivo viene ignorato (forzato a False) al salvataggio.
     is_test: bool = False
 
 class QuestionAnswerPayload(BaseModel):
@@ -80,15 +67,9 @@ class QuestionAnswerPayload(BaseModel):
 class ParameterBlockSavePayload(BaseModel):
     answers: List[QuestionAnswerPayload]
     is_unsure: bool
-    # Nota libera admin-only per (lingua, parametro). None = non passare in update;
-    # stringa vuota = svuotare la nota. Ignorata per utenti non admin.
     admin_note: Optional[str] = None
-    # Timestamp del blocco visto dal client al caricamento (ISO 8601). Se al save
-    # il MAX(updated_at) corrente è diverso, qualcun altro ha modificato nel mentre:
-    # rispondiamo 409 e il client deve ricaricare prima di sovrascrivere.
     expected_last_modified: Optional[str] = None
 
-# --- ENDPOINT: RICERCA ESEMPI (per import in fase di compilazione) ---
 @router.get("/examples/search")
 def search_examples(
     q: str = "",
@@ -97,21 +78,7 @@ def search_examples(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """
-    Ricerca esempi per il selettore di import della pagina di compilazione.
 
-    Filtro per lingua:
-      - language_id presente → ricerca SEMPRE ristretta a quella lingua, sia con
-        q vuota sia con q valorizzata. Un esempio linguistico non si ripete tra
-        lingue diverse, quindi gli esempi di altre lingue sarebbero rumore.
-      - language_id assente → ricerca globale (caso non usato dal frontend, ma
-        supportato; qui il limit di 200 fa da safety net per evitare payload enormi).
-
-    Filtri:
-      - q: full-text ILIKE su textarea/translation/gloss (case-insensitive)
-      - limit: se language_id è presente, nessun limite di default (mostra tutti
-        gli esempi della lingua). Se language_id è assente, clamp a [1, 200].
-    """
     base = db.query(
         models.Example.id,
         models.Example.textarea,
@@ -167,7 +134,6 @@ def search_examples(
     } for r in rows]
 
 
-# --- ENDPOINT: LETTURA DATI COMPILAZIONE ---
 @router.get("/{lang_id}/compilation")
 def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
@@ -195,7 +161,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     )
     ans_dict = {a.question_id: a for a in answers}
 
-    # Carica gli stati "unsure" dei parametri (e admin_note solo per admin)
     statuses = db.query(models.LanguageParameterStatus).filter(models.LanguageParameterStatus.language_id == language.id).all()
     status_dict = {s.parameter_id: s.is_unsure for s in statuses}
     needs_review_dict = {s.parameter_id: bool(s.needs_review) for s in statuses}
@@ -231,34 +196,24 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "supervisor": language.supervisor,
             "informant": language.informant,
             "source": language.source,
-            # Asse A: override manuale (super-admin) del completamento, o None.
             "completion_override": language.completion_override,
         },
         "parameters": []
     }
 
-    # Colori dei parametri "rispondibili" (con almeno una question attiva), per
-    # calcolare il completamento della lingua (asse A) dopo il loop.
     answerable_colors: list[str] = []
 
     for p in parameters:
-        # Ordine deterministico: prima le question regolari per id, poi le
-        # stop-question per id. Coerente con la pagina debug admin (vedi sotto)
-        # e indipendente dall'ordine fisico delle righe in Postgres.
         active_questions = sorted(
             (q for q in p.questions if q.is_active),
             key=lambda x: (x.is_stop_question, x.id),
         )
         total_q = len(active_questions)
-        # 'unsure' non conta come risposta completata: il parametro resta colorato
-        # come "vuoto" anche dopo il save, esattamente come una selezione vuota.
         answered_q = sum(
             1 for q in active_questions
             if q.id in ans_dict and ans_dict[q.id].response_text in ("yes", "no")
         )
 
-        # Fingerprint del blocco: MAX(updated_at) delle risposte appartenenti al parametro.
-        # Usato per il check di concorrenza ottimistica al save (admin/user simultanei).
         block_last_modified = None
         for q in active_questions:
             if q.id in ans_dict:
@@ -266,9 +221,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                 if u is not None and (block_last_modified is None or u > block_last_modified):
                     block_last_modified = u
 
-        # Colore del quadratino (grey/red/yellow/green). Calcolato dai dati
-        # correnti + il flag needs_review. is_flagged (unsure di parametro) NON
-        # entra nel colore: resta solo come dato informativo.
         qids = [q.id for q in active_questions]
         response_by_qid = {
             q.id: (ans_dict[q.id].response_text if q.id in ans_dict else None)
@@ -296,8 +248,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "stats": {"answered": answered_q, "total": total_q},
             "is_flagged": status_dict.get(p.id, False),
             "color": color,
-            # True se una question del parametro ha subito una modifica seria:
-            # il quadratino è giallo "da ricontrollare" finché non si ri-salva.
             "needs_review": needs_review_dict.get(p.id, False),
             "last_modified": block_last_modified.isoformat() if block_last_modified else None,
             "questions": []
@@ -318,10 +268,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
                     "response_text": ans.response_text or "",
                     "comments": ans.comments or "",
                     "motivation_ids": [m.motivation_id for m in ans.answer_motivations],
-                    # Ordine per id = ordine di inserimento. Al save gli esempi
-                    # vengono cancellati e ricreati nell'ordine inviato dal client,
-                    # quindi gli id crescenti riflettono il riordino fatto in UI
-                    # (frecce su/giù): ordinando per id qui l'ordine resiste al refresh.
                     "examples": [{
                         "id": ex.id,
                         "number": ex.number or "",
@@ -336,8 +282,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             param_data["questions"].append(q_data)
         result["parameters"].append(param_data)
 
-    # Completamento della lingua (asse A): override super-admin se presente,
-    # altrimenti calcolato dai colori dei parametri rispondibili.
     result["language"]["completion"] = (
         language.completion_override
         or language_completion_from_colors(answerable_colors)
@@ -352,16 +296,7 @@ def get_param_block_for_language(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Dati di compilazione di UN parametro per UNA lingua, nello stesso formato
-    del singolo blocco prodotto da `get_language_compilation_data`.
 
-    Serve la pagina admin "parametro → tutte le lingue": il blocco viene caricato
-    solo quando una riga-lingua viene espansa, così la lista resta leggera. Il
-    salvataggio riusa l'endpoint esistente `save_block` (con tutta la sua logica
-    di concorrenza ottimistica, validazione esempi e ricalcolo DAG). Admin-only:
-    l'admin può editare a prescindere dallo status della lingua e il salvataggio
-    non cambia lo status (coerente con l'override admin della pagina lingua).
-    """
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language:
         raise HTTPException(status_code=404, detail="Language not found")
@@ -378,7 +313,6 @@ def get_param_block_for_language(
     if not parameter:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    # Stesso ordinamento deterministico del reader principale.
     active_questions = sorted(
         (q for q in parameter.questions if q.is_active),
         key=lambda x: (x.is_stop_question, x.id),
@@ -407,7 +341,6 @@ def get_param_block_for_language(
     is_unsure = status_entry.is_unsure if status_entry else False
     admin_note = (status_entry.admin_note or "") if status_entry else ""
 
-    # Fingerprint del blocco = MAX(updated_at) delle risposte del parametro.
     block_last_modified = None
     for q in active_questions:
         a = ans_dict.get(q.id)
@@ -462,15 +395,7 @@ def get_param_block_for_language(
 
 
 def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Optional[str]:
-    """MAX(answer.updated_at) per le risposte di questo (lingua, parametro), in ISO 8601.
-
-    SOLO question attive: il blocco mostra ed edita unicamente le question attive,
-    quindi il fingerprint di concorrenza deve essere calcolato sullo stesso insieme
-    del reader (get_language_compilation_data). Senza il filtro is_active, la
-    risposta di una question disattivata di recente resterebbe nel MAX lato-save ma
-    non lato-lettura: il confronto fallirebbe SEMPRE con un 409 fasullo, impedendo
-    di salvare le altre question del parametro.
-    """
+ 
     current_max = db.query(func.max(models.Answer.updated_at)).join(
         models.Question, models.Question.id == models.Answer.question_id
     ).filter(
@@ -481,20 +406,12 @@ def _block_last_modified_iso(db: Session, language_id: str, param_id: str) -> Op
     return current_max.isoformat() if current_max else None
 
 
-# --- ENDPOINT: SALVATAGGIO MASSIVO PARAMETRO ---
 @router.post("/{lang_id}/parameters/{param_id}/save_block")
 def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSavePayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    # Lock pessimistico sulla Language: serializza due save_block concorrenti sulla
-    # stessa lingua. L'optimistic check sotto resta come barriera primaria
-    # (e dà 409 con UX chiara), questo lock chiude la finestra di TOCTOU
-    # tra il check e l'UPDATE delle Answer. Coerente con dag_eval / param_consolidate.
     language = db.query(models.Language).with_for_update().filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     _ensure_can_modify(language, current_user)
 
-    # Optimistic concurrency: se il client ci dice che ha caricato il blocco a un
-    # certo timestamp e nel frattempo qualcun altro l'ha modificato, rifiutiamo
-    # con 409 invece di sovrascrivere il lavoro altrui.
     if payload.expected_last_modified is not None:
         current_iso = _block_last_modified_iso(db, language.id, param_id)
         if current_iso != payload.expected_last_modified:
@@ -508,7 +425,6 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
                 }
             )
 
-    # 1. Aggiorna o crea il flag Unsure (e admin_note se admin)
     status_entry = db.query(models.LanguageParameterStatus).filter(
         models.LanguageParameterStatus.language_id == language.id,
         models.LanguageParameterStatus.parameter_id == param_id
@@ -517,32 +433,19 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         status_entry = models.LanguageParameterStatus(language_id=language.id, parameter_id=param_id)
         db.add(status_entry)
     status_entry.is_unsure = payload.is_unsure
-    # Ri-salvare il parametro = "l'ho ricontrollato": spegne il giallo "da
-    # ricontrollare" eventualmente acceso da una modifica seria a una question.
     status_entry.needs_review = False
-    # admin_note: solo per admin e solo se il client lo passa esplicitamente
     if current_user.role == "admin" and payload.admin_note is not None:
         note = payload.admin_note.strip()
         status_entry.admin_note = note or None
 
-    # 2. Salva tutte le risposte fornite. Per ogni risposta toccata teniamo
-    #    traccia di (answer, was_new, old_snapshot) così a fine ciclo possiamo
-    #    registrare una EntityVersion solo per quelle effettivamente cambiate.
     touched: list[tuple[models.Answer, bool, Optional[dict]]] = []
 
     for ans_payload in payload.answers:
-        # La colonna response_text è Enum("yes","no","unsure","missing") nullable: "" non è
-        # valido, va convertito in None per indicare "non risposta".
         normalized_response = ans_payload.response_text if ans_payload.response_text in ("yes", "no", "unsure", "missing") else None
 
-        # 'unsure' eredita da 'yes' il vincolo "almeno 2 esempi", perché anche
-        # quando l'utente è incerto deve documentare con esempi reali. 'missing'
-        # invece NON richiede esempi (dato genuinamente non disponibile).
         if normalized_response in ("yes", "unsure"):
             valid_ex_count = sum(1 for ex in ans_payload.examples if ex.textarea.strip())
             if valid_ex_count < 2:
-                # detail strutturato: il frontend usa `question_id` per scrollare
-                # alla card della question incriminata e applicarle un bordo rosso.
                 raise HTTPException(status_code=400, detail={
                     "code": "missing_examples",
                     "question_id": ans_payload.question_id,
@@ -554,7 +457,6 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
             models.Answer.question_id == ans_payload.question_id
         ).first()
 
-        # Se non c'è ancora una Answer e la risposta è vuota, non creiamo righe vuote
         if not answer and normalized_response is None and not (ans_payload.comments or "").strip():
             continue
 
@@ -569,28 +471,19 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
         answer.response_text = normalized_response
         answer.comments = ans_payload.comments
 
-        # Pulisci e ricrea motivazioni/esempi
         db.query(models.AnswerMotivation).filter(models.AnswerMotivation.answer_id == answer.id).delete()
         if normalized_response == "no":
             for mid in ans_payload.motivation_ids:
                 db.add(models.AnswerMotivation(answer_id=answer.id, motivation_id=mid))
 
         db.query(models.Example).filter(models.Example.answer_id == answer.id).delete()
-        # Esempi salvabili per yes/no/unsure/missing: yes/unsure li richiedono
-        # (≥2, validato sopra), per 'no'/'missing' sono facoltativi ma vanno
-        # comunque persistiti se il linguista li fornisce a supporto della risposta.
         if normalized_response in ("yes", "no", "unsure", "missing"):
             for ex in ans_payload.examples:
                 if ex.textarea.strip():
-                    # is_test arriva dal payload: lo settano solo gli admin (la
-                    # checkbox è admin-only in UI); i non-admin fanno round-trip
-                    # del valore esistente senza poterlo cambiare.
                     db.add(models.Example(answer_id=answer.id, **ex.model_dump(exclude={'id'})))
 
         touched.append((answer, was_new, old_snapshot))
 
-    # Flush per allineare DB; poi expire delle relazioni così serialize_entity
-    # rilegge la collection examples/motivations attuale e non quella in cache.
     db.flush()
     for answer, _, _ in touched:
         db.expire(answer)
@@ -609,9 +502,6 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     recompute_and_persist_language_parameter(language.id, param_id, db)
     db.commit()
 
-    # DAG auto-run: schedulato come BackgroundTask, parte dopo che la response
-    # è stata inviata al client. value_eval/warning_eval di TableA/Queries
-    # restano stale per ~1-2s, accettabile. Errori loggati nel task stesso.
     background_tasks.add_task(_run_dag_in_background, language.id)
 
     return {
@@ -620,17 +510,14 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     }
 
 
-# --- WORKFLOW ENDPOINTS (asse B: draft → submitted → validated) ---
+# --- WORKFLOW ENDPOINTS ---
 class NotePayload(BaseModel):
     note: Optional[str] = ""
 
 
 @router.post("/{lang_id}/workflow/submit")
 def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    draft -> submitted. SOLO l'utente assegnato conferma la compilazione. Da quel
-    momento la lingua è bloccata per l'utente e l'admin può iniziare la review.
-    """
+ 
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
@@ -655,10 +542,7 @@ def validate_language(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """
-    submitted -> validated. Tutti gli admin. Esegue il DAG in background (come il
-    vecchio approve). La lingua diventa sola lettura per tutti finché non si riapre.
-    """
+
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "submitted":
@@ -674,10 +558,7 @@ def validate_language(
 
 @router.post("/{lang_id}/workflow/send_back")
 def send_back_language(lang_id: str, payload: NotePayload, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    submitted -> draft (con nota opzionale per l'utente). Tutti gli admin. È il
-    "rimanda indietro": l'utente può ricominciare la compilazione.
-    """
+
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "submitted":
@@ -709,7 +590,6 @@ def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: m
 
 # --- ASSE A: override manuale del completamento (solo super-admin) ---
 class CompletionOverridePayload(BaseModel):
-    # 'empty' | 'incomplete' | 'complete' | None (None = torna al calcolo automatico)
     override: Optional[str] = None
 
 
@@ -723,10 +603,7 @@ def set_completion_override(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_super_admin),
 ):
-    """
-    Forza (o azzera) il completamento della lingua (asse A). Riservato al
-    SUPER-ADMIN. override=None rimette il completamento in automatico.
-    """
+
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
@@ -744,16 +621,13 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
-    # 1. Recupera parametri attivi e relative domande
     parameters = db.query(models.ParameterDef).filter(
         models.ParameterDef.is_active == True
     ).order_by(models.ParameterDef.position, models.ParameterDef.id).all()
 
-    # 2. Recupera risposte correnti
     answers = db.query(models.Answer).filter(models.Answer.language_id == language.id).all()
     ans_by_qid = {a.question_id: a for a in answers}
 
-    # 3. Recupera valori originali ed eval (LanguageParameter)
     lps = db.query(models.LanguageParameter).filter(models.LanguageParameter.language_id == language.id).all()
 
     init_by_pid = {}
@@ -775,11 +649,6 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
             warnf_by_pid[pid] = False
             cond_values[pid] = lp.value_orig or ""
 
-    # 4. Costruisci le righe per la UI
-    # Le question vengono restituite tutte (anche le inactive) con flag is_active:
-    # è il frontend a decidere se mostrarle (checkbox "Show inactive", default off).
-    # I valori init/final arrivano da LanguageParameter, già coerenti col fix di
-    # consolidate (le inactive non concorrono al value_orig).
     rows = []
     for p in parameters:
         q_list = []
@@ -792,7 +661,6 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
                 "is_active": bool(q.is_active),
             })
 
-        # Calcolo in tempo reale della condizione
         cond_true = None
         if p.implicational_condition:
             try:
@@ -819,14 +687,9 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
     }
 
 
-# --- ENDPOINT: ESECUZIONE MANUALE DAG E APPROVAZIONE ---
 @router.post("/{lang_id}/workflow/run_dag")
 def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Esecuzione manuale del DAG: ricalcola value_orig (consolidate) e value_eval
-    (DAG implicazionale) per tutti i parametri attivi della lingua.
-    Non tocca lo status della lingua né delle answer.
-    """
+
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 

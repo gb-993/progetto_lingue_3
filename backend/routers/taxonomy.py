@@ -10,9 +10,6 @@ from dependencies import get_db, require_admin
 router = APIRouter(prefix="/api/admin/taxonomy", tags=["Taxonomy"])
 
 
-# ==========================================
-# Schemas
-# ==========================================
 class TopFamilyCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
 
@@ -28,8 +25,8 @@ class FamilyCreate(BaseModel):
 
 class FamilyUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    top_family_id: Optional[int] = None  # passare 0 o None? Usiamo None=non modificare; per scollegare usare /unassign
-    set_top_family: bool = False  # se True, top_family_id (anche None) viene applicato
+    top_family_id: Optional[int] = None  
+    set_top_family: bool = False  
 
 
 class GroupCreate(BaseModel):
@@ -43,9 +40,6 @@ class GroupUpdate(BaseModel):
     set_family: bool = False
 
 
-# ==========================================
-# Helpers
-# ==========================================
 def _check_unique_top_family(db: Session, name: str, exclude_id: Optional[int] = None):
     q = db.query(models.TopFamily).filter(models.TopFamily.name == name)
     if exclude_id is not None:
@@ -74,18 +68,9 @@ def _languages_using(db: Session, column, value: str) -> int:
     return db.query(func.count(models.Language.id)).filter(column == value).scalar() or 0
 
 
-# ==========================================
-# Tree (read)
-# ==========================================
 @router.get("/tree")
 def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Albero completo + sezioni "unassigned" e "non normalizzate":
-      - top_families[].families[].groups[]
-      - orphan_families: family senza top_family
-      - orphan_groups: group senza family
-      - unnormalized: stringhe usate su Language ma non corrispondenti a entità
-    """
+
     top_families = db.query(models.TopFamily).order_by(
         models.TopFamily.position, models.TopFamily.name
     ).all()
@@ -96,7 +81,6 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
         models.Group.position, models.Group.name
     ).all()
 
-    # conteggi lingue per nome (case-sensitive, coerente con i filtri esistenti)
     def _lang_count_by(column) -> dict:
         rows = db.query(column, func.count(models.Language.id)).filter(
             column.isnot(None), column != ""
@@ -157,7 +141,6 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
     orphan_families = families_by_top.get(None, [])
     orphan_groups = groups_by_family.get(None, [])
 
-    # Stringhe presenti su Language ma non normalizzate in entità
     known_top = {tf.name for tf in top_families}
     known_fam = {f.name for f in families}
     known_grp = {g.name for g in groups}
@@ -185,9 +168,6 @@ def get_tree(db: Session = Depends(get_db), current_user: models.User = Depends(
     }
 
 
-# ==========================================
-# Top-Families CRUD
-# ==========================================
 @router.post("/top-families")
 def create_top_family(payload: TopFamilyCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     name = payload.name.strip()
@@ -211,7 +191,6 @@ def update_top_family(tf_id: int, payload: TopFamilyUpdate, db: Session = Depend
             _check_unique_top_family(db, new_name, exclude_id=tf.id)
             old_name = tf.name
             tf.name = new_name
-            # Propaga rinomina sulle Language che usano la stringa
             db.query(models.Language).filter(
                 models.Language.top_level_family == old_name
             ).update({models.Language.top_level_family: new_name}, synchronize_session=False)
@@ -236,9 +215,6 @@ def delete_top_family(tf_id: int, db: Session = Depends(get_db), current_user: m
     return {"ok": True}
 
 
-# ==========================================
-# Families CRUD
-# ==========================================
 @router.post("/families")
 def create_family(payload: FamilyCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     name = payload.name.strip()
@@ -293,9 +269,6 @@ def delete_family(f_id: int, db: Session = Depends(get_db), current_user: models
     return {"ok": True}
 
 
-# ==========================================
-# Groups CRUD
-# ==========================================
 @router.post("/groups")
 def create_group(payload: GroupCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     name = payload.name.strip()
@@ -347,9 +320,6 @@ def delete_group(g_id: int, db: Session = Depends(get_db), current_user: models.
     return {"ok": True}
 
 
-# ==========================================
-# Promote unnormalized string -> entity
-# ==========================================
 class PromotePayload(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     parent_id: Optional[int] = None  # top_family_id per family, family_id per group
@@ -395,9 +365,6 @@ def promote_group(payload: PromotePayload, db: Session = Depends(get_db), curren
     return {"id": g.id, "name": g.name, "family_id": g.family_id}
 
 
-# ==========================================
-# Reorder (drag & drop)
-# ==========================================
 class ReorderPayload(BaseModel):
     ids: list[int]
 

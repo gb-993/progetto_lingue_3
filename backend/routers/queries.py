@@ -6,10 +6,6 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import build_parser, pretty_print_expression, eval_node, _as_list
 
-# Tutti gli endpoint sono admin-only: la pagina /queries della SPA è admin-only
-# e questi endpoint espongono dati cross-language (Q1-Q10) che non vanno
-# accessibili a utenti non admin né tantomeno al pubblico. Dichiariamo la
-# dipendenza a livello di router così non rischiamo di dimenticarla in nuovi
 # endpoint aggiunti in futuro: nessun endpoint qui dentro deve restare aperto.
 router = APIRouter(
     prefix="/api/queries",
@@ -17,11 +13,8 @@ router = APIRouter(
     dependencies=[Depends(require_admin)],
 )
 
-# --- Helper Functions (Migrate da views.py) ---
 def _final_map_for_language(db: Session, lang_id: str) -> Dict[str, str]:
     out = {}
-    # Selezioniamo direttamente parameter_id e value_eval per evitare N+1 query
-    # (non triggera lazy-load della relazione language_parameter su ogni eval)
     rows = db.query(
         models.LanguageParameter.parameter_id,
         models.LanguageParameterEval.value_eval
@@ -45,7 +38,6 @@ def _extract_tokens(expr: str) -> List[str]:
     TOKEN_RE = re.compile(r'([+\-0])([A-Za-z][A-Za-z0-9_]*)')
     return [t[1] for t in TOKEN_RE.findall((expr or "").strip().upper())]
 
-# --- Q1: Implicational Conditions ---
 @router.get("/q1")
 def query_1_implications(param_id: str, db: Session = Depends(get_db)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == param_id).first()
@@ -56,7 +48,6 @@ def query_1_implications(param_id: str, db: Session = Depends(get_db)):
     implicating = db.query(models.ParameterDef).filter(models.ParameterDef.id.in_(refs_in_param)).order_by(models.ParameterDef.position).all()
 
     implicated = []
-    # CORREZIONE: Usiamo != invece di .exclude() che era specifico per Django
     all_params = db.query(models.ParameterDef).filter(models.ParameterDef.id != param.id).all()
     for p in all_params:
         if param.id in _extract_tokens(p.implicational_condition or ""):
@@ -70,18 +61,14 @@ def query_1_implications(param_id: str, db: Session = Depends(get_db)):
         "implicated": implicated
     }
 
-# --- Q2: Parameter values distribution ---
 @router.get("/q2")
 def query_2_distribution(param_id: str, db: Session = Depends(get_db)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == param_id).first()
     if not param: raise HTTPException(404, "Parameter not found")
 
-    # CORREZIONE: Mappiamo le lingue qui in Python per evitare errori "AttributeError"
-    # se la relazione diretta su LanguageParameter manca nel models.py
     all_langs = {l.id: l.name_full for l in db.query(models.Language).all()}
 
     plus, minus, zero = [], [], []
-    # Selezioniamo direttamente le colonne per evitare N+1 query sulla relazione language_parameter
     eval_rows = db.query(
         models.LanguageParameter.language_id,
         models.LanguageParameterEval.value_eval
@@ -111,7 +98,6 @@ def query_2_distribution(param_id: str, db: Session = Depends(get_db)):
 
     return {"parameter": {"id": param.id, "name": param.name}, "plus": plus, "minus": minus, "zero": zero}
 
-# --- Q3: Neutralization Blame Analysis ---
 
 def _eval_subtree_safe(node, values: Dict[str, str]) -> bool:
     try:
@@ -121,15 +107,6 @@ def _eval_subtree_safe(node, values: Dict[str, str]) -> bool:
 
 
 def _blame_walk(node, matters: bool, negated: bool, values: Dict[str, str], responsible: list, other: list) -> None:
-    """
-    Cammina l'AST della cond e classifica le foglie:
-      - matters=True  -> finiscono in `responsible` (le foglie il cui valore conta per il risultato)
-      - matters=False -> finiscono in `other` (rami che non influenzano il risultato attuale)
-    Regole su matters: AND vero => tutti rilevanti; AND falso => solo i figli False rilevanti.
-    OR vero => solo i figli True rilevanti; OR falso => tutti rilevanti. NOT trasparente per matters.
-    `negated` traccia il numero di NOT a monte (mod 2): True se la foglia e' sotto un numero
-    dispari di NOT, False altrimenti. Serve al frontend per mostrare correttamente il "Required".
-    """
     if isinstance(node, tuple):
         sign, param = node
         current = values.get(param)
@@ -146,12 +123,10 @@ def _blame_walk(node, matters: bool, negated: bool, values: Dict[str, str], resp
 
     node_l = _as_list(node)
 
-    # NOT <expr>: trasparente per `matters`, flippa `negated`
     if isinstance(node_l, list) and len(node_l) == 2 and str(node_l[0]).lower() == 'not':
         _blame_walk(node_l[1], matters, not negated, values, responsible, other)
         return
 
-    # AND/OR chain: [A op B op C ...]
     if isinstance(node_l, list) and len(node_l) >= 3 and len(node_l) % 2 == 1:
         op_kind = 'and' if str(node_l[1]).lower() in ('&', 'and') else 'or'
         children = [node_l[i] for i in range(0, len(node_l), 2)]
@@ -266,7 +241,6 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
         "condition": cond,
     }
 
-    # Caso 1: nessuna condizione implicazionale.
     if not cond:
         if value_eval in ("+", "-"):
             status = "active"
@@ -282,7 +256,6 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
             explanation = {"type": "no_condition", "answers": _originating_answers(db, lang_id, param_id)}
         return {**base, "status": status, "explanation": explanation}
 
-    # Caso 2: condizione presente -> parsing.
     parser = build_parser()
     try:
         parsed = parser.parseString(cond, parseAll=True)
@@ -290,7 +263,6 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
     except Exception as e:
         return {**base, "status": "parse_error", "explanation": {"type": "parse_error", "message": str(e)}}
 
-    # Mappa valori correnti, normalizzata in uppercase per coerenza con il parser.
     raw_vals = _final_map_for_language(db, lang_id)
     values = {k.upper(): v for k, v in raw_vals.items()}
 
@@ -299,7 +271,6 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
     except Exception as e:
         return {**base, "status": "parse_error", "explanation": {"type": "parse_error", "message": str(e)}}
 
-    # Decisione status quando la cond e' parsabile.
     if cond_ok is False:
         status = "neutralized"
     elif value_eval == "?" and warning_eval:
@@ -336,7 +307,6 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
 
     return {**base, "status": status, "explanation": explanation}
 
-# --- Q4, Q5, Q6: Parameters with value +, -, 0 ---
 @router.get("/q456")
 def query_456_values(lang_id: str, value: str, db: Session = Depends(get_db)):
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
@@ -355,7 +325,6 @@ def query_456_values(lang_id: str, value: str, db: Session = Depends(get_db)):
         "params": [{"id": p.id, "name": p.name, "condition": p.implicational_condition, "pretty": pretty_print_expression(p.implicational_condition)} for p in params]
     }
 
-# --- Q7: Comparable parameters ---
 @router.get("/q7")
 def query_7_comparable(lang_a: str, lang_b: str, db: Session = Depends(get_db)):
     map_a = _final_map_for_language(db, lang_a)
@@ -371,16 +340,8 @@ def query_7_comparable(lang_a: str, lang_b: str, db: Session = Depends(get_db)):
 
     return {"rows": rows}
 
-# --- Q10 helpers / endpoints ---
 @router.get("/options/questions-for-language")
 def options_questions_for_language(lang_id: str, db: Session = Depends(get_db)):
-    """Lista degli ID delle question già risposte dalla lingua indicata.
-
-    Serve a Q10 lato frontend per restringere il dropdown delle question
-    quando l'utente vuole vedere solo quelle effettivamente compilate per
-    una specifica lingua. Risposta vuota o null comprese: include qualsiasi
-    riga Answer esistente.
-    """
     rows = (
         db.query(models.Answer.question_id)
         .filter(models.Answer.language_id == lang_id)
@@ -390,15 +351,9 @@ def options_questions_for_language(lang_id: str, db: Session = Depends(get_db)):
     return [r[0] for r in rows]
 
 
-# --- Q10: Answers and examples per question (cross-language) ---
 @router.get("/by-question")
 def query_by_question(q_id: str, db: Session = Depends(get_db)):
-    """Per una singola question, ritorna una riga per ogni lingua con la
-    risposta (yes/no/unsure/None) e tutti gli esempi associati.
 
-    Lingue senza Answer per questa question vengono comunque incluse, con
-    response=None ed examples=[]: comodo per vedere chi non ha ancora risposto.
-    """
     question = (
         db.query(models.Question)
         .options(joinedload(models.Question.parameter))
@@ -410,7 +365,6 @@ def query_by_question(q_id: str, db: Session = Depends(get_db)):
 
     langs = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
 
-    # joinedload su examples evita N+1 (una sola query con join).
     answers = (
         db.query(models.Answer)
         .options(joinedload(models.Answer.examples))
@@ -424,8 +378,6 @@ def query_by_question(q_id: str, db: Session = Depends(get_db)):
         a = answer_by_lang.get(lang.id)
         examples = []
         if a:
-            # Ordina per `number` (lessicografico): "1", "2", "10" -> "1", "10", "2"
-            # è accettabile, gli esempi sono sempre 2-5 in pratica.
             for ex in sorted(a.examples, key=lambda x: (x.number or "")):
                 examples.append({
                     "id": ex.id,
@@ -455,7 +407,6 @@ def query_by_question(q_id: str, db: Session = Depends(get_db)):
     }
 
 
-# --- Q8, Q9: Questions with answer YES/NO ---
 @router.get("/q89")
 def query_89_answers(lang_id: str, response_text: str, db: Session = Depends(get_db)):
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()
@@ -471,19 +422,10 @@ def query_89_answers(lang_id: str, response_text: str, db: Session = Depends(get
     for a in answers:
         res.append({"q_id": a.question_id, "text": a.question.text, "p_id": a.question.parameter_id})
 
-    # Ordina per p_id (approssimazione ordinamento parametro)
     res.sort(key=lambda x: x["p_id"])
     return {"language": {"id": lang.id, "name": lang.name_full}, "answers": res}
 
 
-# --- Q11: Questions WITHOUT an answer (per language) ---
-# "Senza risposta" = nessuna risposta data per quella combinazione (lingua,
-# question), nel senso piu' largo: o non esiste proprio una riga in `answers`
-# oppure esiste con `response_text IS NULL`. Le risposte 'unsure' SONO
-# considerate date, quindi le loro question non rientrano qui.
-#
-# Filtri di scope: solo question attive di parametri attivi (le inattive non
-# sono di interesse per il linguista, vedi nota discreta in UI).
 @router.get("/q11")
 def query_11_unanswered(lang_id: str, db: Session = Depends(get_db)):
     lang = db.query(models.Language).filter(models.Language.id == lang_id).first()

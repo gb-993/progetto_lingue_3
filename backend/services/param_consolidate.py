@@ -12,64 +12,64 @@ ALLOWED_STATUSES = (
     "approved",
 )
 
-def _get_or_create_lp(lang_id: str, param_id: str, db: Session) -> models.LanguageParameter:
+def _get_or_create_lp(language_id: str, parameter_id: str, db: Session) -> models.LanguageParameter:
     """Restituisce la riga LanguageParameter di (lingua, parametro), creandola se manca."""
-    obj = db.query(models.LanguageParameter).filter(
-        models.LanguageParameter.language_id == lang_id,
-        models.LanguageParameter.parameter_id == param_id
+    language_parameter = db.query(models.LanguageParameter).filter(
+        models.LanguageParameter.language_id == language_id,
+        models.LanguageParameter.parameter_id == parameter_id
     ).first()
 
-    if not obj:
-        obj = models.LanguageParameter(
-            language_id=lang_id,
-            parameter_id=param_id,
+    if not language_parameter:
+        language_parameter = models.LanguageParameter(
+            language_id=language_id,
+            parameter_id=parameter_id,
             value_orig=None,
             warning_orig=False
         )
-        db.add(obj)
+        db.add(language_parameter)
         # flush e non commit: la transazione è gestita dal chiamante
         db.flush()
-    return obj
+    return language_parameter
 
-def is_yes(ans: models.Answer) -> bool:
-    return ans.response_text is not None and ans.response_text.lower() == "yes"
+def is_yes(answer: models.Answer) -> bool:
+    return answer.response_text is not None and answer.response_text.lower() == "yes"
 
-def is_no(ans: models.Answer) -> bool:
-    return ans.response_text is not None and ans.response_text.lower() == "no"
+def is_no(answer: models.Answer) -> bool:
+    return answer.response_text is not None and answer.response_text.lower() == "no"
 
-def consolidate_parameter_for_language(lang_id: str, param_id: str, db: Session) -> Tuple[Optional[str], bool]:
+def consolidate_parameter_for_language(language_id: str, parameter_id: str, db: Session) -> Tuple[Optional[str], bool]:
     """Calcola value_orig ('+' / '-' / None) e il flag di conflitto per un parametro di una lingua."""
     # Le question disattivate non contano, ma le loro Answer restano in DB
     # e tornano a contare se la question viene riattivata
     questions = db.query(models.Question).filter(
-        models.Question.parameter_id == param_id,
+        models.Question.parameter_id == parameter_id,
         models.Question.is_active == True,
     ).all()
 
-    norm_qs = [q for q in questions if not q.is_stop_question]
-    stop_qs = [q for q in questions if q.is_stop_question]
+    normal_questions = [q for q in questions if not q.is_stop_question]
+    stop_questions = [q for q in questions if q.is_stop_question]
 
     # Senza domande normali il parametro resta indeterminato
-    if not norm_qs:
+    if not normal_questions:
         return None, False
 
     answers = db.query(models.Answer).join(models.Question).filter(
-        models.Answer.language_id == lang_id,
-        models.Question.parameter_id == param_id,
+        models.Answer.language_id == language_id,
+        models.Question.parameter_id == parameter_id,
         models.Question.is_active == True,
         models.Answer.status.in_(ALLOWED_STATUSES)
     ).all()
 
-    ans_dict = {a.question_id: a for a in answers}
+    answers_by_question_id = {a.question_id: a for a in answers}
 
-    norm_answers = [ans_dict[q.id] for q in norm_qs if q.id in ans_dict]
-    stop_answers = [ans_dict[q.id] for q in stop_qs if q.id in ans_dict]
+    normal_answers = [answers_by_question_id[q.id] for q in normal_questions if q.id in answers_by_question_id]
+    stop_answers = [answers_by_question_id[q.id] for q in stop_questions if q.id in answers_by_question_id]
 
-    has_norm_yes = any(is_yes(a) for a in norm_answers)
+    has_normal_yes = any(is_yes(a) for a in normal_answers)
     has_stop_yes = any(is_yes(a) for a in stop_answers)
 
     # Almeno un YES su domanda normale: '+', in conflitto se anche una stop-question è YES
-    if has_norm_yes:
+    if has_normal_yes:
         warning = has_stop_yes
         return "+", warning
 
@@ -77,15 +77,15 @@ def consolidate_parameter_for_language(lang_id: str, param_id: str, db: Session)
     if has_stop_yes:
         return "-", False
 
-    norm_q_ids = {q.id for q in norm_qs}
-    answered_normals = {a.question_id for a in norm_answers}
+    normal_question_ids = {q.id for q in normal_questions}
+    answered_normal_question_ids = {a.question_id for a in normal_answers}
 
     # Copertura incompleta delle domande normali: indeterminato
-    if answered_normals != norm_q_ids:
+    if answered_normal_question_ids != normal_question_ids:
         return None, False
 
     # Tutte risposte: '-' solo se sono tutte NO
-    if all(is_no(a) for a in norm_answers):
+    if all(is_no(a) for a in normal_answers):
         return "-", False
 
     return None, False
@@ -95,18 +95,17 @@ def recompute_and_persist_language_parameter(language_id: str, parameter_id: str
     """Ricalcola e salva value_orig/warning_orig della coppia (lingua, parametro)."""
     try:
         # Lock di riga esclusivo per serializzare i ricalcoli concorrenti
-        lang = db.query(models.Language).with_for_update().filter(models.Language.id == language_id).one()
+        language = db.query(models.Language).with_for_update().filter(models.Language.id == language_id).one()
     except NoResultFound:
         return None
 
-    # .one() solleva di proposito se il parametro non esiste: è un errore di programmazione
-    param = db.query(models.ParameterDef).filter(models.ParameterDef.id == parameter_id).one()
+    parameter = db.query(models.ParameterDef).filter(models.ParameterDef.id == parameter_id).one()
 
-    lp = _get_or_create_lp(language_id, parameter_id, db)
+    language_parameter = _get_or_create_lp(language_id, parameter_id, db)
     value, warning = consolidate_parameter_for_language(language_id, parameter_id, db)
 
-    lp.value_orig = value
-    lp.warning_orig = bool(warning)
+    language_parameter.value_orig = value
+    language_parameter.warning_orig = bool(warning)
 
     db.flush()
-    return lp
+    return language_parameter

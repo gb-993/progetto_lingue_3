@@ -75,16 +75,7 @@ def _register_fonts(pdf: FPDF) -> None:
 
 
 def _render_questions_section(pdf: FPDF, questions, *, base_size: int = 10) -> None:
-    """Render della sezione 'Questions' di un parametro.
 
-    Helper condivisa tra il PDF di singolo parametro (usato con base_size=10)
-    e il bulk PDF di tutti i parametri (base_size=9, un punto più piccolo
-    per ridurre verticalità senza compromettere leggibilità).
-
-    Per le 'Allowed Motivations' viene mostrato solo il testo della motivation
-    (label, fallback su code se il label è vuoto): niente codice tipo "MOT004"
-    e niente parentesi tonde.
-    """
     questions = list(questions)
     line_h = 5 if base_size <= 9 else 6
     block_gap = 2 if base_size <= 9 else 4
@@ -142,8 +133,6 @@ def _render_questions_section(pdf: FPDF, questions, *, base_size: int = 10) -> N
                 m = getattr(link, "motivation", None)
                 if m is None:
                     continue
-                # Solo testo motivation (label) — niente codice né parentesi.
-                # Fallback su code se label è assente, così non rendiamo "- ".
                 text = m.label or m.code or ""
                 if not text:
                     continue
@@ -154,16 +143,7 @@ def _render_questions_section(pdf: FPDF, questions, *, base_size: int = 10) -> N
 
 
 def build_parameter_pdf(parameter, questions) -> bytes:
-    """Render a parameter detail PDF.
 
-    Args:
-        parameter: ParameterDef instance.
-        questions: Iterable of Question instances ordered for display, with
-            ``allowed_motivations`` accessible.
-
-    Returns:
-        PDF bytes ready to stream to the client.
-    """
     pdf = _ParamReport()
     _register_fonts(pdf)
     pdf.add_page()
@@ -194,32 +174,27 @@ def build_parameter_pdf(parameter, questions) -> bytes:
         pdf.multi_cell(0, 5, str(value or "-"))
         pdf.ln(4)
 
-    # Title
     pdf.set_font(FONT_FAMILY, style="B", size=18)
     pdf.set_text_color(27, 29, 32)
     pdf.cell(pdf.get_string_width("Parameter: "), 10, "Parameter: ", ln=False)
     pdf.set_text_color(209, 65, 36)
     pdf.cell(0, 10, str(parameter.id), ln=True)
 
-    # Subtitle
     pdf.set_font(FONT_FAMILY, size=14)
     pdf.set_text_color(97, 101, 107)
     pdf.cell(0, 8, str(parameter.name), ln=True)
     pdf.ln(2)
 
-    # 1. Basic info
     section_title("Basic Information")
     line("Status:", "Active" if parameter.is_active else "Disabled")
     line("Schema:", parameter.schema or "-")
     line("Type:", parameter.param_type or "-")
     line("Level of comparison:", parameter.level_of_comparison or "-")
 
-    # 2. Descriptions
     section_title("Descriptions")
     long_text("Short Description:", parameter.short_description)
     long_text("Long Description:", parameter.long_description)
 
-    # 3. Logic
     section_title("Logic & Conditions")
     line("Implicational Condition(s):", parameter.implicational_condition or "-")
     long_text(
@@ -227,7 +202,6 @@ def build_parameter_pdf(parameter, questions) -> bytes:
         parameter.description_of_the_implicational_condition,
     )
 
-    # 4. Questions
     section_title("Questions")
     _render_questions_section(pdf, questions, base_size=10)
 
@@ -235,24 +209,7 @@ def build_parameter_pdf(parameter, questions) -> bytes:
 
 
 def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: dict | None = None) -> bytes:
-    """Render a single PDF with the *general info* of every parameter.
 
-    Layout:
-      1. Cover with title, generation timestamp, total count
-      2. Compact summary table (ID, Name, Schema, Type, Level, Status)
-      3. One section per parameter with: header band, basic info, descriptions,
-         logic & conditions, questions (Text/Instructions/Examples/Allowed
-         Motivations) — stessa struttura del PDF singolo.
-
-    Args:
-        parameters: Iterable of ParameterDef instances (already ordered).
-        questions_by_param_id: dict {parameter_id: [Question, ...]} con
-            ``allowed_motivations.motivation`` pre-caricati. Se None, la sezione
-            Questions viene omessa (compatibile con vecchi callers).
-
-    Returns:
-        PDF bytes ready to stream to the client.
-    """
     parameters = list(parameters)
     questions_by_param_id = questions_by_param_id or {}
 
@@ -263,7 +220,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
 
     page_width = pdf.w - pdf.l_margin - pdf.r_margin
 
-    # ---------- COVER ----------
     pdf.set_font(FONT_FAMILY, style="B", size=20)
     pdf.set_text_color(27, 29, 32)
     pdf.cell(0, 12, "Parameters Overview", ln=True)
@@ -273,14 +229,12 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
     pdf.cell(0, 7, f"Total parameters: {len(parameters)}", ln=True)
     pdf.ln(4)
 
-    # ---------- INDEX (summary table) ----------
     pdf.set_font(FONT_FAMILY, style="B", size=12)
     pdf.set_fill_color(241, 242, 244)
     pdf.set_text_color(209, 65, 36)
     pdf.cell(0, 10, "  Index", ln=True, fill=True)
     pdf.ln(2)
 
-    # Colonne dell'indice: larghezze ottimizzate per A4 portrait (~190mm utili)
     col_widths = (18, 60, 32, 30, 28, 22)
     headers = ("ID", "Name", "Schema", "Type", "Level", "Status")
 
@@ -288,8 +242,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
     pdf.set_text_color(27, 29, 32)
     pdf.set_draw_color(218, 221, 226)
 
-    # API nativa fpdf2: gestisce word-wrap, page break per riga intera,
-    # ripetizione automatica dell'header su ogni pagina.
     with pdf.table(
         col_widths=col_widths,
         headings_style=FontFace(emphasis="B", color=(97, 101, 107), fill_color=(248, 249, 250)),
@@ -311,7 +263,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
 
     pdf.ln(6)
 
-    # ---------- DETTAGLIO PARAMETRI ----------
     pdf.set_font(FONT_FAMILY, style="B", size=12)
     pdf.set_fill_color(241, 242, 244)
     pdf.set_text_color(209, 65, 36)
@@ -343,7 +294,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
         pdf.ln(2)
 
     def status_badge(active: bool) -> None:
-        # Pillola colorata accanto al titolo, sulla stessa riga
         label = "Active" if active else "Disabled"
         if active:
             pdf.set_fill_color(220, 252, 231)
@@ -363,7 +313,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
         return bytes(pdf.output())
 
     for idx, p in enumerate(parameters):
-        # Separatore prima di ogni parametro tranne il primo
         if idx > 0:
             pdf.ln(3)
             pdf.set_draw_color(209, 65, 36)
@@ -374,51 +323,40 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
             pdf.set_draw_color(218, 221, 226)
             pdf.ln(4)
 
-        # Riserva spazio: se sta per finire la pagina, vai a capo. ~50mm minimi.
         if pdf.get_y() > pdf.h - 50:
             pdf.add_page()
 
-        # Header parametro: ID grosso colorato + Name grigio + badge status sulla riga
         header_y = pdf.get_y()
         pdf.set_font(FONT_FAMILY, style="B", size=15)
         pdf.set_text_color(209, 65, 36)
         id_w = pdf.get_string_width(str(p.id) + "  ")
         pdf.cell(id_w, 9, str(p.id), ln=False)
 
-        # Badge status piazzato a destra prima, così il nome può andare a capo
-        # nello spazio rimanente senza sforare l'A4.
         badge_label = "Active" if p.is_active else "Disabled"
         pdf.set_font(FONT_FAMILY, style="B", size=8)
         badge_w = pdf.get_string_width(badge_label) + 6
         name_w = page_width - id_w - badge_w - 2
 
-        # Nome con word-wrap (multi_cell). new_x/new_y posizionano il cursore
-        # subito dopo il nome senza scendere a capo, così il badge resta in linea.
         pdf.set_font(FONT_FAMILY, style="B", size=12)
         pdf.set_text_color(27, 29, 32)
         name_x = pdf.get_x()
         pdf.multi_cell(name_w, 7, str(p.name or ""), align="L",
                        new_x="RIGHT", new_y="TOP", max_line_height=7)
 
-        # Allinea il badge al bordo destro sulla riga d'intestazione
         pdf.set_xy(pdf.l_margin + page_width - badge_w, header_y + 2)
         status_badge(p.is_active)
-        # Vai sotto la sezione header (almeno una riga di nome)
         pdf.set_y(max(pdf.get_y(), header_y) + 9)
 
-        # Basic info
         section_title("Basic Information")
         line("Schema:", p.schema or "-")
         line("Type:", p.param_type or "-")
         line("Level of comparison:", p.level_of_comparison or "-")
         pdf.ln(2)
 
-        # Descriptions
         section_title("Descriptions")
         long_text("Short description:", p.short_description)
         long_text("Long description:", p.long_description)
 
-        # Logic & conditions
         section_title("Logic & Conditions")
         line("Implicational condition(s):", p.implicational_condition or "-")
         long_text(
@@ -426,8 +364,6 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
             p.description_of_the_implicational_condition,
         )
 
-        # Questions: stessa struttura del single-parameter PDF, font ridotto
-        # di 1pt per coerenza col resto del bulk PDF.
         if questions_by_param_id:
             section_title("Questions")
             _render_questions_section(pdf, questions_by_param_id.get(p.id, []), base_size=9)
@@ -436,12 +372,7 @@ def build_all_parameters_pdf(parameters: Iterable[Any], questions_by_param_id: d
 
 
 def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
-    """Render the change history PDF for a single parameter.
 
-    Mirrors the UI filter in ParameterForm/QuestionForm: drops the "Test edit"
-    placeholder entries and the auto-logged "DEACTIVATED..." rows. Newest
-    entries first.
-    """
     entries = [
         log for log in change_logs
         if not (log.change_note or "").startswith("Test edit")
@@ -517,26 +448,13 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
     return bytes(pdf.output())
 
 
-# ============================================================================
-# LANGUAGE PARAMETRIC DATA PDF
-#
-# Layout A (scelto in fase di design): una cover con metadati della lingua,
-# poi una scheda per ogni parametro attivo (page break dopo ogni parametro).
-# Ogni scheda elenca tutte le question attive del parametro, con risposta
-# colorata, eventuali commenti, motivazioni ed esempi. I parametri senza
-# nessuna risposta data appaiono comunque, con "Not answered" su ogni q.
-# Le question/parametri disattivati sono esclusi.
-#
-# Footer identico al PDF parametri (citazione PCM_Hub + numero pagina) via
-# `_LanguageReport`, sottoclasse di `_CitationFooterReport`.
-# ============================================================================
 
 _ANSWER_LABELS = {"yes": "YES", "no": "NO", "unsure": "UNSURE", "missing": "MISSING"}
 _ANSWER_COLORS = {
-    "yes": (21, 128, 61),     # green (allineato al frontend)
+    "yes": (21, 128, 61),     # green 
     "no": (185, 28, 28),      # red
     "unsure": (161, 98, 7),   # orange
-    "missing": (161, 98, 7),  # orange (stesso di unsure, come da richiesta)
+    "missing": (161, 98, 7),  # orange 
 }
 _NOT_ANSWERED_COLOR = (130, 134, 140)  # grigio chiaro
 
@@ -550,23 +468,9 @@ def _example_sort_key_pdf(ex):
 
 
 def build_language_pdf(db, lang) -> bytes:
-    """Render del PDF parametric data per una singola lingua.
 
-    Pre-carica tutti i dati necessari (parametri/question attivi, answer per
-    lingua, esempi, motivazioni, valori parametri, admin notes) e poi rende
-    una pagina per parametro.
-
-    Args:
-        db: SQLAlchemy Session.
-        lang: models.Language instance.
-
-    Returns:
-        PDF bytes pronti per essere streamati al client.
-    """
-    # Import locale per evitare cicli (gli altri builder PDF non importano models).
     import models
 
-    # ---------- pre-load ----------
     params = (
         db.query(models.ParameterDef)
         .filter(models.ParameterDef.is_active == True)
@@ -618,13 +522,11 @@ def build_language_pdf(db, lang) -> bytes:
         if lp.eval and lp.eval.value_eval:
             value_eval_by_pid[lp.parameter_id] = lp.eval.value_eval
 
-    # ---------- PDF setup ----------
     pdf = _LanguageReport()
     _register_fonts(pdf)
     pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)
     pdf.add_page()
 
-    # ---------- COVER ----------
     pdf.set_font(FONT_FAMILY, style="B", size=20)
     pdf.set_text_color(27, 29, 32)
     pdf.cell(pdf.get_string_width("Language: "), 12, "Language: ", ln=False)
@@ -643,9 +545,7 @@ def build_language_pdf(db, lang) -> bytes:
     pdf.ln(2)
 
     def meta_row(label: str, value) -> None:
-        # Stesso pattern di `line()` nel PDF parametri: pdf.write su una riga,
-        # poi ln(). Evita gli errori "no horizontal space" che si verificano
-        # accodando cell(w)+multi_cell(0) ripetutamente.
+
         if value in (None, ""):
             return
         pdf.set_x(pdf.l_margin)
@@ -679,7 +579,6 @@ def build_language_pdf(db, lang) -> bytes:
     pdf.cell(0, 6, f"Generated on {utc_now().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
     pdf.cell(0, 6, f"Active parameters in this report: {len(params)}", ln=True)
 
-    # ---------- ONE PAGE PER PARAMETER ----------
     for p in params:
         pdf.add_page()
         _render_parameter_card(
@@ -698,14 +597,12 @@ def _render_parameter_card(
 ) -> None:
     """Render della scheda di un singolo parametro: banner + value + admin
     note + tutte le question. Il chiamante e' responsabile del page break."""
-    # Banner parametro
     pdf.set_font(FONT_FAMILY, style="B", size=14)
     pdf.set_fill_color(241, 242, 244)
     pdf.set_text_color(209, 65, 36)
     pdf.cell(0, 12, f"  Parameter {p.id} - {p.name or ''}", ln=True, fill=True)
     pdf.ln(2)
 
-    # Valore consolidato (eval, fallback orig)
     pdf.set_font(FONT_FAMILY, style="B", size=11)
     pdf.set_text_color(97, 101, 107)
     pdf.cell(pdf.get_string_width("Value: "), 8, "Value: ", ln=False)
@@ -743,21 +640,18 @@ def _render_parameter_card(
 def _render_question_block(pdf, q, answer, examples, mot_by_id) -> None:
     q_type = "  (Stop Question)" if q.is_stop_question else ""
 
-    # Riga ID question con fondo grigio chiaro
     pdf.set_font(FONT_FAMILY, style="B", size=11)
     pdf.set_text_color(27, 29, 32)
     pdf.set_fill_color(248, 249, 250)
     pdf.cell(0, 8, f"  Q {q.id}{q_type}", ln=True, fill=True)
     pdf.ln(1)
 
-    # Testo della question
     pdf.set_font(FONT_FAMILY, size=10)
     pdf.set_text_color(27, 29, 32)
     pdf.set_x(pdf.l_margin + 4)
     pdf.multi_cell(0, 5, q.text or "")
     pdf.ln(1)
 
-    # Answer colorata
     pdf.set_x(pdf.l_margin + 4)
     pdf.set_font(FONT_FAMILY, style="B", size=10)
     pdf.set_text_color(97, 101, 107)
@@ -772,7 +666,6 @@ def _render_question_block(pdf, q, answer, examples, mot_by_id) -> None:
         pdf.set_text_color(*_NOT_ANSWERED_COLOR)
         pdf.cell(0, 6, "Not answered", ln=True)
 
-    # Comments
     if answer and answer.comments:
         pdf.set_x(pdf.l_margin + 4)
         pdf.set_font(FONT_FAMILY, style="B", size=10)
@@ -782,7 +675,6 @@ def _render_question_block(pdf, q, answer, examples, mot_by_id) -> None:
         pdf.set_text_color(27, 29, 32)
         pdf.multi_cell(0, 5, answer.comments)
 
-    # Motivations
     if answer:
         mot_labels = []
         for am in answer.answer_motivations:
@@ -799,7 +691,6 @@ def _render_question_block(pdf, q, answer, examples, mot_by_id) -> None:
             pdf.set_text_color(27, 29, 32)
             pdf.multi_cell(0, 5, "; ".join(mot_labels))
 
-    # Examples (numerati, glossing su righe separate)
     if examples:
         pdf.set_x(pdf.l_margin + 4)
         pdf.set_font(FONT_FAMILY, style="B", size=10)

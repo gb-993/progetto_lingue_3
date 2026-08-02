@@ -1,12 +1,4 @@
-"""
-Router cronologia versioni (admin only).
 
-Endpoint:
-  GET /api/admin/versions               -> lista paginata con filtri
-  GET /api/admin/versions/{id}          -> singola versione + diff vs precedente
-  GET /api/admin/versions/options       -> popolamento dropdown filtri
-  POST /api/admin/versions/{id}/rollback -> placeholder per rollback (non implementato)
-"""
 from __future__ import annotations
 from typing import Optional, List
 from datetime import datetime
@@ -28,9 +20,6 @@ from services.versioning import (
 router = APIRouter(prefix="/api/admin/versions", tags=["History"])
 
 
-# ============================================================================
-# Schemas
-# ============================================================================
 
 class VersionSummary(BaseModel):
     id: int
@@ -55,7 +44,6 @@ def _user_dict(u: Optional[models.User]) -> Optional[dict]:
 
 
 def _summary_label(v: models.EntityVersion) -> str:
-    """Una stringa breve, es. 'FGM — Feature Geometry Marker'."""
     snap = v.snapshot or {}
     if v.entity_type == "parameter":
         return f"{v.entity_id} — {snap.get('name', '')}"
@@ -86,9 +74,6 @@ def _to_summary(v: models.EntityVersion) -> dict:
     }
 
 
-# ============================================================================
-# Endpoint principali
-# ============================================================================
 
 @router.get("")
 def list_versions(
@@ -129,7 +114,6 @@ def list_versions(
     if until:
         try:
             d = datetime.fromisoformat(until)
-            # +1 giorno per essere inclusivo
             d_end = d.replace(hour=23, minute=59, second=59)
             q = q.filter(models.EntityVersion.created_at <= d_end)
         except ValueError:
@@ -160,12 +144,10 @@ def list_versions_options(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Valori distinti per popolare i dropdown dei filtri."""
     types = [r[0] for r in db.query(models.EntityVersion.entity_type).distinct().all() if r[0]]
     sources = [r[0] for r in db.query(models.EntityVersion.source).distinct().all() if r[0]]
     operations = [r[0] for r in db.query(models.EntityVersion.operation).distinct().all() if r[0]]
 
-    # Lista utenti che hanno creato almeno una versione
     user_ids = [r[0] for r in db.query(models.EntityVersion.user_id).distinct().all() if r[0]]
     users = []
     if user_ids:
@@ -197,9 +179,6 @@ def get_version_detail(
 
     prev = get_previous_version(db, v.entity_type, v.entity_id, v.id)
     if v.operation == "delete":
-        # Per una cancellazione lo snapshot salvato rappresenta lo stato
-        # appena prima del delete: nel diff i valori vanno mostrati come
-        # "Before", e "Now" è null perché il record non esiste più.
         diff = {
             k: {"old": val, "new": None}
             for k, val in (v.snapshot or {}).items()

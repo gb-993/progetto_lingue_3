@@ -5,47 +5,6 @@ Importa in blocco lo stato del vecchio sito Django partendo da un ZIP che
 contiene fogli Excel + xlsx Database_model per lingua. Pensato per un'unica
 operazione di seed alla messa online del nuovo sito.
 
-Contratto del bundle (vedi `docs` o l'export Django gemello):
-
-    PCM_migration_<ts>.zip
-    ├── 00_languages.xlsx
-    │     ID, Name, Position, Top-level family, Family, Group,
-    │     ISO code, Glottocode, Location, Latitude, Longitude,
-    │     Supervisor, Informant, Historical, Source
-    ├── 01_motivations.xlsx        (ID, Code, Label)
-    ├── 02_parameters.xlsx         (ID, Position, Name, Schema, Type, Level,
-    │                                Short Description, Long Description,
-    │                                Implicational Condition,
-    │                                Explanation of Implicational Condition,
-    │                                Is Active)
-    ├── 03_questions.xlsx          (ID, Parameter ID, Text, Template Type,
-    │                                Instruction, Instruction YES, Instruction NO,
-    │                                Example YES, Help Info,
-    │                                Is Stop Question, Is Active)
-    ├── 04_question_allowed_motivations.xlsx (Question ID, Motivation Code)
-    ├── 06_glossary.xlsx           (Word, Description)
-    ├── 08_unsure_flags.xlsx       (Language ID, Parameter ID)   # opzionale
-    └── data/
-        ├── <Lingua1>.xlsx         (foglio Database_model)
-        └── ...
-
-Strategia operativa:
-    - se `wipe=True`, TRUNCATE delle tabelle dati in ordine FK-safe prima dell'import;
-    - upsert per id/code/word su tutte le entità di schema;
-    - tassonomia (top_families/families/groups) ricavata dalle stringhe presenti
-      su 00_languages.xlsx;
-    - per ogni file in data/: cancella eventuali risposte esistenti della lingua
-      e ricrea Answer come `approved` + Example;
-    - alla fine: per ogni lingua, calcola LanguageParameter (consolidate) + esegue il DAG;
-    - admin di default ricreato sempre (env: ADMIN_EMAIL, ADMIN_PASSWORD);
-    - per ogni entità versionata (Motivation, Parameter, Question, Language,
-      Answer) viene registrata una EntityVersion con operation='create' e
-      source='migration_import'. Questo dà a ciascuna entità una "prima
-      versione" da cui partire: ogni modifica futura mostrerà diff puliti
-      contro questo snapshot iniziale, come se i dati fossero stati immessi
-      manualmente al momento del seed.
-
-Endpoint chiamante: routers/migration.py
 """
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
@@ -70,10 +29,7 @@ from services.versioning import record_version
 from services.migration_progress import ProgressReporter, NULL_PROGRESS
 
 
-# ============================================================================
 # Report
-# ============================================================================
-
 @dataclass
 class MigrationError:
     section: str
@@ -130,10 +86,8 @@ class MigrationReport:
         return self.by_section[name]
 
 
-# ============================================================================
-# Helpers
-# ============================================================================
 
+# Helpers
 def _str(v: Any) -> str:
     if v is None:
         return ""
@@ -191,9 +145,7 @@ def _open_xlsx_from_zip(zf: zipfile.ZipFile, name: str) -> Optional[Worksheet]:
     return wb.active
 
 
-# ============================================================================
 # WIPE: TRUNCATE FK-safe
-# ============================================================================
 
 # Ordine di cancellazione: prima foglie, poi tabelle parent.
 WIPE_ORDER = [
@@ -225,10 +177,6 @@ WIPE_ORDER = [
     "top_families",
 ]
 
-# Tabella users non viene mai svuotata interamente: lasciamo i record esistenti
-# (es. eventuali account admin custom). Per il flusso "DB pulito" l'utente lo
-# avrà comunque azzerato a monte.
-
 
 def _wipe_all(db: Session) -> None:
     """TRUNCATE in ordine FK-safe. Postgres: TRUNCATE ... CASCADE per sicurezza."""
@@ -238,17 +186,10 @@ def _wipe_all(db: Session) -> None:
     db.flush()
 
 
-# ============================================================================
 # DEFAULT ADMIN
-# ============================================================================
 
 def _ensure_default_admin(db: Session) -> str:
     """Crea l'admin di default se manca. Idempotente: non tocca utenti esistenti.
-
-    Storico: prima questa funzione *resettava* password/role/flags dell'admin
-    a ogni import del bundle, sovrascrivendo le modifiche fatte dall'utente
-    via UI (cambio password, ecc.). Ora se l'utente con `ADMIN_EMAIL`
-    esiste gia' viene lasciato intatto.
     """
     email = os.getenv("ADMIN_EMAIL", "admin@pcm.local").strip().lower()
 
@@ -274,9 +215,7 @@ def _ensure_default_admin(db: Session) -> str:
     return email
 
 
-# ============================================================================
 # 1. MOTIVATIONS — upsert per code
-# ============================================================================
 
 def _import_motivations(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("Motivations")
@@ -315,9 +254,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: MigrationReport) -> 
             summary.inserted += 1
 
 
-# ============================================================================
 # 2. PARAMETERS — upsert per id
-# ============================================================================
 
 PARAM_FIELDS = (
     ("Name", "name", _str),
@@ -337,12 +274,7 @@ def _ensure_param_lookup(
     raw_label: str,
     cache: Dict[str, Any],
 ) -> str:
-    """
-    Upsert su una lookup table di parametri (ParamSchema/ParamType/ParamLevelOfComparison)
-    con matching case-insensitive. Ritorna la label canonica (quella effettivamente
-    presente in DB) così che il valore stringa sul ParameterDef venga normalizzato e
-    coincida esattamente con un'opzione delle tendine del form.
-    """
+
     if raw_label is None:
         return ""
     label = str(raw_label).strip()
@@ -377,7 +309,6 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
         max((p.position or 0) for p in db.query(models.ParameterDef).all()) or 0
     )
 
-    # Cache locali per le lookup (riempite on-the-fly, case-insensitive)
     schema_cache: Dict[str, models.ParamSchema] = {}
     type_cache: Dict[str, models.ParamType] = {}
     level_cache: Dict[str, models.ParamLevelOfComparison] = {}
@@ -420,15 +351,12 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
                 summary.inserted += 1
                 next_position = max(next_position, position) + 1
 
-            # Popola le lookup table e normalizza il valore stringa sul ParameterDef
-            # (case-insensitive: la prima occorrenza definisce la forma canonica).
             target.schema = _ensure_param_lookup(db, models.ParamSchema, target.schema, schema_cache)
             target.param_type = _ensure_param_lookup(db, models.ParamType, target.param_type, type_cache)
             target.level_of_comparison = _ensure_param_lookup(
                 db, models.ParamLevelOfComparison, target.level_of_comparison, level_cache
             )
 
-            # Versione iniziale solo per gli inserimenti (existing == None).
             if existing is None:
                 db.flush()
                 record_version(db, target, operation="create", source="migration_import",
@@ -441,9 +369,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
             ))
 
 
-# ============================================================================
 # 3. QUESTIONS — upsert per id
-# ============================================================================
 
 QUESTION_FIELDS = (
     ("Text", "text", _str),
@@ -512,8 +438,6 @@ def _import_questions(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 db.add(obj)
                 db.flush()
                 by_id[qid] = obj
-                # NB: la versione 'create' per Question viene registrata dopo
-                # _import_qam, così lo snapshot include allowed_motivation_codes.
                 summary.inserted += 1
         except (IntegrityError, DataError) as e:
             db.rollback()

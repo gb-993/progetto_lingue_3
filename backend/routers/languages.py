@@ -24,7 +24,6 @@ class LanguageBase(BaseModel):
     family: str = ""
     top_level_family: str = ""
     grp: str = ""
-    # FK opzionali alla tassonomia (preferite rispetto alle stringhe se passate)
     top_family_id: Optional[int] = None
     family_id: Optional[int] = None
     group_id: Optional[int] = None
@@ -32,7 +31,6 @@ class LanguageBase(BaseModel):
     longitude: Optional[float] = None
     historical_language: bool = False
     assigned_user_id: Optional[int] = None
-    # Campi metadata aggiuntivi
     isocode: str = ""
     glottocode: str = ""
     informant: str = ""
@@ -57,16 +55,7 @@ def ensure_assigned_user_exists(user_id: Optional[int], db: Session):
 
 
 def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
-    """
-    Risolve la gerarchia top → family → group:
-    - se arriva una stringa senza FK (es. da import Excel/migration o edit
-      manuale), prova a risolvere l'FK cercando l'entità con lo stesso nome
-      (case-sensitive, coerente con il vincolo unique sui dizionari)
-    - se passi group_id, deduce family_id e top_family_id dai parent
-    - se passi family_id, deduce top_family_id dal parent
-    - sincronizza i campi stringa (top_level_family, family, grp) con i nomi delle entità
-    Ritorna un dict {top_family_id, family_id, group_id, top_level_family, family, grp}.
-    """
+
     top_id = item.top_family_id
     fam_id = item.family_id
     grp_id = item.group_id
@@ -74,11 +63,6 @@ def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
     fam_str = item.family or ""
     grp_str = item.grp or ""
 
-    # Reverse lookup: stringa → FK quando la stringa è popolata e l'FK no.
-    # Se la stringa non corrisponde a nessuna entità lasciamo l'FK a None: lo
-    # stato "stringa unnormalized" resta lecito ed è visibile in /taxonomy.
-    # Il forward propagation sotto può comunque sovrascrivere l'FK appena
-    # trovato (es. group → family) per garantire la consistenza gerarchica.
     if grp_id is None and grp_str:
         g = db.query(models.Group).filter(models.Group.name == grp_str).first()
         if g:
@@ -100,7 +84,7 @@ def resolve_taxonomy(item: "LanguageBase", db: Session) -> dict:
         if g.family_id is not None:
             fam_id = g.family_id
         elif fam_id is None:
-            fam_id = None  # group orfano: lascia family vuota se non specificata
+            fam_id = None  
 
     if fam_id is not None:
         f = db.get(models.Family, fam_id)
@@ -143,11 +127,7 @@ def get_public_languages(db: Session = Depends(get_db)):
 
 @router.get("/admin/languages")
 def get_admin_languages(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Restituisce le lingue.
-    Se Admin: tutte.
-    Se User: solo quelle assegnate.
-    """
+
     query = db.query(models.Language)
 
     if current_user.role != "admin":
@@ -155,8 +135,6 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
 
     languages = query.order_by(func.lower(models.Language.id)).all()
 
-    # Completamento (asse A: empty/incomplete/complete) per ogni lingua, in batch.
-    # Rispetta l'override super-admin. Indipendente dallo status (asse B).
     pq = active_param_questions(db)
     completion_by_lang = compute_language_completion(
         db,
@@ -196,14 +174,11 @@ def get_admin_languages(db: Session = Depends(get_db), current_user: models.User
 
 @router.get("/admin/languages/{id}")
 def get_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Recupera una singola lingua con controllo permessi.
-    """
+
     language = db.query(models.Language).filter(models.Language.id == id).first()
     if not language:
         raise HTTPException(status_code=404, detail="Language not found")
 
-    # Se non è admin, deve essere l'assegnatario
     if current_user.role != "admin" and language.assigned_user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied to this language.")
 
@@ -259,12 +234,6 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
     ensure_assigned_user_exists(item.assigned_user_id, db)
     tax = resolve_taxonomy(item, db)
 
-    # Gestione rename dell'id: il DB ha ON UPDATE CASCADE su tutte le FK verso
-    # languages.id (answers, language_parameters, language_parameter_statuses,
-    # submissions), quindi i record collegati vengono aggiornati nella stessa
-    # transazione. Le tabelle storiche con language_id denormalizzato senza FK
-    # (archived_answers, entity_versions) NON seguono: per design conservano
-    # il valore al momento dell'archiviazione/log.
     new_id = (item.id or "").strip()
     if not new_id:
         raise HTTPException(status_code=422, detail="Language ID cannot be empty.")
@@ -282,8 +251,6 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
                 status_code=409,
                 detail=f"Language ID '{new_id}' is already in use.",
             )
-        # Il nuovo id non puo' collidere con un alias di un'altra lingua,
-        # altrimenti il resolver di restore/import diventerebbe ambiguo.
         conflicting_alias = (
             db.query(models.LanguageAlias)
             .filter(
@@ -301,16 +268,10 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
                 ),
             )
 
-        # Se il nuovo id era un alias di QUESTA stessa lingua (rename A->B->A),
-        # rimuovi quell'alias adesso: tra poco l'id ridiventa "corrente", non
-        # piu' "storico".
         db.query(models.LanguageAlias).filter(
             models.LanguageAlias.old_id == new_id,
             models.LanguageAlias.language_id == old_id,
         ).delete(synchronize_session=False)
-        # Applica il rename PRIMA di registrare l'alias: cosi' la riga in
-        # language_aliases punta direttamente al nuovo id ed evitiamo
-        # dipendenze sull'ordine di flush della cascade SQLAlchemy.
         db_item.id = new_id
         db.flush()
         existing_alias = (
@@ -354,9 +315,6 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
         return db_item
     except IntegrityError as e:
         db.rollback()
-        # Conserva il messaggio originario del DB nel detail: aiuta a
-        # diagnosticare violazioni di unique/FK quando capitano (sennò
-        # tutti i 400 risultano indistinguibili).
         raise HTTPException(
             status_code=400,
             detail=f"Could not update the language: {getattr(e, 'orig', e)}",
@@ -365,25 +323,11 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
 
 @router.delete("/admin/languages/{id}")
 def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Eliminazione "vera" della lingua: rimuove la riga e, per ON DELETE
-    CASCADE a livello DB, tutte le righe figlie/nipote nelle tabelle
-    operative (answers, examples, answer_motivations, language_parameters,
-    language_parameter_evals, language_parameter_statuses, submissions e
-    le loro children, language_aliases).
 
-    NON viene toccato lo storico immutabile:
-      - `entity_versions` (History): la timeline della lingua resta visibile;
-        prima di cancellare registriamo una nuova entry operation=delete.
-      - `archived_answers`: snapshot di question buttate via, language_id
-        denormalizzato senza FK.
-      - `motivations` (dizionario globale) e altre tabelle non FK.
-    """
     db_item = db.query(models.Language).filter(models.Language.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Language not found")
 
-    # Snapshot prima del delete: la History conserva il record di quando e
-    # da chi e' stata cancellata e in che stato si trovava al momento.
     record_version(
         db, db_item, operation="delete", source="manual",
         user_id=current_user.id,
@@ -401,14 +345,6 @@ def delete_admin_language(id: str, db: Session = Depends(get_db), current_user: 
     return {"detail": "Language deleted successfully"}
 
 
-# ==========================================
-# DUPLICATE LANGUAGE
-# Copia integrale della lingua con tutte le risposte, esempi, motivazioni
-# e i parametri/eval. Non copia: Submissions (storico) ed EntityVersion (audit).
-# L'admin puo' scegliere l'ID (e il nome) della copia; se non li passa, il
-# nuovo ID e il nuovo nome ottengono un suffisso numerico progressivo a
-# partire da 2 (es. "It"/"Italian" -> "It2"/"Italian2").
-# ==========================================
 class DuplicateLanguageRequest(BaseModel):
     new_id: Optional[str] = None
     new_name: Optional[str] = None
@@ -449,7 +385,6 @@ def duplicate_admin_language(
     requested_name = requested_name.strip()
 
     if requested_id:
-        # ID scelto dall'admin: stesse validazioni del rename.
         new_id = requested_id
         if len(new_id) > ID_MAX_LEN:
             raise HTTPException(
@@ -461,8 +396,6 @@ def duplicate_admin_language(
                 status_code=409,
                 detail=f"Language ID '{new_id}' is already in use.",
             )
-        # Una lingua nuova non puo' riusare un id che e' alias storico di
-        # un'altra lingua, altrimenti restore/import diventerebbero ambigui.
         conflicting_alias = (
             db.query(models.LanguageAlias)
             .filter(models.LanguageAlias.old_id == new_id)
@@ -478,7 +411,6 @@ def duplicate_admin_language(
             )
         new_name = requested_name or base_name
     else:
-        # Default automatico: suffisso numerico progressivo a partire da 2.
         n = _next_duplicate_suffix(db, base_id)
         new_id = f"{base_id}{n}"
         new_name = requested_name or f"{base_name}{n}"
@@ -521,7 +453,6 @@ def duplicate_admin_language(
     db.add(new_lang)
     db.flush()
 
-    # Answers (+ esempi, + answer_motivations) — copia integrale.
     src_answers = db.query(models.Answer).filter(models.Answer.language_id == src.id).all()
     for a in src_answers:
         new_a = models.Answer(
@@ -551,7 +482,6 @@ def duplicate_admin_language(
                 motivation_id=am.motivation_id,
             ))
 
-    # Stato di compilazione per parametro (is_unsure)
     src_statuses = (
         db.query(models.LanguageParameterStatus)
         .filter(models.LanguageParameterStatus.language_id == src.id)
@@ -564,7 +494,6 @@ def duplicate_admin_language(
             is_unsure=s.is_unsure,
         ))
 
-    # Valori dei parametri + valutazione DAG
     src_params = (
         db.query(models.LanguageParameter)
         .filter(models.LanguageParameter.language_id == src.id)

@@ -1,19 +1,4 @@
-"""
-Migration Bundle Importer — endpoint admin one-shot.
 
-POST /api/admin/migration/import-bundle?wipe=true
-    multipart/form-data con il file ZIP prodotto dal sito vecchio.
-    Ritorna immediatamente {"job_id": "..."} e lancia l'import come
-    BackgroundTask. Polla GET /status/{job_id} per seguire l'avanzamento.
-
-GET /api/admin/migration/status/{job_id}
-    Stato corrente del job: phase, label, current/total, finished, error,
-    report (popolato a fine job).
-
-Attenzione: con wipe=true vengono troncate tutte le tabelle dati. È pensato
-come operazione una-tantum di seed alla messa online del nuovo sito. Disabilitare
-o nascondere il bottone in produzione una volta completata la migrazione.
-"""
 from __future__ import annotations
 import io
 import logging
@@ -33,26 +18,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/migration", tags=["Migration"])
 
 
-# Limite di sicurezza per il bundle compresso e per la sua decompressione.
-# Il check sul decompresso evita zip-bomb (file piccolo, dati enormi).
 MAX_BUNDLE_SIZE = 200 * 1024 * 1024            # 200 MB compresso
 MAX_UNCOMPRESSED_TOTAL = 500 * 1024 * 1024     # 500 MB decompresso totale
 MAX_UNCOMPRESSED_PER_FILE = 100 * 1024 * 1024  # 100 MB per singolo file
 
 
 def _validate_zip_bundle(contents: bytes) -> None:
-    """
-    Apre il bundle in lettura SOLO per validarne i metadati (namelist + sizes)
-    senza estrarre nulla, e solleva HTTPException 400/413 se trova qualcosa
-    di sospetto. Chi chiama deve aver gia' verificato la dimensione totale
-    del file caricato.
 
-    Difese:
-      - path-traversal: rifiuta nomi assoluti, contenenti ".." o backslash
-      - directory escape: rifiuta nomi con drive Windows (es. "C:\\...")
-      - zip-bomb: rifiuta se un singolo file supera MAX_UNCOMPRESSED_PER_FILE
-        o se la somma di tutti i file decompressi supera MAX_UNCOMPRESSED_TOTAL
-    """
     try:
         zf = zipfile.ZipFile(io.BytesIO(contents), "r")
     except zipfile.BadZipFile as e:
@@ -62,9 +34,6 @@ def _validate_zip_bundle(contents: bytes) -> None:
     for info in zf.infolist():
         name = info.filename
 
-        # Path-traversal: il bundle del nostro vecchio sito ha solo
-        # filename "piatti" tipo "01_motivations.xlsx", senza directory.
-        # Qualsiasi cosa di diverso e' sospetta.
         if (
             name.startswith("/")
             or name.startswith("\\")
@@ -97,8 +66,6 @@ def _validate_zip_bundle(contents: bytes) -> None:
 
 
 def _run_import_in_background(contents: bytes, wipe: bool, job_id: str) -> None:
-    """Eseguito dal threadpool di BackgroundTasks. Apre la propria DB session
-    perché quella iniettata via Depends() viene chiusa al ritorno della response."""
     db = SessionLocal()
     try:
         reporter = ProgressReporter(job_id)
@@ -132,8 +99,6 @@ async def post_import_migration_bundle(
     if len(contents) > MAX_BUNDLE_SIZE:
         raise HTTPException(status_code=413, detail="Bundle too large (max 200 MB)")
 
-    # Validazione metadati zip prima di lanciare il job: blocca path
-    # traversal e zip-bomb. Solleva HTTPException se qualcosa non torna.
     _validate_zip_bundle(contents)
 
     job_id = migration_progress.new_job()

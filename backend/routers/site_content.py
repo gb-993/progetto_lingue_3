@@ -19,16 +19,10 @@ class MapDataResponse(BaseModel):
 class SiteContentUpdate(BaseModel):
     content: str
 
-# ==========================================
-# ENDPOINT PUBBLICI
-# ==========================================
 
 @router.get("/api/public/map-data", response_model=List[MapDataResponse])
 def get_map_data(db: Session = Depends(get_db)):
-    """
-    Recupera tutte le lingue che hanno coordinate geografiche.
-    Utilizzato per renderizzare la mappa interattiva nella Public Dashboard.
-    """
+
     langs = db.query(models.Language).filter(
         models.Language.latitude.isnot(None),
         models.Language.longitude.isnot(None)
@@ -47,26 +41,17 @@ def get_map_data(db: Session = Depends(get_db)):
 
 @router.get("/api/public/site-content", response_model=Dict[str, str])
 def get_site_content(db: Session = Depends(get_db)):
-    """
-    Recupera tutti i contenuti dinamici del sito (es. regole di citazione).
-    Restituisce un dizionario chiave: contenuto per facilitare l'uso in React.
-    """
+
     contents = db.query(models.SiteContent).all()
     return {item.key: item.content for item in contents}
 
-# ==========================================
-# ENDPOINT ADMIN
-# ==========================================
 
 @router.put("/api/admin/site-content/{key}")
 def update_site_content(key: str, data: SiteContentUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Aggiorna o crea un blocco di testo dinamico. Riservato agli amministratori.
-    """
+
     content_obj = db.query(models.SiteContent).filter(models.SiteContent.key == key).first()
 
     if not content_obj:
-        # Se la chiave non esiste, la crea
         content_obj = models.SiteContent(
             key=key,
             page="how_to_cite",  # Default page logico
@@ -75,7 +60,6 @@ def update_site_content(key: str, data: SiteContentUpdate, db: Session = Depends
         )
         db.add(content_obj)
     else:
-        # Altrimenti aggiorna quella esistente
         content_obj.content = data.content
         content_obj.updated_by_id = current_user.id
 

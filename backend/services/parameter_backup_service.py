@@ -163,10 +163,7 @@ def create_single_parameter_backup(
         raise
 
 
-# ============================================================================
 # Export di una ParameterSubmission in xlsx (download del backup parametro).
-# Tutto deriva dallo snapshot in DB: niente lookup vivi.
-# ============================================================================
 
 _PINFO_HEADERS = ["Field", "Value"]
 _PQUESTIONS_HEADERS = [

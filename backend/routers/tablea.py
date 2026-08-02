@@ -33,17 +33,8 @@ from services.citation import (
     inject_html_citation,
 )
 
-# Tutti gli endpoint di TableA sono admin-only (la pagina /tablea nella SPA è
-# riservata agli admin e i payload — matrice cross-language, export, distanze,
-# Mantel, PCA — non vanno esposti a utenti non admin né tantomeno al pubblico),
-# TRANNE `/options` che è chiamato anche da LanguageList per popolare i filtri
-# top_family/family/group e quindi richiede solo `get_current_user`.
-# Le dipendenze sono dichiarate per-view invece che a livello di router perché
-# in FastAPI le dependencies del router sono additive: non c'è modo di
-# "togliere" require_admin da una singola route.
 router = APIRouter(prefix="/api/tablea", tags=["Table A"])
 
-# --- SCHEMI PYDANTIC ---
 class TableAFilterRequest(BaseModel):
     view: str = "params"
     f_lang_top_family: Optional[str] = ""
@@ -69,71 +60,66 @@ class ClusterMapRequest(TableAFilterRequest):
     distance: str = "hamming"          # "hamming" | "jaccard"
     threshold_coeff: float = 0.56      # cluster cut at coeff * max(linkage_distance), come 01_plot_clusters.py
 
-# --- FUNZIONI CORE (PORTING MATEMATICO ESATTO) ---
 
-def _hamming_core(P1, P2) -> float:
+def _hamming_core(symbols_a, symbols_b) -> float:
     """Calcola distanza di Hamming su simboli + e -."""
     identities, differences = 0.0, 0.0
-    for v1, v2 in zip(P1, P2):
-        if v1 == v2 and v1 in ("+", "-"): identities += 1
-        elif (v1 == "+" and v2 == "-") or (v1 == "-" and v2 == "+"): differences += 1
+    for symbol_a, symbol_b in zip(symbols_a, symbols_b):
+        if symbol_a == symbol_b and symbol_a in ("+", "-"): identities += 1
+        elif (symbol_a == "+" and symbol_b == "-") or (symbol_a == "-" and symbol_b == "+"): differences += 1
     return differences / (identities + differences) if (identities + differences) > 0 else 0.0
 
-def _jaccard_core(P1, P2, identity="+") -> float:
+def _jaccard_core(symbols_a, symbols_b, identity="+") -> float:
     """Calcola distanza di Jaccard sull'identità scelta."""
     identities, differences = 0.0, 0.0
-    for v1, v2 in zip(P1, P2):
-        if v1 == v2 == identity: identities += 1
-        elif (v1 == "+" and v2 == "-") or (v1 == "-" and v2 == "+"): differences += 1
+    for symbol_a, symbol_b in zip(symbols_a, symbols_b):
+        if symbol_a == symbol_b == identity: identities += 1
+        elif (symbol_a == "+" and symbol_b == "-") or (symbol_a == "-" and symbol_b == "+"): differences += 1
     return differences / (identities + differences) if (identities + differences) > 0 else 0.0
 
 def _get_filtered_data(db: Session, filters: TableAFilterRequest):
     """Replicazione esatta della logica get_tablea_filtered_data."""
-    # 1. Filtro Lingue
-    l_query = db.query(models.Language)
-    if filters.f_lang_top_family: l_query = l_query.filter(models.Language.top_level_family == filters.f_lang_top_family)
-    if filters.f_lang_family: l_query = l_query.filter(models.Language.family == filters.f_lang_family)
-    if filters.f_lang_grp: l_query = l_query.filter(models.Language.grp == filters.f_lang_grp)
-    if filters.f_lang_hist == "yes": l_query = l_query.filter(models.Language.historical_language == True)
-    elif filters.f_lang_hist == "no": l_query = l_query.filter(models.Language.historical_language == False)
-    if filters.f_lang_specific: l_query = l_query.filter(models.Language.id.in_(filters.f_lang_specific))
+    language_query = db.query(models.Language)
+    if filters.f_lang_top_family: language_query = language_query.filter(models.Language.top_level_family == filters.f_lang_top_family)
+    if filters.f_lang_family: language_query = language_query.filter(models.Language.family == filters.f_lang_family)
+    if filters.f_lang_grp: language_query = language_query.filter(models.Language.grp == filters.f_lang_grp)
+    if filters.f_lang_hist == "yes": language_query = language_query.filter(models.Language.historical_language == True)
+    elif filters.f_lang_hist == "no": language_query = language_query.filter(models.Language.historical_language == False)
+    if filters.f_lang_specific: language_query = language_query.filter(models.Language.id.in_(filters.f_lang_specific))
 
-    languages = l_query.order_by(func.lower(models.Language.id)).all()
-    lang_ids = [l.id for l in languages]
+    languages = language_query.order_by(func.lower(models.Language.id)).all()
+    lang_ids = [language.id for language in languages]
 
-    # 2. Filtro Item (Parametri o Domande)
     matrix = []
     if filters.view == "questions":
-        q_query = db.query(models.Question).join(models.ParameterDef).filter(
+        question_query = db.query(models.Question).join(models.ParameterDef).filter(
             models.ParameterDef.is_active == True,
             models.Question.is_active == True,
         )
-        if filters.f_q_template: q_query = q_query.filter(models.Question.template_type == filters.f_q_template)
-        if filters.f_q_stop == "yes": q_query = q_query.filter(models.Question.is_stop_question == True)
-        elif filters.f_q_stop == "no": q_query = q_query.filter(models.Question.is_stop_question == False)
-        if filters.selected_ids: q_query = q_query.filter(models.Question.id.in_(filters.selected_ids))
+        if filters.f_q_template: question_query = question_query.filter(models.Question.template_type == filters.f_q_template)
+        if filters.f_q_stop == "yes": question_query = question_query.filter(models.Question.is_stop_question == True)
+        elif filters.f_q_stop == "no": question_query = question_query.filter(models.Question.is_stop_question == False)
+        if filters.selected_ids: question_query = question_query.filter(models.Question.id.in_(filters.selected_ids))
 
-        items = q_query.order_by(models.ParameterDef.position, models.Question.id).all()
-        item_ids = [q.id for q in items]
-        ans = db.query(models.Answer).filter(models.Answer.question_id.in_(item_ids), models.Answer.language_id.in_(lang_ids)).all()
-        ans_dict = {(a.question_id, a.language_id): (a.response_text or "").upper() for a in ans}
+        items = question_query.order_by(models.ParameterDef.position, models.Question.id).all()
+        item_ids = [question.id for question in items]
+        answers = db.query(models.Answer).filter(models.Answer.question_id.in_(item_ids), models.Answer.language_id.in_(lang_ids)).all()
+        answer_by_question_and_lang = {(answer.question_id, answer.language_id): (answer.response_text or "").upper() for answer in answers}
 
-        for q in items:
+        for question in items:
             matrix.append({
-                "id": q.id, "name": q.text, "extra": "",
-                "cells": [ans_dict.get((q.id, lid), "") for lid in lang_ids]
+                "id": question.id, "name": question.text, "extra": "",
+                "cells": [answer_by_question_and_lang.get((question.id, lid), "") for lid in lang_ids]
             })
     else:
-        p_query = db.query(models.ParameterDef).filter(models.ParameterDef.is_active == True)
-        if filters.f_p_schema: p_query = p_query.filter(models.ParameterDef.schema == filters.f_p_schema)
-        if filters.f_p_type: p_query = p_query.filter(models.ParameterDef.param_type == filters.f_p_type)
-        if filters.f_p_level: p_query = p_query.filter(models.ParameterDef.level_of_comparison == filters.f_p_level)
-        if filters.selected_ids: p_query = p_query.filter(models.ParameterDef.id.in_(filters.selected_ids))
+        parameter_query = db.query(models.ParameterDef).filter(models.ParameterDef.is_active == True)
+        if filters.f_p_schema: parameter_query = parameter_query.filter(models.ParameterDef.schema == filters.f_p_schema)
+        if filters.f_p_type: parameter_query = parameter_query.filter(models.ParameterDef.param_type == filters.f_p_type)
+        if filters.f_p_level: parameter_query = parameter_query.filter(models.ParameterDef.level_of_comparison == filters.f_p_level)
+        if filters.selected_ids: parameter_query = parameter_query.filter(models.ParameterDef.id.in_(filters.selected_ids))
 
-        items = p_query.order_by(models.ParameterDef.position).all()
-        item_ids = [p.id for p in items]
-        # Query a colonne (niente lazy-load di e.language_parameter): evita
-        # l'N+1 storico — con N lingue × M parametri si emetteva 1 SELECT per ogni eval.
+        items = parameter_query.order_by(models.ParameterDef.position).all()
+        item_ids = [parameter.id for parameter in items]
         eval_rows = db.query(
             models.LanguageParameter.parameter_id,
             models.LanguageParameter.language_id,
@@ -145,46 +131,30 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
             models.LanguageParameter.parameter_id.in_(item_ids),
             models.LanguageParameter.language_id.in_(lang_ids),
         ).all()
-        ev_dict = {(p_id, l_id): val for (p_id, l_id, val) in eval_rows}
+        eval_by_param_and_lang = {(parameter_id, language_id): val for (parameter_id, language_id, val) in eval_rows}
 
-        for p in items:
+        for parameter in items:
             matrix.append({
-                "id": p.id, "name": p.name, "extra": p.implicational_condition or "",
-                "cells": [ev_dict.get((p.id, lid), "") for lid in lang_ids]
+                "id": parameter.id, "name": parameter.name, "extra": parameter.implicational_condition or "",
+                "cells": [eval_by_param_and_lang.get((parameter.id, lid), "") for lid in lang_ids]
             })
 
     return languages, matrix
 
-# Mappatura vista questions → simboli degli script (concordata con C. Guardiano
-# via email, giugno 2026): yes→'+', no→'-'; unsure/missing/vuoto diventano '0'
-# (missing character) e quindi vengono saltati da _hamming_core/_jaccard_core
-# esattamente come gli 0/?/vuoto dei parametri. Ogni question è un item
-# indipendente: NESSUNA ri-pesatura per parametro, quindi un parametro con più
-# domande pesa di più nelle distanze (comportamento voluto, non un bug).
 _ANSWER_TO_SYMBOL = {"YES": "+", "NO": "-"}
 
 def _get_symbol_data(db: Session, filters: TableAFilterRequest):
-    """Come _get_filtered_data, ma con celle già in simboli +/-/0 per ENTRAMBE
-    le viste. Da usare in tutti gli endpoint computazionali (distanze,
-    dendrogrammi, cluster map, PCA, Mantel); matrix/xlsx/csv continuano invece
-    a mostrare i valori grezzi delle risposte (YES/NO/...)."""
     langs, rows = _get_filtered_data(db, filters)
     if filters.view == "questions":
-        for r in rows:
-            r["cells"] = [_ANSWER_TO_SYMBOL.get(c, "0") for c in r["cells"]]
+        for row in rows:
+            row["cells"] = [_ANSWER_TO_SYMBOL.get(cell, "0") for cell in row["cells"]]
     return langs, rows
 
-# ==========================================
-# ENDPOINT: VISUALIZZAZIONE E TENDINE
-# ==========================================
 
-# Accessibile a tutti gli utenti loggati (vedi nota sul router): LanguageList
-# usa queste opzioni per popolare i filtri top_family/family/group anche per
-# gli utenti non admin.
 @router.get("/options")
 def get_tablea_options(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """Restituisce le opzioni univoche per popolare i filtri."""
-    def distinct(col): return [r[0] for r in db.query(col).filter(col != None, col != "", col != "none").distinct().order_by(col).all()]
+    def distinct(col): return [row[0] for row in db.query(col).filter(col != None, col != "", col != "none").distinct().order_by(col).all()]
     return {
         "opt_top_families": distinct(models.Language.top_level_family),
         "opt_families": distinct(models.Language.family),
@@ -193,41 +163,23 @@ def get_tablea_options(db: Session = Depends(get_db), current_user: models.User 
         "opt_types": distinct(models.ParamType.label),
         "opt_levels": distinct(models.ParamLevelOfComparison.label),
         "opt_templates": distinct(models.Question.template_type),
-        # Aggiunti top_family/family/grp/historical: servono al frontend per
-        # "espandere" una famiglia nelle sue lingue e costruire l'insieme di
-        # colonne (selezione famiglie → escludi/aggiungi singole lingue), come
-        # nella pagina Languages. Campi additivi: i consumer storici usano solo
-        # id/name.
         "opt_all_languages": [{
-            "id": l.id,
-            "name": l.name_full,
-            "top_family": l.top_level_family or "",
-            "family": l.family or "",
-            "grp": l.grp or "",
-            "historical": bool(l.historical_language),
-        } for l in db.query(models.Language).order_by(func.lower(models.Language.id)).all()]
+            "id": language.id,
+            "name": language.name_full,
+            "top_family": language.top_level_family or "",
+            "family": language.family or "",
+            "grp": language.grp or "",
+            "historical": bool(language.historical_language),
+        } for language in db.query(models.Language).order_by(func.lower(models.Language.id)).all()]
     }
 
 def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, bool]:
-    """Mappa (lang_id, param_id) -> bool dove True = "rosso" in TableA.
-
-    Replica la stessa regola del wizard navigation in LanguageData
-    (services/compilation _build_lang_data, classe CSS `is-incomplete`):
-        red = is_unsure == True
-              OR (answered > 0 AND answered < total)
-    dove `answered` è il numero di question attive con `response_text` in
-    ("yes","no") — unsure NON conta come risposta — e `total` è il numero
-    di question attive del parametro.
-
-    Costa 3 query batch (status, questions, answers): O(N×M) in memoria
-    Python, niente N+1.
-    """
+  
     if not lang_ids or not param_ids:
         return {}
 
-    # 1. is_unsure flags
     flagged: set[tuple] = set()
-    for lid, pid in db.query(
+    for language_id, parameter_id in db.query(
         models.LanguageParameterStatus.language_id,
         models.LanguageParameterStatus.parameter_id,
     ).filter(
@@ -235,88 +187,69 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
         models.LanguageParameterStatus.parameter_id.in_(param_ids),
         models.LanguageParameterStatus.is_unsure == True,
     ).all():
-        flagged.add((lid, pid))
+        flagged.add((language_id, parameter_id))
 
-    # 2. Total question attive per parametro
-    qid_to_param: Dict[str, str] = {}
-    param_total: Dict[str, int] = {}
-    for q_id, p_id in db.query(
+    parameter_id_by_question_id: Dict[str, str] = {}
+    total_questions_by_param: Dict[str, int] = {}
+    for question_id, parameter_id in db.query(
         models.Question.id, models.Question.parameter_id,
     ).filter(
         models.Question.parameter_id.in_(param_ids),
         models.Question.is_active == True,
     ).all():
-        qid_to_param[q_id] = p_id
-        param_total[p_id] = param_total.get(p_id, 0) + 1
+        parameter_id_by_question_id[question_id] = parameter_id
+        total_questions_by_param[parameter_id] = total_questions_by_param.get(parameter_id, 0) + 1
 
-    # 3. answered count per (lang, param)
     answered_count: Dict[tuple, int] = {}
-    if qid_to_param:
-        for l_id, q_id in db.query(
+    if parameter_id_by_question_id:
+        for language_id, question_id in db.query(
             models.Answer.language_id, models.Answer.question_id,
         ).filter(
             models.Answer.language_id.in_(lang_ids),
-            models.Answer.question_id.in_(list(qid_to_param.keys())),
+            models.Answer.question_id.in_(list(parameter_id_by_question_id.keys())),
             models.Answer.response_text.in_(["yes", "no"]),
         ).all():
-            p_id = qid_to_param.get(q_id)
-            if p_id is not None:
-                key = (l_id, p_id)
+            parameter_id = parameter_id_by_question_id.get(question_id)
+            if parameter_id is not None:
+                key = (language_id, parameter_id)
                 answered_count[key] = answered_count.get(key, 0) + 1
 
-    # 4. Compose: True se flagged OR parzialmente compilato.
     result: Dict[tuple, bool] = {}
-    for l_id in lang_ids:
-        for p_id in param_ids:
-            if (l_id, p_id) in flagged:
-                result[(l_id, p_id)] = True
+    for language_id in lang_ids:
+        for parameter_id in param_ids:
+            if (language_id, parameter_id) in flagged:
+                result[(language_id, parameter_id)] = True
                 continue
-            answered = answered_count.get((l_id, p_id), 0)
-            total = param_total.get(p_id, 0)
+            answered = answered_count.get((language_id, parameter_id), 0)
+            total = total_questions_by_param.get(parameter_id, 0)
             if answered > 0 and answered < total:
-                result[(l_id, p_id)] = True
+                result[(language_id, parameter_id)] = True
     return result
 
 
 def _orphan_answers_report(db: Session, lang_ids: List[str], question_ids: List[str]) -> Dict[str, Any]:
-    """Risposte yes/no su domande di parametri neutralizzati dall'implicazione.
 
-    La vista questions legge le Answer grezze e NON applica l'azzeramento
-    implicazionale. Se un compilatore ha risposto alle domande di un parametro
-    che poi risulta azzerato (il genitore cambia valore, oppure la condizione
-    viene aggiunta dopo), quelle risposte restano nella tabella e pesano in
-    tutti i calcoli; in vista params la stessa cella è '0' e viene saltata dai
-    core di distanza. Le due viste divergono quindi sulle lingue interessate.
-
-    Comportamento voluto (la vista questions mostra il dato grezzo): qui lo
-    quantifichiamo soltanto, per poterlo segnalare in UI.
-
-    `value_eval == '0'` identifica esattamente il caso: dag_eval assegna '0'
-    solo nel ramo "condizione falsa".
-
-    3 query batch, niente N+1.
-    """
     empty: Dict[str, Any] = {"count": 0, "languages": [], "parameters": []}
     if not lang_ids or not question_ids:
         return empty
 
-    qid_to_param: Dict[str, str] = {
-        q_id: p_id for q_id, p_id in db.query(
+    parameter_id_by_question_id: Dict[str, str] = {
+        question_id: parameter_id for question_id, parameter_id in db.query(
             models.Question.id, models.Question.parameter_id,
         ).filter(models.Question.id.in_(question_ids)).all()
     }
-    if not qid_to_param:
+    if not parameter_id_by_question_id:
         return empty
 
     zeroed = {
-        (p_id, l_id) for p_id, l_id in db.query(
+        (parameter_id, language_id) for parameter_id, language_id in db.query(
             models.LanguageParameter.parameter_id,
             models.LanguageParameter.language_id,
         ).join(
             models.LanguageParameterEval,
             models.LanguageParameterEval.language_parameter_id == models.LanguageParameter.id,
         ).filter(
-            models.LanguageParameter.parameter_id.in_(list(set(qid_to_param.values()))),
+            models.LanguageParameter.parameter_id.in_(list(set(parameter_id_by_question_id.values()))),
             models.LanguageParameter.language_id.in_(lang_ids),
             models.LanguageParameterEval.value_eval == "0",
         ).all()
@@ -327,32 +260,27 @@ def _orphan_answers_report(db: Session, lang_ids: List[str], question_ids: List[
     count = 0
     langs_hit: set = set()
     params_hit: set = set()
-    for l_id, q_id in db.query(
+    for language_id, question_id in db.query(
         models.Answer.language_id, models.Answer.question_id,
     ).filter(
         models.Answer.language_id.in_(lang_ids),
-        models.Answer.question_id.in_(list(qid_to_param.keys())),
+        models.Answer.question_id.in_(list(parameter_id_by_question_id.keys())),
         models.Answer.response_text.in_(["yes", "no"]),
     ).all():
-        p_id = qid_to_param.get(q_id)
-        if p_id and (p_id, l_id) in zeroed:
+        parameter_id = parameter_id_by_question_id.get(question_id)
+        if parameter_id and (parameter_id, language_id) in zeroed:
             count += 1
-            langs_hit.add(l_id)
-            params_hit.add(p_id)
+            langs_hit.add(language_id)
+            params_hit.add(parameter_id)
 
     return {"count": count, "languages": sorted(langs_hit), "parameters": sorted(params_hit)}
 
 
 def _value_orig_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> Dict[tuple, str]:
-    """Mappa (param_id, lang_id) -> value_orig (valore "iniziale"), sola lettura.
 
-    Usata SOLO per la resa estetica di "0+" (parametro con initial '+' azzerato
-    dall'implicazione) a schermo e nei due export leggibili (xlsx/csv). Non entra
-    in alcun calcolo: distanze/Mantel/cluster/PCA leggono sempre value_eval.
-    """
-    m: Dict[tuple, str] = {}
+    value_orig_by_param_and_lang: Dict[tuple, str] = {}
     if param_ids and lang_ids:
-        for p_id, l_id, v_orig in db.query(
+        for parameter_id, language_id, value_orig in db.query(
             models.LanguageParameter.parameter_id,
             models.LanguageParameter.language_id,
             models.LanguageParameter.value_orig,
@@ -360,203 +288,169 @@ def _value_orig_map(db: Session, lang_ids: List[str], param_ids: List[str]) -> D
             models.LanguageParameter.parameter_id.in_(param_ids),
             models.LanguageParameter.language_id.in_(lang_ids),
         ).all():
-            m[(p_id, l_id)] = v_orig or ""
-    return m
+            value_orig_by_param_and_lang[(parameter_id, language_id)] = value_orig or ""
+    return value_orig_by_param_and_lang
 
 
-def _display_cell(val: str, init: str) -> str:
-    """Dettaglio PURAMENTE estetico: un '0' finale con valore iniziale '+' si
-    mostra come '0+'. Mai persistito e mai passato a calcoli/DB (l'Enum ammette
-    solo +/-/0/?); negli script '0+' va trattato come '0'."""
-    return "0+" if (val == "0" and init == "+") else val
+def _display_cell(value: str, initial_value: str) -> str:
+    return "0+" if (value == "0" and initial_value == "+") else value
 
 
 @router.post("/matrix")
 def get_tablea_matrix(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     langs, rows = _get_filtered_data(db, filters)
-    lang_ids = [l.id for l in langs]
+    lang_ids = [language.id for language in langs]
 
-    # Solo per vista params: calcoliamo se la cella va segnalata "rossa"
-    # (incomplete o flagged unsure). La vista questions mostra le singole
-    # Answer e non ha questo concetto.
     incomplete_map: Dict[tuple, bool] = {}
-    # Valore iniziale (value_orig) per cella: serve SOLO alla resa a schermo del
-    # dettaglio "0+" (parametro azzerato dall'implicazione ma con initial '+').
-    # Nessun impatto sui calcoli/export computazionali. Read-only.
     init_map: Dict[tuple, str] = {}
     if filters.view == "params":
-        param_ids = [r["id"] for r in rows]
+        param_ids = [row["id"] for row in rows]
         incomplete_map = _compute_param_incomplete_map(db, lang_ids, param_ids)
         init_map = _value_orig_map(db, lang_ids, param_ids)
 
-    # Vista questions: quantifica le risposte su parametri azzerati
-    # dall'implicazione, che qui continuano a pesare (vedi
-    # _orphan_answers_report). Serve al warning in UI, non altera i dati.
     orphan_answers = (
-        _orphan_answers_report(db, lang_ids, [r["id"] for r in rows])
+        _orphan_answers_report(db, lang_ids, [row["id"] for row in rows])
         if filters.view == "questions"
         else {"count": 0, "languages": [], "parameters": []}
     )
 
     return {
-        "languages": [{"id": l.id, "name": l.name_full} for l in langs],
+        "languages": [{"id": language.id, "name": language.name_full} for language in langs],
         "orphan_answers": orphan_answers,
         "rows": [{
-            "item": {"id": r["id"], "name": r["name"], "extra": r["extra"]},
+            "item": {"id": row["id"], "name": row["name"], "extra": row["extra"]},
             "cells": [
                 {
-                    "lang_id": lid,
-                    "val": val,
-                    "init": init_map.get((r["id"], lid), ""),
-                    "is_incomplete": incomplete_map.get((lid, r["id"]), False),
+                    "lang_id": lang_id,
+                    "val": value,
+                    "init": init_map.get((row["id"], lang_id), ""),
+                    "is_incomplete": incomplete_map.get((lang_id, row["id"]), False),
                 }
-                for lid, val in zip(lang_ids, r["cells"])
+                for lang_id, value in zip(lang_ids, row["cells"])
             ],
-        } for r in rows]
+        } for row in rows]
     }
 
-# ==========================================
-# ENDPOINT: EXPORT STANDARD (EXCEL/CSV)
-# ==========================================
 
 @router.post("/export/xlsx")
 def export_tablea_xlsx(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Export XLSX standard con gestione colonne differenziata."""
     langs, rows = _get_filtered_data(db, filters)
-    lang_ids = [l.id for l in langs]
-    wb = Workbook()
-    ws = wb.active
+    lang_ids = [language.id for language in langs]
+    workbook = Workbook()
+    worksheet = workbook.active
 
-    # Resa estetica "0+" solo per la vista params (mappa value_orig read-only).
-    # I valori grezzi restano '0': qui li trasformiamo solo nel testo scritto.
-    init_map = _value_orig_map(db, lang_ids, [r["id"] for r in rows]) if filters.view == "params" else {}
+    init_map = _value_orig_map(db, lang_ids, [row["id"] for row in rows]) if filters.view == "params" else {}
 
-    # Intestazione specifica per vista
     if filters.view == "questions":
-        ws.append(["Label", "Question text"] + lang_ids)
-        for r in rows: ws.append([r["id"], r["name"]] + r["cells"])
+        worksheet.append(["Label", "Question text"] + lang_ids)
+        for row in rows: worksheet.append([row["id"], row["name"]] + row["cells"])
     else:
-        ws.append(["Label", "Parameter", "Implicational Condition(s)"] + lang_ids)
-        for r in rows:
-            cells = [_display_cell(v, init_map.get((r["id"], lang_ids[i]), "")) for i, v in enumerate(r["cells"])]
-            ws.append([r["id"], r["name"], r["extra"]] + cells)
+        worksheet.append(["Label", "Parameter", "Implicational Condition(s)"] + lang_ids)
+        for row in rows:
+            cells = [_display_cell(value, init_map.get((row["id"], lang_ids[index]), "")) for index, value in enumerate(row["cells"])]
+            worksheet.append([row["id"], row["name"], row["extra"]] + cells)
 
-    apply_excel_citation(wb)
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    apply_excel_citation(workbook)
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                              headers={"Content-Disposition": f"attachment; filename=tableA_{filters.view}.xlsx"})
 
 @router.post("/export/csv")
 def export_tablea_csv(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Export CSV Trasposto: righe=lingue, colonne=parametri."""
     langs, rows = _get_filtered_data(db, filters)
-    # Resa estetica "0+" solo per la vista params (vedi _display_cell). Per la
-    # vista questions init_map resta vuoto → nessuna trasformazione.
-    init_map = _value_orig_map(db, [l.id for l in langs], [r["id"] for r in rows]) if filters.view == "params" else {}
-    buf = io.StringIO()
-    buf.write(build_citation_comment())
-    writer = csv.writer(buf)
-    writer.writerow(["Language"] + [r["id"] for r in rows])
-    for i, l in enumerate(langs):
-        writer.writerow([l.id] + [_display_cell(r["cells"][i], init_map.get((r["id"], l.id), "")) for r in rows])
+    init_map = _value_orig_map(db, [language.id for language in langs], [row["id"] for row in rows]) if filters.view == "params" else {}
+    buffer = io.StringIO()
+    buffer.write(build_citation_comment())
+    writer = csv.writer(buffer)
+    writer.writerow(["Language"] + [row["id"] for row in rows])
+    for index, language in enumerate(langs):
+        writer.writerow([language.id] + [_display_cell(row["cells"][index], init_map.get((row["id"], language.id), "")) for row in rows])
 
-    return Response(content=buf.getvalue(), media_type="text/csv",
+    return Response(content=buffer.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": f"attachment; filename=tableA_{filters.view}_transposed.csv"})
 
-# ==========================================
-# ENDPOINT: ANALISI COMPUTAZIONALE (ZIP/PNG)
-# ==========================================
 
 @router.post("/export/distances")
 def export_distances_txt(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Genera le matrici di distanza tabulari in formato .txt."""
     langs, rows = _get_symbol_data(db, filters)
 
-    lang_vectors = [[r["cells"][i] for r in rows] for i in range(len(langs))]
-    ids = [l.id for l in langs]
+    lang_vectors = [[row["cells"][lang_index] for row in rows] for lang_index in range(len(langs))]
+    ids = [language.id for language in langs]
 
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
-        for name, func in [("hamming", _hamming_core), ("jaccard[+]", _jaccard_core)]:
-            out = "Language\t" + "\t".join(ids) + "\n"
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zip_file:
+        for name, distance_func in [("hamming", _hamming_core), ("jaccard[+]", _jaccard_core)]:
+            output_text = "Language\t" + "\t".join(ids) + "\n"
             for i, id1 in enumerate(ids):
                 row_vals = [id1]
                 for j, _ in enumerate(ids):
-                    d = func(lang_vectors[i], lang_vectors[j])
-                    row_vals.append(str(d))
-                out += "\t".join(row_vals) + "\n"
-            zf.writestr(f"{name}.txt", build_citation_comment() + out)
+                    distance = distance_func(lang_vectors[i], lang_vectors[j])
+                    row_vals.append(str(distance))
+                output_text += "\t".join(row_vals) + "\n"
+            zip_file.writestr(f"{name}.txt", build_citation_comment() + output_text)
 
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/zip",
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/zip",
                              headers={"Content-Disposition": f"attachment; filename=distances_txt_{filters.view}.zip"})
 
 @router.post("/export/geo_distances")
 def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Matrici di distanza geografica in km (porting di 11_latitude_longitude_to_distance_matrix.py).
 
-    Output zip con due TSV:
-      - gcd_km.txt        : Great Circle Distance, modello sferico (R = 6371.0088 km)
-      - crow_flies_km.txt : Geodesic su ellissoide WGS-84 via Vincenty inverso
-    Lingue senza coordinate vengono escluse e segnalate.
-    Disponibile in entrambe le viste: l'output dipende solo dalle lingue.
-    """
     langs, _rows = _get_filtered_data(db, filters)
 
-    keep = [(l, l.latitude, l.longitude) for l in langs
-            if l.latitude is not None and l.longitude is not None]
-    skipped = [l.id for l in langs if l.latitude is None or l.longitude is None]
-    if len(keep) < 2:
+    languages_with_coords = [(language, language.latitude, language.longitude) for language in langs
+            if language.latitude is not None and language.longitude is not None]
+    skipped = [language.id for language in langs if language.latitude is None or language.longitude is None]
+    if len(languages_with_coords) < 2:
         raise HTTPException(400, "Need at least 2 languages with coordinates.")
 
-    ids = [l.id for l, _, _ in keep]
-    coords = [(float(lat), float(lon)) for _, lat, lon in keep]
-    n = len(keep)
+    ids = [language.id for language, _, _ in languages_with_coords]
+    coords = [(float(lat), float(lon)) for _, lat, lon in languages_with_coords]
+    n = len(languages_with_coords)
 
-    gcd_mat = np.zeros((n, n))
-    fly_mat = np.zeros((n, n))
+    gcd_matrix = np.zeros((n, n))
+    fly_matrix = np.zeros((n, n))
     for i in range(n):
         lat1, lon1 = coords[i]
         for j in range(i + 1, n):
             lat2, lon2 = coords[j]
-            d_gcd = round(_gcd_km(lat1, lon1, lat2, lon2), 3)
-            d_fly = round(_vincenty_km(lat1, lon1, lat2, lon2), 3)
-            gcd_mat[i, j] = gcd_mat[j, i] = d_gcd
-            fly_mat[i, j] = fly_mat[j, i] = d_fly
+            gcd_distance = round(_gcd_km(lat1, lon1, lat2, lon2), 3)
+            fly_distance = round(_vincenty_km(lat1, lon1, lat2, lon2), 3)
+            gcd_matrix[i, j] = gcd_matrix[j, i] = gcd_distance
+            fly_matrix[i, j] = fly_matrix[j, i] = fly_distance
 
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("gcd_km.txt", _matrix_to_tsv(ids, gcd_mat))
-        zf.writestr("crow_flies_km.txt", _matrix_to_tsv(ids, fly_mat))
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zip_file:
+        zip_file.writestr("gcd_km.txt", _matrix_to_tsv(ids, gcd_matrix))
+        zip_file.writestr("crow_flies_km.txt", _matrix_to_tsv(ids, fly_matrix))
         if skipped:
-            zf.writestr(
+            zip_file.writestr(
                 "warnings.txt",
                 "The following languages were excluded because they have no coordinates:\n"
                 + "\n".join(skipped) + "\n"
             )
 
-    buf.seek(0)
+    buffer.seek(0)
     headers = {"Content-Disposition": "attachment; filename=geo_distances_km.zip"}
     if skipped:
         headers["X-Skipped-Languages"] = ",".join(skipped)
-    return StreamingResponse(buf, media_type="application/zip", headers=headers)
+    return StreamingResponse(buffer, media_type="application/zip", headers=headers)
 
 @router.post("/export/dendrograms")
 def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Genera i Dendrogrammi con metodo 'average'."""
     langs, rows = _get_symbol_data(db, filters)
-    lang_vectors = [[r["cells"][i] for r in rows] for i in range(len(langs))]
-    labels = [l.id for l in langs]
+    lang_vectors = [[row["cells"][lang_index] for row in rows] for lang_index in range(len(langs))]
+    labels = [language.id for language in langs]
 
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w") as zf:
-        for name, func, title in [
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zip_file:
+        for name, distance_func, title in [
             ("hamming", _hamming_core, "Dendrogram, hamming, average"),
             ("jaccard[+]", _jaccard_core, "Dendrogram, jaccard[+], average")
         ]:
-            dist_matrix = [[func(v1, v2) for v2 in lang_vectors] for v1 in lang_vectors]
+            dist_matrix = [[distance_func(vector_a, vector_b) for vector_b in lang_vectors] for vector_a in lang_vectors]
             linkage_matrix = linkage(squareform(dist_matrix), method='average')
 
             fig = plt.figure(figsize=(12, 8))
@@ -570,24 +464,15 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
             img_buf = io.BytesIO()
             plt.savefig(img_buf, format='png', dpi=300, bbox_inches="tight")
             plt.close()
-            zf.writestr(f"dendrogram_{name}_average.png", img_buf.getvalue())
+            zip_file.writestr(f"dendrogram_{name}_average.png", img_buf.getvalue())
 
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/zip",
+    buffer.seek(0)
+    return StreamingResponse(buffer, media_type="application/zip",
                              headers={"Content-Disposition": f"attachment; filename=dendrograms_{filters.view}.zip"})
 
 @router.post("/export/cluster_map")
 def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Mappa interattiva HTML dei cluster UPGMA (porting di 02_carta_italia.py).
 
-    Pipeline (replicata da 01_plot_clusters.py + 02_carta_italia.py):
-      1. matrice di distanza (hamming default, oppure jaccard[+]) sugli item
-         filtrati (parametri o questions a seconda della vista)
-      2. linkage UPGMA (average)
-      3. cluster ottenuti tagliando il dendrogramma a threshold_coeff * max(linkage_distance)
-      4. plot scatter_geo (plotly) con un colore per cluster; singletoni → "No Cluster"
-    Lingue senza coordinate vengono escluse e segnalate via header X-Skipped-Languages.
-    """
     if filters.distance not in ("hamming", "jaccard"):
         raise HTTPException(400, "distance must be 'hamming' or 'jaccard'")
     if not (0.0 < filters.threshold_coeff <= 1.0):
@@ -597,40 +482,40 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
     if not langs or not rows:
         raise HTTPException(400, "No data available with the current filters.")
 
-    keep_idx = [i for i, l in enumerate(langs)
-                if l.latitude is not None and l.longitude is not None]
-    skipped = [langs[i].id for i in range(len(langs)) if i not in keep_idx]
-    if len(keep_idx) < 3:
+    keep_indices = [index for index, language in enumerate(langs)
+                if language.latitude is not None and language.longitude is not None]
+    skipped = [langs[index].id for index in range(len(langs)) if index not in keep_indices]
+    if len(keep_indices) < 3:
         raise HTTPException(400, "Need at least 3 languages with coordinates to build the cluster map.")
 
-    langs = [langs[i] for i in keep_idx]
-    for r in rows:
-        r["cells"] = [r["cells"][i] for i in keep_idx]
+    langs = [langs[index] for index in keep_indices]
+    for row in rows:
+        row["cells"] = [row["cells"][index] for index in keep_indices]
 
     n = len(langs)
-    lang_vectors = [[r["cells"][i] for r in rows] for i in range(n)]
-    dist_func = _hamming_core if filters.distance == "hamming" else _jaccard_core
+    lang_vectors = [[row["cells"][lang_index] for row in rows] for lang_index in range(n)]
+    distance_func = _hamming_core if filters.distance == "hamming" else _jaccard_core
     dist_matrix = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):
-            d = dist_func(lang_vectors[i], lang_vectors[j])
-            dist_matrix[i, j] = dist_matrix[j, i] = d
+            distance = distance_func(lang_vectors[i], lang_vectors[j])
+            dist_matrix[i, j] = dist_matrix[j, i] = distance
 
     Z = linkage(squareform(dist_matrix), method='average')
-    max_d = float(Z[:, 2].max()) if Z.size else 0.0
-    threshold = filters.threshold_coeff * max_d
-    cluster_ids = fcluster(Z, t=threshold, criterion='distance') if max_d > 0 else np.ones(n, dtype=int)
+    max_distance = float(Z[:, 2].max()) if Z.size else 0.0
+    threshold = filters.threshold_coeff * max_distance
+    cluster_ids = fcluster(Z, t=threshold, criterion='distance') if max_distance > 0 else np.ones(n, dtype=int)
 
     counts = Counter(cluster_ids.tolist())
     df_plot = pd.DataFrame({
-        "id": [l.id for l in langs],
-        "name": [getattr(l, "name_full", None) or l.id for l in langs],
-        "lat": [float(l.latitude) for l in langs],
-        "lon": [float(l.longitude) for l in langs],
+        "id": [language.id for language in langs],
+        "name": [getattr(language, "name_full", None) or language.id for language in langs],
+        "lat": [float(language.latitude) for language in langs],
+        "lon": [float(language.longitude) for language in langs],
         "raw_cluster": cluster_ids,
     })
     df_plot["cluster"] = df_plot["raw_cluster"].apply(
-        lambda c: f"Cluster {int(c)}" if counts[int(c)] > 1 else "No Cluster"
+        lambda cluster_id: f"Cluster {int(cluster_id)}" if counts[int(cluster_id)] > 1 else "No Cluster"
     )
     df_plot = df_plot.sort_values(["cluster", "id"]).reset_index(drop=True)
 
@@ -660,57 +545,45 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
 
 @router.post("/export/pca")
 def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Analisi PCA via sklearn.decomposition.PCA, allineata a pca1.py."""
     langs, rows = _get_symbol_data(db, filters)
     if not langs or len(rows) < 2: raise HTTPException(400, "Insufficient data for PCA")
 
-    # Conversione numerica: + -> 1.0, altrimenti 0.0
-    data = np.array([[1.0 if r["cells"][i] == "+" else 0.0 for r in rows] for i in range(len(langs))])
+    data = np.array([[1.0 if row["cells"][lang_index] == "+" else 0.0 for row in rows] for lang_index in range(len(langs))])
 
-    # Rimuove colonne a varianza zero
     data = data[:, np.var(data, axis=0) > 0]
     if data.shape[1] < 2: raise HTTPException(400, "Insufficient variance for PCA")
 
-    # Standardizzazione e PCA via sklearn
     scaler = StandardScaler()
     data_std = scaler.fit_transform(data)
     pca = PCA(n_components=2)
     scores = pca.fit_transform(data_std)
 
     f1, f2 = scores[:, 0], scores[:, 1]
-    v1_pct, v2_pct = pca.explained_variance_ratio_[0] * 100, pca.explained_variance_ratio_[1] * 100
+    f1_variance_pct, f2_variance_pct = pca.explained_variance_ratio_[0] * 100, pca.explained_variance_ratio_[1] * 100
 
     fig = plt.figure(figsize=(12, 8))
     plt.scatter(f1, f2, c='black', s=10, alpha=0.75)
-    texts = [plt.text(x, y, l.id, fontsize=9) for x, y, l in zip(f1, f2, langs)]
+    texts = [plt.text(x, y, language.id, fontsize=9) for x, y, language in zip(f1, f2, langs)]
     adjust_text(texts, arrowprops=dict(arrowstyle='-', color='gray', lw=0.5))
 
     plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.75)
-    plt.xlabel(f'F1 ({v1_pct:.2f}%)')
-    plt.ylabel(f'F2 ({v2_pct:.2f}%)')
+    plt.xlabel(f'F1 ({f1_variance_pct:.2f}%)')
+    plt.ylabel(f'F2 ({f2_variance_pct:.2f}%)')
     plt.axhline(0, color='gray', lw=0.5); plt.axvline(0, color='gray', lw=0.5)
     plt.tight_layout()
     apply_matplotlib_citation(fig)
 
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300, bbox_inches="tight")
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', dpi=300, bbox_inches="tight")
     plt.close()
-    buf.seek(0)
-    return Response(content=buf.getvalue(), media_type="image/png",
+    buffer.seek(0)
+    return Response(content=buffer.getvalue(), media_type="image/png",
                     headers={"Content-Disposition": f"attachment; filename=pca_scatterplot_{filters.view}.png"})
 
 
-# ==========================================
-# ENDPOINT: MANTEL TEST (ZIP)
-# ==========================================
 
 def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance (miglia nautiche) via legge dei coseni.
 
-    Porting esatto da gcd.py (Ceolin): conversione gradi→radianti, arrotondamento
-    a 5 decimali per evitare argomenti >1 dell'acos dovuti al floating point,
-    output gradi×60 (1° = 60 nautical miles).
-    """
     x1, y1 = math.radians(lat1), math.radians(lon1)
     x2, y2 = math.radians(lat2), math.radians(lon2)
     cos_val = math.sin(x1) * math.sin(x2) + math.cos(x1) * math.cos(x2) * math.cos(y1 - y2)
@@ -730,12 +603,7 @@ def _gcd_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _vincenty_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Geodesic distance (km) su ellissoide WGS-84 via Vincenty inverso.
 
-    Stessa metrica di geopy.distance.geodesic (script 11). Per coppie
-    quasi antipodali la formula può non convergere: in tal caso ritorna
-    il GCD sferico come fallback (caso non realistico per lingue terrestri).
-    """
     if lat1 == lat2 and lon1 == lon2:
         return 0.0
     a = 6378137.0
@@ -781,13 +649,10 @@ def _vincenty_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _matrix_to_tsv(ids: List[str], mat: np.ndarray) -> str:
-    """Serializza una matrice quadrata in TSV con header come gcd.py / distance.py.
 
-    Il blocco è preceduto dalla citazione di attribuzione (righe-commento ``#``).
-    """
     lines = ["Language\t" + "\t".join(ids)]
-    for i, id1 in enumerate(ids):
-        lines.append(id1 + "\t" + "\t".join(str(mat[i, j]) for j in range(len(ids))))
+    for i, row_id in enumerate(ids):
+        lines.append(row_id + "\t" + "\t".join(str(mat[i, j]) for j in range(len(ids))))
     return build_citation_comment() + "\n".join(lines) + "\n"
 
 
@@ -800,15 +665,11 @@ _CORR_FUNCS = {
 
 def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
                  permutations: int = 999, seed: int = 42):
-    """Mantel test two-sided con permutation test (default skbio: 999 perm, seed=42).
 
-    P-value = (count(|r_perm| >= |r_obs|) + 1) / (permutations + 1).
-    Permuto contemporaneamente righe e colonne di B per preservare la simmetria.
-    """
     n = mat_a.shape[0]
-    iu = np.triu_indices(n, k=1)
-    a_flat = mat_a[iu]
-    b_flat = mat_b[iu]
+    upper_indices = np.triu_indices(n, k=1)
+    a_flat = mat_a[upper_indices]
+    b_flat = mat_b[upper_indices]
     corr = _CORR_FUNCS[method]
     obs = corr(a_flat, b_flat)
 
@@ -818,7 +679,7 @@ def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
     for _ in range(permutations):
         perm = rng.permutation(n)
         b_perm = mat_b[perm][:, perm]
-        r = corr(a_flat, b_perm[iu])
+        r = corr(a_flat, b_perm[upper_indices])
         if abs(r) >= abs_obs:
             count += 1
     p_value = (count + 1) / (permutations + 1)
@@ -827,12 +688,7 @@ def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
 
 @router.post("/export/mantel")
 def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Mantel test su sottoinsieme di {GCD, Hamming, Jaccard[+]}.
 
-    Restituisce uno zip con matrici .txt, scatterplot PNG (matplotlib) +
-    HTML interattivi (plotly), e mantel_results.csv (pearson/spearman/kendalltau
-    con permutation test 999 perm, seed=42, two-sided).
-    """
     selected = []
     if filters.include_gcd: selected.append("gcd")
     if filters.include_hamming: selected.append("hamming")
@@ -844,97 +700,91 @@ def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), cur
     if not langs or not rows:
         raise HTTPException(400, "No data available with the current filters.")
 
-    # Esclude lingue senza coords se è inclusa la GCD (così tutte le matrici
-    # sono allineate sulle stesse lingue)
     skipped: List[str] = []
     if filters.include_gcd:
-        keep_idx = [i for i, l in enumerate(langs) if l.latitude is not None and l.longitude is not None]
-        skipped = [langs[i].id for i in range(len(langs)) if i not in keep_idx]
+        keep_indices = [index for index, language in enumerate(langs) if language.latitude is not None and language.longitude is not None]
+        skipped = [langs[index].id for index in range(len(langs)) if index not in keep_indices]
         if skipped:
-            langs = [langs[i] for i in keep_idx]
-            for r in rows:
-                r["cells"] = [r["cells"][i] for i in keep_idx]
+            langs = [langs[index] for index in keep_indices]
+            for row in rows:
+                row["cells"] = [row["cells"][index] for index in keep_indices]
 
     n = len(langs)
     if n < 3:
         raise HTTPException(400, "Need at least 3 languages with coordinates to run Mantel.")
 
-    ids = [l.id for l in langs]
+    ids = [language.id for language in langs]
 
-    # Costruisce le matrici richieste
     matrices: Dict[str, np.ndarray] = {}
 
     if filters.include_gcd:
-        coords = [(float(l.latitude), float(l.longitude)) for l in langs]
-        m = np.zeros((n, n))
+        coords = [(float(language.latitude), float(language.longitude)) for language in langs]
+        distance_matrix = np.zeros((n, n))
         for i in range(n):
             for j in range(i + 1, n):
-                d = _gcd_nautical_miles(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
-                m[i, j] = m[j, i] = d
-        matrices["gcd"] = m
+                distance = _gcd_nautical_miles(coords[i][0], coords[i][1], coords[j][0], coords[j][1])
+                distance_matrix[i, j] = distance_matrix[j, i] = distance
+        matrices["gcd"] = distance_matrix
 
     if filters.include_hamming or filters.include_jaccard:
-        lang_vectors = [[r["cells"][i] for r in rows] for i in range(n)]
+        lang_vectors = [[row["cells"][lang_index] for row in rows] for lang_index in range(n)]
         if filters.include_hamming:
-            m = np.zeros((n, n))
+            distance_matrix = np.zeros((n, n))
             for i in range(n):
                 for j in range(i + 1, n):
-                    d = _hamming_core(lang_vectors[i], lang_vectors[j])
-                    m[i, j] = m[j, i] = d
-            matrices["hamming"] = m
+                    distance = _hamming_core(lang_vectors[i], lang_vectors[j])
+                    distance_matrix[i, j] = distance_matrix[j, i] = distance
+            matrices["hamming"] = distance_matrix
         if filters.include_jaccard:
-            m = np.zeros((n, n))
+            distance_matrix = np.zeros((n, n))
             for i in range(n):
                 for j in range(i + 1, n):
-                    d = _jaccard_core(lang_vectors[i], lang_vectors[j])
-                    m[i, j] = m[j, i] = d
-            matrices["jaccard[+]"] = m
+                    distance = _jaccard_core(lang_vectors[i], lang_vectors[j])
+                    distance_matrix[i, j] = distance_matrix[j, i] = distance
+            matrices["jaccard[+]"] = distance_matrix
 
-    # Costruisce lo zip
     zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w") as zf:
+    with zipfile.ZipFile(zip_buf, "w") as zip_file:
         for name, mat in matrices.items():
-            zf.writestr(f"{name}.txt", _matrix_to_tsv(ids, mat))
+            zip_file.writestr(f"{name}.txt", _matrix_to_tsv(ids, mat))
 
-        names_sorted = sorted(matrices.keys())  # gcd < hamming < jaccard[+]
+        names_sorted = sorted(matrices.keys())
         results = []
-        iu = np.triu_indices(n, k=1)
-        pair_labels = [f"{ids[i]} - {ids[j]}" for i, j in zip(*iu)]
+        upper_indices = np.triu_indices(n, k=1)
+        pair_labels = [f"{ids[i]} - {ids[j]}" for i, j in zip(*upper_indices)]
 
         for n1, n2 in combinations(names_sorted, 2):
             mat1, mat2 = matrices[n1], matrices[n2]
-            v1 = mat1[iu]
-            v2 = mat2[iu]
+            values1 = mat1[upper_indices]
+            values2 = mat2[upper_indices]
 
             for method in ("pearson", "spearman", "kendalltau"):
-                corr, p, samples = _mantel_test(mat1, mat2, method)
+                corr, p_value, samples = _mantel_test(mat1, mat2, method)
                 results.append({"matrix1": n1, "matrix2": n2, "method": method,
-                                "correlation": corr, "p_value": p})
+                                "correlation": corr, "p_value": p_value})
 
-            # Scatterplot PNG (matplotlib)
             fig = plt.figure(figsize=(12, 8))
-            plt.scatter(v1, v2, s=10, alpha=0.75)
+            plt.scatter(values1, values2, s=10, alpha=0.75)
             plt.grid(True, linestyle='--', linewidth=0.5, alpha=0.75)
             plt.xlabel(n1); plt.ylabel(n2)
             apply_matplotlib_citation(fig)
             png_buf = io.BytesIO()
             plt.savefig(png_buf, format='png', dpi=300, bbox_inches='tight')
             plt.close(fig)
-            zf.writestr(f"{n1}-{n2}_mantel_scatterplot.png", png_buf.getvalue())
+            zip_file.writestr(f"{n1}-{n2}_mantel_scatterplot.png", png_buf.getvalue())
 
-            # Scatterplot HTML interattivo (plotly)
-            df_plot = pd.DataFrame({"x": v1, "y": v2, "pair": pair_labels})
+            df_plot = pd.DataFrame({"x": values1, "y": values2, "pair": pair_labels})
             fig_pl = px.scatter(df_plot, x="x", y="y", hover_data=["pair"],
                                 labels={"x": n1, "y": n2})
             fig_pl.update_traces(marker=dict(size=10, opacity=0.75))
-            zf.writestr(f"{n1}-{n2}_mantel_scatterplot_interactive.html",
+            zip_file.writestr(f"{n1}-{n2}_mantel_scatterplot_interactive.html",
                         inject_html_citation(fig_pl.to_html(include_plotlyjs="cdn")))
 
-        zf.writestr("mantel_results.csv",
+        zip_file.writestr("mantel_results.csv",
                     build_citation_comment() + pd.DataFrame(results).to_csv(index=False))
 
         if skipped:
-            zf.writestr(
+            zip_file.writestr(
                 "mantel_warnings.txt",
                 "The following languages were excluded because they have no coordinates:\n"
                 + "\n".join(skipped) + "\n"

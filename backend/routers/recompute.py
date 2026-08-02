@@ -1,15 +1,3 @@
-"""
-Recompute endpoints (admin only).
-
-POST /api/admin/recompute/all
-    Avvia il ricalcolo dei final values (DAG + consolidate) su TUTTE le lingue.
-    Ritorna {"job_id": "..."} subito; il lavoro vero gira in background.
-
-GET /api/admin/recompute/status/{job_id}
-    Stato corrente del job: phase, current/total, finished, error.
-
-Riusa l'infrastruttura `migration_progress` per il tracking progresso.
-"""
 from __future__ import annotations
 import logging
 
@@ -28,8 +16,6 @@ router = APIRouter(prefix="/api/admin/recompute", tags=["Recompute"])
 
 
 def _run_recompute_all_in_background(job_id: str) -> None:
-    """Loop su tutte le lingue, esegue run_dag_for_language per ciascuna.
-    Ogni lingua ha la propria sessione: errore su una non blocca le altre."""
     list_db = SessionLocal()
     try:
         lang_ids = [

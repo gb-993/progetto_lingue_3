@@ -1,19 +1,4 @@
-"""
-Backup Restore — endpoint admin.
 
-POST /api/admin/backup-restore?wipe=true|false
-    multipart/form-data con il file ZIP prodotto da `Export backup (.zip)`.
-    Ritorna immediatamente {"job_id": "..."} e lancia l'import come BackgroundTask.
-    Polla GET /api/admin/backup-restore/status/{job_id} per seguire l'avanzamento.
-
-GET /api/admin/backup-restore/status/{job_id}
-    Stato corrente del job: phase, label, current/total, finished, error,
-    report (popolato a fine job).
-
-A differenza di Migration Import (one-shot al go-live), il Backup Restore è
-ricorrente: serve a ripristinare i dati dopo un export. Riusa la stessa
-infrastruttura `migration_progress` per il progress reporting.
-"""
 from __future__ import annotations
 import logging
 import zipfile
@@ -40,8 +25,7 @@ MAX_UNCOMPRESSED_PER_FILE = 100 * 1024 * 1024  # 100 MB per singolo file
 
 
 def _validate_zip_bundle(contents: bytes) -> None:
-    """Validazione metadati zip: blocca path-traversal, drive letters e
-    zip-bomb. Ricalca routers/migration.py."""
+
     try:
         zf = zipfile.ZipFile(io.BytesIO(contents), "r")
     except zipfile.BadZipFile as e:
@@ -82,8 +66,6 @@ def _validate_zip_bundle(contents: bytes) -> None:
 def _run_restore_in_background(
     contents: bytes, wipe: bool, current_user_id: int, job_id: str
 ) -> None:
-    """Esegue restore_backup_bundle col proprio session DB (quella iniettata
-    via Depends() viene chiusa appena la response del start endpoint torna)."""
     db = SessionLocal()
     try:
         reporter = ProgressReporter(job_id)

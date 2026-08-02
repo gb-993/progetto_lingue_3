@@ -1,22 +1,4 @@
-"""
-"What's New": annuncio facoltativo (aggiornamenti/novita') mostrato una volta
-agli utenti loggati tramite un modale non bloccante.
 
-Design volutamente minimale e a basso rischio:
-  - il CONTENUTO (HTML) e' salvato in `site_contents` con chiave `whats_new`,
-    la stessa tabella usata da Instructions. `updated_at` (onupdate) fa da
-    "versione": ogni salvataggio del super-admin lo aggiorna.
-  - lo stato "gia' visto" e' tracciato lato server, per-utente, nella tabella
-    `whats_new_views` (vedi models.WhatsNewView): per ogni utente salviamo
-    l'updated_at dell'ultima versione su cui ha cliccato "OK". Il backend
-    calcola `should_show` confrontando la versione corrente con quella vista.
-    Cosi' il banner si vede "una volta" per utente su QUALSIASI dispositivo
-    (il vecchio tracciamento in localStorage era invece per-browser).
-    Tabella separata da `users` -> nessun rischio di rompere login/`/api/me`.
-
-Permessi: la modifica del contenuto e' riservata al super-admin (come
-Migration Import / Backup Restore); la lettura e' per qualsiasi utente loggato.
-"""
 import re
 from typing import Optional
 
@@ -31,18 +13,10 @@ from time_utils import utc_now
 router = APIRouter(tags=["What's New"])
 
 WHATS_NEW_KEY = "whats_new"
-# Audience del What's New, salvata come riga site_contents separata (stesso
-# pattern key-value di Instructions/whats_new): 'all' = tutti gli utenti loggati,
-# 'admins' = solo gli admin. Tenerla separata dal contenuto fa si' che cambiare
-# SOLO la visibilita' non bumpi la "versione" (updated_at) dell'annuncio.
 WHATS_NEW_AUDIENCE_KEY = "whats_new_audience"
 _VALID_AUDIENCES = ("all", "admins")
 _DEFAULT_AUDIENCE = "all"
 
-# Toglie i tag HTML e i &nbsp; per capire se resta testo reale. Specchio
-# lato server di hasRealText() nel frontend (WhatsNewModal.jsx): una casella
-# svuotata (vuota o con solo <p></p>/&nbsp;) NON e' una novita' e non va
-# mostrata a nessuno, ritardatari inclusi.
 _TAG_RE = re.compile(r"<[^>]*>")
 _NBSP_RE = re.compile(r"&nbsp;", re.IGNORECASE)
 
@@ -56,7 +30,6 @@ def _has_real_text(html: str) -> bool:
 
 class WhatsNewUpdate(BaseModel):
     content: str
-    # 'all' | 'admins'. None = non modificare l'audience corrente.
     audience: Optional[str] = None
 
     @field_validator("audience")
@@ -79,7 +52,6 @@ def _get_row(db: Session):
 
 
 def _get_audience(db: Session) -> str:
-    """Audience corrente ('all'|'admins'). Default 'all' (comportamento storico)."""
     row = (
         db.query(models.SiteContent)
         .filter(models.SiteContent.key == WHATS_NEW_AUDIENCE_KEY)
@@ -90,19 +62,10 @@ def _get_audience(db: Session) -> str:
 
 
 def _content_visible_to(is_admin: bool, audience: str) -> bool:
-    """True se un utente con quel ruolo puo' vedere il What's New con questa audience."""
     return is_admin or audience == "all"
 
 
 def _user_should_see(db: Session, user_id: int, updated_at) -> bool:
-    """True se l'utente NON ha ancora visto la versione corrente.
-
-    Confronta `updated_at` (versione corrente) con `seen_version` salvato per
-    l'utente. Nessuna riga = mai visto -> True. seen_version >= updated_at =
-    gia' visto questa versione (o piu' recente) -> False.
-    NB: il controllo "il contenuto ha testo reale" resta lato frontend
-    (hasRealText), che sa togliere tag/&nbsp; vuoti.
-    """
     if updated_at is None:
         return False
     view = (
@@ -120,13 +83,7 @@ def get_whats_new(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Contenuto corrente + updated_at ('versione') + should_show per l'utente.
 
-    should_show e' vero solo se il contenuto ha testo reale E l'utente non ha
-    ancora visto la versione corrente. Cosi' svuotare la casella (regola #2) o
-    cancellare il contenuto per i ritardatari (regola #3) non mostra nulla a
-    nessuno, indipendentemente dalla versione.
-    """
     row = _get_row(db)
     audience = _get_audience(db)
     is_admin = current_user.role == "admin"
@@ -140,7 +97,6 @@ def get_whats_new(
         and _user_should_see(db, current_user.id, row.updated_at)
     )
     return {
-        # Audience 'admins': non far trapelare il contenuto agli utenti non-admin.
         "content": content if visible else "",
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
         "should_show": should_show,
@@ -153,10 +109,7 @@ def mark_whats_new_seen(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
-    """Segna la versione corrente come vista dall'utente (chiamato su "OK").
-
-    Upsert su whats_new_views: aggiorna seen_version all'updated_at corrente.
-    Se non c'e' contenuto/updated_at non c'e' niente da segnare (no-op)."""
+    
     row = _get_row(db)
     if not row or row.updated_at is None:
         return {"detail": "Nothing to mark."}
@@ -186,9 +139,7 @@ def update_whats_new(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_super_admin),
 ):
-    """Salva il contenuto (super-admin). Salvare = ripubblicare: forziamo
-    l'aggiornamento di updated_at cosi' tutti gli utenti rivedono il modale
-    una volta al prossimo accesso."""
+
     row = _get_row(db)
     now = utc_now()
     if not row:
@@ -202,12 +153,8 @@ def update_whats_new(
     else:
         row.content = data.content
         row.updated_by_id = current_user.id
-        # Bump esplicito: garantisce la "ripubblicazione" anche se il testo
-        # non cambia (onupdate non scatterebbe senza modifiche ai campi).
         row.updated_at = now
 
-    # Audience: aggiornata solo se passata esplicitamente. Riga site_contents
-    # separata: cambiarla non tocca updated_at dell'annuncio (no ripubblicazione).
     if data.audience is not None:
         arow = (
             db.query(models.SiteContent)

@@ -20,14 +20,7 @@ import models
 
 @dataclass
 class LanguageResolveResult:
-    """Esito del lookup di una lingua per id (eventualmente via alias).
-
-    - `language`: l'istanza Language trovata, oppure None.
-    - `matched_via_alias`: True se il match e' avvenuto sulla tabella alias
-      (l'id del file differisce dall'id corrente). False se match diretto.
-    - `glottocode_mismatch`: descrizione del mismatch se entrambi i
-      glottocode sono valorizzati e diversi. None altrimenti.
-    """
+    """Esito del lookup: `matched_via_alias` se il match è avvenuto via alias invece che per id diretto; `glottocode_mismatch` è valorizzato solo in quel caso se i glottocode di file e lingua corrente divergono."""
     language: Optional[models.Language]
     matched_via_alias: bool = False
     glottocode_mismatch: Optional[str] = None
@@ -38,19 +31,13 @@ def resolve_language(
     file_id: str,
     file_glottocode: str = "",
 ) -> LanguageResolveResult:
-    """Cerca una lingua per id corrente, con fallback su `language_aliases`.
-
-    Se il match avviene via alias e sia `file_glottocode` sia
-    `language.glottocode` sono valorizzati ma diversi, popola
-    `glottocode_mismatch` lasciando comunque l'istanza in `language` (il
-    chiamante decide se applicare o saltare).
-    """
+    """Cerca una lingua per id corrente con fallback su `language_aliases`; in caso di mismatch sul glottocode non blocca, popola `glottocode_mismatch` e lascia al chiamante decidere se applicare o saltare."""
     if not file_id:
         return LanguageResolveResult(language=None)
 
-    lang = db.query(models.Language).filter(models.Language.id == file_id).first()
-    if lang is not None:
-        return LanguageResolveResult(language=lang, matched_via_alias=False)
+    language = db.query(models.Language).filter(models.Language.id == file_id).first()
+    if language is not None:
+        return LanguageResolveResult(language=language, matched_via_alias=False)
 
     alias = (
         db.query(models.LanguageAlias)
@@ -60,22 +47,21 @@ def resolve_language(
     if alias is None:
         return LanguageResolveResult(language=None)
 
-    lang = db.get(models.Language, alias.language_id)
-    if lang is None:
-        # alias orfano (la lingua e' stata cancellata): trattalo come miss.
+    language = db.get(models.Language, alias.language_id)
+    if language is None:
         return LanguageResolveResult(language=None)
 
-    backup_g = (file_glottocode or "").strip()
-    current_g = (lang.glottocode or "").strip()
+    incoming_glottocode = (file_glottocode or "").strip()
+    existing_glottocode = (language.glottocode or "").strip()
     mismatch = None
-    if backup_g and current_g and backup_g != current_g:
+    if incoming_glottocode and existing_glottocode and incoming_glottocode != existing_glottocode:
         mismatch = (
-            f"Glottocode mismatch on alias '{file_id}' -> '{lang.id}': "
-            f"file has '{backup_g}', current language has '{current_g}'"
+            f"Glottocode mismatch on alias '{file_id}' -> '{language.id}': "
+            f"file has '{incoming_glottocode}', current language has '{existing_glottocode}'"
         )
 
     return LanguageResolveResult(
-        language=lang,
+        language=language,
         matched_via_alias=True,
         glottocode_mismatch=mismatch,
     )

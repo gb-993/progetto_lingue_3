@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# Durata di validita' del link di reset password. 30 min e' lo standard:
-# abbastanza per leggere la mail con calma, abbastanza poco da limitare
 # il danno se la mail viene intercettata.
 RESET_TOKEN_TTL = timedelta(minutes=30)
 
@@ -47,30 +45,18 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-# Rate-limit: 5 tentativi/minuto per IP. slowapi richiede che il primo
-# parametro della view sia `request: Request` per leggere l'IP. Quando
-# la quota e' superata risponde 429 (handler registrato in main.py).
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
-    # Normalizza come fanno create_account e forgot_password: le email in DB
-    # sono salvate lowercase, senza questo "Mario@Unimore.it" non entrerebbe.
     email = (req.email or "").strip().lower()
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Wrong email or password")
 
-    # sub = id utente (come stringa, lo richiede lo standard JWT), NON l'email:
-    # l'id non cambia mai, quindi cambiare email dal profilo non slogga piu'.
-    # I token vecchi con sub=email restano validi (vedi resolve_user_from_sub).
     access_token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "name": user.name}
 
 
-# Rate-limit: 5/min per IP. Difesa contro enumeration brute-force (chi
-# prova in massa email per scoprire quali esistono nel sistema). La
-# risposta e' SEMPRE 200 indipendentemente dall'esistenza dell'email,
-# per non leakare quali account sono registrati.
 @router.post("/forgot-password")
 @limiter.limit("5/minute")
 def forgot_password(
@@ -78,39 +64,23 @@ def forgot_password(
     req: ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    """Genera un token di reset e manda la mail con il link.
 
-    Per ragioni di privacy/sicurezza, risponde 200 anche se l'email non
-    esiste o se l'invio mail fallisce: dall'esterno non e' possibile
-    capire quali account sono registrati ne' se il nostro SMTP e' giu'.
-    Gli eventuali errori (SMTP fallito, ecc.) finiscono nei log.
-    """
     email = (req.email or "").strip().lower()
     user = db.query(models.User).filter(models.User.email == email).first()
 
-    # NON sollevare se l'utente non esiste: rispondi 200 come se tutto fosse
-    # andato bene per non leakare la lista email. Logghiamo solo per debug.
     if not user:
         logger.info("forgot-password: email non registrata (%s) — risposta 200 silente.", email)
-        return {"detail": "Se l'email e' registrata, riceverai un link per reimpostare la password."}
+        return {"detail": "If the email is registered, you will receive a link to reset your password."}
 
-    # Token random ad alta entropia: 32 byte url-safe = ~43 caratteri.
-    # Vive solo nella mail e in memoria; nel DB salviamo solo lo sha256.
     token_clear = secrets.token_urlsafe(32)
     token_hash = _hash_token(token_clear)
     now = utc_now()
 
-    # Un solo token valido alla volta: chi richiede un nuovo reset invalida
-    # i precedenti non ancora usati. Senza questo, per 30 minuti potevano
-    # coesistere piu' link validi per lo stesso account.
     db.query(models.PasswordResetToken).filter(
         models.PasswordResetToken.user_id == user.id,
         models.PasswordResetToken.used_at.is_(None),
     ).update({"used_at": now})
 
-    # Igiene tabella: butta i token scaduti da piu' di 30 giorni (di chiunque).
-    # Fatto qui invece che in un job dedicato: la tabella cresce solo quando
-    # qualcuno chiede un reset, quindi questo e' il posto naturale e basta.
     db.query(models.PasswordResetToken).filter(
         models.PasswordResetToken.expires_at < now - timedelta(days=30),
     ).delete()
@@ -127,19 +97,19 @@ def forgot_password(
 
     reset_link = f"{SITE_URL}/reset-password?token={token_clear}"
     body_text = (
-        f"Ciao,\n\n"
-        f"abbiamo ricevuto una richiesta di reimpostazione della password "
-        f"per il tuo account su PCM-Hub ({email}).\n\n"
-        f"Clicca sul link sottostante per impostare una nuova password "
-        f"(valido per {int(RESET_TOKEN_TTL.total_seconds() // 60)} minuti):\n\n"
+        f"Hi,\n\n"
+        f"we received a request to reset the password "
+        f"for your PCM-Hub account ({email}).\n\n"
+        f"Click the link below to set a new password "
+        f"(valid for {int(RESET_TOKEN_TTL.total_seconds() // 60)} minutes):\n\n"
         f"{reset_link}\n\n"
-        f"Se non sei stato tu a richiedere il reset, ignora questa mail: "
-        f"la tua password attuale rimane valida.\n\n"
+        f"If you didn't request this reset, you can ignore this email: "
+        f"your current password remains valid.\n\n"
         f"-- PCM-Hub"
     )
     send_email(
         to=email,
-        subject="PCM-Hub — reimposta la tua password",
+        subject="PCM-Hub — reset your password",
         body_text=body_text,
     )
 
@@ -153,8 +123,6 @@ def reset_password(
     req: ResetPasswordRequest,
     db: Session = Depends(get_db),
 ):
-    """Verifica il token e aggiorna la password dell'utente."""
-    # Stessa politica del cambio password manuale (vedi routers/users.py).
     MIN_PASSWORD_LENGTH = 8
     if len(req.new_password or "") < MIN_PASSWORD_LENGTH:
         raise HTTPException(
@@ -169,10 +137,7 @@ def reset_password(
         .first()
     )
 
-    # Messaggio generico per token mancante / scaduto / gia' usato: non
-    # diamo all'attaccante feedback granulare ("scaduto" vs "inesistente"
-    # vs "gia' usato") che potrebbe servirgli per fingerprint.
-    invalid_msg = "Link di reset non valido o scaduto. Richiedine uno nuovo."
+    invalid_msg = "Reset link invalid or expired. Please request a new one."
     if not db_token:
         raise HTTPException(status_code=400, detail=invalid_msg)
     if db_token.used_at is not None:
@@ -182,7 +147,6 @@ def reset_password(
 
     user = db.query(models.User).filter(models.User.id == db_token.user_id).first()
     if not user:
-        # User cancellato dopo la richiesta di reset: token diventa invalido.
         raise HTTPException(status_code=400, detail=invalid_msg)
 
     user.hashed_password = auth.get_password_hash(req.new_password)
@@ -190,4 +154,4 @@ def reset_password(
     db.commit()
 
     logger.info("Password reimpostata per %s (token id=%s).", user.email, db_token.id)
-    return {"detail": "Password aggiornata. Puoi accedere con la nuova password."}
+    return {"detail": "Password updated. You can now log in with your new password."}

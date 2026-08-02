@@ -17,14 +17,7 @@ def _user_label(u: models.User | None) -> dict | None:
 
 @router.get("/admin/dashboard")
 def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Aggrega tutto il necessario per il pannello admin:
-      - to_review: lingue in waiting_for_approval
-      - completed: lingue in approved
-      - red_by_language: per ogni lingua (qualsiasi stato) con parametri "rossi" (unsure o incompleti)
-      - recent_changes: cronologia ParameterChangeLog (ultime 50, escluse le note di test/DEACTIVATED)
-    """
-    # ---- 1. Lingue da revisionare ----
+
     to_review_rows = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
     ).filter(
@@ -39,7 +32,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         "assigned_user": _user_label(l.assigned_user),
     } for l in to_review_rows]
 
-    # ---- 2. Lingue completate ----
     completed_rows = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
     ).filter(
@@ -54,11 +46,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         "assigned_user": _user_label(l.assigned_user),
     } for l in completed_rows]
 
-    # ---- 3. Parametri rossi per lingua ----
-    # Includiamo TUTTE le lingue, anche le approved: di norma una approved e'
-    # "verde", ma puo' capitare (raro) che abbia ancora parametri unsure o
-    # incompleti, e in quel caso vanno mostrati. Ordine alfabetico per nome
-    # (case-insensitive) cosi' la card Flagged/Unsure e' facile da scorrere.
     red_candidate_languages = db.query(models.Language).options(
         joinedload(models.Language.assigned_user)
     ).order_by(func.lower(models.Language.id)).all()
@@ -67,7 +54,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         models.ParameterDef.is_active == True
     ).order_by(models.ParameterDef.position).all()
 
-    # Conteggio domande attive per parametro
     qcount_rows = db.query(
         models.Question.parameter_id,
         func.count(models.Question.id)
@@ -76,7 +62,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).group_by(models.Question.parameter_id).all()
     qcount_by_param = {pid: c for pid, c in qcount_rows}
 
-    # Flag unsure (LanguageParameterStatus)
     unsure_rows = db.query(
         models.LanguageParameterStatus.language_id,
         models.LanguageParameterStatus.parameter_id,
@@ -85,7 +70,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).all()
     unsure_set = {(l, p) for l, p in unsure_rows}
 
-    # Conteggio risposte testuali per (lingua, parametro)
     answered_rows = db.query(
         models.Answer.language_id,
         models.Question.parameter_id,
@@ -136,7 +120,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
                 "params": red_params,
             })
 
-    # ---- 3.5 Conteggio lingue per status + elenco lingue per status ----
     status_counts_rows = db.query(
         models.Language.status,
         func.count(models.Language.id),
@@ -158,7 +141,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         if lstatus in languages_by_status:
             languages_by_status[lstatus].append({"id": lid, "name_full": lname})
 
-    # ---- 4. Cronologia delle modifiche ----
     changes_rows = db.query(models.ParameterChangeLog).options(
         joinedload(models.ParameterChangeLog.user),
         joinedload(models.ParameterChangeLog.parameter),
@@ -197,7 +179,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     }
 
 
-# ---- Dashboard utente normale: lingue assegnate con stato e progress ----
 @router.get("/user/dashboard")
 def get_user_dashboard(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
@@ -207,12 +188,10 @@ def get_user_dashboard(db: Session = Depends(get_db), current_user: models.User 
         models.Language.assigned_user_id == current_user.id
     ).order_by(func.lower(models.Language.id)).all()
 
-    # Domande attive totali (denominatore comune)
     total_active_q = db.query(func.count(models.Question.id)).filter(
         models.Question.is_active == True
     ).scalar() or 0
 
-    # Risposte testuali per ogni lingua dell'utente
     answered_by_lang: dict[str, int] = {}
     if langs:
         answered_rows = db.query(

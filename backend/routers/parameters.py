@@ -21,14 +21,10 @@ from services.param_state import compute_colors
 import re as _re
 
 ID_MAX_LEN = 10  # Length(ParameterDef.id) — vincolo schema
-# Un id parametro deve essere un token valido per le formule (sign + param):
-# param = [A-Za-z0-9_]+ in logic_parser. Vincoliamo lo stesso charset così un
-# rename non puo' produrre una implicational_condition non parsabile.
 _VALID_PARAM_ID_RE = _re.compile(r'^[A-Za-z0-9_]+$')
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
 
-# --- SCHEMI PYDANTIC ---
 
 class QuestionRead(BaseModel):
     id: str
@@ -61,9 +57,6 @@ class ParameterBase(BaseModel):
     param_type: str = ""
     level_of_comparison: str = ""
 
-    # Le colonne di testo sono nullable a livello DB: righe vecchie possono
-    # avere NULL (es. admin_remarks aggiunta dopo). Coerciamo None -> "" così la
-    # response non fallisce la validazione contro il tipo `str`.
     @field_validator(
         "short_description", "long_description", "admin_remarks",
         "description_of_the_implicational_condition",
@@ -94,7 +87,6 @@ class DeactivatePayload(BaseModel):
     password: str
     reason: Optional[str] = ""
 
-# --- ENDPOINT ---
 
 @router.get("", response_model=List[ParameterListItem])
 def get_admin_parameters(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
@@ -136,7 +128,6 @@ def get_admin_parameters(db: Session = Depends(get_db), current_user: models.Use
 
 @router.get("/{id}", response_model=ParameterDetail)
 def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    # Usiamo joinedload per le domande e selectinload per i log
     parameter = db.query(models.ParameterDef).options(
         joinedload(models.ParameterDef.questions),
         selectinload(models.ParameterDef.change_logs)
@@ -149,7 +140,6 @@ def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: mo
 def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     db_item = models.ParameterDef(**item.dict())
     db.add(db_item)
-    # Blocca il salvataggio se il TUDO parser fallisce
     if item.implicational_condition:
         try:
             validate_expression(item.implicational_condition)
@@ -247,20 +237,12 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    # Blocca il salvataggio se il parser della formula fallisce (fail fast,
-    # prima di toccare il DB con rename/cascade).
     if item.implicational_condition:
         try:
             validate_expression(item.implicational_condition)
         except ParseException as e:
             raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
 
-    # --- Rename dell'id (speculare a languages/questions) + riscrittura formule ---
-    # Le FK verso parameter_defs.id hanno ON UPDATE CASCADE: questions,
-    # language_parameters, language_parameter_statuses, parameter_change_logs
-    # seguono il nuovo id nella stessa transazione. I riferimenti dentro le
-    # `implicational_condition` di ALTRI parametri sono testo libero e NON
-    # seguono la cascade: li riscriviamo qui sotto in modo token-aware.
     new_id = (item.id or "").strip()
     if not new_id:
         raise HTTPException(status_code=422, detail="Parameter ID cannot be empty.")
@@ -298,18 +280,15 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
                 ),
             )
 
-    # Applica i campi NON-id (l'id e' gestito sotto, a parte, per la cascade).
     update_data = item.dict(exclude={'is_active', 'change_note', 'id'})
     for key, value in update_data.items():
         setattr(db_item, key, value)
 
     if renaming:
-        # A->B->A: se il nuovo id era un alias di QUESTO stesso parametro, rimuovilo.
         db.query(models.ParameterAlias).filter(
             models.ParameterAlias.old_id == new_id,
             models.ParameterAlias.parameter_id == old_id,
         ).delete(synchronize_session=False)
-        # Applica il rename: la cascade DB sposta i figli sul nuovo id.
         db_item.id = new_id
         db.flush()
         existing_alias = (
@@ -320,10 +299,6 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
         if existing_alias is None:
             db.add(models.ParameterAlias(parameter_id=new_id, old_id=old_id))
 
-        # Riscrittura delle formule che citano il vecchio id. Il LIKE e'
-        # sovra-inclusivo (prende anche chi cita un id di cui old_id e'
-        # sottostringa); il rewrite token-aware applica la sostituzione SOLO
-        # sugli operandi esatti e ci dice quali formule sono davvero cambiate.
         candidates = (
             db.query(models.ParameterDef)
             .filter(models.ParameterDef.implicational_condition.ilike(f"%{old_id}%"))
@@ -344,7 +319,6 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
         if rewritten_param_ids:
             rename_note += f" (formulas rewritten in: {', '.join(sorted(set(rewritten_param_ids)))})"
 
-    # Log di modifica sul parametro corrente (nota utente + marcatore rename).
     note_parts = []
     if item.change_note and item.change_note.strip():
         note_parts.append(item.change_note.strip())
@@ -362,9 +336,6 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
         record_version(db, db_item, operation="update", source="manual",
                        user_id=current_user.id, note=(rename_note or item.change_note or None))
         db.commit()
-        # Qualunque modifica al parametro può rendere stale i value_orig/value_eval
-        # (cambio formula → DAG diverso). Ricalcoliamo il corrente e, se il rename
-        # ha toccato le formule di altri parametri, anche quelli.
         for pid in {new_id, *rewritten_param_ids}:
             background_tasks.add_task(recompute_parameter_for_all_languages, pid)
         return db_item
@@ -375,7 +346,6 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
 
 @router.post("/{id}/deactivate")
 def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    # 1. Verifica Password
     if not auth.verify_password(payload.password, current_user.hashed_password):
         raise HTTPException(status_code=403, detail="Wrong password. Cannot deactivate.")
 
@@ -383,7 +353,6 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: 
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    # 2. Verifica Dipendenze
     used_in = db.query(models.ParameterDef).filter(
         models.ParameterDef.is_active == True,
         models.ParameterDef.implicational_condition.ilike(f"%{id}%")
@@ -392,7 +361,6 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: 
     if used_in:
         raise HTTPException(status_code=400, detail="Cannot deactivate: the parameter is used in the implicational conditions of other active parameters.")
 
-    # 3. Disattiva e logga
     db_item.is_active = False
 
     if payload.reason:
@@ -408,13 +376,10 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: 
                    user_id=current_user.id,
                    note=f"Deactivated{f': {payload.reason}' if payload.reason else ''}")
     db.commit()
-    # Disattivare un parametro lo esclude dal DAG: ricalcolo per tutte le lingue
-    # così i value_eval dei figli che lo citano si riallineano.
     background_tasks.add_task(recompute_parameter_for_all_languages, id)
     return {"detail": "Parameter successfully deactivated."}
 
 class ParametersInfoPdfPayload(BaseModel):
-    # Lista opzionale di ID; se vuota/omessa, esporta tutti i parametri.
     param_ids: Optional[List[str]] = None
 
 
@@ -424,21 +389,12 @@ def export_parameters_info_pdf(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """PDF con le info generali (no domande) di tutti i parametri richiesti.
 
-    Pensato come overview compatta da stampare/condividere coi linguisti:
-    una pagina di indice + una sezione per parametro con info di base,
-    descrizioni e logica.
-    """
     q = db.query(models.ParameterDef)
     if payload.param_ids:
         q = q.filter(models.ParameterDef.id.in_(payload.param_ids))
     parameters = q.order_by(models.ParameterDef.position, models.ParameterDef.id).all()
 
-    # Pre-carico tutte le question dei parametri richiesti, con le loro
-    # allowed_motivations.motivation: stesso pattern del single-parameter PDF
-    # (vedi download_parameter_pdf più sotto). Le raggruppo per parameter_id
-    # per un lookup O(1) nel renderer.
     param_ids = [p.id for p in parameters]
     questions_by_param: dict[str, list] = {pid: [] for pid in param_ids}
     if param_ids:
@@ -491,8 +447,7 @@ def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user:
 
 @router.get("/{id}/data-xlsx")
 def download_parameter_data_xlsx(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Excel matrice per un parametro: lingue (righe) × question attive (colonne),
-    celle = frasi d'esempio di quella lingua per quella question."""
+
     parameter = db.query(models.ParameterDef).filter(models.ParameterDef.id == id).first()
     if not parameter:
         raise HTTPException(status_code=404, detail="Parameter not found")
@@ -546,29 +501,11 @@ def reactivate_parameter(id: str, background_tasks: BackgroundTasks, db: Session
                    user_id=current_user.id, note="Reactivated")
     db.commit()
 
-    # Durante la disattivazione il parametro era escluso dal DAG, quindi i suoi
-    # value_orig/value_eval e quelli dei figli che lo citano sono potenzialmente
-    # stale. Ricalcoliamo in background per tutte le lingue: il param_consolidate
-    # e poi il DAG (che internamente parte dall'intero grafo dei parametri attivi
-    # per la lingua) riallineano tutto.
     background_tasks.add_task(recompute_parameter_for_all_languages, id)
 
     return {"detail": "Parameter successfully reactivated."}
 
 
-# --- ENDPOINT QUICK-FILL ANSWERS ---
-# Caso d'uso: appena creato un parametro nuovo l'admin vuole pre-popolare
-# tutte le risposte "vuote" con il default piu' frequente (no = caso assente)
-# per evitare di compilare a mano ogni lingua. Le stop questions ricevono
-# "yes" (= "procedi") perche' una stop a "no" bloccherebbe il parametro per
-# la lingua, l'opposto dell'intento "pigrizia".
-#
-# Comportamento (intenzionalmente non distruttivo):
-#   - tocca solo le combinazioni (lingua, domanda attiva) SENZA Answer esistente
-#   - non sovrascrive mai risposte gia' date
-#   - parametro disattivato -> 409 (non ha senso pre-fillare)
-#   - una EntityVersion aggregata in History
-#   - recompute del parametro per tutte le lingue in background
 @router.post("/{id}/quick-fill-answers")
 def quick_fill_parameter_answers(
     id: str,
@@ -599,9 +536,6 @@ def quick_fill_parameter_answers(
             "languages_touched": 0, "recompute_started": False,
         }
 
-    # Pre-carica le risposte esistenti per (questo set di question, qualunque lingua)
-    # con UNA query: O(Q*L) Python loops vs O(Q*L) queries DB. Per parametri
-    # tipici (Q < 20, L < 500) restiamo dentro qualche migliaio di righe.
     q_ids = [q.id for q in active_questions]
     existing = db.query(models.Answer.language_id, models.Answer.question_id).filter(
         models.Answer.question_id.in_(q_ids)
@@ -627,8 +561,6 @@ def quick_fill_parameter_answers(
             created += 1
             languages_touched.add(lang.id)
 
-    # Una sola entry aggregata in History: la granularita' per ogni answer
-    # creerebbe migliaia di entry inutili nella timeline del parametro.
     note = (
         f"Quick-fill: created {created} answers "
         f"({len([q for q in active_questions if q.is_stop_question])} stop->yes, "
@@ -650,9 +582,6 @@ def quick_fill_parameter_answers(
             detail=f"Could not quick-fill answers: {getattr(e, 'orig', e)}",
         )
 
-    # Le nuove answers cambiano value_orig dei parametri (e i loro figli nel DAG):
-    # stesso pattern di reactivate, ricalcoliamo per tutte le lingue in background
-    # cosi' l'admin non aspetta. Le lingue non toccate sono no-op nel consolidate.
     background_tasks.add_task(recompute_parameter_for_all_languages, id)
 
     return {
@@ -672,13 +601,11 @@ def validate_condition_api(payload: ConditionCheck, db: Session = Depends(get_db
     if not payload.condition:
         return {"valid": True, "error": None}
     try:
-        # Usa ESATTAMENTE la tua funzione!
         validate_expression(payload.condition)
         return {"valid": True, "error": None}
     except ParseException as e:
         return {"valid": False, "error": str(e)}
 
-# --- ENDPOINT "WHERE USED" (Mantenuto perché fa solo una query al DB utilissima) ---
 @router.get("/{id}/usage")
 def get_parameter_usage(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     used_in = db.query(models.ParameterDef).filter(
@@ -693,13 +620,7 @@ def get_parameter_by_language(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Riepilogo di UN parametro su TUTTE le lingue: la vista "inversa" della
-    pagina di compilazione (un parametro, sotto tutte le lingue). Per ogni lingua
-    restituisce lo stato workflow, quante question del parametro hanno risposta
-    yes/no, se esistono dati e il flag unsure. Niente risposte/esempi qui: la
-    pagina admin li carica pigramente per la singola lingua via
-    /api/languages/{lang}/parameters/{param}/block. Admin-only.
-    """
+
     parameter = (
         db.query(models.ParameterDef)
         .filter(models.ParameterDef.id == param_id)
@@ -712,9 +633,6 @@ def get_parameter_by_language(
     active_qids = [q.id for q in parameter.questions if q.is_active]
     total_q = len(active_qids)
 
-    # answered = question con risposta yes/no (coerente col reader di compilazione,
-    # dove 'unsure' non conta come completata); with_response = qualsiasi risposta
-    # non nulla (serve a distinguere "vuoto" da "iniziato").
     answered_map: dict[str, int] = {}
     with_response_map: dict[str, int] = {}
     if active_qids:
@@ -740,8 +658,6 @@ def get_parameter_by_language(
     unsure_map = {lid: bool(u) for lid, u in unsure_rows}
 
     languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
-    # Colore del quadratino (grey/red/yellow/green) per ogni lingua, stessa
-    # logica di Language Data.
     colors = compute_colors(db, [l.id for l in languages], {param_id: active_qids})
     langs_out = [{
         "id": l.id,
@@ -767,9 +683,6 @@ def get_parameter_by_language(
         "languages": langs_out,
     }
 
-# ==========================================
-# ENDPOINT LOOKUPS
-# ==========================================
 
 class LookupBase(BaseModel):
     label: str
