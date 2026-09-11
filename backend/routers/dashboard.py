@@ -4,6 +4,14 @@ from sqlalchemy import func, not_
 
 import models
 from dependencies import get_db, require_admin, get_current_user
+from services.param_consolidate import ALLOWED_STATUSES
+from services.param_state import (
+    GREEN,
+    RED,
+    active_param_questions,
+    compute_colors,
+    language_completion_from_colors,
+)
 
 router = APIRouter(prefix="/api", tags=["Dashboard"])
 
@@ -54,13 +62,15 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         models.ParameterDef.is_active == True
     ).order_by(models.ParameterDef.position).all()
 
-    qcount_rows = db.query(
-        models.Question.parameter_id,
-        func.count(models.Question.id)
-    ).filter(
-        models.Question.is_active == True
-    ).group_by(models.Question.parameter_id).all()
-    qcount_by_param = {pid: c for pid, c in qcount_rows}
+    # Un parametro e' rosso quando lo dice param_state, cioe' la stessa regola
+    # che colora i quadratini nella pagina della lingua: almeno una domanda
+    # senza risposta o marcata 'unsure', su un parametro gia' iniziato.
+    answerable_questions = {
+        param_id: question_ids
+        for param_id, question_ids in active_param_questions(db).items()
+        if question_ids
+    }
+    colors = compute_colors(db, [l.id for l in red_candidate_languages], answerable_questions)
 
     unsure_rows = db.query(
         models.LanguageParameterStatus.language_id,
@@ -70,6 +80,8 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).all()
     unsure_set = {(l, p) for l, p in unsure_rows}
 
+    # Conteggio per il testo "incomplete (n/m)": contano solo le risposte vere e
+    # non respinte, come nel consolidamento. 'unsure' e 'missing' non risolvono.
     answered_rows = db.query(
         models.Answer.language_id,
         models.Question.parameter_id,
@@ -77,7 +89,8 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).join(
         models.Question, models.Question.id == models.Answer.question_id
     ).filter(
-        models.Answer.response_text.isnot(None),
+        models.Answer.response_text.in_(["yes", "no"]),
+        models.Answer.status.in_(ALLOWED_STATUSES),
         models.Question.is_active == True
     ).group_by(
         models.Answer.language_id, models.Question.parameter_id
@@ -88,12 +101,13 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     for lang in red_candidate_languages:
         red_params = []
         for p in active_params:
-            total_q = qcount_by_param.get(p.id, 0)
-            if total_q == 0:
+            question_ids = answerable_questions.get(p.id)
+            if not question_ids:
                 continue  # parametro senza domande attive: skip
+            total_q = len(question_ids)
             ans_q = answered_count.get((lang.id, p.id), 0)
             is_unsure = (lang.id, p.id) in unsure_set
-            is_incomplete = 0 < ans_q < total_q
+            is_incomplete = colors.get((lang.id, p.id)) == RED
             if not (is_unsure or is_incomplete):
                 continue
             reasons = []
@@ -182,42 +196,38 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
 @router.get("/user/dashboard")
 def get_user_dashboard(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
-    Mostra all'utente le sue lingue assegnate con status, progress (% answered) e nota di rifiuto se applicabile.
+    Mostra all'utente le sue lingue assegnate con status, completamento (parametri verdi sul totale) e nota di rifiuto se applicabile.
     """
     langs = db.query(models.Language).filter(
         models.Language.assigned_user_id == current_user.id
     ).order_by(func.lower(models.Language.id)).all()
 
-    total_active_q = db.query(func.count(models.Question.id)).filter(
-        models.Question.is_active == True
-    ).scalar() or 0
-
-    answered_by_lang: dict[str, int] = {}
-    if langs:
-        answered_rows = db.query(
-            models.Answer.language_id,
-            func.count(models.Answer.id)
-        ).join(
-            models.Question, models.Question.id == models.Answer.question_id
-        ).filter(
-            models.Answer.response_text.isnot(None),
-            models.Question.is_active == True,
-            models.Answer.language_id.in_([l.id for l in langs])
-        ).group_by(models.Answer.language_id).all()
-        answered_by_lang = {lang_id: cnt for lang_id, cnt in answered_rows}
+    # Stessa base di calcolo del badge di completamento nella lista lingue: solo
+    # i parametri attivi che hanno almeno una question attiva. Contare invece le
+    # singole risposte darebbe una percentuale che non raggiunge mai il 100%.
+    answerable_questions = {
+        param_id: question_ids
+        for param_id, question_ids in active_param_questions(db).items()
+        if question_ids
+    }
+    total_params = len(answerable_questions)
+    colors = compute_colors(db, [l.id for l in langs], answerable_questions)
 
     languages = []
     for l in langs:
-        ans = answered_by_lang.get(l.id, 0)
+        param_colors = [colors[(l.id, param_id)] for param_id in answerable_questions]
+        complete_params = sum(1 for color in param_colors if color == GREEN)
         languages.append({
             "id": l.id,
             "name_full": l.name_full,
             "family": l.family,
             "status": l.status,
+            "completion": l.completion_override or language_completion_from_colors(param_colors),
+            "completion_forced": l.completion_override is not None,
             "rejection_note": l.rejection_note,
-            "answered": ans,
-            "total": total_active_q,
-            "progress_pct": round(100 * ans / total_active_q) if total_active_q else 0,
+            "complete_params": complete_params,
+            "total_params": total_params,
+            "progress_pct": round(100 * complete_params / total_params) if total_params else 0,
             "submitted_at": l.submitted_at.isoformat() if l.submitted_at else None,
             "reviewed_at": l.reviewed_at.isoformat() if l.reviewed_at else None,
         })

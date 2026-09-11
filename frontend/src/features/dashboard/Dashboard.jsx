@@ -19,6 +19,16 @@ function StatusBadge({ status }) {
     );
 }
 
+// ===== Completamento — ASSE A. Stessi colori dei quadratini e dello stesso
+// badge in LanguageList: vuoto→grigio, incompleto→giallo, completo→verde. =====
+const COMPLETION_BAR = {
+    empty: { label: 'Empty', color: 'var(--text-muted)' },
+    incomplete: { label: 'Incomplete', color: 'var(--warn)' },
+    complete: { label: 'Complete', color: 'var(--ok)' },
+};
+
+const completionMeta = (completion) => COMPLETION_BAR[completion] || COMPLETION_BAR.empty;
+
 const fmtDateShort = (iso) => iso ? new Date(iso).toLocaleDateString() : '—';
 
 // ============================================================================
@@ -384,15 +394,15 @@ function UserDashboard() {
                                     {l.status === 'draft' ? 'Fill in' : 'View'}
                                 </Link>
                             </div>
-                            <div>
+                            <div title={`${completionMeta(l.completion).label}${l.completion_forced ? ' (forced by a super-admin)' : ''}`}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                                    <span>Progress: {l.answered}/{l.total} answers</span>
+                                    <span>Progress: {l.complete_params}/{l.total_params} parameters</span>
                                     <span>{l.progress_pct}%</span>
                                 </div>
                                 <div style={{ height: '8px', background: 'var(--surface-2)', borderRadius: '4px', overflow: 'hidden' }}>
                                     <div style={{
                                         width: `${l.progress_pct}%`, height: '100%',
-                                        background: l.status === 'validated' ? '#16a34a' : '#3b82f6'
+                                        background: completionMeta(l.completion).color
                                     }}/>
                                 </div>
                             </div>
