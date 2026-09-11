@@ -124,6 +124,29 @@ def delete_motivation(id: int, db: Session = Depends(get_db), current_user: mode
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
 
+    # Le FK verso motivations sono ON DELETE CASCADE (question_allowed_motivations,
+    # answer_motivations): senza questo controllo la DELETE riesce sempre e il DB
+    # cancella in silenzio i collegamenti risposta-motivazione di tutte le lingue.
+    answers_used = db.query(models.AnswerMotivation).filter(
+        models.AnswerMotivation.motivation_id == id
+    ).count()
+    questions_used = db.query(models.QuestionAllowedMotivation).filter(
+        models.QuestionAllowedMotivation.motivation_id == id
+    ).count()
+    if answers_used or questions_used:
+        used_in = []
+        if answers_used:
+            used_in.append(f"{answers_used} answer{'s' if answers_used != 1 else ''}")
+        if questions_used:
+            used_in.append(f"{questions_used} question{'s' if questions_used != 1 else ''}")
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Cannot delete: the motivation is used in {' and '.join(used_in)}. "
+                "Unlink it there first."
+            ),
+        )
+
     record_version(db, db_item, operation="delete", source="manual", user_id=current_user.id)
     db.delete(db_item)
     try:
