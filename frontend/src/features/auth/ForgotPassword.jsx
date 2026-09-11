@@ -18,9 +18,9 @@ export default function ForgotPassword() {
             setSubmitted(true);
         } catch (err) {
             if (err?.response?.status === 429) {
-                setError('Troppi tentativi. Riprova tra un minuto.');
+                setError('Too many attempts. Please try again in a minute.');
             } else {
-                setError('Errore di rete. Riprova.');
+                setError('Network error. Please try again.');
             }
         }
     };
@@ -28,27 +28,27 @@ export default function ForgotPassword() {
     return (
         <div className="auth-shell">
             <section className="card auth-card">
-                <h1 className="auth-title">Password dimenticata</h1>
+                <h1 className="auth-title">Forgot password</h1>
                 {submitted ? (
                     <>
                         <p>
-                            Se l'email <strong>{email}</strong> e' registrata,
-                            riceverai a breve un messaggio con il link per
-                            reimpostare la password.
+                            If <strong>{email}</strong> is registered, you will
+                            shortly receive a message with the link to reset
+                            your password.
                         </p>
                         <p style={{ fontSize: '.9rem', color: 'var(--text-muted)' }}>
-                            Il link e' valido per 30 minuti. Controlla anche la
-                            cartella spam.
+                            The link is valid for 30 minutes. Please check your
+                            spam folder too.
                         </p>
                         <div className="auth-secondary">
-                            <Link to="/login">Torna al login</Link>
+                            <Link to="/login">Back to login</Link>
                         </div>
                     </>
                 ) : (
                     <>
                         <p>
-                            Inserisci l'email associata al tuo account: ti
-                            invieremo un link per impostare una nuova password.
+                            Enter the email address linked to your account: we
+                            will send you a link to set a new password.
                         </p>
                         {error && <div className="alert alert-error">{error}</div>}
                         <form onSubmit={handleSubmit}>
@@ -63,12 +63,12 @@ export default function ForgotPassword() {
                             </div>
                             <div className="auth-actions">
                                 <button type="submit" className="btn btn--primary fit">
-                                    Invia link
+                                    Send link
                                 </button>
                             </div>
                         </form>
                         <div className="auth-secondary">
-                            <Link to="/login">Torna al login</Link>
+                            <Link to="/login">Back to login</Link>
                         </div>
                     </>
                 )}

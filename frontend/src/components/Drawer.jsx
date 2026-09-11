@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function Drawer({ open, onClose, children, ariaLabel = 'Pannello di modifica' }) {
+export default function Drawer({ open, onClose, children, ariaLabel = 'Edit panel' }) {
     useEffect(() => {
         if (!open) return;
         const onKey = (e) => {
@@ -26,8 +26,8 @@ export default function Drawer({ open, onClose, children, ariaLabel = 'Pannello 
                     type="button"
                     className="drawer-close"
                     onClick={onClose}
-                    aria-label="Chiudi"
-                    title="Chiudi (Esc)"
+                    aria-label="Close"
+                    title="Close (Esc)"
                 >
                     ×
                 </button>

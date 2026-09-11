@@ -12,8 +12,8 @@ const TYPE_LABELS = {
 // leggendo il PDF a prescindere dalla card in cui e' stato caricato, l'admin
 // vede istruzioni mirate al singolo documento per coerenza visiva.
 const TYPE_HINTS = {
-    terms_of_use: 'Il PDF deve contenere "Terms of Use" nel titolo e la stringa "version X.Y" nel testo (es. version 1.0, di solito in header/footer).',
-    privacy_notice: 'Il PDF deve contenere "Informativa" nel titolo e la stringa "version X.Y" nel testo (es. version 1.0, di solito in header/footer).',
+    terms_of_use: 'The PDF must contain "Terms of Use" in the title and the string "version X.Y" in the text (e.g. version 1.0, usually in the header/footer).',
+    privacy_notice: 'The PDF must contain "Informativa" in the title and the string "version X.Y" in the text (e.g. version 1.0, usually in the header/footer).',
 };
 
 function fmtDate(iso) {
@@ -63,9 +63,9 @@ export default function LegalDocuments() {
             <header className="dashboard-hero" style={{ marginBottom: 'var(--form-card-header-mb, 1.5rem)' }}>
                 <h1>Legal Documents</h1>
                 <p className="muted">
-                    Gestisci le versioni di <strong>Terms of Use</strong> e
-                    <strong> Privacy Notice</strong>. Caricando un nuovo PDF, gli
-                    utenti dovranno ri-accettarlo al prossimo login.
+                    Manage the versions of <strong>Terms of Use</strong> and
+                    <strong> Privacy Notice</strong>. When you upload a new PDF,
+                    users will have to accept it again at their next login.
                 </p>
             </header>
 
@@ -101,8 +101,8 @@ export default function LegalDocuments() {
 
                 {!loadingList && !listError && docs.length === 0 && (
                     <div className="muted small">
-                        Nessun documento ancora caricato. Carica la prima versione
-                        di Terms of Use e Privacy Notice qui sopra.
+                        No document uploaded yet. Upload the first version of
+                        Terms of Use and Privacy Notice above.
                     </div>
                 )}
 
@@ -206,7 +206,7 @@ function UploadCard({ type, title, hint, onPublished }) {
             );
             setPreview(res.data);
         } catch (err) {
-            setPreviewError(err.response?.data?.detail || 'Errore durante l\'analisi del PDF.');
+            setPreviewError(err.response?.data?.detail || 'Error while analysing the PDF.');
         } finally {
             setAnalyzing(false);
         }
@@ -225,11 +225,11 @@ function UploadCard({ type, title, hint, onPublished }) {
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
             const published = TYPE_LABELS[preview.type] || preview.type;
-            setSuccessMsg(`✓ ${published} ${preview.version} pubblicata.`);
+            setSuccessMsg(`✓ ${published} ${preview.version} published.`);
             reset();
             await onPublished();
         } catch (err) {
-            setPublishError(err.response?.data?.detail || 'Errore durante la pubblicazione.');
+            setPublishError(err.response?.data?.detail || 'Error while publishing.');
         } finally {
             setPublishing(false);
         }
@@ -326,13 +326,13 @@ function UploadCard({ type, title, hint, onPublished }) {
                     </div>
                     {preview.would_replace && (
                         <div className="small muted" style={{ marginBottom: '0.5rem' }}>
-                            Sostituira' la versione {preview.would_replace.version}.
+                            It will replace version {preview.would_replace.version}.
                         </div>
                     )}
 
                     {preview.already_exists && (
                         <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>
-                            Questa versione esiste già. Incrementa il numero di versione nel PDF.
+                            This version already exists. Increase the version number in the PDF.
                         </div>
                     )}
 

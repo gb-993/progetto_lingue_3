@@ -508,7 +508,7 @@ export default function QuestionForm({ mode = 'page' }) {
 
     const closeMotivationEditor = () => {
         if (motSaving || motDeleting) return; // non chiudere durante un'azione
-        if (motDirty && !window.confirm('Hai modifiche non salvate alla motivation. Annullarle?')) return;
+        if (motDirty && !window.confirm('You have unsaved changes on this motivation. Discard them?')) return;
         setEditingMotivationId(null);
         setEditMotData({ code: '', label: '' });
         setInitialMotData({ code: '', label: '' });
@@ -535,7 +535,7 @@ export default function QuestionForm({ mode = 'page' }) {
             setEditMotData({ code: '', label: '' });
             setInitialMotData({ code: '', label: '' });
         } catch (err) {
-            alert(err.response?.data?.detail || 'Errore nel salvataggio della motivation.');
+            alert(err.response?.data?.detail || 'Error while saving the motivation.');
         } finally {
             setMotSaving(false);
         }
@@ -546,8 +546,8 @@ export default function QuestionForm({ mode = 'page' }) {
         const m = allMotivations.find(x => x.id === editingMotivationId);
         const linked = m?.linked_questions?.length || 0;
         const confirmMsg = linked > 1
-            ? `Questa motivation è usata da ${linked} domande. Eliminandola la rimuoveresti da tutte. Continuare?`
-            : 'Eliminare questa motivation? L\'operazione viene bloccata se è usata da altre domande.';
+            ? `This motivation is used by ${linked} questions. Deleting it would remove it from all of them. Continue?`
+            : 'Delete this motivation? The operation is blocked if it is used by other questions.';
         if (!window.confirm(confirmMsg)) return;
         setMotDeleting(true);
         try {
@@ -562,7 +562,7 @@ export default function QuestionForm({ mode = 'page' }) {
             setEditMotData({ code: '', label: '' });
             setInitialMotData({ code: '', label: '' });
         } catch (err) {
-            alert(err.response?.data?.detail || 'Eliminazione bloccata: la motivation è in uso.');
+            alert(err.response?.data?.detail || 'Deletion blocked: the motivation is in use.');
         } finally {
             setMotDeleting(false);
         }
@@ -586,7 +586,7 @@ export default function QuestionForm({ mode = 'page' }) {
                     textDecorationStyle: 'dotted',
                     textUnderlineOffset: '3px',
                 }}
-                title="Clicca per modificare o eliminare globalmente questa motivation"
+                title="Click to edit or globally delete this motivation"
             >
                 <RSComponents.MultiValueLabel {...props} />
             </div>
@@ -616,7 +616,7 @@ export default function QuestionForm({ mode = 'page' }) {
                         fontSize: '0.85rem',
                         color: 'var(--link, #0056b3)',
                     }}
-                    title="Apri il modal per creare una nuova motivation con code e descrizione"
+                    title="Open the modal to create a new motivation with code and description"
                 >
                     + Create new motivation…
                 </div>
@@ -750,8 +750,8 @@ export default function QuestionForm({ mode = 'page' }) {
     const questionDirtyForGuard = isDirtyForGuard && !isLoading;
     const guardActive = questionDirtyForGuard || motDirty;
     const guardMessage = motDirty
-        ? 'Hai modifiche non salvate alla motivation. Se esci ora andranno perse. Continuare?'
-        : 'Hai modifiche non salvate. Se esci ora la bozza resterà nel browser ma non sarà inviata al server. Continuare?';
+        ? 'You have unsaved changes on this motivation. If you leave now they will be lost. Continue?'
+        : 'You have unsaved changes. If you leave now the draft stays in your browser but is not sent to the server. Continue?';
     useUnsavedChangesGuard(guardActive, guardMessage);
 
     const cancelLink = formData.parameter_id
@@ -1254,16 +1254,16 @@ export default function QuestionForm({ mode = 'page' }) {
                 return (
                     <div style={modalOverlayStyle}>
                         <div className="card" style={{ width: '460px', maxWidth: '92vw' }}>
-                            <h3 style={{ marginTop: 0 }}>Modifica motivation</h3>
+                            <h3 style={{ marginTop: 0 }}>Edit motivation</h3>
                             <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)', fontSize: '0.82rem' }}>
-                                <strong>Attenzione.</strong> Le modifiche al <em>code</em> o al <em>label</em>
-                                sono globali: si propagano in tutte le risposte già date e in tutte le
-                                domande che la usano. {linkedCount > 0 && (
-                                    <>Questa motivation è attualmente collegata a <strong>{linkedCount}</strong>{' '}
-                                    domand{linkedCount === 1 ? 'a' : 'e'}
+                                <strong>Warning.</strong> Changes to the <em>code</em> or the <em>label</em>
+                                are global: they propagate to every answer already given and to every
+                                question using it. {linkedCount > 0 && (
+                                    <>This motivation is currently linked to <strong>{linkedCount}</strong>{' '}
+                                    question{linkedCount === 1 ? '' : 's'}
                                     {linkedOthers.length > 0 && (
-                                        <> (oltre a quella corrente: {linkedOthers.slice(0, 3).join(', ')}
-                                            {linkedOthers.length > 3 ? ` e altre ${linkedOthers.length - 3}` : ''})</>
+                                        <> (besides the current one: {linkedOthers.slice(0, 3).join(', ')}
+                                            {linkedOthers.length > 3 ? ` and ${linkedOthers.length - 3} more` : ''})</>
                                     )}.</>
                                 )}
                             </div>
@@ -1297,10 +1297,10 @@ export default function QuestionForm({ mode = 'page' }) {
                                     onClick={deleteCurrentMotivation}
                                     disabled={motSaving || motDeleting}
                                     title={linkedCount > 1
-                                        ? `Bloccata se in uso da altre domande (${linkedCount} link)`
-                                        : 'Elimina globalmente questa motivation'}
+                                        ? `Blocked if used by other questions (${linkedCount} links)`
+                                        : 'Globally delete this motivation'}
                                 >
-                                    {motDeleting ? 'Eliminazione...' : 'Elimina globalmente'}
+                                    {motDeleting ? 'Deleting...' : 'Delete globally'}
                                 </button>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <button
@@ -1309,7 +1309,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         onClick={closeMotivationEditor}
                                         disabled={motSaving || motDeleting}
                                     >
-                                        Annulla
+                                        Cancel
                                     </button>
                                     <button
                                         type="button"
@@ -1317,7 +1317,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         onClick={saveEditedMotivation}
                                         disabled={motSaving || motDeleting || !editMotData.code.trim() || !editMotData.label.trim()}
                                     >
-                                        {motSaving ? 'Salvataggio...' : 'Salva modifiche'}
+                                        {motSaving ? 'Saving...' : 'Save changes'}
                                     </button>
                                 </div>
                             </div>

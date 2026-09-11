@@ -186,7 +186,7 @@ def import_excel(
     except Exception as e:
         report = ImportReport()
         report.errors.append(ImportError(
-            sheet="(file)", row=0, reason=f"File non leggibile: {e}"
+            sheet="(file)", row=0, reason=f"File not readable: {e}"
         ))
         return report
 
@@ -209,7 +209,7 @@ def import_excel(
             db.commit()
         except Exception as e:
             db.rollback()
-            report.errors.append(ImportError(sheet=sheet_type, row=0, reason=f"Commit fallito: {e}"))
+            report.errors.append(ImportError(sheet=sheet_type, row=0, reason=f"Commit failed: {e}"))
 
     _run("Motivations", lambda ws: _import_motivations(
         db, ws, report, failed_motivation_codes,
@@ -275,7 +275,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
     hmap = _build_header_map(ws)
     if "Code" not in hmap:
         report.errors.append(ImportError(sheet="Motivations", row=1,
-                                         reason="Colonna 'Code' mancante"))
+                                         reason="Missing 'Code' column"))
         return
 
     # Chiave upper-case per il match case-insensitive col file (vedi DEV-NOTES.md)
@@ -291,7 +291,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             summary.errors += 1
             report.errors.append(ImportError(
                 sheet="Motivations", row=ridx, column="Code",
-                reason="Codice vuoto, riga saltata"
+                reason="Empty Code, row skipped"
             ))
             continue
 
@@ -1077,7 +1077,7 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
     if "ID" not in hmap or "Name" not in hmap:
         report.errors.append(ImportError(
             sheet="Languages", row=1,
-            reason="Colonne 'ID' e 'Name' obbligatorie."
+            reason="Columns 'ID' and 'Name' are required."
         ))
         return
 
@@ -1185,7 +1185,7 @@ def _import_glossary(db: Session, ws: Worksheet, report: ImportReport) -> None:
     if "Word" not in hmap or "Description" not in hmap:
         report.errors.append(ImportError(
             sheet="Glossary", row=1,
-            reason="Colonne 'Word' e 'Description' obbligatorie."
+            reason="Columns 'Word' and 'Description' are required."
         ))
         return
 

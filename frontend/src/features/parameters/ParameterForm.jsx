@@ -183,8 +183,8 @@ export default function ParameterForm() {
         if (cleaned !== raw) {
             const rejected = [...new Set(
                 raw.split('').filter(c => !/[A-Za-z0-9_]/.test(c))
-            )].map(c => (c === ' ' ? 'spazio' : `« ${c} »`)).join(', ');
-            setIdWarning(`Carattere non ammesso: ${rejected}. Usa solo lettere, numeri e underscore ( _ ).`);
+            )].map(c => (c === ' ' ? 'space' : `« ${c} »`)).join(', ');
+            setIdWarning(`Character not allowed: ${rejected}. Use only letters, digits and underscore ( _ ).`);
         } else {
             setIdWarning('');
         }
@@ -928,7 +928,7 @@ export default function ParameterForm() {
         <Drawer
             open={isDrawerOpen}
             onClose={() => navigate(`/admin/parameters/${id}/edit`)}
-            ariaLabel="Modifica domanda"
+            ariaLabel="Edit question"
         >
             {outlet}
         </Drawer>

@@ -38,17 +38,17 @@ api.interceptors.response.use(
     }
 );
 
-export function getApiErrorMessage(err, fallback = 'Operazione non riuscita.') {
+export function getApiErrorMessage(err, fallback = 'Operation failed.') {
     if (err && !err.response) {
         if (err.code === 'ECONNABORTED') {
-            return 'La richiesta è scaduta (timeout). Riprova.';
+            return 'The request timed out. Please try again.';
         }
         if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-            return 'Impossibile contattare il server: backend non raggiungibile, '
-                + 'connessione assente o richiesta bloccata (CORS). '
-                + 'Controlla che il backend sia attivo e l’indirizzo API corretto.';
+            return 'Cannot reach the server: the backend is unavailable, '
+                + 'there is no connection, or the request was blocked (CORS). '
+                + 'Check that the backend is running and the API address is correct.';
         }
-        return err?.message ? `Errore di rete: ${err.message}` : fallback;
+        return err?.message ? `Network error: ${err.message}` : fallback;
     }
 
     const status = err?.response?.status;
@@ -65,7 +65,7 @@ export function getApiErrorMessage(err, fallback = 'Operazione non riuscita.') {
                 return loc ? `${loc}: ${d?.msg || ''}` : (d?.msg || '');
             })
             .filter(Boolean);
-        if (msgs.length) return `Dati non validi — ${msgs.join('; ')}`;
+        if (msgs.length) return `Invalid data — ${msgs.join('; ')}`;
     }
 
     if (detail && typeof detail === 'object' && typeof detail.message === 'string') {

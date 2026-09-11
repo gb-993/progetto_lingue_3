@@ -23,7 +23,7 @@ import { useBlocker } from 'react-router-dom';
  */
 export default function useUnsavedChangesGuard(
     isDirty,
-    message = 'Hai modifiche non salvate. Se esci ora la bozza resterà nel browser ma non sarà inviata al server. Continuare?'
+    message = 'You have unsaved changes. If you leave now the draft stays in your browser but is not sent to the server. Continue?'
 ) {
     // 1. beforeunload (uscita "fuori app")
     useEffect(() => {

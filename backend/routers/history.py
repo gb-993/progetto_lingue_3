@@ -87,7 +87,7 @@ def list_versions(
     operation: Optional[str] = Query(None),
     since: Optional[str] = Query(None, description="ISO date 'YYYY-MM-DD' inclusivo"),
     until: Optional[str] = Query(None, description="ISO date 'YYYY-MM-DD' inclusivo"),
-    search: Optional[str] = Query(None, description="Ricerca su entity_id, note, snapshot.name"),
+    search: Optional[str] = Query(None, description="Search on entity_id, note, snapshot.name"),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=500),
 ):
@@ -110,14 +110,14 @@ def list_versions(
             d = datetime.fromisoformat(since)
             q = q.filter(models.EntityVersion.created_at >= d)
         except ValueError:
-            raise HTTPException(400, f"Formato 'since' non valido: {since}")
+            raise HTTPException(400, f"Invalid 'since' format: {since}")
     if until:
         try:
             d = datetime.fromisoformat(until)
             d_end = d.replace(hour=23, minute=59, second=59)
             q = q.filter(models.EntityVersion.created_at <= d_end)
         except ValueError:
-            raise HTTPException(400, f"Formato 'until' non valido: {until}")
+            raise HTTPException(400, f"Invalid 'until' format: {until}")
     if search:
         like = f"%{search.lower()}%"
         q = q.filter(or_(

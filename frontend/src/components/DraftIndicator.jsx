@@ -32,7 +32,7 @@ export default function DraftIndicator({ lastSavedAt }) {
                 background: 'var(--surface-2, #f1f5f9)',
                 border: '1px solid var(--border)',
             }}
-            title={`Le modifiche non salvate vengono memorizzate nel browser e ripristinate al ricaricamento della pagina. Salvate alle ${time}.`}
+            title={`Unsaved changes are kept in your browser and restored when the page reloads. Saved at ${time}.`}
         >
             <span aria-hidden="true" style={{
                 width: '0.5rem',
@@ -41,17 +41,17 @@ export default function DraftIndicator({ lastSavedAt }) {
                 background: '#16a34a',
                 display: 'inline-block',
             }} />
-            Bozza salvata {ago} ({time})
+            Draft saved {ago} ({time})
         </div>
     );
 }
 
 function formatAgo(ms) {
     const sec = Math.round(ms / 1000);
-    if (sec < 5) return 'ora';
-    if (sec < 60) return `${sec}s fa`;
+    if (sec < 5) return 'just now';
+    if (sec < 60) return `${sec}s ago`;
     const min = Math.round(sec / 60);
-    if (min < 60) return `${min} min fa`;
+    if (min < 60) return `${min} min ago`;
     const h = Math.round(min / 60);
-    return `${h}h fa`;
+    return `${h}h ago`;
 }

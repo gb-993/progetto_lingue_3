@@ -447,7 +447,7 @@ def test_unreadable_file_returns_error(db_session):
 
     report = import_excel(db_session, b"not an xlsx", user.id)
     assert len(report.errors) >= 1
-    assert "non leggibile" in report.errors[0].reason.lower()
+    assert "not readable" in report.errors[0].reason.lower()
 
 
 def test_param_invalid_condition_skipped(db_session):

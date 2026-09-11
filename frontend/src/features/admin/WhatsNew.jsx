@@ -86,11 +86,11 @@ export default function WhatsNew() {
             </header>
 
             <p className="muted" style={{ marginTop: '.25rem' }}>
-                Annuncio mostrato una volta agli utenti nel modale di benvenuto.
-                <strong> Salvare = pubblicare:</strong> se il contenuto è diverso dal precedente, chi rientra nella visibilità lo rivedrà una volta.
-                Lasciandolo <strong>vuoto</strong> non viene mostrato nessun annuncio.
+                Announcement shown once to users in the welcome modal.
+                <strong> Saving = publishing:</strong> if the content differs from the previous one, everyone in the selected audience will see it again once.
+                Leaving it <strong>empty</strong> shows no announcement at all.
                 {!isEditing && (
-                    <> Visibile attualmente a: <strong>{audience === 'admins' ? 'solo amministratori' : 'tutti gli utenti'}</strong>.</>
+                    <> Currently visible to: <strong>{audience === 'admins' ? 'administrators only' : 'all users'}</strong>.</>
                 )}
             </p>
 
@@ -111,7 +111,7 @@ export default function WhatsNew() {
                         </Suspense>
 
                         <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-                            <strong style={{ fontSize: '.9rem' }}>Visibile a:</strong>
+                            <strong style={{ fontSize: '.9rem' }}>Visible to:</strong>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer' }}>
                                 <input
                                     type="radio"
@@ -121,7 +121,7 @@ export default function WhatsNew() {
                                     onChange={() => setDraftAudience('all')}
                                     disabled={saving}
                                 />
-                                Tutti gli utenti
+                                All users
                             </label>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer' }}>
                                 <input
@@ -132,7 +132,7 @@ export default function WhatsNew() {
                                     onChange={() => setDraftAudience('admins')}
                                     disabled={saving}
                                 />
-                                Solo amministratori
+                                Administrators only
                             </label>
                         </div>
 
@@ -148,7 +148,7 @@ export default function WhatsNew() {
                 ) : hasContent ? (
                     <div className="instructions-view" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
                 ) : (
-                    <p className="muted">Nessun annuncio pubblicato. Clicca <strong>Edit</strong> per scriverne uno.</p>
+                    <p className="muted">No announcement published. Click <strong>Edit</strong> to write one.</p>
                 )}
             </div>
         </div>

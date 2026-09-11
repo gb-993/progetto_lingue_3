@@ -17,15 +17,15 @@ export default function ResetPassword() {
         setError('');
 
         if (!token) {
-            setError('Link di reset non valido: token mancante. Richiedine uno nuovo.');
+            setError('Invalid reset link: the token is missing. Please request a new one.');
             return;
         }
         if (password1 !== password2) {
-            setError('Le due password non coincidono.');
+            setError('The two passwords do not match.');
             return;
         }
         if (password1.length < 8) {
-            setError('La password deve essere lunga almeno 8 caratteri.');
+            setError('The password must be at least 8 characters long.');
             return;
         }
 
@@ -42,9 +42,9 @@ export default function ResetPassword() {
             if (detail) {
                 setError(detail);
             } else if (err?.response?.status === 429) {
-                setError('Troppi tentativi. Riprova tra un minuto.');
+                setError('Too many attempts. Please try again in a minute.');
             } else {
-                setError('Errore di rete. Riprova.');
+                setError('Network error. Please try again.');
             }
         }
     };
@@ -52,28 +52,28 @@ export default function ResetPassword() {
     return (
         <div className="auth-shell">
             <section className="card auth-card">
-                <h1 className="auth-title">Imposta una nuova password</h1>
+                <h1 className="auth-title">Set a new password</h1>
                 {done ? (
                     <>
                         <div className="alert alert-success">
-                            Password aggiornata. Ti reindirizzo al login...
+                            Password updated. Redirecting you to the login page...
                         </div>
                         <div className="auth-secondary">
-                            <Link to="/login">Vai al login adesso</Link>
+                            <Link to="/login">Go to login now</Link>
                         </div>
                     </>
                 ) : (
                     <>
                         {!token && (
                             <div className="alert alert-error">
-                                Link non valido: manca il token. Richiedi un nuovo
-                                link dalla pagina <Link to="/forgot-password">Password dimenticata</Link>.
+                                Invalid link: the token is missing. Request a new
+                                link from the <Link to="/forgot-password">Forgot password</Link> page.
                             </div>
                         )}
                         {error && <div className="alert alert-error">{error}</div>}
                         <form onSubmit={handleSubmit}>
                             <div className="form-row">
-                                <label>Nuova password</label>
+                                <label>New password</label>
                                 <input
                                     type="password"
                                     value={password1}
@@ -84,7 +84,7 @@ export default function ResetPassword() {
                                 />
                             </div>
                             <div className="form-row">
-                                <label>Conferma nuova password</label>
+                                <label>Confirm new password</label>
                                 <input
                                     type="password"
                                     value={password2}
@@ -96,12 +96,12 @@ export default function ResetPassword() {
                             </div>
                             <div className="auth-actions">
                                 <button type="submit" className="btn btn--primary fit" disabled={!token}>
-                                    Imposta password
+                                    Set password
                                 </button>
                             </div>
                         </form>
                         <div className="auth-secondary">
-                            <Link to="/login">Torna al login</Link>
+                            <Link to="/login">Back to login</Link>
                         </div>
                     </>
                 )}
