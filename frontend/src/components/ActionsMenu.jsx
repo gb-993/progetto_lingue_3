@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-/**
- * Voce di un menu a tendina (Tools ▾, kebab di riga, ...). Estratta da
- * LanguageList per essere condivisa tra le pagine-lista.
- */
 export function DropdownItem({ onClick, disabled, danger, children }) {
     return (
         <button
@@ -31,10 +27,6 @@ export function DropdownItem({ onClick, disabled, danger, children }) {
     );
 }
 
-/**
- * Intestazione di sezione dentro un menu ("Export", "Maintenance", ...).
- * `divider` aggiunge la riga di separazione sopra (non usarlo sulla prima).
- */
 export function MenuSection({ label, divider = false }) {
     return (
         <div style={{
@@ -52,16 +44,6 @@ export function MenuSection({ label, divider = false }) {
     );
 }
 
-/**
- * Menu "⋯" per le azioni rare di una riga di tabella (progressive disclosure:
- * le azioni quotidiane restano bottoni visibili, le eccezionali finiscono qui).
- *
- * items: [{ label, onClick, disabled, danger }]
- *
- * Il menu usa position:fixed calcolata dal bottone: le card-tabella hanno
- * overflow:hidden (per il border-radius) e un menu absolute verrebbe tagliato
- * sulle ultime righe. Si chiude su click fuori, scroll o resize.
- */
 export function RowActionsMenu({ items, title = 'More actions' }) {
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState({ top: 0, right: 0 });
@@ -70,9 +52,6 @@ export function RowActionsMenu({ items, title = 'More actions' }) {
     const toggle = () => {
         if (!open && wrapRef.current) {
             const r = wrapRef.current.getBoundingClientRect();
-            // Se sotto il bottone resta poco spazio (righe in fondo a finestre
-            // basse), il menu si apre verso l'alto: chiudendosi allo scroll,
-            // le voci fuori viewport sarebbero irraggiungibili.
             const spaceBelow = window.innerHeight - r.bottom;
             const openUp = spaceBelow < 240 && r.top > spaceBelow;
             setPos({

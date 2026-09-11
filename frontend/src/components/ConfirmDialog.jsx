@@ -1,32 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getApiErrorMessage } from '../api';
 
-/**
- * Modale di conferma riusabile: sostituisce window.prompt/confirm nei flussi
- * dell'app (duplicate/delete lingua, note backup, recompute, ...) con un
- * dialogo coerente con lo stile PCM (stesso overlay di LegalConsentsModal).
- *
- * Uso (il chiamante tiene il config in uno useState; null = chiuso):
- *   {dialog && <ConfirmDialog config={dialog} onClose={() => setDialog(null)} />}
- *
- * config:
- *   - title           titolo del dialogo
- *   - message         testo o JSX sotto il titolo (opzionale)
- *   - fields          [{ name, label, placeholder, initial, autoFocus }] input testuali (opzionale)
- *   - confirmLabel    etichetta bottone conferma (default "Confirm")
- *   - cancelLabel     etichetta bottone annulla (default "Cancel")
- *   - danger          true = conferma rossa (azioni distruttive)
- *   - confirmEnabled  (values) => bool, abilita/disabilita la conferma
- *                     (es. "digita l'ID per confermare")
- *   - onConfirm       (values) => void | Promise. Se ritorna una Promise il
- *                     dialogo mostra "Working…" e resta aperto fino al
- *                     termine; un errore (es. errore API) viene mostrato nel
- *                     dialogo stesso senza chiuderlo. Se ritorna undefined il
- *                     dialogo si chiude subito (operazioni fire-and-forget
- *                     gestite dal chiamante con i suoi toast).
- *
- * Tastiera: Enter conferma, Esc annulla (disabilitati mentre è busy).
- */
 export default function ConfirmDialog({ config, onClose }) {
     const {
         title,
@@ -48,8 +22,6 @@ export default function ConfirmDialog({ config, onClose }) {
 
     const canConfirm = !busy && (confirmEnabled ? !!confirmEnabled(values) : true);
 
-    // Senza input, il focus va sull'overlay così Enter/Esc funzionano subito
-    // (i keydown arrivano solo se il focus è dentro il dialogo).
     useEffect(() => {
         if (fields.length === 0) overlayRef.current?.focus();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,8 +48,6 @@ export default function ConfirmDialog({ config, onClose }) {
             e.stopPropagation();
             onClose();
         }
-        // Enter conferma solo se il focus NON è su un bottone: altrimenti
-        // Tab su "Cancel" + Enter confermerebbe invece di annullare.
         if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
             e.preventDefault();
             submit();

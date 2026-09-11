@@ -6,22 +6,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      # Lock il timezone del DB a UTC: i timestamp naive scritti dall'app
-      # vengono interpretati e restituiti coerentemente.
       TZ: UTC
       PGTZ: UTC
     ports:
-      # Solo localhost (il DB non deve essere esposto sulla rete LAN).
-      # Host 5433 -> container 5432: evita conflitto con PostgreSQL nativo di Windows.
-      # Per pgAdmin: host=127.0.0.1, port=5433.
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Healthcheck: "container partito" non vuol dire "Postgres pronto".
-    # pg_isready risponde ok solo quando il server accetta connessioni;
-    # il backend (sotto) aspetta questo stato prima di partire.
-    # $$ = escape di compose: la variabile viene letta dall'env del
-    # container a runtime, non interpolata dal .env al parse del file.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -35,19 +25,13 @@ services:
     container_name: pcm_backend
     volumes:
       - ./backend:/app
-    # Tutte le variabili (SECRET_KEY, DATABASE_URL, CORS_ORIGINS, ...)
-    # arrivano dal file .env al root del progetto.
     env_file:
       - .env
     environment:
-      # Timezone del container in UTC (utc_now() resta UTC anche se il TZ
-      # del sistema host fosse diverso).
       TZ: UTC
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --reload
-    # service_healthy: aspetta il healthcheck del db (pg_isready), non solo
-    # che il container sia partito. Evita errori di connessione al boot.
     depends_on:
       db:
         condition: service_healthy

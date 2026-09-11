@@ -4,48 +4,21 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 
-// Vero solo se, tolti i tag e gli spazi, resta del testo reale. Serve a NON
-// mostrare una finestra vuota (o con solo <p></p>/&nbsp;) come "novita'".
-// NB: il backend applica la stessa regola in should_show; questa e' una
-// seconda difesa lato client.
 function hasRealText(html) {
     if (!html) return false;
     return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim().length > 0;
 }
 
-/**
- * Modale "What's New" — facoltativo e NON bloccante.
- *
- * Regole (volutamente conservative, "non deve dare problemi"):
- *  - cede SEMPRE il passo al modale legale: finche' ci sono consensi pendenti
- *    (requiredConsents non vuoto) non compare;
- *  - compare solo se il server dice should_show=true (versione corrente non
- *    ancora vista dall'utente E con testo reale) ED il testo e' reale;
- *  - lo stato "gia' visto" e' lato server, per-utente (tabella whats_new_views):
- *    "una volta" vale su qualsiasi dispositivo;
- *  - "dal vivo" senza logout: ricontrolliamo a ogni cambio pagina e quando
- *    l'utente torna sulla scheda (niente timer). Cosi' se il super-admin
- *    pubblica mentre l'utente e' gia' dentro, lo vede appena naviga/rifocalizza;
- *  - qualsiasi errore di rete -> semplicemente non si mostra (fail-safe);
- *  - OK (o click fuori) = nasconde subito e POST /api/whats-new/seen; non
- *    riappare finche' il super-admin non pubblica un contenuto nuovo.
- */
 export default function WhatsNewModal() {
     const { user, requiredConsents, consentsLoaded } = useAuth();
     const legalPending = !!(requiredConsents && requiredConsents.length > 0);
     const { pathname } = useLocation();
 
-    const [content, setContent] = useState(null); // null = non ancora caricato / errore
+    const [content, setContent] = useState(null);
     const [shouldShow, setShouldShow] = useState(false);
-    const [version, setVersion] = useState(null); // updated_at corrente dal server
-    // Versione chiusa dall'utente in questa sessione: la teniamo nascosta anche
-    // se il POST /seen e' lento o fallisce (no ricomparsa per race/rete). Si
-    // "sblocca" solo quando arriva una versione DIVERSA (nuova pubblicazione).
+    const [version, setVersion] = useState(null);
     const ackedVersionRef = useRef(null);
 
-    // Possiamo controllare solo se: loggati, stato consensi noto (cosi' non
-    // corriamo davanti al legale) e nessun consenso legale pendente (precedenza
-    // assoluta al modale legale).
     const canCheck = !!user && consentsLoaded && !legalPending;
 
     const refresh = useCallback(() => {
@@ -55,25 +28,17 @@ export default function WhatsNewModal() {
                 const v = res.data?.updated_at ?? null;
                 setContent(res.data?.content ?? '');
                 setVersion(v);
-                // Se e' la versione gia' chiusa in questa sessione, restiamo
-                // nascosti anche se il server non ha ancora registrato il
-                // "seen" (POST in volo o fallito).
                 const acked = ackedVersionRef.current !== null && ackedVersionRef.current === v;
                 setShouldShow(!!res.data?.should_show && !acked);
             })
             .catch(() => { setContent(null); setShouldShow(false); });
     }, [canCheck]);
 
-    // Ricarica quando cambiano i presupposti (login / consensi) E a ogni
-    // navigazione (pathname). Se non possiamo controllare, azzeriamo.
     useEffect(() => {
         if (!canCheck) { setShouldShow(false); return; }
         refresh();
     }, [canCheck, pathname, refresh]);
 
-    // Ricarica quando l'utente torna sulla scheda/finestra (focus o tab di
-    // nuovo visibile): cosi' una pubblicazione fatta mentre era altrove
-    // compare al rientro, senza bisogno di logout o reload manuale.
     useEffect(() => {
         if (!canCheck) return;
         const onFocus = () => refresh();
@@ -87,17 +52,13 @@ export default function WhatsNewModal() {
     }, [canCheck, refresh]);
 
     if (!canCheck || content == null) return null;
-    if (!shouldShow) return null; // versione corrente gia' vista (o niente da mostrare)
-    if (!hasRealText(content)) return null; // vuoto -> non e' una novita'
+    if (!shouldShow) return null;
+    if (!hasRealText(content)) return null;
 
     const handleOk = () => {
-        // Ricorda la versione chiusa (guard locale) e nascondi subito, poi
-        // segnala "visto" al server. Il guard fa sì che, anche se il POST è
-        // lento o fallisce, il banner non riappaia in sessione per QUESTA
-        // versione; tornerà solo a una pubblicazione diversa.
         ackedVersionRef.current = version;
         setShouldShow(false);
-        api.post('/api/whats-new/seen').catch(() => { /* ignore: tiene il guard locale */ });
+        api.post('/api/whats-new/seen').catch(() => {});
     };
 
     return (
@@ -113,7 +74,7 @@ export default function WhatsNewModal() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 9998, // sotto al modale legale (9999), per sicurezza
+                zIndex: 9998,
                 padding: '1rem',
             }}
         >

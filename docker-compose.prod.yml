@@ -1,17 +1,3 @@
-## docker-compose.prod.yml — stack di PRODUZIONE.
-##
-##   - DB non esposto sull'host (solo rete docker interna)
-##   - backend non esposto sull'host (solo rete docker interna)
-##   - frontend buildato sul PC (npm run build) e committato in repo come
-##     frontend/dist/. Caddy lo serve via bind-mount diretto: niente build
-##     sulla VM (la VM piccola da 8GB / poca RAM andava in OOM su `npm ci`).
-##   - backup nightly fatto da un sidecar (no cron host, no SSH richiesto).
-##   - Caddy davanti: HTTPS automatico via Let's Encrypt e SPA statica
-##   - logging json-file con rotation a 10MB x 3 file
-##
-## Tutto vive in volumi nominati Docker. Niente bind-mount su /opt/pcm-hub.
-## Le variabili d'ambiente NON vengono lette da .env: vanno impostate
-## come "Stack environment variables" in Portainer (vedi DEPLOY_NOTES.txt).
 
 services:
   db:
@@ -24,12 +10,6 @@ services:
       PGTZ: UTC
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # Healthcheck: "container partito" non vuol dire "Postgres pronto".
-    # pg_isready risponde ok solo quando il server accetta connessioni; il
-    # backend aspetta questo stato (depends_on: service_healthy) prima di
-    # lanciare `alembic upgrade head`, che al primo deploy partiva in race
-    # con l'init del DB. $$ = escape di compose: la variabile viene letta
-    # dall'env del container a runtime, non interpolata al parse del file.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -37,11 +17,6 @@ services:
       retries: 10
       start_period: 10s
     restart: unless-stopped
-    # Tetto RAM. La VM ha solo 4GB totali e finora nessun container aveva un
-    # limite: bastava un singolo spike a prendersi tutta la RAM e gelare
-    # l'intera macchina (OOM del kernel su un processo a caso). Con mem_limit
-    # Docker uccide e riavvia SOLO il container colpevole, il resto sopravvive.
-    # Postgres su questo dataset piccolo sta comodo in 1g.
     mem_limit: 1g
     mem_reservation: 256m
     logging:
@@ -72,42 +47,23 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM}
-      # Cartella dove il backend scrive i PDF dei documenti legali (ToU,
-      # Privacy Notice) caricati dall'admin. Coincide col mount di
-      # `legal_archive` qui sotto e con il path che Caddy serve sotto
-      # /legal-docs/* (vedi Caddyfile).
       LEGAL_DOCUMENTS_DIR: /srv/legal_documents
       TZ: UTC
     expose:
       - "8000"
     volumes:
-      # Volume condiviso con Caddy. Il backend scrive qui i PDF; Caddy li
-      # serve sotto /legal-docs/* (read-only dalla sua parte).
       - legal_archive:/srv/legal_documents
-    # Applica le migrazioni alembic PRIMA di uvicorn. Senza questo, il
-    # lifespan di FastAPI (bootstrap_first_admin) crasha al primo avvio
-    # perche' la tabella users non esiste ancora -> backend in restart loop.
     command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"
-    # service_healthy: aspetta il healthcheck del db (pg_isready) prima di
-    # partire, cosi' alembic trova un Postgres gia' pronto ad accettare
-    # connessioni anche al primissimo deploy (volume vuoto -> initdb lento).
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
-    # Health check: pinga /healthz ogni 30s. start_period: tempo di
-    # boot di uvicorn + lifespan (bootstrap admin, ecc.) prima che
-    # docker inizi a contare i fallimenti.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz').read()"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
-    # Tetto RAM. Il backend e' il container piu' esposto: costruisce gli export
-    # Excel/PDF in memoria e gira il recompute su tutte le lingue. 1.5g gli
-    # lasciano margine per un export medio; se sfora viene ucciso e riparte da
-    # solo (restart: unless-stopped) senza trascinare giu' tutta la VM.
     mem_limit: 1500m
     mem_reservation: 256m
     logging:
@@ -117,10 +73,6 @@ services:
         max-file: "3"
 
   caddy:
-    # Caddy con Caddyfile imbarcato nell'immagine (build da caddy/Dockerfile).
-    # Niente bind-mount del Caddyfile: il file singolo via bind-mount dava
-    # problemi di "no such file" / "not a directory" su Portainer durante
-    # i redeploy (cache git su /data/compose). Cosi' e' robusto.
     build:
       context: .
       dockerfile: caddy/Dockerfile
@@ -132,12 +84,8 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      # Volume condiviso col backend: stessa cartella in cui il backend
-      # scrive i PDF caricati dall'admin. Read-only dal lato di Caddy:
-      # Caddy serve i file ma non li puo' modificare.
       - legal_archive:/srv/legal_documents:ro
     restart: unless-stopped
-    # Reverse proxy + file statici: leggero. 192m con margine.
     mem_limit: 192m
     logging:
       driver: "json-file"
@@ -145,36 +93,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Sidecar di backup. Una volta a settimana fa pg_dump del DB di prod
-  # nel volume nominato `pcm_backups`. Tiene gli ultimi KEEP=3 dump
-  # (3 settimane di rolling window) per contenere l'uso di disco sulla VM.
-  #
-  # CIFRATURA AT-REST (age, https://age-encryption.org):
-  #   I dump vengono cifrati con la chiave pubblica `BACKUP_AGE_RECIPIENT`
-  #   (formato `age1...`). Solo chi possiede la chiave privata corrispondente
-  #   (mai presente sul server!) puo' decifrarli. Anche se la VM viene
-  #   compromessa, i .dump.age restano illeggibili senza la chiave privata.
-  #
-  #   Setup iniziale (una tantum):
-  #     1) Sul PC dell'admin generare la keypair:
-  #          docker run --rm alpine sh -c 'apk add --no-cache age >/dev/null && age-keygen'
-  #        Output: una public key `age1...` (da mettere in Portainer come
-  #        `BACKUP_AGE_RECIPIENT`) e una private key `AGE-SECRET-KEY-...`
-  #        (da salvare in luogo sicuro: password manager, NON sul server).
-  #     2) In Portainer: aggiungere stack env var `BACKUP_AGE_RECIPIENT=age1...`
-  #     3) Redeploy dello stack.
-  #
-  #   Se `BACKUP_AGE_RECIPIENT` NON e' impostato il sidecar continua a fare
-  #   dump IN CHIARO (backward compat) e logga un WARNING ad ogni ciclo.
-  #   Va impostato il prima possibile.
-  #
-  # Recupero:
-  #   - file in chiaro (legacy):  cat /backups/<file>.dump | base64
-  #   - file cifrato:             cat /backups/<file>.dump.age | base64
-  #     poi sul PC dell'admin:
-  #       base64 -d > file.dump.age
-  #       age -d -i path/to/private_key.txt file.dump.age > file.dump
-  #       pg_restore -d <db_target> file.dump
   backup:
     image: postgres:16-alpine
     depends_on:
@@ -186,8 +104,6 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
       KEEP: "3"
-      # Public key age (`age1...`) per cifrare i dump. Opzionale per
-      # backward compat: se vuoto, fallback a dump in chiaro + warning.
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
       TZ: UTC
     volumes:
@@ -198,14 +114,10 @@ services:
       - |
         set -eu
         echo "[backup] avviato. KEEP=$$KEEP, dest=/backups"
-        # Installa age (cifratura backup) se non c'e' gia'. Idempotente:
-        # alla seconda iterazione del while sotto e' un no-op veloce, ma
-        # dopo un riavvio container la cache apk viene persa e va rifatta.
         if ! command -v age >/dev/null 2>&1; then
           echo "[backup] installazione age in corso..."
           apk add --no-cache age >/dev/null
         fi
-        # Aspetta che il DB sia su prima del primo dump.
         until pg_isready -q; do
           echo "[backup] DB non pronto, attendo 5s..."
           sleep 5
@@ -213,8 +125,6 @@ services:
         while true; do
           ts=$$(date -u +%Y%m%d-%H%M%S)
           if [ -n "$${BACKUP_AGE_RECIPIENT:-}" ]; then
-            # Dump cifrato. pg_dump scrive su stdout, age cifra al volo
-            # senza materializzare il chiaro su disco.
             out="/backups/pcm-$$ts.dump.age"
             tmp="$$out.partial"
             echo "[backup] $$(date -Iseconds) inizio dump cifrato -> $$out"
@@ -226,8 +136,6 @@ services:
               echo "[backup] $$(date -Iseconds) DUMP CIFRATO FALLITO"
             fi
           else
-            # Fallback in chiaro: warning rumoroso ad ogni ciclo per
-            # ricordare all'admin di configurare BACKUP_AGE_RECIPIENT.
             out="/backups/pcm-$$ts.dump"
             tmp="$$out.partial"
             echo "[backup] WARNING: BACKUP_AGE_RECIPIENT non impostato -> dump in chiaro"
@@ -240,15 +148,11 @@ services:
               echo "[backup] $$(date -Iseconds) DUMP FALLITO"
             fi
           fi
-          # Ritenzione: tieni gli ultimi KEEP file di backup, cancella il resto.
-          # Includiamo sia .dump (in chiaro legacy) che .dump.age (cifrati) cosi'
-          # la transizione cifrato/non-cifrato non lascia residui dei vecchi.
           ls -1t /backups/pcm-*.dump /backups/pcm-*.dump.age 2>/dev/null | tail -n +$$((KEEP+1)) | xargs -r rm -f
           echo "[backup] $$(date -Iseconds) prossimo dump tra 7 giorni"
           sleep 604800
         done
     restart: unless-stopped
-    # pg_dump streamma su stdout (uso RAM modesto). 256m bastano.
     mem_limit: 256m
     logging:
       driver: "json-file"
@@ -256,31 +160,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # cleaner: versione "tranquilla". Il vecchio cleaner fu rimosso perché
-  # faceva `docker container prune -f` (anche all'avvio) e cancellava
-  # container appena creati ma non ancora startati durante un redeploy
-  # -> "No such container: <hash>". Questo invece e' volutamente conservativo:
-  #
-  #   - NON tocca MAI i container  -> nessun rischio durante i redeploy
-  #   - NON tocca MAI i volumi     -> i dati (postgres, caddy, backup, legal)
-  #                                   vivono nei volumi nominati e restano intatti
-  #   - rimuove SOLO:
-  #       * immagini "dangling" = i layer orfani che ogni rebuild di backend/
-  #         caddy lascia indietro (la vecchia immagine perde il tag) -> e' la
-  #         causa principale di disco che si riempie nel tempo
-  #       * build cache ORFANA (layer non piu' referenziati da nessuna
-  #         immagine). NON usa `--filter until=` ne' `-a`: cosi' pota subito
-  #         la cache orfana (anche recente) ma TIENE quella ancora in uso
-  #         (es. il pesante layer `pip install` del backend) -> i redeploy
-  #         con requirements invariati restano veloci. Senza questo, su una
-  #         VM piccola la build cache orfana arrivava a >1GB in pochi giorni.
-  #
-  # Gira una volta al giorno e aspetta 1h all'avvio, cosi' non parte mai a
-  # ridosso di un redeploy. Anche se girasse durante un redeploy, prunando
-  # solo immagini/cache (mai container) non puo' rompere nulla.
-  #
-  # Richiede il socket Docker montato (stessa fiducia di Portainer). Read-only
-  # sul socket non basta per prune, serve accesso in scrittura.
   cleaner:
     image: docker:cli
     restart: unless-stopped
@@ -292,7 +171,6 @@ services:
       - |
         set -eu
         echo "[cleaner] avviato (solo immagini dangling + build cache orfana; mai container/volumi). Primo giro tra 1h."
-        # Attesa iniziale: evita di girare appena dopo un redeploy.
         sleep 3600
         while true; do
           echo "[cleaner] $$(date -Iseconds) prune immagini dangling..."
@@ -302,7 +180,6 @@ services:
           echo "[cleaner] $$(date -Iseconds) fatto. Prossimo giro tra 24h."
           sleep 86400
         done
-    # docker:cli e' minuscolo. 96m bastano.
     mem_limit: 96m
     logging:
       driver: "json-file"
@@ -315,7 +192,4 @@ volumes:
   caddy_data:
   caddy_config:
   pcm_backups:
-  # Cartella dei PDF dei documenti legali (ToU, Privacy Notice) caricati
-  # dall'admin via UI. Condivisa fra backend (scrittura) e caddy (lettura,
-  # serve i file sotto /legal-docs/*). Persistente sui redeploy.
   legal_archive:

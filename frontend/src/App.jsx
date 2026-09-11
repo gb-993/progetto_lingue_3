@@ -59,9 +59,6 @@ import WhatsNew from './features/admin/WhatsNew';
 import History from './features/history/History';
 import Taxonomy from './features/taxonomy/Taxonomy';
 
-// Scroll automatico in cima ad ogni cambio di rotta. Senza questo, React Router
-// preserva la posizione di scroll fra navigazioni, dando l'impressione che le
-// nuove pagine si aprano "a metà".
 function ScrollToTop() {
     const { pathname } = useLocation();
     useEffect(() => {
@@ -70,14 +67,6 @@ function ScrollToTop() {
     return null;
 }
 
-// Root element del Data Router: AuthProvider deve restare DENTRO il
-// RouterProvider (cioè qui dentro l'Outlet) perché alcuni hook usati da
-// AuthProvider o dai suoi consumer assumono il context del router.
-//
-// LegalConsentsModal e' montato qui (al livello piu' alto sotto AuthProvider)
-// cosi' galleggia sopra qualunque pagina: e' bloccante per definizione, non
-// deve essere sotto la sidebar/topbar. Si nasconde da solo quando l'utente
-// e' in regola (vedi requiredConsents in AuthContext).
 function AppRoot() {
     return (
         <AuthProvider>
@@ -89,8 +78,6 @@ function AppRoot() {
     );
 }
 
-// Wrappa con Layout (sidebar + topbar) solo per utenti loggati come admin o user.
-// Usato per le rotte pubbliche che però vogliamo "decorare" quando l'utente è autenticato.
 function ConditionalLayout({ children }) {
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
     if (role === 'admin' || role === 'user') {
@@ -104,10 +91,6 @@ function ConditionalLayout({ children }) {
     );
 }
 
-// La rotta `/` mostra PublicHome (landing pubblica con hero "Welcome" e bottone
-// Login). Per un utente autenticato non ha senso: vedrebbe sidebar + Logout
-// insieme al bottone Login della landing. Redirigiamo a /dashboard. La mappa
-// pubblica resta comunque accessibile agli admin tramite Languages.
 function HomeRoute() {
     const { user } = useAuth();
     if (user) return <Navigate to="/dashboard" replace />;
@@ -118,33 +101,24 @@ const router = createBrowserRouter([
     {
         path: '/',
         element: <AppRoot />,
-        // errorElement: il data router (createBrowserRouter) cattura i crash
-        // dentro le sue children e li manda qui. Senza questo, React Router
-        // mostra un fallback minimal ("Unexpected Application Error!") prima
-        // ancora che l'ErrorBoundary class esterno possa intervenire.
         errorElement: <RouterErrorElement />,
         children: [
-            // Rotte pubbliche
             { index: true, element: <HomeRoute /> },
             { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
             { path: 'login', element: <Login /> },
             { path: 'forgot-password', element: <ForgotPassword /> },
             { path: 'reset-password', element: <ResetPassword /> },
 
-            // Rotta protetta generica
             { path: 'dashboard', element: <Layout><Dashboard /></Layout> },
             { path: 'me', element: <Layout><MyAccount /></Layout> },
 
-            // GLOSSARIO UNIFICATO
             { path: 'glossary', element: <Layout><GlossaryList /></Layout> },
 
-            // ROTTE LINGUE
             { path: 'languages', element: <Layout><LanguageList /></Layout> },
             { path: 'languages/:id/data', element: <Layout><LanguageData /></Layout> },
             { path: 'instructions', element: <Layout><Instructions /></Layout> },
             { path: 'manual', element: <Layout><Manual /></Layout> },
 
-            // ROTTE ESCLUSIVE ADMIN
             { path: 'languages/add', element: <AdminRoute><Layout><LanguageForm /></Layout></AdminRoute> },
             { path: 'languages/:id/edit', element: <AdminRoute><Layout><LanguageForm /></Layout></AdminRoute> },
             { path: 'languages/:id/debug', element: <AdminRoute><Layout><LanguageDebug /></Layout></AdminRoute> },
@@ -155,9 +129,6 @@ const router = createBrowserRouter([
             { path: 'admin/parameters', element: <AdminRoute><Layout><ParameterList /></Layout></AdminRoute> },
             { path: 'admin/parameters/graph', element: <AdminRoute><Layout><ParameterGraph /></Layout></AdminRoute> },
             { path: 'admin/parameters/add', element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute> },
-            // Edit di un parametro: la rotta ha figli nested per la edit/aggiunta
-            // di una question, che vengono renderizzate come drawer sopra il
-            // parametro stesso (vedi ParameterForm + Drawer).
             {
                 path: 'admin/parameters/:id/edit',
                 element: <AdminRoute><Layout><ParameterForm /></Layout></AdminRoute>,
@@ -166,8 +137,6 @@ const router = createBrowserRouter([
                     { path: 'questions/:qid/edit', element: <QuestionForm mode="drawer" /> },
                 ],
             },
-            // Vista "inversa": un parametro, sotto tutte le lingue (scorciatoia
-            // admin per editare lo stesso parametro in molte lingue).
             { path: 'admin/parameters/:id/by-language', element: <AdminRoute><Layout><ParameterByLanguage /></Layout></AdminRoute> },
 
             { path: 'admin/questions', element: <AdminRoute><Layout><QuestionList /></Layout></AdminRoute> },
@@ -188,41 +157,22 @@ const router = createBrowserRouter([
 
             { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
             { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },
-            // Rotte super-admin: oltre a essere admin, l'utente deve avere
-            // l'email in SUPER_ADMIN_EMAIL (env var backend). Operazioni
-            // distruttive sull'intero DB.
             { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
             { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
             { path: 'admin/whats-new', element: <AdminRoute requireSuperAdmin><Layout><WhatsNew /></Layout></AdminRoute> },
-            // Gestione versioni documenti legali (ToU, Privacy Notice).
-            // Accessibile a tutti gli admin: la pubblicazione e' un'operazione
-            // amministrativa normale, e il backend (require_admin) la limita
-            // comunque al ruolo admin. Non super-admin: gli admin co-gestori
-            // del sito devono poter aggiornare ToU/Privacy autonomamente.
             { path: 'admin/legal-documents', element: <AdminRoute><Layout><LegalDocuments /></Layout></AdminRoute> },
             { path: 'admin/history', element: <AdminRoute><Layout><History /></Layout></AdminRoute> },
             { path: 'admin/taxonomy', element: <AdminRoute><Layout><Taxonomy /></Layout></AdminRoute> },
-            // TableA e Queries sono admin-only: la sidebar le mostra solo
-            // agli admin e gli endpoint backend (/api/tablea/*, /api/queries/*)
-            // sono protetti da require_admin. Avvolgiamo anche le rotte SPA
-            // con AdminRoute per coerenza UX: un utente non admin che digiti
-            // l'URL a mano viene rimandato a /dashboard invece di vedere una
-            // pagina che farà solo errori 403 sulle proprie chiamate.
             { path: 'tablea', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
             { path: 'tablea/:id', element: <AdminRoute><Layout><TableA /></Layout></AdminRoute> },
             { path: 'queries', element: <AdminRoute><Layout><QueriesDashboard /></Layout></AdminRoute> },
 
-            // Catch-all: qualsiasi URL non riconosciuto cade qui invece del
-            // fallback minimal di React Router. Mostra una scheda PCM-style
-            // coerente con frontend/public/404.html.
             { path: '*', element: <ConditionalLayout><NotFound /></ConditionalLayout> },
         ],
     },
 ]);
 
 export default function App() {
-    // ErrorBoundary fuori dal RouterProvider: cattura crash JS in qualsiasi
-    // pagina/route e mostra una scheda PCM-style invece dello schermo bianco.
     return (
         <ErrorBoundary>
             <RouterProvider router={router} />

@@ -1,28 +1,10 @@
 import { useEffect, useState } from 'react';
 
-/**
- * Indicatore "Bozza salvata localmente" mostrato nelle form lunghe
- * (parametro, domanda) per rassicurare l'utente che le modifiche
- * non andranno perse anche se chiude o ricarica la pagina prima del save.
- *
- * Riceve `lastSavedAt` (timestamp ms) da useFormDraft. Se null/undefined non
- * mostra nulla: l'utente non ha ancora toccato il form da quando è stato
- * caricato, quindi non c'è bozza locale di cui parlare.
- *
- * Il testo "x minuti fa" si aggiorna ogni 30 secondi così rimane realistico
- * durante sessioni di editing lunghe.
- */
 export default function DraftIndicator({ lastSavedAt }) {
-    // Tick periodico per ricalcolare il "x minuti fa". Tenere `Date.now()`
-    // nel render diretto sarebbe impuro (regola di React 19): lo materializziamo
-    // in uno state che aggiorniamo da un setInterval.
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         if (!lastSavedAt) return;
-        // Tick relativamente frequente: subito dopo un save, `now` può essere
-        // ancora "vecchio" finché non scatta il primo tick. 5s tiene il display
-        // realistico senza creare carico.
         const id = setInterval(() => setNow(Date.now()), 5_000);
         return () => clearInterval(id);
     }, [lastSavedAt]);
@@ -33,8 +15,6 @@ export default function DraftIndicator({ lastSavedAt }) {
         hour: '2-digit',
         minute: '2-digit',
     });
-    // Clamp a 0: se `now` non si è ancora aggiornato dopo un save fresco
-    // mostriamo "ora" anziché un valore negativo o stale dal save precedente.
     const ago = formatAgo(Math.max(0, now - lastSavedAt));
 
     return (

@@ -1,19 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-// Etichette user-friendly dei tipi documento. Il backend usa snake_case;
-// qui le rendiamo leggibili nel modal.
 const TYPE_LABELS = {
     terms_of_use: 'Terms of Use',
     privacy_notice: 'Privacy Notice',
 };
 
-// Descrizioni delle clausole vessatorie (art. 1341 c.c.) mostrate nella
-// sezione "approvazione specifica" del modal. Il backend ci dà solo i
-// numeri di sezione (es. ["7", "8", "9.2", "11"]); qui mappiamo a un
-// titolo breve per facilitare la lettura all'utente. Se in futuro il
-// DPO/ufficio legale cambia la lista (vedi backend/config.py
-// VEXATIOUS_CLAUSES_DEFAULT), aggiorna anche qui.
 const VEXATIOUS_LABELS = {
     '7': 'Limitation of Liability',
     '8': 'Account Suspension or Termination',
@@ -21,21 +13,6 @@ const VEXATIOUS_LABELS = {
     '11': 'Amendments (unilateral modifications)',
 };
 
-/**
- * Modal bloccante di accettazione dei documenti legali.
- *
- * Montato globalmente in App.jsx: appare quando `requiredConsents`
- * dell'AuthContext non e' vuoto. L'utente puo' solo Accept o Logout —
- * niente "X" di chiusura, niente click esterno per dismiss.
- *
- * Doppia checkbox ai sensi dell'art. 1341 c.c.:
- *   1. accettazione generale dei documenti + presa visione informativa
- *   2. (visibile solo se almeno un documento ha clausole vessatorie)
- *      approvazione specifica delle clausole elencate
- *
- * Il bottone Accept e' disabilitato finche' entrambe le checkbox
- * necessarie non sono spuntate.
- */
 export default function LegalConsentsModal() {
     const { requiredConsents, acceptConsents, logout } = useAuth();
     const [generalAccepted, setGeneralAccepted] = useState(false);
@@ -43,16 +20,6 @@ export default function LegalConsentsModal() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    // Reset dello stato interno ogni volta che la "firma" dei documenti
-    // richiesti cambia (es. l'utente accetta la versione corrente e poco
-    // dopo viene pubblicata una nuova versione). Il modal e' montato
-    // sempre da App.jsx e si nasconde solo via `return null` quando la
-    // lista e' vuota: senza questo reset, lo state (checkbox spuntate,
-    // flag submitting) sopravvive tra "aperture" successive e crea il
-    // bug "Accept disabilitato con Saving... persistente".
-    //
-    // La "firma" e' la concatenazione degli id: cambia quando l'utente
-    // passa da accettare {ToU v1.0} a accettare {Privacy v1.0} (id diversi).
     const requiredSignature = requiredConsents.map(d => d.id).sort().join(',');
     useEffect(() => {
         setGeneralAccepted(false);
@@ -61,18 +28,12 @@ export default function LegalConsentsModal() {
         setError('');
     }, [requiredSignature]);
 
-    // True se almeno uno dei documenti correnti ha clausole vessatorie
-    // (= dobbiamo mostrare la seconda checkbox). Il backend ci passa
-    // la lista per ciascun documento; concatenare i numeri di sezione
-    // per la sezione "approvazione specifica" sotto.
     const allVexatious = useMemo(
         () => requiredConsents.flatMap(d => d.vexatious_clauses || []),
         [requiredConsents]
     );
     const hasVexatious = allVexatious.length > 0;
 
-    // Lista unica e ordinata di sezioni vessatorie da mostrare (rimuove
-    // duplicati nel caso un giorno avessimo 2 documenti con vessatorie).
     const vexatiousSections = useMemo(
         () => Array.from(new Set(allVexatious)).sort((a, b) => {
             const na = parseFloat(a), nb = parseFloat(b);
@@ -92,15 +53,9 @@ export default function LegalConsentsModal() {
                 ids: requiredConsents.map(d => d.id),
                 vexatiousApproved: vexatiousAccepted,
             });
-            // Il context ricarica requiredConsents al termine: se diventa
-            // vuoto, il modal si "nasconde" via il `return null` sotto.
         } catch (err) {
             setError(err.response?.data?.detail || 'Acceptance failed. Please try again.');
         } finally {
-            // Reset SEMPRE: in caso di successo serve a non lasciare il
-            // bottone "Saving..." disabilitato se il modal venisse riaperto
-            // (es. nuova versione pubblicata subito dopo), anche se
-            // l'useEffect sopra dovrebbe gia' coprire il caso.
             setSubmitting(false);
         }
     };
@@ -108,8 +63,6 @@ export default function LegalConsentsModal() {
     if (!requiredConsents || requiredConsents.length === 0) return null;
 
     return (
-        // Overlay full-screen bloccante: copre tutta la viewport (anche la
-        // sidebar/topbar) cosi' nessun click "trapassa" sul resto dell'app.
         <div
             role="dialog"
             aria-modal="true"
@@ -147,7 +100,6 @@ export default function LegalConsentsModal() {
                     following document{requiredConsents.length > 1 ? 's' : ''}.
                 </p>
 
-                {/* Elenco documenti con link "Open PDF" -> apre in nuova tab */}
                 <div style={{ margin: '1.25rem 0' }}>
                     {requiredConsents.map(doc => (
                         <div
@@ -181,7 +133,6 @@ export default function LegalConsentsModal() {
                     ))}
                 </div>
 
-                {/* Checkbox 1: accettazione generale */}
                 <label
                     style={{
                         display: 'flex',
@@ -206,9 +157,6 @@ export default function LegalConsentsModal() {
                     </span>
                 </label>
 
-                {/* Checkbox 2: approvazione specifica clausole vessatorie.
-                    Visibile solo se almeno un documento ha sezioni vessatorie
-                    elencate. */}
                 {hasVexatious && (
                     <div
                         style={{
@@ -269,9 +217,6 @@ export default function LegalConsentsModal() {
                         marginTop: '1rem',
                     }}
                 >
-                    {/* Logout = "non accetto, esco". Nessuna X di chiusura:
-                        l'unico modo per dismissare il modal e' accettare
-                        oppure uscire dal sistema. */}
                     <button
                         type="button"
                         className="btn"

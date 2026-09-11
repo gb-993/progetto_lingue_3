@@ -1,13 +1,5 @@
 import { useEffect } from 'react';
 
-// Scheda PCM-style condivisa fra le pagine di errore React (NotFound 404 e
-// ErrorBoundary crash JS). Layout "hero": icona tonda brand + titolo grande
-// + frase muted + 1 bottone primario + 1 ghost link.
-//
-// Le pagine statiche frontend/public/404.html e maintenance.html replicano
-// lo stesso layout in HTML+CSS inline perche' devono renderizzare anche
-// quando il bundle React non e' raggiungibile (network down, build rotta,
-// service worker che serve un fallback). Tenerle allineate.
 export default function ErrorCard({
     icon,
     title,

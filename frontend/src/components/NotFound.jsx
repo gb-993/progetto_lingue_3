@@ -1,9 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import ErrorCard from './ErrorCard';
 
-// Componente catch-all per la route '*'. Sostituisce il fallback default
-// di React Router (un piccolo testo "404 not found" senza layout) con la
-// scheda PCM-style coerente con frontend/public/404.html.
 export default function NotFound() {
     const navigate = useNavigate();
 

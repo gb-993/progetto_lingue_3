@@ -1,14 +1,3 @@
-// Toggle segmentato riusabile, coerente coi token del tema (funziona in
-// light e dark). Stato attivo = brand + testo bianco, come le voci attive
-// del resto del sito. Per 2-3 opzioni mutuamente esclusive.
-//
-// Uso:
-//   <SegmentedToggle
-//     value={value}
-//     onChange={setValue}
-//     options={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]}
-//     ariaLabel="Etichetta gruppo"
-//   />
 export default function SegmentedToggle({ value, onChange, options, ariaLabel }) {
     return (
         <div

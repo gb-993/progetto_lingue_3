@@ -20,9 +20,6 @@ function getInitialTheme() {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-// =============================================================================
-// Breadcrumb (auto-generato dal pathname)
-// =============================================================================
 const PATH_LABELS = {
     'dashboard': 'Dashboard',
     'languages': 'Languages',
@@ -52,14 +49,10 @@ const PATH_LABELS = {
     'data': 'Data',
     'debug': 'Debug',
     'assign': 'Assign',
-    'admin': null, // segmento ignorato nel breadcrumb
+    'admin': null,
 };
 
 function Breadcrumb({ pathname }) {
-    // Quando siamo dentro una nested route che si presenta come drawer
-    // (es. /admin/parameters/P12/edit/questions/P12_Qa/edit), il breadcrumb
-    // deve riflettere la pagina di contesto (il parametro), non l'overlay
-    // temporaneo. Tronchiamo il pathname al segmento parent.
     const drawerMatch = pathname.match(
         /^(\/admin\/parameters\/[^/]+\/edit)\/questions\b/
     );
@@ -73,11 +66,7 @@ function Breadcrumb({ pathname }) {
         acc += '/' + seg;
         if (seg === 'dashboard') return;
         const mapped = PATH_LABELS[seg];
-        if (mapped === null) return; // segmenti da nascondere (es. "admin")
-        // Se il segmento non è nel dizionario, è un ID dinamico (es. P12,
-        // P12_Qa, uuid di una lingua): mostrato letterale ma NON cliccabile,
-        // perché la rotta `/admin/parameters/P12` da sola non esiste — solo
-        // `/admin/parameters/P12/edit`. Cliccarlo porterebbe a una 404.
+        if (mapped === null) return;
         const isDynamic = mapped === undefined;
         const label = mapped || seg;
         crumbs.push({ to: acc, label, clickable: !isDynamic });
@@ -101,9 +90,6 @@ function Breadcrumb({ pathname }) {
     );
 }
 
-// =============================================================================
-// Back-to-top button
-// =============================================================================
 function BackToTop() {
     const [visible, setVisible] = useState(false);
 
@@ -129,28 +115,15 @@ function BackToTop() {
     );
 }
 
-// =============================================================================
-// Footer
-// =============================================================================
 export function SiteFooter() {
     const year = new Date().getFullYear();
 
-    // Versioni correnti di ToU e Privacy Notice (caricate via UI admin).
-    // I link "Privacy Policy" / "Disclaimer" puntano sempre all'ultima
-    // versione pubblicata invece di un PDF statico hardcoded. L'endpoint
-    // /api/legal-documents/current e' pubblico (no auth) e whitelistato
-    // nel consent enforcement, quindi funziona anche per visitatori non
-    // loggati e per utenti loggati ma non ancora in regola con i consensi.
-    //
-    // Fallback ai PDF in /docs/ (versione "v1.0" hardcoded in frontend/public)
-    // se il backend non risponde o non ha ancora nessuna versione corrente:
-    // meglio un link a un PDF vecchio che un link rotto.
     const [legalUrls, setLegalUrls] = useState({});
     useEffect(() => {
         let active = true;
         api.get('/api/legal-documents/current')
             .then(res => { if (active) setLegalUrls(res.data || {}); })
-            .catch(() => { /* lascia legalUrls = {} -> fallback statico */ });
+            .catch(() => {});
         return () => { active = false; };
     }, []);
     const privacyUrl = legalUrls.privacy_notice?.public_url || '/docs/Informativa%20WebAPP_revDPO.pdf';
@@ -236,26 +209,16 @@ export function SiteFooter() {
     );
 }
 
-// =============================================================================
-// Layout
-// =============================================================================
 export default function Layout({ children }) {
     const location = useLocation();
     const { logout: contextLogout, user } = useAuth();
     const role = localStorage.getItem('role');
-    // Solo per voci sidebar "pericolose" (Migration Import, Backup Restore).
-    // Backend riconosce super-admin via env var SUPER_ADMIN_EMAIL e lo
-    // espone in /api/me come `is_super_admin`. Senza il flag le voci
-    // restano nascoste e le rotte sono comunque protette server-side.
     const isSuperAdmin = !!user?.is_super_admin;
 
     const [theme, setTheme] = useState(getInitialTheme);
     const [collapsed, setCollapsed] = useState(() =>
         typeof window !== 'undefined' && localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
     );
-    // Menu mobile (hamburger ☰): la sidebar diventa un pannello off-canvas.
-    // Si chiude toccando una voce (delega sul <nav>), il backdrop o Esc;
-    // su desktop il bottone non esiste e lo stato resta inerte.
     const [navOpen, setNavOpen] = useState(false);
     useEffect(() => {
         if (!navOpen) return undefined;
@@ -267,13 +230,9 @@ export default function Layout({ children }) {
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem(THEME_STORAGE_KEY, theme);
-        // Notifica gli altri toggle del tema (es. quello in My Account) così
-        // restano sincronizzati con la top bar.
         window.dispatchEvent(new CustomEvent('pcm-theme-change', { detail: theme }));
     }, [theme]);
 
-    // Sincronizza la top bar quando il tema viene cambiato altrove (My Account).
-    // Il guard (ritorna prev se uguale) evita loop di eventi.
     useEffect(() => {
         const handler = (e) => setTheme(prev => (prev === e.detail ? prev : e.detail));
         window.addEventListener('pcm-theme-change', handler);
@@ -293,15 +252,9 @@ export default function Layout({ children }) {
         localStorage.clear();
         if (savedTheme) localStorage.setItem(THEME_STORAGE_KEY, savedTheme);
         if (savedDensity) localStorage.setItem(DENSITY_STORAGE_KEY, savedDensity);
-        // Delega al context: oltre a `removeItem('token')` (già coperto da
-        // localStorage.clear() sopra) azzera lo stato `user` del provider e
-        // ridireziona. Senza questa chiamata il context restava sporco e
-        // AdminRoute (che legge dal context) poteva lasciar passare
-        // un utente "logoutato" finché non veniva fatto un refresh.
         contextLogout('/');
     };
 
-    // Helper per evidenziare il link attivo
     const isCurrent = (path) => location.pathname.startsWith(path) ? 'is-current' : '';
 
     const citeLabel = role === 'admin' ? 'How to cite (edit)' : 'Citation Guidelines';
@@ -309,9 +262,6 @@ export default function Layout({ children }) {
     return (
         <>
             <div className={`app-wrapper${collapsed ? ' is-sidebar-collapsed' : ''}`}>
-                {/* TOP BAR — fascia a tutta larghezza. Il logo vive qui (non piu'
-                    dentro la sidebar) cosi' resta sempre visibile anche a sidebar
-                    ristretta ed e' cliccabile per tornare alla dashboard. */}
                 <header className="top-bar">
                     <div className="top-bar-left">
                         <button
@@ -355,7 +305,6 @@ export default function Layout({ children }) {
                     </div>
                 </header>
 
-                {/* SIDEBAR (desktop: colonna fissa; mobile: pannello off-canvas via ☰) */}
                 {navOpen && (
                     <div className="sidebar-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
                 )}
@@ -384,7 +333,6 @@ export default function Layout({ children }) {
                                 </Link>
                             </li>
 
-                            {/* How to cite — visibile a tutti, etichetta diversa per admin */}
                             <li>
                                 <Link className={`btn ${isCurrent('/how-to-cite')}`} to="/how-to-cite" title={citeLabel}>
                                     <Quote size={18} className="nav-icon" />
@@ -392,7 +340,6 @@ export default function Layout({ children }) {
                                 </Link>
                             </li>
 
-                            {/* Voci per User loggati e Admin (ordine come nel vecchio base.html) */}
                             {role !== 'public' && (
                                 <>
                                     <li className="nav-divider-label" aria-hidden="true"></li>
@@ -403,7 +350,6 @@ export default function Layout({ children }) {
                                         </Link>
                                     </li>
 
-                                    {/* Strumenti esclusivi Admin */}
                                     {role === 'admin' && (
                                         <>
                                             <li>
@@ -470,9 +416,6 @@ export default function Layout({ children }) {
                                                     <span className="nav-label">Legal Documents</span>
                                                 </Link>
                                             </li>
-                                            {/* Voci super-admin: visibili solo agli admin la
-                                                cui email e' in SUPER_ADMIN_EMAIL (env backend).
-                                                Operazioni distruttive sull'intero DB. */}
                                             {isSuperAdmin && (
                                                 <>
                                                     <li>
@@ -498,7 +441,6 @@ export default function Layout({ children }) {
                                         </>
                                     )}
 
-                                    {/* Tool comuni a User e Admin (in fondo, come nel vecchio) */}
                                     <li>
                                         <Link className={`btn ${isCurrent('/instructions')}`} to="/instructions" title="Instructions">
                                             <BookOpen size={18} className="nav-icon" />

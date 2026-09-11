@@ -6,23 +6,6 @@ const COLORS = {
     error: '#dc2626',
 };
 
-/**
- * Toast non bloccante per l'esito delle operazioni (successo/avviso/errore):
- * sostituisce gli alert() nativi che obbligavano un click per informazioni
- * che non richiedono decisioni. Auto-dismiss (più lungo per gli errori),
- * chiudibile a mano con la ×.
- *
- * Uso:
- *   const [notice, setNotice] = useState(null);           // {type, text} | null
- *   const dismiss = useCallback(() => setNotice(null), []);
- *   ...
- *   setNotice({ type: 'success', text: 'Backup completed.' });
- *   ...
- *   <NoticeToast notice={notice} onClose={dismiss} />
- *
- * NB: onClose deve essere stabile (useCallback) per non far ripartire il
- * timer di auto-dismiss a ogni render del padre.
- */
 export default function NoticeToast({ notice, onClose }) {
     useEffect(() => {
         if (!notice) return undefined;
@@ -67,7 +50,6 @@ export default function NoticeToast({ notice, onClose }) {
                 style={{
                     background: 'transparent', border: 'none', color: 'var(--text-muted)',
                     cursor: 'pointer', fontSize: '1rem', lineHeight: 1, flexShrink: 0,
-                    // Area di tocco allargata senza spostare la × visivamente
                     padding: '0.5rem', margin: '-0.5rem -0.5rem -0.5rem 0',
                 }}
             >
