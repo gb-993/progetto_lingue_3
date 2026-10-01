@@ -70,14 +70,6 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     }
     colors = compute_colors(db, [l.id for l in red_candidate_languages], answerable_questions)
 
-    unsure_rows = db.query(
-        models.LanguageParameterStatus.language_id,
-        models.LanguageParameterStatus.parameter_id,
-    ).filter(
-        models.LanguageParameterStatus.is_unsure == True
-    ).all()
-    unsure_set = {(l, p) for l, p in unsure_rows}
-
     # solo risposte yes/no non respinte, come nel consolidamento
     answered_rows = db.query(
         models.Answer.language_id,
@@ -103,23 +95,15 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
                 continue
             total_q = len(question_ids)
             ans_q = answered_count.get((lang.id, p.id), 0)
-            is_unsure = (lang.id, p.id) in unsure_set
-            is_incomplete = colors.get((lang.id, p.id)) == RED
-            if not (is_unsure or is_incomplete):
+            if colors.get((lang.id, p.id)) != RED:
                 continue
-            reasons = []
-            if is_unsure:
-                reasons.append("unsure")
-            if is_incomplete:
-                reasons.append(f"incomplete ({ans_q}/{total_q})")
             red_params.append({
                 "id": p.id,
                 "name": p.name,
                 "answered": ans_q,
                 "total": total_q,
-                "is_unsure": is_unsure,
-                "is_incomplete": is_incomplete,
-                "reasons": reasons,
+                "is_incomplete": True,
+                "reasons": [f"incomplete ({ans_q}/{total_q})"],
             })
         if red_params:
             red_by_language.append({

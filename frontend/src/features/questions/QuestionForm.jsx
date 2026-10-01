@@ -8,6 +8,7 @@ import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import DraftIndicator from '../../components/DraftIndicator';
 import CopyExamplesModal from './CopyExamplesModal';
 import usePresence from '../../utils/usePresence';
+import { compareQuestions } from '../../utils/questionOrder';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -283,7 +284,7 @@ export default function QuestionForm({ mode = 'page' }) {
             .map(parameter => {
                 const options = allQuestions
                     .filter(question => question.parameter_id === parameter.id)
-                    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+                    .sort(compareQuestions)
                     .map(question => {
                         const text = (question.text || '').trim();
                         const snippet = text.length > 70 ? `${text.slice(0, 70)}…` : text;
@@ -896,7 +897,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         disabled={!isDirty}
                                         onChange={e => setIsTestEdit(e.target.checked)}
                                     />
-                                    <span>{isEditMode ? 'Minor change' : 'Minor change'}</span>
+                                    <span>Minor change</span>
                                 </label>
                                 {isTestEdit && isDirty && (
                                     <div style={{

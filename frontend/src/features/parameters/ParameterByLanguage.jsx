@@ -119,13 +119,9 @@ export default function ParameterByLanguage() {
             if (filters.top_family && lang.top_level_family !== filters.top_family) return false;
             if (filters.family && lang.family !== filters.family) return false;
             if (filters.status && lang.status !== filters.status) return false;
-            if (filters.completion) {
-                if (filters.completion === 'unsure') {
-                    if (!lang.is_unsure) return false;
-                } else if (completionOf(lang) !== filters.completion) {
-                    return false;
-                }
-            }
+            // un vecchio filtro "unsure" rimasto salvato nella sessione viene ignorato
+            if (['empty', 'partial', 'complete'].includes(filters.completion)
+                && completionOf(lang) !== filters.completion) return false;
             return searchMatches(lang, search, ['id', 'name_full', 'top_level_family', 'family', 'grp']);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,7 +285,6 @@ export default function ParameterByLanguage() {
                             <option value="empty">Empty</option>
                             <option value="partial">Partial</option>
                             <option value="complete">Complete</option>
-                            <option value="unsure">Flagged unsure</option>
                         </select>
                     </FilterField>
                 </div>
@@ -315,7 +310,7 @@ export default function ParameterByLanguage() {
                             type="button"
                             onClick={() => selectLanguage(lang.id)}
                             className={`param-btn ${squareState(lang)}${lang.id === selectedId ? ' is-active' : ''}`}
-                            title={`${lang.name_full} · ${STATUS_LABELS[lang.status] || lang.status}${lang.is_unsure ? ' · flagged unsure' : ` · ${lang.answered}/${total} answered`}`}
+                            title={`${lang.name_full} · ${STATUS_LABELS[lang.status] || lang.status} · ${lang.answered}/${total} answered`}
                         >
                             {lang.id}
                         </button>

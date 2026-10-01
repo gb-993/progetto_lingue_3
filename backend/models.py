@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint, Index, JSON
+from sqlalchemy import Column, String, Integer, Boolean, Float, ForeignKey, DateTime, Text, Numeric, Enum, UniqueConstraint, Index, JSON, text
 from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime  # noqa: F401  (mantenuto per eventuali type hints)
 from time_utils import utc_now
@@ -228,8 +228,14 @@ class ParameterDef(Base):
     schema = Column(String(100), default="")
     param_type = Column(String(100), default="")
     level_of_comparison = Column(String(255), default="")
+    # sezioni segnate "da completare" (es. ["long_description", "questions"]): pallino giallo nella lista
+    needs_work = Column(JSON, nullable=False, default=list, server_default=text("'[]'"))
 
-    questions = relationship("Question", back_populates="parameter", cascade="all, delete-orphan")
+    # prima le domande normali, poi le stop; dentro ogni gruppo per nome
+    questions = relationship(
+        "Question", back_populates="parameter", cascade="all, delete-orphan",
+        order_by=lambda: (Question.is_stop_question, Question.id),
+    )
     change_logs = relationship("ParameterChangeLog", back_populates="parameter", cascade="all, delete-orphan")
     aliases = relationship("ParameterAlias", back_populates="parameter", cascade="all, delete-orphan")
 
@@ -513,10 +519,12 @@ class ParameterSubmission(Base):
     level_of_comparison = Column(String(255), default="")
 
     submitted_by = relationship("User")
+    # stesso ordine delle domande vere: prima le normali, poi le stop
     questions = relationship(
         "ParameterSubmissionQuestion",
         back_populates="submission",
         cascade="all, delete-orphan",
+        order_by=lambda: (ParameterSubmissionQuestion.is_stop_question, ParameterSubmissionQuestion.question_code),
     )
 
 

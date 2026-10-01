@@ -186,7 +186,7 @@ Layout a 3+1 card:
 
 - **Waiting for Approval**: numero di lingue in attesa di revisione + click rapidi per aprirle.
 - **Languages by Status**: contatori `Pending / Waiting / Approved / Rejected` cliccabili. Cliccando un contatore si espande un menù con la lista delle lingue in quello stato.
-- **Flagged/Unsure Parameters**: numero di parametri "rossi" (compilazione parziale o segnati Unsure) raggruppati per lingua, con conteggio.
+- **Incomplete Parameters**: numero di parametri "rossi" (compilati solo in parte) raggruppati per lingua, con conteggio.
 - **Latest Changes** (a destra): tabella con le ultime modifiche ai parametri (chi, quando, cosa, nota).
 
 Da qui un admin può aprire rapidamente le lingue che richiedono attenzione.
@@ -363,7 +363,7 @@ Quando clicchi su un quadratino vedi:
 - intestazione con **ID e nome** del parametro, più una `short_description`;
 - (solo admin) area collassabile **Admin notes** dove l'admin può scrivere una nota libera per questa coppia (lingua, parametro). La nota non è visibile agli User e non viene esportata.
 - **una card per ogni domanda** del parametro;
-- in basso a destra una **toolbar fluttuante** (resta in vista mentre scorri) con due pulsanti di salvataggio: **Confident → Next** (verde) e **Unsure → Next** (rosso). Vedi sotto.
+- in basso a destra una **toolbar fluttuante** (resta in vista mentre scorri) con il pulsante di salvataggio **Save → Next** (verde). Vedi sotto.
 
 ---
 
@@ -424,14 +424,9 @@ Pratica utility per non riscrivere a mano lo stesso esempio in più domande dell
 
 ### Salvare un blocco parametro
 
-In basso a destra del blocco corrente vedi una **toolbar fluttuante** (resta in vista mentre scorri) con due pulsanti:
+In basso a destra del blocco corrente vedi una **toolbar fluttuante** (resta in vista mentre scorri) con il pulsante **Save → Next** (verde).
 
-| Pulsante | Quando usarlo |
-|---|---|
-| **Confident → Next** (verde) | I dati sono completi e verificati. Il quadratino del parametro diventa verde. |
-| **Unsure → Next** (rosso) | Hai dei dubbi e vuoi salvare per riguardarci più tardi. Il quadratino del parametro resta giallo (flagged). |
-
-Entrambi i pulsanti **salvano tutti i dati del blocco corrente** (risposte + esempi + motivazioni + comments + admin note se sei admin) e poi **avanzano automaticamente al parametro successivo**.
+Il pulsante **salva tutti i dati del blocco corrente** (risposte + esempi + motivazioni + comments + admin note se sei admin) e poi **avanzano automaticamente al parametro successivo**.
 
 Se il save va a buon fine: nessun feedback particolare, ti ritrovi sul parametro successivo.
 
@@ -792,7 +787,7 @@ Click sul pulsante **Open** di una riga (o sulla riga stessa) → si apre un **p
 
 ![Tab Answer changes: stessi filtri della tab precedente (senza Entity Type, perché qui sono solo Answer) e tabella con tutte le modifiche alle risposte](img/manuale/history-answers.png)
 
-Versione "focalizzata sulle Answer" della stessa tabella. Ogni volta che un linguista (o un admin) clicca **Confident → Next** o **Unsure → Next** in un blocco parametro, qui compare una riga per ogni risposta toccata. Pensata per rispondere a "quando l'utente X ha messo YES alla domanda FGM_Qb per la lingua Italian?" o "chi ha cambiato la risposta della lingua francese per il parametro SPK il giorno tot?".
+Versione "focalizzata sulle Answer" della stessa tabella. Ogni volta che un linguista (o un admin) clicca **Save → Next** in un blocco parametro, qui compare una riga per ogni risposta toccata. Pensata per rispondere a "quando l'utente X ha messo YES alla domanda FGM_Qb per la lingua Italian?" o "chi ha cambiato la risposta della lingua francese per il parametro SPK il giorno tot?".
 
 Stessa esperienza dell'altra tab: filtri, tabella, click su una riga → pannello laterale con il confronto. La separazione esiste solo perché le Answer cambiano molto più spesso delle altre entità (ogni save di un blocco) e mescolarle con i parametri/domande renderebbe la tab "Change history" illeggibile.
 
@@ -940,7 +935,7 @@ Le stringhe `top_family`/`family`/`group` sulle lingue sono una copia salvata pr
 |---|---|
 | **Wizard / quadratini** | la fila di pulsantini in alto nella pagina di compilazione, uno per parametro |
 | **Block / blocco parametro** | l'insieme di tutte le domande di un parametro per una lingua |
-| **Confident / Unsure** | i due pulsanti di salvataggio del blocco. Confident = tutto verificato; Unsure = ho dei dubbi, ricontrollo dopo |
+| **Save → Next** | il pulsante di salvataggio del blocco: salva tutto e passa al parametro successivo |
 | **Stale block (409)** | un blocco che è stato modificato da un'altra sessione mentre stavi editando |
 | **Submit for approval** | l'invio della lingua all'admin per la revisione |
 | **Reopen** | riportare a `Pending` una lingua `Rejected` |

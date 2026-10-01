@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../../api';
 import { searchMatches } from '../../utils/search';
 import usePersistentState from '../../utils/usePersistentState';
+import { needsWorkLabels } from './needsWork';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import NoticeToast from '../../components/NoticeToast';
 import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
@@ -25,6 +26,7 @@ const INITIAL_FILTERS = {
     param_type: '',
     level_of_comparison: '',
     active: 'all',
+    todo: 'all',
 };
 
 export default function ParameterList() {
@@ -101,6 +103,7 @@ export default function ParameterList() {
             if (filters.level_of_comparison && param.level_of_comparison !== filters.level_of_comparison) return false;
             if (filters.active === 'yes' && !param.is_active) return false;
             if (filters.active === 'no' && param.is_active) return false;
+            if (filters.todo === 'yes' && !(param.needs_work || []).length) return false;
             return searchMatches(param, search, [
                 'id', 'name', 'short_description', 'long_description',
                 'implicational_condition', 'description_of_the_implicational_condition',
@@ -114,6 +117,7 @@ export default function ParameterList() {
         (filters.param_type ? 1 : 0) +
         (filters.level_of_comparison ? 1 : 0) +
         (filters.active !== 'all' ? 1 : 0) +
+        (filters.todo === 'yes' ? 1 : 0) +
         (search ? 1 : 0);
 
     const canReorder = activeFilterCount === 0 && !savingOrder;
@@ -365,6 +369,12 @@ export default function ParameterList() {
                             <option value="no">Only Inactive</option>
                         </select>
                     </FilterField>
+                    <FilterField label="To do">
+                        <select name="todo" value={filters.todo || 'all'} onChange={handleFilter} style={inputStyle}>
+                            <option value="all">All</option>
+                            <option value="yes">Needs work</option>
+                        </select>
+                    </FilterField>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -443,6 +453,7 @@ export default function ParameterList() {
                             {canReorder && <th style={{ width: '24px' }} aria-label="Drag handle" />}
                             <th>ID</th>
                             <th>Name</th>
+                            <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }} title="Yellow dot = some sections still need work (hover the dot to see which)">To do</th>
                             <th className="hide-mobile">Schema</th>
                             <th className="hide-mobile">Type</th>
                             <th className="hide-mobile">Level</th>
@@ -455,7 +466,7 @@ export default function ParameterList() {
                     <tbody>
                         {loading && (
                             <tr>
-                                <td colSpan={canReorder ? 11 : 10} className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading parameters…</td>
+                                <td colSpan={canReorder ? 12 : 11} className="muted" style={{ textAlign: 'center', padding: '2rem' }}>Loading parameters…</td>
                             </tr>
                         )}
                         {!loading && filteredParams.map(param => {
@@ -509,6 +520,16 @@ export default function ParameterList() {
                                     )}
                                     <td style={{ fontWeight: 'bold' }}>{param.id}</td>
                                     <td>{param.name}</td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {(param.needs_work || []).length > 0 && (
+                                            <span
+                                                className="todo-dot"
+                                                role="img"
+                                                aria-label={`Needs work: ${needsWorkLabels(param.needs_work).join(', ')}`}
+                                                title={`Needs work: ${needsWorkLabels(param.needs_work).join(', ')}`}
+                                            />
+                                        )}
+                                    </td>
                                     <td className="muted small hide-mobile">{param.schema || '—'}</td>
                                     <td className="hide-mobile">{param.param_type ? <span className="badge">{param.param_type}</span> : '—'}</td>
                                     <td className="muted small hide-mobile">{param.level_of_comparison || '—'}</td>
@@ -545,7 +566,7 @@ export default function ParameterList() {
                         })}
                         {filteredParams.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={canReorder ? 11 : 10} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
+                                <td colSpan={canReorder ? 12 : 11} style={{ textAlign: 'center', padding: '2rem' }}>No parameter found.</td>
                             </tr>
                         )}
                     </tbody>

@@ -568,7 +568,7 @@ a:hover{text-decoration:underline}
   color: var(--text-muted);
 }
 .auth-shell{
-  min-height: calc(100vh - 2rem);
+  min-height: calc(100vh - var(--topbar-height) - 2rem);
   display: grid;
   place-items: center;
   padding: 2rem 1rem;
@@ -640,6 +640,11 @@ a:hover{text-decoration:underline}
   .top-bar{
     flex-direction: column;
     align-items: flex-start;
+  }
+  /* barra pubblica: solo due tasti, sta su una riga */
+  .top-bar.top-bar--public{
+    flex-direction: row;
+    align-items: center;
   }
 }
 
@@ -903,6 +908,13 @@ button.btn {
   --btn-bd:color-mix(in oklab, var(--brand) 75%, black);
 }
 .btn.btn-link{ background:transparent; border-color:transparent; padding:0 }
+
+/* pallino giallo fisso: parametro con sezioni da completare (lista parametri, colonna To do) */
+.todo-dot{
+  display:inline-block; width:.75rem; height:.75rem; border-radius:50%;
+  background:#f5c518; box-shadow:0 0 0 1px rgba(0,0,0,.18);
+  cursor:help; vertical-align:middle;
+}
 
 /* pallino giallo: un altro utente sta modificando */
 .presence-dot{

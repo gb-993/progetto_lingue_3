@@ -25,8 +25,29 @@ async function downloadBlob(request, fallbackName) {
 const PARAMETER_DRAFT_FIELDS = [
     'name', 'short_description', 'long_description', 'admin_remarks',
     'implicational_condition', 'description_of_the_implicational_condition',
-    'schema', 'param_type', 'level_of_comparison',
+    'schema', 'param_type', 'level_of_comparison', 'needs_work',
 ];
+
+// confronto delle sezioni "da completare" che non dipende dall'ordine
+const sectionsKey = (sections) => [...(sections || [])].sort().join(',');
+
+// spunta "Needs work" accanto al titolo di una sezione
+function NeedsWorkToggle({ checked, onChange, title }) {
+    return (
+        <label
+            title={title || 'Mark this section as still to be completed: the parameter gets a yellow dot in the list'}
+            style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer',
+                fontWeight: checked ? 600 : 400,
+                color: checked ? 'var(--warn)' : 'var(--text-muted)',
+            }}
+        >
+            <input type="checkbox" checked={checked} onChange={onChange} />
+            Needs work
+        </label>
+    );
+}
 
 export default function ParameterForm() {
     const { id } = useParams();
@@ -43,7 +64,8 @@ export default function ParameterForm() {
         implicational_condition: '',
         description_of_the_implicational_condition: '',
         is_active: true,
-        schema: '', param_type: '', level_of_comparison: ''
+        schema: '', param_type: '', level_of_comparison: '',
+        needs_work: [],
     });
 
     const [questions, setQuestions] = useState([]);
@@ -334,6 +356,18 @@ export default function ParameterForm() {
     };
 
     const safeString = (val) => val === null || val === undefined ? '' : String(val);
+
+    const isFlagged = (section) => (formData.needs_work || []).includes(section);
+    const toggleNeedsWork = (section) => {
+        setFormData(prev => {
+            const current = prev.needs_work || [];
+            const next = current.includes(section) ? current.filter(item => item !== section) : [...current, section];
+            return { ...prev, needs_work: next };
+        });
+    };
+    // sezione segnata: bordo giallo attorno al campo
+    const flaggedStyle = (section) => (isFlagged(section) ? { outline: '2px solid #f5c518', outlineOffset: '1px' } : {});
+    const sectionHeaderStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' };
     const isDirty = isEditMode && initialData && (
         safeString(formData.id) !== safeString(initialData.id) ||
         safeString(formData.name) !== safeString(initialData.name) ||
@@ -345,12 +379,14 @@ export default function ParameterForm() {
         safeString(formData.description_of_the_implicational_condition) !== safeString(initialData.description_of_the_implicational_condition) ||
         safeString(formData.schema) !== safeString(initialData.schema) ||
         safeString(formData.param_type) !== safeString(initialData.param_type) ||
-        safeString(formData.level_of_comparison) !== safeString(initialData.level_of_comparison)
+        safeString(formData.level_of_comparison) !== safeString(initialData.level_of_comparison) ||
+        sectionsKey(formData.needs_work) !== sectionsKey(initialData.needs_work)
     );
 
     const isCreatingDirty = !isEditMode && PARAMETER_DRAFT_FIELDS.some(field => {
         const value = formData[field];
         if (value === null || value === undefined || value === '') return false;
+        if (Array.isArray(value)) return value.length > 0;
         if (typeof value === 'string') return value.trim().length > 0;
         return true;
     });
@@ -509,13 +545,19 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
-                            <label style={{fontWeight: 'bold'}}>Short Description</label>
-                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="2" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} />
+                            <div style={sectionHeaderStyle}>
+                                <label style={{fontWeight: 'bold'}}>Short Description</label>
+                                <NeedsWorkToggle checked={isFlagged('short_description')} onChange={() => toggleNeedsWork('short_description')} />
+                            </div>
+                            <textarea name="short_description" value={formData.short_description} onChange={handleChange} rows="2" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', ...flaggedStyle('short_description')}} />
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
-                            <label style={{fontWeight: 'bold'}}>Long Description</label>
-                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Extended description of the parameter (optional)" />
+                            <div style={sectionHeaderStyle}>
+                                <label style={{fontWeight: 'bold'}}>Long Description</label>
+                                <NeedsWorkToggle checked={isFlagged('long_description')} onChange={() => toggleNeedsWork('long_description')} />
+                            </div>
+                            <textarea name="long_description" value={formData.long_description || ''} onChange={handleChange} rows="4" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', ...flaggedStyle('long_description')}} placeholder="Extended description of the parameter (optional)" />
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
@@ -527,21 +569,27 @@ export default function ParameterForm() {
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
-                            <label style={{fontWeight: 'bold'}}>Implicational Condition(s)</label>
+                            <div style={sectionHeaderStyle}>
+                                <label style={{fontWeight: 'bold'}}>Implicational Condition(s)</label>
+                                <NeedsWorkToggle checked={isFlagged('implicational_condition')} onChange={() => toggleNeedsWork('implicational_condition')} />
+                            </div>
                             <input
                                 type="text"
                                 name="implicational_condition"
                                 value={formData.implicational_condition || ''}
                                 onChange={handleChange}
                                 placeholder="e.g. (+FGM | -ABC)"
-                                style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: syntaxError ? 'red' : 'inherit'}}
+                                style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: syntaxError ? 'red' : 'inherit', ...flaggedStyle('implicational_condition')}}
                             />
                             {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{syntaxError}</p>}
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
-                            <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition(s)</label>
-                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)'}} placeholder="Textual explanation (optional)" />
+                            <div style={sectionHeaderStyle}>
+                                <label style={{fontWeight: 'bold'}}>Explanation of the Implicational Condition(s)</label>
+                                <NeedsWorkToggle checked={isFlagged('description_of_the_implicational_condition')} onChange={() => toggleNeedsWork('description_of_the_implicational_condition')} />
+                            </div>
+                            <textarea name="description_of_the_implicational_condition" value={formData.description_of_the_implicational_condition || ''} onChange={handleChange} rows="3" style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', ...flaggedStyle('description_of_the_implicational_condition')}} placeholder="Textual explanation (optional)" />
                         </div>
 
                         <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: 'var(--form-field-mb, 1rem)', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px'}}>
@@ -637,7 +685,7 @@ export default function ParameterForm() {
                                                 disabled={!isDirty}
                                                 onChange={e => setIsTestEdit(e.target.checked)}
                                             />
-                                            <span>Mark as test edit</span>
+                                            <span>Minor change</span>
                                         </label>
                                         {isTestEdit && isDirty && (
                                             <div style={{
@@ -684,8 +732,15 @@ export default function ParameterForm() {
                 </div>
 
                 {isEditMode && (
-                    <div className="card">
-                        <h3>Questions</h3>
+                    <div className="card" style={flaggedStyle('questions')}>
+                        <div style={sectionHeaderStyle}>
+                            <h3>Questions</h3>
+                            <NeedsWorkToggle
+                                checked={isFlagged('questions')}
+                                onChange={() => toggleNeedsWork('questions')}
+                                title="Mark the questions as still to be completed. Saved with the parameter: use Save Parameter above"
+                            />
+                        </div>
                         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1.5rem)', marginTop: 'var(--form-field-mb, 1rem)' }}>
                             <div style={{ minWidth: 0 }}>
                                 <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Questions</label>

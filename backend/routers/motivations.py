@@ -31,13 +31,13 @@ def get_motivations_with_usage(db: Session = Depends(get_db), current_user: mode
     mots = db.query(models.Motivation).order_by(models.Motivation.code).all()
     links = (
         db.query(models.QuestionAllowedMotivation.motivation_id, models.QuestionAllowedMotivation.question_id)
+        .join(models.Question, models.Question.id == models.QuestionAllowedMotivation.question_id)
+        .order_by(models.Question.parameter_id, models.Question.is_stop_question, models.Question.id)
         .all()
     )
     by_mid: dict[int, list[str]] = {}
     for mid, qid in links:
         by_mid.setdefault(mid, []).append(qid)
-    for qids in by_mid.values():
-        qids.sort()
     return [
         {
             "id": m.id,

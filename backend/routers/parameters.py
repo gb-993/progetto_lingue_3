@@ -26,6 +26,15 @@ _VALID_PARAM_ID_RE = _re.compile(r'^[A-Za-z0-9_]+$')
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
 
+# sezioni che si possono segnare "da completare" (colonna "To do" della lista)
+NEEDS_WORK_SECTIONS = (
+    "short_description",
+    "long_description",
+    "implicational_condition",
+    "description_of_the_implicational_condition",
+    "questions",
+)
+
 
 class QuestionRead(BaseModel):
     id: str
@@ -57,6 +66,7 @@ class ParameterBase(BaseModel):
     schema: str = ""
     param_type: str = ""
     level_of_comparison: str = ""
+    needs_work: List[str] = []
 
     @field_validator(
         "short_description", "long_description", "admin_remarks",
@@ -66,6 +76,13 @@ class ParameterBase(BaseModel):
     @classmethod
     def _none_to_empty(cls, v):
         return "" if v is None else v
+
+    @field_validator("needs_work", mode="before")
+    @classmethod
+    def _known_sections_only(cls, v):
+        # sezioni sconosciute scartate, ordine fisso, niente doppioni
+        chosen = set(v or [])
+        return [section for section in NEEDS_WORK_SECTIONS if section in chosen]
 
 class ParameterListItem(ParameterBase):
     questions_count: int = 0
@@ -119,6 +136,7 @@ def get_admin_parameters(db: Session = Depends(get_db), current_user: models.Use
             schema=p.schema or "",
             param_type=p.param_type or "",
             level_of_comparison=p.level_of_comparison or "",
+            needs_work=p.needs_work or [],
             questions_count=int(qc or 0),
             stop_count=int(sc or 0),
         ))
@@ -400,7 +418,8 @@ def export_parameters_info_pdf(
         questions = (
             db.query(models.Question)
             .options(selectinload(models.Question.allowed_motivations).joinedload(models.QuestionAllowedMotivation.motivation))
-            .filter(models.Question.parameter_id.in_(param_ids))
+            # nei PDF solo le domande attive
+            .filter(models.Question.parameter_id.in_(param_ids), models.Question.is_active == True)
             .order_by(models.Question.is_stop_question, models.Question.id)
             .all()
         )
@@ -428,7 +447,8 @@ def download_parameter_pdf(id: str, db: Session = Depends(get_db), current_user:
     questions = (
         db.query(models.Question)
         .options(selectinload(models.Question.allowed_motivations).joinedload(models.QuestionAllowedMotivation.motivation))
-        .filter(models.Question.parameter_id == id)
+        # nel PDF solo le domande attive
+        .filter(models.Question.parameter_id == id, models.Question.is_active == True)
         .order_by(models.Question.is_stop_question, models.Question.id)
         .all()
     )
@@ -661,13 +681,6 @@ def get_parameter_by_language(
             answered_map[lid] = int(answered or 0)
             with_response_map[lid] = int(with_resp or 0)
 
-    unsure_rows = (
-        db.query(models.LanguageParameterStatus.language_id, models.LanguageParameterStatus.is_unsure)
-        .filter(models.LanguageParameterStatus.parameter_id == param_id)
-        .all()
-    )
-    unsure_map = {lid: bool(u) for lid, u in unsure_rows}
-
     languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
     colors = compute_colors(db, [l.id for l in languages], {param_id: active_qids})
     langs_out = [{
@@ -679,7 +692,6 @@ def get_parameter_by_language(
         "grp": l.grp or "",
         "answered": answered_map.get(l.id, 0),
         "with_response": with_response_map.get(l.id, 0),
-        "is_unsure": unsure_map.get(l.id, False),
         "color": colors.get((l.id, param_id), "grey"),
     } for l in languages]
 

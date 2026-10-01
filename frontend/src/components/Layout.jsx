@@ -115,6 +115,25 @@ function BackToTop() {
     );
 }
 
+export function PublicTopBar() {
+    const { pathname } = useLocation();
+    const { user } = useAuth();
+
+    return (
+        <header className="top-bar top-bar--public">
+            <div className="top-bar-left">
+                <Link to="/" className="brand" title="Home">The PCM Hub</Link>
+            </div>
+            <div className="top-bar-right">
+                <Link to="/" className="btn">Home</Link>
+                {!user && pathname !== '/login' && (
+                    <Link to="/login" className="btn btn--primary">Login</Link>
+                )}
+            </div>
+        </header>
+    );
+}
+
 export function SiteFooter() {
     const year = new Date().getFullYear();
 

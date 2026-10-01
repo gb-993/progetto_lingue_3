@@ -130,7 +130,8 @@ def test_le_respinte_non_contano_nel_totale_risposto(db_session):
     assert params[0]["answered"] == 0
 
 
-def test_flag_unsure_segnala_anche_un_parametro_risolto(db_session):
+def test_vecchio_flag_unsure_non_segnala_piu_un_parametro_risolto(db_session):
+    # il pulsante "Unsure -> Next" è stato tolto: un flag rimasto nel DB non conta
     admin = _seed_admin(db_session)
     _answer(db_session, "P1_01", "no")
     _answer(db_session, "P1_02", "no")
@@ -138,6 +139,4 @@ def test_flag_unsure_segnala_anche_un_parametro_risolto(db_session):
         language_id="ITA", parameter_id="P1", is_unsure=True,
     ))
     db_session.commit()
-    params = _red_params(db_session, admin)
-    assert len(params) == 1
-    assert params[0]["reasons"] == ["unsure"]
+    assert _red_params(db_session, admin) == []

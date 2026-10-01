@@ -46,7 +46,7 @@ def get_admin_questions(db: Session = Depends(get_db), current_user: models.User
     questions = (
         db.query(models.Question)
         .join(models.ParameterDef, models.Question.parameter_id == models.ParameterDef.id)
-        .order_by(models.ParameterDef.position, models.Question.id)
+        .order_by(models.ParameterDef.position, models.Question.is_stop_question, models.Question.id)
         .all()
     )
     return questions

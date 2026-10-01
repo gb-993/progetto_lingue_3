@@ -159,7 +159,7 @@ export default function LanguageList() {
                     <p style={{ margin: '0 0 0.5rem' }}><strong>This will permanently delete:</strong></p>
                     <ul style={{ margin: '0 0 0.75rem', paddingLeft: '1.2rem' }}>
                         <li>All answers, examples and answer-motivation links of this language</li>
-                        <li>All parameter values, evaluations and "is_unsure" / admin-note statuses</li>
+                        <li>All parameter values, evaluations and admin notes</li>
                         <li>All saved backups (Submissions) of this language and their contents</li>
                         <li>All historical ID aliases of this language</li>
                     </ul>

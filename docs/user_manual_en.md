@@ -186,7 +186,7 @@ If the language is `Rejected`, below you'll also see the **admin's note** explai
 
 - **Waiting for Approval**: count of languages awaiting review + quick links to open them.
 - **Languages by Status**: clickable counters `Pending / Waiting / Approved / Rejected`. Clicking a counter expands a panel listing the languages in that status.
-- **Flagged/Unsure Parameters**: count of "red" parameters (partial compilation or marked Unsure) grouped by language, with totals.
+- **Incomplete Parameters**: count of "red" parameters (only partially compiled) grouped by language, with totals.
 - **Latest Changes** (right): table with the most recent parameter changes (who, when, what, note).
 
 From here an admin can quickly open languages that need attention.
@@ -363,7 +363,7 @@ When you click a square you see:
 - header with **ID and name** of the parameter, plus a `short_description`;
 - (admin only) collapsible **Admin notes** area where the admin can write a free-text note for this (language, parameter) pair. The note is not visible to Users and is not exported.
 - **one card per question** in the parameter;
-- at the bottom-right a **floating toolbar** (it stays in view as you scroll) with two save buttons: **Confident → Next** (green) and **Unsure → Next** (red). See below.
+- at the bottom-right a **floating toolbar** (it stays in view as you scroll) with the **Save → Next** save button (green). See below.
 
 ---
 
@@ -424,14 +424,9 @@ Handy utility to avoid retyping the same example in multiple questions of the sa
 
 ### Saving a parameter block
 
-At the bottom-right of the current block you see a **floating toolbar** (it stays in view as you scroll) with two buttons:
+At the bottom-right of the current block you see a **floating toolbar** (it stays in view as you scroll) with the **Save → Next** button (green).
 
-| Button | When to use it |
-|---|---|
-| **Confident → Next** (green) | Data is complete and verified. The parameter square turns green. |
-| **Unsure → Next** (red) | You have doubts and want to save for later review. The parameter square stays yellow (flagged). |
-
-Both buttons **save all data of the current block** (answers + examples + motivations + comments + admin note if you're an admin) and then **automatically advance to the next parameter**.
+The button **saves all data of the current block** (answers + examples + motivations + comments + admin note if you're an admin) and then **automatically advance to the next parameter**.
 
 If the save succeeds: no special feedback, you find yourself on the next parameter.
 
@@ -792,7 +787,7 @@ Click **Open** on a row (or the row itself) → a **side panel** slides in with 
 
 ![Answer changes tab: same filters as the previous tab (no Entity Type, since these are all Answer entries) and table with all answer modifications](img/manuale/history-answers.png)
 
-The "Answer-focused" version of the same table. Every time a linguist (or admin) clicks **Confident → Next** or **Unsure → Next** in a parameter block, a row appears here for every touched answer. Designed to answer "when did user X put YES on question FGM_Qb for Italian?" or "who changed the French answer for parameter SPK on day Y?".
+The "Answer-focused" version of the same table. Every time a linguist (or admin) clicks **Save → Next** in a parameter block, a row appears here for every touched answer. Designed to answer "when did user X put YES on question FGM_Qb for Italian?" or "who changed the French answer for parameter SPK on day Y?".
 
 Same experience as the other tab: filters, table, click a row → side panel with the comparison. The split exists only because Answers change much more frequently than other entities (every block save) and mixing them with parameters/questions would make the "Change history" tab unreadable.
 
@@ -940,7 +935,7 @@ The `top_family`/`family`/`group` strings on languages are a stored copy taken f
 |---|---|
 | **Wizard / squares** | the row of small buttons at the top of the compilation page, one per parameter |
 | **Block / parameter block** | the set of all questions of a parameter for one language |
-| **Confident / Unsure** | the two save buttons of the block. Confident = everything verified; Unsure = I have doubts, will recheck |
+| **Save → Next** | the save button of the block: saves everything and moves to the next parameter |
 | **Stale block (409)** | a block that was modified by another session while you were editing |
 | **Submit for approval** | sending the language to the admin for review |
 | **Reopen** | bringing a `Rejected` language back to `Pending` |

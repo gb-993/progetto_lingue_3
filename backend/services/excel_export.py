@@ -175,7 +175,7 @@ def build_language_workbook(
     all_questions = (
         db.query(models.Question)
         .filter(models.Question.is_active == True)
-        .order_by(models.Question.parameter_id, models.Question.id)
+        .order_by(models.Question.parameter_id, models.Question.is_stop_question, models.Question.id)
         .all()
     )
     for q in all_questions:
@@ -579,7 +579,9 @@ def _append_schema_sheets(db: Session, wb: Workbook) -> None:
     ws_q = wb.create_sheet("Questions")
     ws_q.append(QUESTIONS_HEADERS)
     _bold_header_row(ws_q, len(QUESTIONS_HEADERS))
-    for q in db.query(models.Question).order_by(models.Question.parameter_id, models.Question.id).all():
+    for q in db.query(models.Question).order_by(
+        models.Question.parameter_id, models.Question.is_stop_question, models.Question.id,
+    ).all():
         ws_q.append([
             q.id,
             q.parameter_id,

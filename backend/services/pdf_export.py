@@ -469,7 +469,7 @@ def build_language_pdf(db, lang) -> bytes:
     for q in (
         db.query(models.Question)
         .filter(models.Question.is_active == True)
-        .order_by(models.Question.parameter_id, models.Question.id)
+        .order_by(models.Question.parameter_id, models.Question.is_stop_question, models.Question.id)
         .all()
     ):
         questions_by_param.setdefault(q.parameter_id, []).append(q)

@@ -446,9 +446,9 @@ def query_11_unanswered(lang_id: str, db: Session = Depends(get_db)):
 
     unanswered = [q for q in active_questions if q.id not in answered_qids]
 
+    unanswered.sort(key=lambda q: (q.parameter_id, q.is_stop_question, q.id))
     res = [
         {"q_id": q.id, "text": q.text, "p_id": q.parameter_id}
         for q in unanswered
     ]
-    res.sort(key=lambda x: x["p_id"])
     return {"language": {"id": lang.id, "name": lang.name_full}, "answers": res}

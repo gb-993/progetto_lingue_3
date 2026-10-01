@@ -67,7 +67,6 @@ class QuestionAnswerPayload(BaseModel):
 
 class ParameterBlockSavePayload(BaseModel):
     answers: List[QuestionAnswerPayload]
-    is_unsure: bool
     admin_note: Optional[str] = None
     expected_last_modified: Optional[str] = None
 
@@ -163,7 +162,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     ans_dict = {a.question_id: a for a in answers}
 
     statuses = db.query(models.LanguageParameterStatus).filter(models.LanguageParameterStatus.language_id == language.id).all()
-    status_dict = {s.parameter_id: s.is_unsure for s in statuses}
     needs_review_dict = {s.parameter_id: bool(s.needs_review) for s in statuses}
     is_admin = current_user.role == "admin"
     admin_note_dict = {s.parameter_id: (s.admin_note or "") for s in statuses} if is_admin else {}
@@ -247,7 +245,6 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "name": p.name,
             "short_description": p.short_description,
             "stats": {"answered": answered_q, "total": total_q},
-            "is_flagged": status_dict.get(p.id, False),
             "color": color,
             "needs_review": needs_review_dict.get(p.id, False),
             "last_modified": block_last_modified.isoformat() if block_last_modified else None,
@@ -339,7 +336,6 @@ def get_param_block_for_language(
         models.LanguageParameterStatus.language_id == language.id,
         models.LanguageParameterStatus.parameter_id == param_id,
     ).first()
-    is_unsure = status_entry.is_unsure if status_entry else False
     admin_note = (status_entry.admin_note or "") if status_entry else ""
 
     block_last_modified = None
@@ -353,7 +349,6 @@ def get_param_block_for_language(
         "id": parameter.id,
         "name": parameter.name,
         "short_description": parameter.short_description,
-        "is_flagged": is_unsure,
         "admin_note": admin_note,
         "last_modified": block_last_modified.isoformat() if block_last_modified else None,
         "questions": [],
@@ -433,7 +428,6 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     if not status_entry:
         status_entry = models.LanguageParameterStatus(language_id=language.id, parameter_id=param_id)
         db.add(status_entry)
-    status_entry.is_unsure = payload.is_unsure
     status_entry.needs_review = False
     if current_user.role == "admin" and payload.admin_note is not None:
         note = payload.admin_note.strip()

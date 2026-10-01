@@ -119,7 +119,9 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
         elif filters.f_q_stop == "no": question_query = question_query.filter(models.Question.is_stop_question == False)
         if filters.selected_ids: question_query = question_query.filter(models.Question.id.in_(filters.selected_ids))
 
-        items = question_query.order_by(models.ParameterDef.position, models.Question.id).all()
+        items = question_query.order_by(
+            models.ParameterDef.position, models.Question.is_stop_question, models.Question.id,
+        ).all()
         item_ids = [question.id for question in items]
         answers = db.query(
             models.Answer.question_id, models.Answer.language_id, models.Answer.response_text,
@@ -201,17 +203,6 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
     if not lang_ids or not param_ids:
         return {}
 
-    flagged: set[tuple] = set()
-    for language_id, parameter_id in db.query(
-        models.LanguageParameterStatus.language_id,
-        models.LanguageParameterStatus.parameter_id,
-    ).filter(
-        models.LanguageParameterStatus.language_id.in_(lang_ids),
-        models.LanguageParameterStatus.parameter_id.in_(param_ids),
-        models.LanguageParameterStatus.is_unsure == True,
-    ).all():
-        flagged.add((language_id, parameter_id))
-
     parameter_id_by_question_id: Dict[str, str] = {}
     total_questions_by_param: Dict[str, int] = {}
     for question_id, parameter_id in db.query(
@@ -240,9 +231,6 @@ def _compute_param_incomplete_map(db: Session, lang_ids: List[str], param_ids: L
     result: Dict[tuple, bool] = {}
     for language_id in lang_ids:
         for parameter_id in param_ids:
-            if (language_id, parameter_id) in flagged:
-                result[(language_id, parameter_id)] = True
-                continue
             answered = answered_count.get((language_id, parameter_id), 0)
             total = total_questions_by_param.get(parameter_id, 0)
             if answered > 0 and answered < total:

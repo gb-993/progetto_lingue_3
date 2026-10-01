@@ -768,7 +768,7 @@ export default function TableA() {
                                                 background: cell.is_incomplete ? 'rgba(220, 53, 69, 0.15)' : undefined,
                                             }}
                                             title={
-                                                cell.is_incomplete ? 'Parameter incomplete or flagged unsure for this language'
+                                                cell.is_incomplete ? 'Parameter partially compiled for this language'
                                                 : (cell.val === '0' && cell.init === '+') ? 'Final value 0 (initial value was +, zeroed by the implicational condition)'
                                                 : undefined
                                             }

@@ -78,11 +78,10 @@ export default function ParameterBlock({
         setLocalAnswers(prev => ({ ...prev, [questionId]: { ...prev[questionId], ...newData } }));
     };
 
-    const handleFinalSave = async (isUnsure) => {
+    const handleFinalSave = async () => {
         setIsSaving(true);
         try {
             const payload = {
-                is_unsure: isUnsure,
                 answers: Object.values(localAnswers),
                 expected_last_modified: blockLastModified,
             };
@@ -280,31 +279,13 @@ export default function ParameterBlock({
                     gap: '0.75rem',
                     flexWrap: 'wrap',
                 }}>
-                    <span>Everything ready and verified?</span>
                     <button
                         className="btn btn--ok"
-                        onClick={() => handleFinalSave(false)}
+                        onClick={handleFinalSave}
                         disabled={isSaving || isReadOnly}
                         style={{ minWidth: '180px', background: '#16a34a', borderColor: '#15803d', color: '#fff' }}
                     >
-                        {isSaving ? 'Saving...' : 'Confident -> Next'}
-                    </button>
-                </div>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: '0.75rem',
-                    flexWrap: 'wrap',
-                }}>
-                    <span>Any doubts? Save for later.</span>
-                    <button
-                        className="btn btn--bad"
-                        onClick={() => handleFinalSave(true)}
-                        disabled={isSaving || isReadOnly}
-                        style={{ minWidth: '180px' }}
-                    >
-                        {isSaving ? 'Saving...' : 'Unsure -> Next'}
+                        {isSaving ? 'Saving...' : 'Save → Next'}
                     </button>
                 </div>
             </div>

@@ -36,6 +36,8 @@ def _coerce(v: Any) -> Any:
         return float(v)
     if isinstance(v, (datetime, date)):
         return v.isoformat()
+    if isinstance(v, (list, tuple)):
+        return [_coerce(item) for item in v]
     return str(v)
 
 

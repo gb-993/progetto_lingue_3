@@ -788,7 +788,7 @@ Sequenza:
 1. **Lock pessimistico** sulla `Language` (`SELECT ... FOR UPDATE`) per serializzare due save concorrenti sulla stessa lingua.
 2. **`_ensure_can_modify`** (vedi sopra).
 3. **Optimistic concurrency check**: il client manda `expected_last_modified` (il MAX(updated_at) delle Answer del parametro al momento del fetch). Se il valore corrente nel DB è diverso → 409 con `code: stale_block`. Tipico caso: admin e linguista che editano in parallelo.
-4. **Upsert `LanguageParameterStatus`** con `is_unsure` (e `admin_note` se admin).
+4. **Upsert `LanguageParameterStatus`**: azzera `needs_review` e salva `admin_note` se admin. La colonna `is_unsure` (vecchio pulsante "Unsure → Next", tolto) resta nel DB per compatibilità dei backup ma non viene più scritta né letta dalle pagine.
 5. **Per ogni Answer in payload**:
    - normalizza `response_text` (`""` → `None`);
    - se `response_text in ('yes', 'unsure')` valida ≥2 esempi non vuoti, altrimenti `400 missing_examples` con `question_id` dell'incriminata (frontend usa il campo per scrollare e flashare la card);

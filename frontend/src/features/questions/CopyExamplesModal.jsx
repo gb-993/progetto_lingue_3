@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
 import api, { getApiErrorMessage } from '../../api';
+import { compareQuestions } from '../../utils/questionOrder';
 
 // copia solo gli esempi su un'altra question
 
@@ -64,7 +65,7 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
             label: `${parameter.id} - ${parameter.name}`,
             options: allQuestions
                 .filter(question => question.parameter_id === parameter.id && question.id !== sourceQuestionId)
-                .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+                .sort(compareQuestions)
                 .map(question => {
                     const text = (question.text || '').trim();
                     return { value: question.id, label: `${question.id} — ${text.length > 70 ? text.slice(0, 70) + '…' : text}` };

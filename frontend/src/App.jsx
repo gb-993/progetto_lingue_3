@@ -7,7 +7,7 @@ import {
     useLocation,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Layout, { SiteFooter } from './components/Layout';
+import Layout, { SiteFooter, PublicTopBar } from './components/Layout';
 import AdminRoute from './components/AdminRoute';
 import ErrorBoundary, { RouterErrorElement } from './components/ErrorBoundary';
 import LegalConsentsModal from './components/LegalConsentsModal';
@@ -78,13 +78,14 @@ function AppRoot() {
     );
 }
 
-function ConditionalLayout({ children }) {
+function ConditionalLayout({ children, withTopBar = true }) {
     const role = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
     if (role === 'admin' || role === 'user') {
         return <Layout>{children}</Layout>;
     }
     return (
         <>
+            {withTopBar && <PublicTopBar />}
             {children}
             <SiteFooter />
         </>
@@ -94,7 +95,7 @@ function ConditionalLayout({ children }) {
 function HomeRoute() {
     const { user } = useAuth();
     if (user) return <Navigate to="/dashboard" replace />;
-    return <ConditionalLayout><PublicHome /></ConditionalLayout>;
+    return <ConditionalLayout withTopBar={false}><PublicHome /></ConditionalLayout>;
 }
 
 const router = createBrowserRouter([
@@ -105,9 +106,9 @@ const router = createBrowserRouter([
         children: [
             { index: true, element: <HomeRoute /> },
             { path: 'how-to-cite', element: <ConditionalLayout><HowToCite /></ConditionalLayout> },
-            { path: 'login', element: <Login /> },
-            { path: 'forgot-password', element: <ForgotPassword /> },
-            { path: 'reset-password', element: <ResetPassword /> },
+            { path: 'login', element: <><PublicTopBar /><Login /></> },
+            { path: 'forgot-password', element: <><PublicTopBar /><ForgotPassword /></> },
+            { path: 'reset-password', element: <><PublicTopBar /><ResetPassword /></> },
 
             { path: 'dashboard', element: <Layout><Dashboard /></Layout> },
             { path: 'me', element: <Layout><MyAccount /></Layout> },
