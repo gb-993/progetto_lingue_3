@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, DataError
 
 import models
+from services.condition_rules import ParamState, load_state, rejected_changes
 from services.logic_parser import validate_expression, ParseException
 from services.versioning import record_version
 from services.language_alias import resolve_language
@@ -335,6 +336,31 @@ PARAM_FIELDS = (
 )
 
 
+def _rejected_parameter_rows(db: Session, ws: Worksheet, hmap: Dict[str, int],
+                             by_id: Dict[str, models.ParameterDef]) -> Dict[str, Tuple[str, str]]:
+    """Guarda tutte le righe insieme e trova quelle da rifiutare: id -> (campo, motivo).
+
+    Le condizioni si giudicano sullo stato finale dell'intero foglio, perché una
+    riga può citare un parametro che un'altra riga spegne o modifica.
+    """
+    planned: ParamState = {}
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        pid = _str(_get(row, hmap, "ID"))
+        if not pid:
+            continue
+        existing = by_id.get(pid.upper()) or resolve_parameter(db, pid).parameter
+        if existing is None:
+            continue
+        cond = _none_if_empty(_get(row, hmap, "Implicational Condition"))
+        if cond:
+            try:
+                validate_expression(cond)
+            except ParseException:
+                continue  # riga già scartata per la sintassi
+        planned[existing.id.upper()] = (cond, _bool_yn(_get(row, hmap, "Is Active")))
+    return rejected_changes(load_state(db), planned)
+
+
 def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                        user_id: int, failed_ids: Set[str],
                        *, create_missing: bool = False) -> None:
@@ -350,6 +376,10 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
 
     # confronto case-insensitive
     by_id = {p.id.upper(): p for p in db.query(models.ParameterDef).all()}
+
+    # Nel restore (create_missing) il file va ripreso così com'è; in un import
+    # normale le condizioni che romperebbero il calcolo dei valori si rifiutano.
+    rejected_conditions = {} if create_missing else _rejected_parameter_rows(db, ws, hmap, by_id)
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -387,6 +417,18 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                     reason=f"Wrong formula syntax: {e}"
                 ))
                 continue
+
+        if existing is not None and existing.id.upper() in rejected_conditions:
+            field, reason = rejected_conditions[existing.id.upper()]
+            summary.errors += 1
+            failed_ids.add(pid_key)
+            report.errors.append(ImportError(
+                sheet="Parameters", row=ridx,
+                column="Is Active" if field == "is_active" else "Implicational Condition",
+                value=_str(_get(row, hmap, "Is Active")) if field == "is_active" else cond_raw,
+                reason=reason,
+            ))
+            continue
 
         # nuovo parametro (solo con create_missing)
         if existing is None:

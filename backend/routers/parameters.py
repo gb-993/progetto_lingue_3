@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 import auth
 import models
 from dependencies import get_db, require_admin
-from services.logic_parser import validate_expression, ParseException, rename_param_in_expression
+from services.condition_rules import ConditionError, check_condition
+from services.logic_parser import rename_param_in_expression
 from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
 from services.pdf_export import build_parameter_pdf, build_all_parameters_pdf, build_parameter_changelog_pdf
@@ -135,13 +136,13 @@ def get_admin_parameter(id: str, db: Session = Depends(get_db), current_user: mo
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    # una condizione sbagliata falserebbe i valori finali di tutte le lingue: non si salva
+    try:
+        check_condition(db, item.id, item.implicational_condition, is_active=item.is_active)
+    except ConditionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     db_item = models.ParameterDef(**item.dict())
     db.add(db_item)
-    if item.implicational_condition:
-        try:
-            validate_expression(item.implicational_condition)
-        except ParseException as e:
-            raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
     try:
         db.commit()
         db.refresh(db_item)
@@ -233,11 +234,13 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    if item.implicational_condition:
-        try:
-            validate_expression(item.implicational_condition)
-        except ParseException as e:
-            raise HTTPException(status_code=400, detail=f"Wrong formula syntax: {str(e)}")
+    try:
+        check_condition(
+            db, db_item.id, item.implicational_condition,
+            is_active=db_item.is_active, other_own_ids=[item.id],
+        )
+    except ConditionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     new_id = (item.id or "").strip()
     if not new_id:
@@ -491,6 +494,12 @@ def reactivate_parameter(id: str, background_tasks: BackgroundTasks, db: Session
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
+    # da attivo non può dipendere da parametri spenti
+    try:
+        check_condition(db, db_item.id, db_item.implicational_condition, is_active=True)
+    except ConditionError as e:
+        raise HTTPException(status_code=400, detail=f"Cannot reactivate this parameter. {e}")
+
     db_item.is_active = True
     db.commit()
     record_version(db, db_item, operation="update", source="manual",
@@ -590,15 +599,22 @@ def quick_fill_parameter_answers(
 
 class ConditionCheck(BaseModel):
     condition: str
+    param_id: Optional[str] = None
 
 @router.post("/validate-condition")
-def validate_condition_api(payload: ConditionCheck, db: Session = Depends(get_db)):
+def validate_condition_api(payload: ConditionCheck, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    """Stesso controllo del salvataggio, per avvisare mentre si scrive la condizione."""
     if not payload.condition:
         return {"valid": True, "error": None}
+    param_id = (payload.param_id or "").strip()
+    existing = db.query(models.ParameterDef).filter(models.ParameterDef.id == param_id).first() if param_id else None
     try:
-        validate_expression(payload.condition)
+        check_condition(
+            db, param_id, payload.condition,
+            is_active=existing.is_active if existing else True,
+        )
         return {"valid": True, "error": None}
-    except ParseException as e:
+    except ConditionError as e:
         return {"valid": False, "error": str(e)}
 
 @router.get("/{id}/usage")

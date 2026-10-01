@@ -896,7 +896,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         disabled={!isDirty}
                                         onChange={e => setIsTestEdit(e.target.checked)}
                                     />
-                                    <span>{isEditMode ? '🧪 Mark as test edit' : '🧪 Mark as test new question'}</span>
+                                    <span>{isEditMode ? 'Minor change' : 'Minor change'}</span>
                                 </label>
                                 {isTestEdit && isDirty && (
                                     <div style={{

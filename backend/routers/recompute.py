@@ -1,55 +1,44 @@
 from __future__ import annotations
-import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlalchemy import func
 
 import models
 from database import SessionLocal
 from dependencies import require_admin
 from services import migration_progress
-from services.dag_eval import run_dag_for_language
+from services.dag_eval import formula_problems
+from services.recompute import recompute_all_languages
 
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/recompute", tags=["Recompute"])
 
 
 def _run_recompute_all_in_background(job_id: str) -> None:
     list_db = SessionLocal()
     try:
-        lang_ids = [
-            l.id for l in
-            list_db.query(models.Language.id).order_by(func.lower(models.Language.id)).all()
-        ]
+        total = list_db.query(models.Language).count()
+        # uguali per tutte le lingue: quei parametri escono '?'
+        formula_errors = formula_problems(list_db)
     finally:
         list_db.close()
 
-    total = len(lang_ids)
     if total == 0:
-        migration_progress.finish_ok(job_id, {"languages_processed": 0, "errors": []})
+        migration_progress.finish_ok(job_id, {"languages_processed": 0, "errors": [], "formula_errors": formula_errors})
         return
 
     migration_progress.set_phase(job_id, "recompute", "Recomputing final values…", total=total)
 
-    errors = []
-    for i, lang_id in enumerate(lang_ids, start=1):
-        migration_progress.tick(job_id, current=i, label=f"Recomputing {lang_id} ({i}/{total})")
-        db = SessionLocal()
-        try:
-            run_dag_for_language(lang_id, db)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            logger.error("Recompute failed for language %s: %s", lang_id, e, exc_info=True)
-            errors.append({"language_id": lang_id, "reason": str(e)[:300]})
-        finally:
-            db.close()
+    errors = recompute_all_languages(
+        on_language=lambda position, count, lang_id: migration_progress.tick(
+            job_id, current=position, label=f"Recomputing {lang_id} ({position}/{count})"
+        )
+    )
 
     migration_progress.finish_ok(job_id, {
         "languages_processed": total,
         "errors": errors,
         "errors_count": len(errors),
+        "formula_errors": formula_errors,
     })
 
 

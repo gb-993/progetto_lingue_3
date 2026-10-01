@@ -180,6 +180,19 @@ function ImportReport({ report, onDownloadErrors }) {
                 </p>
             )}
 
+            {/* i valori dei parametri non stanno nel file: il server li ricalcola dopo l'import */}
+            {report.recompute === 'language_done' && (
+                <p className="small muted" style={{ marginTop: 0 }}>
+                    The parameter values of this language have been recomputed from the imported answers.
+                </p>
+            )}
+            {report.recompute === 'all_languages_started' && (
+                <div className="alert alert-info" role="status" style={{ marginBottom: '1rem' }}>
+                    Parameters or questions were imported: the parameter values of all languages are being
+                    recomputed in the background. Table A will be up to date in about a minute.
+                </div>
+            )}
+
             <h4 style={{ marginBottom: '0.5rem' }}>Per-sheet summary</h4>
             {sheets.length === 0 ? (
                 <p className="small muted">No sheet recognised in the file.</p>

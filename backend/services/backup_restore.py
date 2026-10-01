@@ -17,7 +17,7 @@ from services.parameter_alias import resolve_parameter
 from services.question_alias import resolve_question
 from services.excel_import import import_excel, ImportReport
 from services.migration_progress import ProgressReporter, NULL_PROGRESS
-from services.dag_eval import run_dag_for_language
+from services.recompute import recompute_language
 
 
 @dataclass
@@ -238,14 +238,18 @@ def restore_backup_bundle(
                 "restored": restored_count, "already_present": already_present_count,
             }
 
-    # il bundle non ha i valori calcolati: ricalcola
-    if report.languages_restored:
-        restored_language_count = len(report.languages_restored)
-        progress.phase("recompute", f"Recomputing final values for {restored_language_count} language(s)…", total=restored_language_count)
-        for index, lang_id in enumerate(report.languages_restored, start=1):
-            progress.tick(current=index, label=f"Recomputing {lang_id} ({index}/{restored_language_count})")
+    # Il bundle non contiene i valori calcolati. Si ricalcolano tutte le lingue
+    # presenti, non solo quelle ripristinate senza errori: lo schema del bundle
+    # cambia le regole per tutte, e una lingua ripristinata a metà ha comunque
+    # risposte nuove.
+    if SCHEMA_FILE in namelist or lang_files:
+        language_ids = [lang_id for (lang_id,) in db.query(models.Language.id).order_by(models.Language.id).all()]
+        recompute_count = len(language_ids)
+        progress.phase("recompute", f"Recomputing final values for {recompute_count} language(s)…", total=recompute_count)
+        for index, lang_id in enumerate(language_ids, start=1):
+            progress.tick(current=index, label=f"Recomputing {lang_id} ({index}/{recompute_count})")
             try:
-                run_dag_for_language(lang_id, db)
+                recompute_language(db, lang_id)
                 db.commit()
             except Exception as exception:
                 db.rollback()

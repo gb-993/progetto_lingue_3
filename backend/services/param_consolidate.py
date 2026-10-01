@@ -1,3 +1,9 @@
+"""Primo passo del calcolo dei valori: dalle risposte al valore grezzo.
+
+Per ogni lingua e parametro guarda le risposte alle domande e ricava '+', '-'
+oppure "non ancora determinabile" (None). Da qui parte il secondo passo
+(dag_eval), che applica le condizioni e produce il valore finale.
+"""
 from __future__ import annotations
 from typing import Optional, Tuple
 

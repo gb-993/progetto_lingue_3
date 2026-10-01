@@ -10,8 +10,9 @@ import models
 from database import SessionLocal
 from dependencies import get_db, get_current_user, require_admin, require_super_admin
 from services.logic_parser import evaluate_with_parser
-from services.dag_eval import run_dag_for_language
+from services.dag_eval import formula_problems, run_dag_for_language
 from services.param_consolidate import recompute_and_persist_language_parameter
+from services.recompute import recompute_language
 from services.versioning import record_version, serialize_entity
 from services.param_state import param_color, language_completion_from_colors
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _run_dag_in_background(language_id: str) -> None:
-
+    """Valori finali della lingua, calcolati dopo la risposta: un errore qui finisce solo nel log."""
     db = SessionLocal()
     try:
         run_dag_for_language(language_id, db)
@@ -499,9 +500,12 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
             )
 
     db.commit()
+    # passo 1: dalle risposte appena salvate al valore grezzo di questo parametro
     recompute_and_persist_language_parameter(language.id, param_id, db)
     db.commit()
 
+    # passo 2: i valori finali di tutta la lingua (un parametro può cambiarne altri
+    # a cascata); parte dopo la risposta, così il salvataggio non aspetta
     background_tasks.add_task(_run_dag_in_background, language.id)
 
     return {
@@ -680,7 +684,9 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
 
     return {
         "language": {"id": language.id, "name_full": language.name_full},
-        "rows": rows
+        "rows": rows,
+        # condizioni che il calcolo non può usare: quei parametri valgono '?'
+        "formula_errors": formula_problems(db),
     }
 
 
@@ -690,16 +696,19 @@ def run_dag_endpoint(lang_id: str, db: Session = Depends(get_db), current_user: 
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
 
-    active_params = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
-    for (pid,) in active_params:
-        recompute_and_persist_language_parameter(language.id, pid, db)
-    db.commit()
-
     try:
-        report = run_dag_for_language(language.id, db)
+        report = recompute_language(db, language.id)
         db.commit()
+        detail = f"DAG completed. Processed: {len(report.processed)}, Forced to zero: {len(report.forced_zero)}, Warnings propagated: {len(report.warnings_propagated)}."
+        if report.formula_errors:
+            names = ", ".join(pid for pid, _cond, _reason in report.formula_errors)
+            detail += f" Unusable conditions (value set to '?'): {names}."
         return {
-            "detail": f"DAG completed. Processed: {len(report.processed)}, Forced to zero: {len(report.forced_zero)}, Warnings propagated: {len(report.warnings_propagated)}."
+            "detail": detail,
+            "formula_errors": [
+                {"param_id": pid, "condition": cond, "reason": reason}
+                for pid, cond, reason in report.formula_errors
+            ],
         }
     except Exception as e:
         db.rollback()

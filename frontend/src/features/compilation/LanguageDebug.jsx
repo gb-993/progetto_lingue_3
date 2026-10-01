@@ -54,6 +54,8 @@ export default function LanguageDebug() {
     if (error) return <div className="container alert alert-error" style={{ marginTop: '2rem' }}>{error}</div>;
     if (!debugData) return null;
 
+    const formulaErrors = debugData.formula_errors || [];
+
     return (
         <div className="container page-debug" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
 
@@ -102,6 +104,28 @@ export default function LanguageDebug() {
                     </span>
                 </div>
             </div>
+
+            {formulaErrors.length > 0 && (
+                <div className="alert alert-error" role="alert" style={{ marginBottom: '1.5rem' }}>
+                    <strong>
+                        {formulaErrors.length === 1
+                            ? '1 implicational condition cannot be used.'
+                            : `${formulaErrors.length} implicational conditions cannot be used.`}
+                    </strong>{' '}
+                    The final value of these parameters, and of the parameters that depend on them, is set
+                    to “?” in every language until the condition is fixed.
+                    <ul style={{ margin: '0.5rem 0 0 1.2rem' }}>
+                        {formulaErrors.map(formulaError => (
+                            <li key={formulaError.param_id}>
+                                <Link to={`/admin/parameters/${formulaError.param_id}/edit`} style={{ textDecoration: 'underline', fontWeight: 'bold' }}>
+                                    {formulaError.param_id}
+                                </Link>
+                                {' '}<code>{formulaError.condition}</code> — {formulaError.reason}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             <div className="table-responsive">
                 <table className="table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>

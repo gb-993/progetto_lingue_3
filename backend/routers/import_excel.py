@@ -5,7 +5,7 @@ from datetime import datetime
 from time_utils import utc_now
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from openpyxl.styles import Font
 import models
 from dependencies import get_db, require_admin
 from services.excel_import import import_excel
+from services.recompute import recompute_after_excel_import
 from services.citation import apply_excel_citation
 
 
@@ -26,6 +27,7 @@ XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 @router.post("/excel")
 def post_import_excel(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
@@ -46,7 +48,8 @@ def post_import_excel(
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     report = import_excel(db, contents, current_user.id)
-    return report.to_dict()
+    recompute = recompute_after_excel_import(db, report, background_tasks)
+    return {**report.to_dict(), "recompute": recompute}
 
 
 class ImportErrorRow(BaseModel):

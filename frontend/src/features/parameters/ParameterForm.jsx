@@ -125,8 +125,10 @@ export default function ParameterForm() {
         const timer = setTimeout(async () => {
             if (formData.implicational_condition !== undefined && formData.implicational_condition.trim() !== '') {
                 try {
+                    // stesso controllo del salvataggio: sintassi, parametri citati, giri chiusi
                     const res = await api.post('/api/admin/parameters/validate-condition', {
-                        condition: formData.implicational_condition
+                        condition: formData.implicational_condition,
+                        param_id: isEditMode ? id : formData.id,
                     });
                     if (res.data.valid) {
                         setSyntaxError('');
@@ -142,7 +144,7 @@ export default function ParameterForm() {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [formData.implicational_condition]);
+    }, [formData.implicational_condition, formData.id, isEditMode, id]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -179,7 +181,7 @@ export default function ParameterForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (syntaxError) {
-            alert("Fix the syntax errors in the formula before saving!");
+            alert("Fix the errors in the implicational condition before saving!");
             return;
         }
         setIsSaving(true);

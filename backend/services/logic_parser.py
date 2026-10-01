@@ -1,5 +1,7 @@
 from __future__ import annotations
 import re
+import threading
+from functools import lru_cache
 from typing import Any
 from pyparsing import (
     Word, alphanums, oneOf, Literal, CaselessKeyword, Combine,
@@ -62,6 +64,11 @@ def _as_list(node: Any):
         return node
 
 def eval_node(node, values: dict[str, str]) -> bool:
+    """Dice se una condizione già letta è vera, dati i valori finali calcolati finora.
+
+    `+FGM` è vero solo se FGM vale '+'. Un parametro non ancora calcolato non
+    ha valore, quindi ogni condizione su di lui è falsa.
+    """
     # Foglia: ('+', 'FGM')
     if isinstance(node, tuple):
         sign, param = node
@@ -99,21 +106,38 @@ def eval_node(node, values: dict[str, str]) -> bool:
     raise ValueError(f"Nodo non gestito: {node}")
 
 
+_shared_parser = None
+_parse_lock = threading.Lock()
+
+
+@lru_cache(maxsize=2048)
+def parse_condition(expression: str):
+    """Legge una condizione e ne restituisce la struttura, pronta per eval_node.
+
+    Le condizioni sono poche e cambiano di rado: ognuna viene letta una volta
+    sola e poi ricordata, perché il calcolo dei valori la riusa per ogni lingua.
+    Solleva ParseException se è scritta male.
+    """
+    global _shared_parser
+    with _parse_lock:
+        if _shared_parser is None:
+            _shared_parser = build_parser()
+        res = _shared_parser.parseString(expression, parseAll=True)
+    if len(res) == 0:
+        raise ParseException("empty condition")
+    return _as_list(res[0])
+
+
 def evaluate_with_parser(expression: str, values: dict[str, str]) -> bool:
-    """True se la condizione è vera; errore di parsing -> False."""
+    """True se la condizione è vera con i valori dati.
+
+    Una condizione scritta male solleva un errore: decide chi chiama cosa farne,
+    così il problema non passa per un semplice "falso".
+    """
     expr = (expression or "").strip()
     if not expr:
         return True
-
-    parser = build_parser()
-    try:
-        res = parser.parseString(expr, parseAll=True)
-        if len(res) == 0:
-            return False
-        root = _as_list(res[0])
-        return eval_node(root, values)
-    except Exception:
-        return False
+    return eval_node(parse_condition(expr), values)
 
 
 def validate_expression(expression: str) -> None:

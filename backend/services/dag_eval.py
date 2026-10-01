@@ -1,19 +1,24 @@
+"""Secondo passo del calcolo dei valori: le dipendenze fra parametri.
+
+Il primo passo (param_consolidate) ricava dalle risposte il valore grezzo di
+ogni parametro. Qui si applicano le condizioni: un parametro con la condizione
+falsa vale '0', uno che dipende da un parametro incerto vale '?'. Il risultato
+è il valore finale (value_eval), quello usato da Tabella A, distanze e grafici.
+"""
 from __future__ import annotations
-from collections import defaultdict, deque
-import re
+from collections import deque
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import NoResultFound
 
 import models
-from services.logic_parser import evaluate_with_parser
+from services.condition_rules import extract_refs, find_cycles, format_cycle
+from services.logic_parser import eval_node, parse_condition
 
 import logging
 logger = logging.getLogger(__name__)
 
-# token nelle condizioni: +FGM, -SCO, 0ABC
-TOKEN_RE = re.compile(r"[+\-0]([A-Za-z0-9_]+)")
 
 @dataclass
 class DagReport:
@@ -22,45 +27,73 @@ class DagReport:
     forced_zero: list[str]
     missing_orig: list[str]
     warnings_propagated: list[str]
-    parse_errors: list[tuple[str, str, str]]
+    # condizioni inutilizzabili: (parametro, condizione, motivo)
+    formula_errors: list[tuple[str, str, str]]
+
+
+@dataclass
+class _Plan:
+    """Cosa serve per calcolare una lingua; dipende solo dai parametri, non dalla lingua."""
+    order: List[str]                # parametri nell'ordine in cui vanno calcolati
+    conditions: Dict[str, str]      # parametro -> testo della condizione
+    trees: Dict[str, Any]           # parametro -> condizione già letta
+    refs: Dict[str, Set[str]]       # parametro -> parametri da cui dipende
+    broken: Dict[str, str]          # parametro -> perché la sua condizione è inutilizzabile
 
 
 def _active_parameter_ids(db: Session) -> Set[str]:
     res = db.query(models.ParameterDef.id).filter(models.ParameterDef.is_active == True).all()
     return {r[0] for r in res}
 
-def _extract_refs(cond: str) -> Set[str]:
-    return {m.upper() for m in TOKEN_RE.findall(cond or "")}
 
-def _build_graph_active_scope(db: Session, active_ids: Set[str]) -> Tuple[Dict[str, List[str]], Dict[str, str]]:
-    """Grafo ref -> target, solo parametri attivi."""
-    params = db.query(models.ParameterDef.id, models.ParameterDef.implicational_condition).filter(
+def _plan_evaluation(db: Session) -> _Plan:
+    """Legge le condizioni dei parametri attivi e decide l'ordine di calcolo."""
+    active_ids = _active_parameter_ids(db)
+    rows = db.query(models.ParameterDef.id, models.ParameterDef.implicational_condition).filter(
         models.ParameterDef.is_active == True
     ).all()
+    conditions = {pid: cond.strip() for pid, cond in rows if cond and cond.strip()}
 
-    graph: Dict[str, List[str]] = {pid: [] for pid in active_ids}
-    conditions: Dict[str, str] = {}
+    trees: Dict[str, Any] = {}
+    refs: Dict[str, Set[str]] = {}
+    broken: Dict[str, str] = {}
 
-    for pid, cond in params:
-        if not cond or not cond.strip():
+    # Il salvataggio rifiuta già queste condizioni (condition_rules). Qui si
+    # ricontrolla per i dati entrati da altre strade: meglio un '?' dichiarato
+    # che un valore sbagliato in silenzio.
+    for pid, cond in conditions.items():
+        try:
+            tree = parse_condition(cond)
+        except Exception as e:
+            broken[pid] = f"wrong formula syntax ({e})"
             continue
-
-        refs = _extract_refs(cond)
-        if not refs:
+        cited = extract_refs(cond)
+        unusable = sorted(cited - active_ids)
+        if unusable:
+            broken[pid] = f"cites parameters that do not exist or are deactivated: {', '.join(unusable)}"
             continue
-        # cita parametri non attivi: regola ignorata
-        if not refs.issubset(active_ids):
-            continue
+        trees[pid] = tree
+        refs[pid] = cited
 
-        conditions[pid] = cond
-        for r in refs:
-            if pid not in graph[r]:
-                graph[r].append(pid)
+    # giri chiusi: nessuno dei parametri coinvolti ha un valore sensato
+    for cycle in find_cycles(refs):
+        for pid in cycle[:-1]:
+            broken.setdefault(pid, f"circular dependency: {format_cycle(cycle)}")
+    for pid in broken:
+        trees.pop(pid, None)
+        refs.pop(pid, None)
 
-    return graph, conditions
+    # frecce "citato -> chi lo cita": servono a calcolare prima i parametri citati
+    graph: Dict[str, List[str]] = {pid: [] for pid in sorted(active_ids)}
+    for pid in sorted(refs):
+        for cited in sorted(refs[pid]):
+            graph[cited].append(pid)
+
+    return _Plan(order=_topo_sort(graph), conditions=conditions, trees=trees, refs=refs, broken=broken)
+
 
 def _topo_sort(graph: Dict[str, List[str]]) -> List[str]:
-    """Ordinamento topologico (Kahn)."""
+    """Mette i parametri in fila: ognuno viene dopo quelli da cui dipende (Kahn)."""
     indeg = {n: 0 for n in graph}
     for u, outs in graph.items():
         for v in outs:
@@ -76,28 +109,34 @@ def _topo_sort(graph: Dict[str, List[str]]) -> List[str]:
             if indeg[v] == 0:
                 q.append(v)
 
-    # nodi in un ciclo: in fondo
+    # i giri sono già stati tolti: qui non dovrebbe restare nessuno
     if len(order) < len(indeg):
         order.extend([n for n in indeg if n not in order])
     return order
 
 
+def formula_problems(db: Session) -> List[dict]:
+    """Condizioni che il calcolo non può usare (uguali per tutte le lingue)."""
+    plan = _plan_evaluation(db)
+    return [
+        {"param_id": pid, "condition": plan.conditions[pid], "reason": reason}
+        for pid, reason in sorted(plan.broken.items())
+    ]
+
+
 def run_dag_for_language(language_id: str, db: Session) -> DagReport:
-    """Valuta le condizioni dei parametri attivi per una lingua."""
+    """Calcola il valore finale di tutti i parametri attivi di una lingua."""
     # lock sulla lingua: niente valutazioni in parallelo
     try:
         lang = db.query(models.Language).with_for_update().filter(models.Language.id == language_id).one()
     except NoResultFound:
         raise ValueError(f"Language ID {language_id} not found.")
 
-    active_ids = _active_parameter_ids(db)
-
-    graph, cond_map = _build_graph_active_scope(db, active_ids)
-    order = _topo_sort(graph)
+    plan = _plan_evaluation(db)
 
     lp_list = db.query(models.LanguageParameter).filter(
         models.LanguageParameter.language_id == language_id,
-        models.LanguageParameter.parameter_id.in_(active_ids)
+        models.LanguageParameter.parameter_id.in_(plan.order)
     ).all()
 
     lp_dict = {lp.parameter_id: lp for lp in lp_list}
@@ -111,12 +150,13 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
     else:
         lpe_by_lp_id = {}
 
-    # valori dei nodi già valutati
+    # valori finali dei parametri già calcolati: li leggono le condizioni di quelli dopo
     cond_values: Dict[str, str] = {}
+    # parametri incerti: chi dipende da uno di loro diventa '?'
     warnings: Set[str] = set()
     missing_orig: List[str] = []
 
-    for pid in active_ids:
+    for pid in plan.order:
         lp = lp_dict.get(pid)
         if lp:
             if lp.warning_orig:
@@ -129,9 +169,9 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
     processed: list[str] = []
     forced_zero: list[str] = []
     warnings_propagated: set[str] = set()
-    parse_errors: list[tuple[str, str, str]] = []
+    formula_errors: list[tuple[str, str, str]] = []
 
-    for target in order:
+    for target in plan.order:
         lp = lp_dict.get(target)
         if not lp:
             lp = models.LanguageParameter(language_id=language_id, parameter_id=target, value_orig=None, warning_orig=False)
@@ -146,10 +186,25 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             lpe_by_lp_id[lp.id] = lpe
 
         v_orig = lp.value_orig
-        cond = (cond_map.get(target) or "").strip()
 
-        # senza condizione: eval = valore originale
-        if not cond:
+        def mark_unusable(reason: str) -> None:
+            # condizione inutilizzabile: '?', che passa anche a chi dipende da questo parametro
+            warnings.add(target)
+            lpe.value_eval = "?"
+            lpe.warning_eval = True
+            db.flush()
+            cond_values[target] = "?"
+            formula_errors.append((target, plan.conditions[target], reason))
+            processed.append(target)
+
+        if target in plan.broken:
+            mark_unusable(plan.broken[target])
+            continue
+
+        tree = plan.trees.get(target)
+
+        # senza condizione: il valore finale è quello grezzo
+        if tree is None:
             if v_orig is None:
                 new_eval = "?"
                 if target not in warnings:
@@ -169,10 +224,8 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             processed.append(target)
             continue
 
-        refs = _extract_refs(cond)
-
-        # warning su un parametro citato: il figlio diventa '?'
-        if any(r in warnings for r in refs):
+        # un parametro citato è incerto: non si può decidere, quindi '?'
+        if any(r in warnings for r in plan.refs[target]):
             if target not in warnings:
                 warnings.add(target)
                 warnings_propagated.add(target)
@@ -186,15 +239,12 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             continue
 
         try:
-            parsed_ok = evaluate_with_parser(cond, cond_values)
-            parse_error = None
+            cond_ok = eval_node(tree, cond_values)
         except Exception as e:
-            parsed_ok = None
-            parse_error = e
+            mark_unusable(f"cannot be evaluated ({e})")
+            continue
 
-        cond_ok = parsed_ok if parse_error is None else None
-
-        if cond_ok is False:
+        if not cond_ok:
             # condizione falsa: 0, e il warning non passa ai figli (DEV-NOTES)
             lpe.value_eval = "0"
             lpe.warning_eval = False
@@ -205,18 +255,14 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
             processed.append(target)
             continue
 
-        if cond_ok is True:
-            if v_orig is None:
-                lpe.value_eval = "?"
-                if target not in warnings:
-                    warnings.add(target)
-                    warnings_propagated.add(target)
-            else:
-                lpe.value_eval = v_orig
+        # condizione vera: vale il valore grezzo
+        if v_orig is None:
+            lpe.value_eval = "?"
+            if target not in warnings:
+                warnings.add(target)
+                warnings_propagated.add(target)
         else:
-            lpe.value_eval = None
-            if parse_error:
-                parse_errors.append((target, cond, str(parse_error)))
+            lpe.value_eval = v_orig
 
         if target in warnings:
             lpe.value_eval = "?"
@@ -229,11 +275,17 @@ def run_dag_for_language(language_id: str, db: Session) -> DagReport:
 
         processed.append(target)
 
+    if formula_errors:
+        logger.warning(
+            "DAG %s: unusable conditions, value set to '?': %s",
+            language_id, "; ".join(f"{pid} ({reason})" for pid, _cond, reason in formula_errors),
+        )
+
     return DagReport(
         language_id=language_id,
         processed=processed,
         forced_zero=forced_zero,
         missing_orig=missing_orig,
         warnings_propagated=sorted(warnings_propagated),
-        parse_errors=parse_errors
+        formula_errors=formula_errors
     )

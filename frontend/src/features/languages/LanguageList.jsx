@@ -478,8 +478,13 @@ export default function LanguageList() {
                     } else {
                         const errCount = res.data.report?.errors_count || 0;
                         const total = res.data.report?.languages_processed || 0;
+                        const formulaErrors = res.data.report?.formula_errors || [];
                         if (errCount > 0) {
                             notify('error', `Recompute completed with ${errCount} error(s) over ${total} language(s). See server logs for details.`);
+                        } else if (formulaErrors.length > 0) {
+                            // condizioni inutilizzabili: quei parametri valgono "?" in tutte le lingue
+                            const names = formulaErrors.map(formulaError => formulaError.param_id).join(', ');
+                            notify('error', `Recompute completed on ${total} language(s), but the implicational condition of ${names} cannot be used: those values are set to "?". Open the Debug page of any language for details.`);
                         } else {
                             notify('success', `Recompute completed on ${total} language(s).`);
                         }
