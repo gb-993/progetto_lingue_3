@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 import auth
 import models
 from dependencies import get_db, require_admin
-from services.condition_rules import ConditionError, check_condition
+from services.condition_rules import ConditionError, check_condition, parameters_citing
 from services.logic_parser import rename_param_in_expression
 from services.recompute import recompute_parameter_for_all_languages
 from services.versioning import record_version
@@ -370,13 +370,12 @@ def deactivate_parameter(id: str, payload: DeactivatePayload, background_tasks: 
     if not db_item:
         raise HTTPException(status_code=404, detail="Parameter not found")
 
-    used_in = db.query(models.ParameterDef).filter(
-        models.ParameterDef.is_active == True,
-        models.ParameterDef.implicational_condition.ilike(f"%{id}%")
-    ).all()
-
-    if used_in:
-        raise HTTPException(status_code=400, detail="Cannot deactivate: the parameter is used in the implicational conditions of other active parameters.")
+    blocking = [p.id for p in parameters_citing(db, id) if p.is_active]
+    if blocking:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot deactivate: the parameter is used in the implicational conditions of these active parameters: {', '.join(blocking)}.",
+        )
 
     db_item.is_active = False
 
@@ -639,10 +638,10 @@ def validate_condition_api(payload: ConditionCheck, db: Session = Depends(get_db
 
 @router.get("/{id}/usage")
 def get_parameter_usage(id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    used_in = db.query(models.ParameterDef).filter(
-        models.ParameterDef.implicational_condition.ilike(f"%{id}%")
-    ).all()
-    return [{"id": p.id, "name": p.name} for p in used_in if p.id != id]
+    return [
+        {"id": p.id, "name": p.name, "is_active": bool(p.is_active)}
+        for p in parameters_citing(db, id)
+    ]
 
 
 @router.get("/{param_id}/by-language")

@@ -3,13 +3,17 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException
 from openpyxl import Workbook
 
+import auth
 import models
 from routers.parameters import (
-    ConditionCheck, ParameterBase, ParameterUpdate,
-    create_admin_parameter, reactivate_parameter, update_admin_parameter, validate_condition_api,
+    ConditionCheck, DeactivatePayload, ParameterBase, ParameterUpdate,
+    create_admin_parameter, deactivate_parameter, get_parameter_usage,
+    reactivate_parameter, update_admin_parameter, validate_condition_api,
 )
+from routers.queries import query_1_implications
 from services.condition_rules import (
-    ConditionError, check_condition, extract_refs, find_cycles, find_dependency_path, rejected_changes,
+    ConditionError, check_condition, extract_refs, find_cycles, find_dependency_path,
+    parameters_citing, rejected_changes,
 )
 from services.excel_export import PARAMETERS_HEADERS
 from services.excel_import import import_excel
@@ -224,3 +228,60 @@ def test_restore_mode_keeps_the_file_as_it_is(db_session):
     db_session.commit()
     assert report.errors == []
     assert db_session.query(models.ParameterDef).count() == 2
+
+
+# chi cita chi: un id deve combaciare per intero, P1 non è dentro +P12
+
+def test_parameters_citing_matches_whole_ids(db_session):
+    _param(db_session, "P1")
+    _param(db_session, "P12")
+    _param(db_session, "Q", cond="+p12 & -X", active=False)
+    assert parameters_citing(db_session, "P1") == []
+    assert [p.id for p in parameters_citing(db_session, "P12")] == ["Q"]
+
+
+def test_deactivate_is_blocked_only_by_active_citing_parameters(db_session):
+    user = _admin(db_session)
+    user.hashed_password = auth.get_password_hash("pw")
+    db_session.commit()
+    _param(db_session, "A")
+    _param(db_session, "B", cond="+A")
+    _param(db_session, "C", cond="-A", active=False)
+    _param(db_session, "P1")
+    _param(db_session, "P12")
+    _param(db_session, "Q", cond="+P12")
+
+    with pytest.raises(HTTPException) as exc:
+        deactivate_parameter("A", DeactivatePayload(password="pw"), BackgroundTasks(), db=db_session, current_user=user)
+    assert exc.value.status_code == 400
+    assert exc.value.detail.endswith("active parameters: B.")
+
+    # citato solo da un parametro spento: si può
+    deactivate_parameter("B", DeactivatePayload(password="pw"), BackgroundTasks(), db=db_session, current_user=user)
+    deactivate_parameter("A", DeactivatePayload(password="pw"), BackgroundTasks(), db=db_session, current_user=user)
+    # +P12 non blocca P1
+    deactivate_parameter("P1", DeactivatePayload(password="pw"), BackgroundTasks(), db=db_session, current_user=user)
+    assert db_session.query(models.ParameterDef).filter_by(is_active=False).count() == 4
+
+
+def test_usage_lists_active_and_inactive_citing_parameters(db_session):
+    user = _admin(db_session)
+    _param(db_session, "A")
+    _param(db_session, "AB", cond="+A")
+    _param(db_session, "C", cond="-A", active=False)
+    _param(db_session, "D", cond="+AB")
+    assert get_parameter_usage("A", db=db_session, current_user=user) == [
+        {"id": "AB", "name": "P AB", "is_active": True},
+        {"id": "C", "name": "P C", "is_active": False},
+    ]
+
+
+def test_query_implications_matches_whole_ids(db_session):
+    _param(db_session, "P1")
+    _param(db_session, "P12")
+    _param(db_session, "Q", cond="+P12 | 0P1")
+    _param(db_session, "R", cond="-P12")
+    res = query_1_implications("P12", db=db_session)
+    assert res["implicated"] == [{"id": "Q", "name": "P Q"}, {"id": "R", "name": "P R"}]
+    res = query_1_implications("Q", db=db_session)
+    assert sorted(p["id"] for p in res["implicating"]) == ["P1", "P12"]

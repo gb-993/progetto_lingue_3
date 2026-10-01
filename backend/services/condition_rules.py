@@ -31,6 +31,18 @@ def extract_refs(cond: Optional[str]) -> Set[str]:
     return {m.upper() for m in TOKEN_RE.findall(cond or "")}
 
 
+def parameters_citing(db: Session, param_id: str) -> List[models.ParameterDef]:
+    """Parametri, attivi e spenti, che citano `param_id` nella loro condizione."""
+    target = param_id.upper()
+    rows = (
+        db.query(models.ParameterDef)
+        .filter(models.ParameterDef.implicational_condition.isnot(None))
+        .order_by(models.ParameterDef.position, models.ParameterDef.id)
+        .all()
+    )
+    return [p for p in rows if p.id.upper() != target and target in extract_refs(p.implicational_condition)]
+
+
 def find_dependency_path(deps: Dict[str, Set[str]], start: str, goal: str) -> Optional[List[str]]:
     """Catena `start → … → goal` seguendo "dipende da"; None se non esiste."""
     stack = [(start, [start])]

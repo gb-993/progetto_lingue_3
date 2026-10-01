@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from typing import List, Dict, Any
+from typing import Dict, Any
 import models
 from dependencies import get_db, require_admin
+from services.condition_rules import extract_refs, parameters_citing
 from services.logic_parser import build_parser, pretty_print_expression, eval_node, _as_list
 
 # admin a livello di router: vale anche per gli endpoint futuri
@@ -33,25 +34,16 @@ def _final_map_for_language(db: Session, lang_id: str) -> Dict[str, str]:
         out.setdefault(pid, val)
     return out
 
-def _extract_tokens(expr: str) -> List[str]:
-    import re
-    TOKEN_RE = re.compile(r'([+\-0])([A-Za-z][A-Za-z0-9_]*)')
-    return [t[1] for t in TOKEN_RE.findall((expr or "").strip().upper())]
-
 @router.get("/q1")
 def query_1_implications(param_id: str, db: Session = Depends(get_db)):
     param = db.query(models.ParameterDef).filter(models.ParameterDef.id == param_id).first()
     if not param: raise HTTPException(404, "Parameter not found")
 
-    refs_in_param = _extract_tokens(param.implicational_condition or "")
+    refs_in_param = sorted(extract_refs(param.implicational_condition))
 
     implicating = db.query(models.ParameterDef).filter(models.ParameterDef.id.in_(refs_in_param)).order_by(models.ParameterDef.position).all()
 
-    implicated = []
-    all_params = db.query(models.ParameterDef).filter(models.ParameterDef.id != param.id).all()
-    for p in all_params:
-        if param.id in _extract_tokens(p.implicational_condition or ""):
-            implicated.append({"id": p.id, "name": p.name})
+    implicated = [{"id": p.id, "name": p.name} for p in parameters_citing(db, param.id)]
 
     return {
         "parameter": {"id": param.id, "name": param.name},
@@ -300,7 +292,7 @@ def query_3_neutralization(lang_id: str, param_id: str, db: Session = Depends(ge
             "answers": _originating_answers(db, lang_id, param_id),
         }
     elif status == "warning_propagated":
-        refs = set(_extract_tokens(cond))
+        refs = extract_refs(cond)
         explanation = {"type": "warning_from_parents", "parents": _parents_with_warning(db, lang_id, refs)}
     else:  # no_answers
         explanation = {"type": "no_answers", "answers": _originating_answers(db, lang_id, param_id)}

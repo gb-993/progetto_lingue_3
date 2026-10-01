@@ -257,13 +257,15 @@ export default function ParameterForm() {
         }
     };
 
+    const usedByActiveParams = usage.some(parameter => parameter.is_active);
+
     const handleToggleActiveClick = async (e) => {
         e.preventDefault();
         if (!isEditMode) return;
 
         if (formData.is_active) {
-            if (usage.length > 0) {
-                alert("You cannot deactivate this parameter because it is mentioned in the implicational conditions of other parameters (see sidebar).");
+            if (usedByActiveParams) {
+                alert("You cannot deactivate this parameter because it is mentioned in the implicational conditions of other active parameters (see sidebar).");
                 return;
             }
             setShowDeactivateModal(true);
@@ -607,14 +609,14 @@ export default function ParameterForm() {
                                 <button
                                     type="button"
                                     onClick={handleToggleActiveClick}
-                                    className={`btn btn--small ${usage.length > 0 && formData.is_active ? 'btn--disabled' : ''}`}
+                                    className={`btn btn--small ${usedByActiveParams && formData.is_active ? 'btn--disabled' : ''}`}
                                     style={{ marginLeft: 'auto' }}
-                                    title={usage.length > 0 ? "Locked: used in other conditions" : ""}
+                                    title={usedByActiveParams ? "Locked: used in the conditions of active parameters" : ""}
                                 >
                                     {formData.is_active ? 'Deactivate Parameter...' : 'Reactivate Parameter'}
                                 </button>
                             )}
-                            {usage.length > 0 && formData.is_active && (
+                            {usedByActiveParams && formData.is_active && (
                                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Locked by dependencies</span>
                             )}
                         </div>
@@ -873,6 +875,7 @@ export default function ParameterForm() {
                         {usage.map(parameter => (
                             <Link key={parameter.id} to={`/admin/parameters/${parameter.id}/edit`} className="card" style={{padding: '0.5rem', fontSize: '0.85rem', textDecoration: 'none', borderLeft: '4px solid var(--brand)'}}>
                                 <strong>{parameter.id}</strong>: {parameter.name}
+                                {!parameter.is_active && <span className="muted"> (Inactive)</span>}
                             </Link>
                         ))}
                         {usage.length === 0 && <p className="muted italic small">Not used by other parameters.</p>}
