@@ -1,7 +1,4 @@
-"""Import Excel: strict update sugli sheet schema, replace totale sulla compilation di una lingua.
-
-Le strategie per sheet e la gestione degli errori a cascata sono in DEV-NOTES.md.
-"""
+"""Import dei file Excel (dettagli in DEV-NOTES.md)."""
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Dict, Set, Any, Tuple
@@ -21,12 +18,10 @@ from services.question_alias import resolve_question
 from services.parameter_alias import resolve_parameter
 
 
-# Data classes per il report
-
 @dataclass
 class ImportError:
     sheet: str
-    row: int                      # numero di riga 1-based (la 1 è l'header)
+    row: int  # riga 1 = header
     column: Optional[str] = None
     value: Optional[str] = None
     reason: str = ""
@@ -66,12 +61,10 @@ class ImportReport:
         }
 
 
-# Helper di parsing celle
-
 SCHEMA_SHEETS = ("Motivations", "Parameters", "Questions", "QuestionAllowedMotivations")
 COMPILATION_SHEET = "Database_model"
 
-# Rispetta le dipendenze: Questions->Parameters, QAM->Questions+Motivations, Database_model->Questions
+# ordine di dipendenza fra gli sheet
 SUPPORTED_SHEET_TYPES = (
     "Motivations",
     "Parameters",
@@ -82,21 +75,14 @@ SUPPORTED_SHEET_TYPES = (
     COMPILATION_SHEET,
 )
 
-# Fallback quando il nome della tab non matcha (es. tab lasciate come "Sheet1").
-# Ogni signature e' un set di colonne che devono essere tutte presenti nella riga 1.
+# riconoscimento per colonne, se il nome della tab non torna
 SHEET_SIGNATURES: Dict[str, Set[str]] = {
-    # 4 colonne tutte specifiche, zero collisioni possibili
     COMPILATION_SHEET: {"Language", "Parameter_Label", "Question_ID", "Language_Answer"},
-    # "Code" da solo non appare in nessun altro sheet (QAM usa "Motivation Code")
     "Motivations": {"Code"},
-    # "Schema" è esclusivo di Parameters (distingue da Questions che ha "ID"+"Text")
     "Parameters": {"ID", "Schema"},
-    # "Parameter ID" distingue da Parameters; "Text" da Motivations
     "Questions": {"ID", "Parameter ID", "Text"},
     "QuestionAllowedMotivations": {"Question ID", "Motivation Code"},
-    # "ISO code" evita collisione con sheet generici che hanno "ID"+"Name"
     "Languages": {"ID", "Name", "ISO code"},
-    # "Word" non appare in nessun altro sheet
     "Glossary": {"Word", "Description"},
 }
 
@@ -126,17 +112,17 @@ def _build_header_map(ws: Worksheet) -> Dict[str, int]:
 
 
 def _get(row: Tuple, header_map: Dict[str, int], col_name: str) -> Any:
-    """Estrae il valore della colonna col_name dalla riga. None se mancante."""
+    """Valore della colonna col_name, None se manca."""
     idx = header_map.get(col_name)
     if idx is None or idx >= len(row):
         return None
     return row[idx]
 
 
-# Sheet detection: nome esatto, poi fallback per header signature
+# riconoscimento degli sheet
 
 def _detect_sheet_type(ws: Worksheet) -> Optional[str]:
-    """Identifica il tipo di sheet dalla riga di header; None se nessuna signature matcha."""
+    """Tipo di sheet dall'header, None se non si riconosce."""
     try:
         header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
     except StopIteration:
@@ -152,7 +138,7 @@ def _detect_sheet_type(ws: Worksheet) -> Optional[str]:
 
 
 def _resolve_sheets(wb) -> Dict[str, Worksheet]:
-    """Mappa tipo -> worksheet: prima il match per nome esatto della tab, poi per header signature."""
+    """Tipo -> worksheet: prima per nome della tab, poi per header."""
     resolved: Dict[str, Worksheet] = {}
     for sheet_type in SUPPORTED_SHEET_TYPES:
         if sheet_type in wb.sheetnames:
@@ -160,13 +146,12 @@ def _resolve_sheets(wb) -> Dict[str, Worksheet]:
 
     for ws in wb.worksheets:
         if ws.title in SUPPORTED_SHEET_TYPES:
-            continue  # tab presa per nome esatto (anche se non era resolved)
+            continue
         detected = _detect_sheet_type(ws)
         if detected and detected not in resolved:
             resolved[detected] = ws
 
     return resolved
-
 
 
 def import_excel(
@@ -176,11 +161,7 @@ def import_excel(
     *,
     create_missing: bool = False,
 ) -> ImportReport:
-    """Apre il file, riconosce gli sheet, li processa in ordine di dipendenza e ritorna l'ImportReport.
-
-    `create_missing=True` fa creare le entita' schema mancanti invece di segnalare errore:
-    serve al backup-restore, dove dopo il wipe lo schema e' vuoto.
-    """
+    """Legge il file, processa gli sheet in ordine e ritorna il report."""
     try:
         wb = load_workbook(io.BytesIO(file_bytes), data_only=True)
     except Exception as e:
@@ -192,12 +173,11 @@ def import_excel(
 
     report = ImportReport()
 
-    # ID falliti che bloccano dipendenze a cascata
+    # id falliti: bloccano le righe che dipendono da loro
     failed_motivation_codes: Set[str] = set()
     failed_parameter_ids: Set[str] = set()
     failed_question_ids: Set[str] = set()
 
-    # Risoluzione tab: nome esatto + fallback per header signature.
     sheets = _resolve_sheets(wb)
 
     def _run(sheet_type: str, fn) -> None:
@@ -227,8 +207,7 @@ def import_excel(
     _run("QuestionAllowedMotivations", lambda ws: _import_qam(
         db, ws, report, failed_motivation_codes, failed_question_ids))
 
-    # Presenti nei file del backup-zip: gestirli qui permette all'import totale
-    # di alimentare ogni xlsx del bundle con la stessa funzione
+    # sheet presenti solo nei backup-zip
     _run("Languages", lambda ws: _import_languages_metadata(db, ws, report))
     _run("Glossary", lambda ws: _import_glossary(db, ws, report))
 
@@ -238,10 +217,8 @@ def import_excel(
     return report
 
 
-# Esegue una funzione su un savepoint per riga
-
 def _safe_apply(db: Session, fn) -> Tuple[bool, Optional[str]]:
-    """Esegue fn() in un savepoint; su errore DB fa rollback al savepoint e ritorna (False, msg)."""
+    """Esegue fn() in un savepoint; se fallisce annulla solo quella riga."""
     sp = db.begin_nested()
     try:
         fn()
@@ -263,7 +240,7 @@ def _format_db_error(e: Exception) -> str:
     return msg
 
 
-# Motivations: strict update
+# Motivations
 
 def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                         failed_codes: Set[str], user_id: Optional[int] = None,
@@ -278,7 +255,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Missing 'Code' column"))
         return
 
-    # Chiave upper-case per il match case-insensitive col file (vedi DEV-NOTES.md)
+    # confronto case-insensitive
     by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -308,7 +285,6 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
                     reason=f"Motivation '{code}' does not exist in the DB. Create it via the UI before importing."
                 ))
                 continue
-            # create_missing path
             def apply_create():
                 m = models.Motivation(code=code, label=label or "")
                 db.add(m)
@@ -345,7 +321,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: ImportReport,
             ))
 
 
-# Parameters: strict update + ParameterChangeLog
+# Parameters
 
 PARAM_FIELDS = (
     ("Name", "name", _str),
@@ -372,7 +348,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Missing 'ID' column"))
         return
 
-    # Chiave upper-case per il match case-insensitive col file
+    # confronto case-insensitive
     by_id = {p.id.upper(): p for p in db.query(models.ParameterDef).all()}
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -392,13 +368,12 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
         pid_key = pid.upper()
         existing = by_id.get(pid_key)
         if existing is None:
-            # Il parametro potrebbe essere stato rinominato dopo l'export: lo ritroviamo via alias
+            # id rinominato dopo l'export: cerca negli alias
             resolved = resolve_parameter(db, pid)
             if resolved.parameter is not None:
                 existing = resolved.parameter
                 by_id[pid_key] = existing
 
-        # Prima del branch create/update, cosi' vale anche per i parametri nuovi
         cond_raw = _none_if_empty(_get(row, hmap, "Implicational Condition"))
         if cond_raw:
             try:
@@ -413,7 +388,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 ))
                 continue
 
-        # CREATE branch (solo se create_missing=True e parametro non esiste)
+        # nuovo parametro (solo con create_missing)
         if existing is None:
             if not create_missing:
                 summary.errors += 1
@@ -454,7 +429,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
                 ))
             continue
 
-        # UPDATE branch (parametro esistente)
+        # parametro esistente
         old_snapshot = {f[1]: getattr(existing, f[1]) for f in PARAM_FIELDS}
         old_position = existing.position
         old_is_active = existing.is_active
@@ -483,7 +458,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        # Diff per ChangeLog
+        # differenze per il changelog
         diff_parts = []
         for f in PARAM_FIELDS:
             attr = f[1]
@@ -507,7 +482,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: ImportReport,
         summary.updated += 1
 
 
-# Questions: strict update + ParameterChangeLog sul parametro padre
+# Questions
 
 QUESTION_FIELDS = (
     ("Text", "text", _str),
@@ -534,7 +509,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                                          reason="Missing 'ID' column"))
         return
 
-    # Chiavi upper-case per il match case-insensitive col file
+    # confronto case-insensitive
     by_id = {q.id.upper(): q for q in db.query(models.Question).all()}
     param_id_by_upper = {p.id.upper(): p.id for p in db.query(models.ParameterDef.id).all()}
 
@@ -555,23 +530,22 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
         qid_key = qid.upper()
         existing = by_id.get(qid_key)
         if existing is None:
-            # La domanda potrebbe essere stata rinominata dopo l'export: la ritroviamo via alias
+            # id rinominato dopo l'export: cerca negli alias
             resolved = resolve_question(db, qid)
             if resolved.question is not None:
                 existing = resolved.question
                 by_id[qid_key] = existing
         new_param_id = _str(_get(row, hmap, "Parameter ID"))
         new_param_id_key = new_param_id.upper() if new_param_id else ""
-        # Risolvi l'ID canonico del parametro (case-insensitive); None se non esiste.
         canonical_new_param_id = param_id_by_upper.get(new_param_id_key) if new_param_id else None
         if new_param_id and canonical_new_param_id is None:
-            # Fallback su alias storico (parametro rinominato dopo l'export)
+            # parametro rinominato: cerca negli alias
             resolved_p = resolve_parameter(db, new_param_id)
             if resolved_p.parameter is not None:
                 canonical_new_param_id = resolved_p.parameter.id
                 param_id_by_upper[new_param_id_key] = canonical_new_param_id
 
-        # CREATE branch (solo se create_missing=True e domanda non esiste)
+        # nuova question (solo con create_missing)
         if existing is None:
             if not create_missing:
                 summary.errors += 1
@@ -627,7 +601,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
                 ))
             continue
 
-        # Cambio parent? Confronto case-insensitive contro l'ID corrente del param.
+        # cambio di parametro?
         parent_changing = bool(new_param_id) and new_param_id_key != existing.parameter_id.upper()
         if parent_changing:
             if new_param_id_key in failed_param_ids:
@@ -672,7 +646,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
             ))
             continue
 
-        # Diff log nel parent param
+        # differenze nel changelog del parametro
         diff_parts = []
         for f in QUESTION_FIELDS:
             if old_snapshot[f[1]] != getattr(existing, f[1]):
@@ -697,7 +671,7 @@ def _import_questions(db: Session, ws: Worksheet, report: ImportReport,
         summary.updated += 1
 
 
-# QuestionAllowedMotivations: rimpiazza i link delle coppie presenti nel file
+# QuestionAllowedMotivations
 
 def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
                 failed_motivation_codes: Set[str],
@@ -714,11 +688,11 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
         ))
         return
 
-    # Chiavi upper-case per il match case-insensitive col file
+    # confronto case-insensitive
     by_qid = {q.id.upper(): q for q in db.query(models.Question).all()}
     by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
 
-    # Per ogni question nel file cancella i link esistenti e li ricrea, evitando link orfani
+    # per ogni question del file: via i link vecchi, dentro i nuovi
     questions_seen: Set[str] = set()
     pairs_to_create: List[Tuple[str, int]] = []
 
@@ -751,7 +725,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             continue
         question_db = by_qid.get(qid_key)
         if question_db is None:
-            # Fallback su alias storico (domanda rinominata dopo l'export).
+            # question rinominata: cerca negli alias
             resolved = resolve_question(db, qid)
             if resolved.question is not None:
                 question_db = resolved.question
@@ -786,7 +760,6 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
         questions_seen.add(question_db.id)
         pairs_to_create.append((question_db.id, motivation_db.id))
 
-    # Replace dei link per le sole question viste nel file
     if questions_seen:
         db.query(models.QuestionAllowedMotivation).filter(
             models.QuestionAllowedMotivation.question_id.in_(questions_seen)
@@ -798,7 +771,7 @@ def _import_qam(db: Session, ws: Worksheet, report: ImportReport,
             summary.inserted += 1
 
 
-# Database_model: rimpiazza la compilation di una singola lingua
+# Database_model: compilation di una lingua
 
 def _split_lines(v: Any) -> List[str]:
     s = _str(v)
@@ -823,7 +796,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         ))
         return
 
-    # Identificazione lingua dal valore "Language", che deve essere unico
+    # la lingua viene dalla colonna "Language" (deve essere unica)
     lang_values: Set[str] = set()
     rows = []
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -857,8 +830,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
     report.target_language_id = lang.id
     report.target_language_name = lang.name_full
 
-    # Cancellazione esplicita e non bulk: db.query().delete() non triggera il cascade ORM
-    # e ondelete=CASCADE non e' uniforme fra SQLite di test e Postgres (vedi DEV-NOTES.md)
+    # cancellazione una per una: il bulk delete salta il cascade (vedi DEV-NOTES.md)
     old_answer_ids = [
         a_id for (a_id,) in db.query(models.Answer.id).filter(
             models.Answer.language_id == lang.id
@@ -874,19 +846,17 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         db.query(models.Answer).filter(
             models.Answer.id.in_(old_answer_ids)
         ).delete(synchronize_session=False)
-    # Azzera le note senza cancellare la riga di status, per preservare is_unsure;
-    # le note vengono riapplicate dal file in fondo all'import
+    # azzera solo le note, per non perdere is_unsure
     db.query(models.LanguageParameterStatus).filter(
         models.LanguageParameterStatus.language_id == lang.id
     ).update({"admin_note": None}, synchronize_session=False)
     db.flush()
 
-    # Pre-load di question e motivations, con chiavi upper-case per il match col file
+    # question e motivation, confronto case-insensitive
     q_id_by_upper = {q.id.upper(): q.id for q in db.query(models.Question.id).all()}
     mot_by_code = {m.code.upper(): m for m in db.query(models.Motivation).all()}
     param_id_by_upper = {p.id.upper(): p.id for p in db.query(models.ParameterDef.id).all()}
 
-    # Admin note da applicare a fine import, una per parametro
     admin_notes_by_pid: dict[str, str] = {}
 
     for ridx, row in rows:
@@ -911,7 +881,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             continue
         canonical_qid = q_id_by_upper.get(qid_key)
         if canonical_qid is None:
-            # Fallback su alias storico (domanda rinominata dopo l'export).
+            # question rinominata: cerca negli alias
             resolved = resolve_question(db, qid)
             if resolved.question is not None:
                 canonical_qid = resolved.question.id
@@ -923,7 +893,6 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 reason=f"Question '{qid}' does not exist"
             ))
             continue
-        # Da qui in poi usa l'ID canonico DB per la FK Answer.question_id.
         qid = canonical_qid
 
         raw_ans = _str(_get(row, hmap, "Language_Answer")).upper()
@@ -932,13 +901,12 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
         elif raw_ans in ("NO", "N"):
             response = "no"
         elif raw_ans in ("UNSURE", "U", "?"):
-            # `unsure` e' una terza risposta valida (vedi enum response_types)
             response = "unsure"
         elif raw_ans in ("MISSING", "M"):
-            # `missing` = dato non disponibile: neutra come `unsure` ma senza vincolo esempi
+            # missing = dato non disponibile, esempi non obbligatori
             response = "missing"
         elif raw_ans == "":
-            # Risposta vuota: la domanda resta non risposta, non e' un errore
+            # risposta vuota: non è un errore
             summary.skipped += 1
             continue
         else:
@@ -951,17 +919,15 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
 
         comments = _str(_get(row, hmap, "Language_Comments"))
 
-        # Esempi multilinea
         ex_texts = _split_lines(_get(row, hmap, "Language_Examples"))
         translit_lines = _split_lines(_get(row, hmap, "Language_Example_Transliteration"))
         gloss_lines = _split_lines(_get(row, hmap, "Language_Example_Gloss"))
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
-        # Colonna opzionale, assente nei file vecchi; allineata per indice alle altre colonne esempio
+        # colonna opzionale (manca nei file vecchi)
         is_test_lines = _split_lines(_get(row, hmap, "Language_Example_Is_Test"))
 
-        # Colonna opzionale. Un codice sconosciuto e' un errore non bloccante:
-        # viene saltato, ma answer e motivations valide entrano comunque
+        # codice sconosciuto: saltato, il resto entra comunque
         mot_codes_raw = _str(_get(row, hmap, "Motivations"))
         mot_codes_to_apply: list[int] = []
         if mot_codes_raw:
@@ -978,14 +944,13 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                     continue
                 mot_codes_to_apply.append(m.id)
 
-        # Admin_Note e' del parametro, non della question: si accumula e si applica una volta sola
+        # la admin note è del parametro: si applica una volta sola
         note_cell = _str(_get(row, hmap, "Admin_Note"))
         param_label = _str(_get(row, hmap, "Parameter_Label"))
         canonical_pid = param_id_by_upper.get(param_label.upper()) if param_label else None
         if note_cell and canonical_pid is not None:
             admin_notes_by_pid[canonical_pid] = note_cell
 
-        # Crea Answer + Examples + AnswerMotivations
         def apply(mot_ids=mot_codes_to_apply):
             answer = models.Answer(
                 language_id=lang.id, question_id=qid,
@@ -1016,7 +981,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 )
                 db.add(ex)
 
-            # Dedup difensivo: stesso codice ripetuto nella cella
+            # evita codici ripetuti nella cella
             for mid in set(mot_ids):
                 db.add(models.AnswerMotivation(answer_id=answer.id, motivation_id=mid))
 
@@ -1029,7 +994,6 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
                 sheet=COMPILATION_SHEET, row=ridx, value=qid, reason=err
             ))
 
-    # Applica le admin note accumulate, una per parametro
     for pid, note in admin_notes_by_pid.items():
         status = db.query(models.LanguageParameterStatus).filter(
             models.LanguageParameterStatus.language_id == lang.id,
@@ -1046,7 +1010,7 @@ def _import_compilation(db: Session, ws: Worksheet, report: ImportReport,
             status.admin_note = note
 
 
-# Languages metadata: upsert per ID, mai cancella lingue non menzionate (vedi DEV-NOTES.md)
+# Languages: aggiorna o aggiunge, non cancella
 
 def _bool_yn_or_none(v: Any) -> Optional[bool]:
     if v is None:
@@ -1081,7 +1045,7 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
         ))
         return
 
-    # Per i nuovi inserimenti la position e' max(position) + 1, calcolata in apply()
+    # nuove lingue in fondo (position max + 1)
 
     for ridx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if all(v is None or _str(v) == "" for v in row):
@@ -1103,15 +1067,14 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
             ))
             continue
 
-        # Accetta sia i valori nuovi (draft/submitted/validated) sia quelli pre-redesign
+        # accetta anche gli status vecchi
         status = models.normalize_language_status(_str(_get(row, hmap, "Status")))
 
         top_str = _str(_get(row, hmap, "Top-level family")) or ""
         fam_str = _str(_get(row, hmap, "Family")) or ""
         grp_str = _str(_get(row, hmap, "Group")) or ""
 
-        # Reverse lookup stringa->FK, stesso pattern di resolve_taxonomy in languages.py.
-        # Se il nome non matcha nessuna entita' l'FK resta NULL (vedi DEV-NOTES.md)
+        # nome -> FK come in languages.py; se non c'è resta NULL
         top_obj = db.query(models.TopFamily).filter(models.TopFamily.name == top_str).first() if top_str else None
         fam_obj = db.query(models.Family).filter(models.Family.name == fam_str).first() if fam_str else None
         grp_obj = db.query(models.Group).filter(models.Group.name == grp_str).first() if grp_str else None
@@ -1136,8 +1099,7 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
             "status": status,
         }
 
-        # Fallback su alias storici: un id non piu' esistente puo' essere il vecchio id
-        # di una lingua rinominata via UI admin
+        # id vecchio di una lingua rinominata: cerca negli alias
         resolved = resolve_language(db, lid, file_glottocode=fields["glottocode"])
         if resolved.glottocode_mismatch:
             summary.errors += 1
@@ -1157,7 +1119,7 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
                 lang = models.Language(id=lid, position=pos, **fields)
                 db.add(lang)
             else:
-                # Non tocchiamo existing.id: se il match e' via alias, l'id corrente e' quello giusto
+                # existing.id resta quello attuale
                 for k, v in fields.items():
                     setattr(existing, k, v)
 
@@ -1174,7 +1136,7 @@ def _import_languages_metadata(db: Session, ws: Worksheet, report: ImportReport)
             ))
 
 
-# Glossary: upsert per word
+# Glossary
 
 def _import_glossary(db: Session, ws: Worksheet, report: ImportReport) -> None:
     summary = SheetSummary()

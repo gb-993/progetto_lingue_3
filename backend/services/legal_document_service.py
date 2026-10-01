@@ -1,4 +1,4 @@
-"""Servizio documenti legali (Terms of Use, Privacy Notice): estrazione automatica di type/version da PDF, validazione e pubblicazione di nuove versioni (vedi PRIVACY_TODO_DPO.md per le convenzioni DPO)."""
+"""Documenti legali: tipo e versione letti dal PDF, e pubblicazione."""
 from __future__ import annotations
 
 import hashlib
@@ -29,8 +29,7 @@ logger = logging.getLogger(__name__)
 MAX_PDF_SIZE = 10 * 1024 * 1024
 TYPE_DETECTION_CHARS = 2000
 
-# Sinonimi del titolo per ciascun type (case-insensitive); lista generosa
-# per tollerare piccole variazioni del DPO nel testo.
+# titoli riconosciuti per ogni tipo
 _TYPE_PATTERNS: list[tuple[str, list[str]]] = [
     ("terms_of_use", [
         "TERMS OF USE AND DATA CONTRIBUTOR LICENSE AGREEMENT",
@@ -45,27 +44,24 @@ _TYPE_PATTERNS: list[tuple[str, list[str]]] = [
     ]),
 ]
 
-# Cerca "version X.Y" (case-insensitive); nei PDF attuali compare ripetuta
-# in header/footer di ogni pagina.
 _VERSION_RE = re.compile(r"version\s+(\d+\.\d+)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
 class ExtractedMetadata:
-    """Metadati dedotti da un PDF caricato, condivisi fra fase preview e fase publish."""
+    """Dati letti dal PDF, usati da preview e publish."""
     type: str                       # "terms_of_use" | "privacy_notice"
     version: str                    # "v1.0", "v1.1", ...
-    sha256: str                     # 64 char hex
+    sha256: str
     size_bytes: int
-    vexatious_clauses: Optional[list[str]]  # snapshot dalla config, None se documento senza
+    vexatious_clauses: Optional[list[str]]  # None se il documento non ne ha
 
 
-# Validation
 PDF_MAGIC_HEADER = b"%PDF-"
 
 
 def validate_pdf(pdf_bytes: bytes) -> None:
-    """Solleva HTTPException se il PDF caricato è vuoto, troppo grande o senza magic header PDF."""
+    """Errore se il file è vuoto, troppo grande o non è un PDF."""
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
     if len(pdf_bytes) > MAX_PDF_SIZE:
@@ -80,9 +76,8 @@ def validate_pdf(pdf_bytes: bytes) -> None:
         )
 
 
-# Extraction
 def _read_pdf_text(pdf_bytes: bytes, max_chars: Optional[int] = None) -> str:
-    """Concatena il testo di tutte le pagine del PDF (troncato a `max_chars` se dato); errori di parsing pypdf diventano un 400 leggibile."""
+    """Testo di tutte le pagine (al massimo `max_chars`)."""
     try:
         reader = PdfReader(io.BytesIO(pdf_bytes))
     except Exception as exception:
@@ -97,7 +92,7 @@ def _read_pdf_text(pdf_bytes: bytes, max_chars: Optional[int] = None) -> str:
         try:
             page_text = page.extract_text() or ""
         except Exception:
-            # Una pagina problematica non deve invalidare l'intero estratto.
+            # una pagina rotta non blocca le altre
             page_text = ""
         parts.append(page_text)
         total_chars += len(page_text)
@@ -155,7 +150,7 @@ def extract_metadata(pdf_bytes: bytes) -> ExtractedMetadata:
 
     sha256 = hashlib.sha256(pdf_bytes).hexdigest()
 
-    # Snapshot delle vessatorie correnti al momento dell'upload; None se il type non ne ha.
+    # clausole vessatorie di oggi; None se il tipo non ne ha
     vexatious_clauses = VEXATIOUS_CLAUSES_DEFAULT.get(detected_type)
 
     return ExtractedMetadata(
@@ -167,7 +162,6 @@ def extract_metadata(pdf_bytes: bytes) -> ExtractedMetadata:
     )
 
 
-# Publish
 _FILENAME_TYPE_PREFIX = {
     "terms_of_use": "Terms_of_use",
     "privacy_notice": "Privacy_notice",
@@ -175,7 +169,7 @@ _FILENAME_TYPE_PREFIX = {
 
 
 def _build_filename(doc_type: str, version: str) -> str:
-    """Costruisce il filename canonico: {TypePrefix}_{version}_{YYYY-MM-DD}.pdf."""
+    """Nome file: {Tipo}_{versione}_{data}.pdf."""
     type_prefix = _FILENAME_TYPE_PREFIX[doc_type]
     date_str = utc_now().strftime("%Y-%m-%d")
     return f"{type_prefix}_{version}_{date_str}.pdf"
@@ -194,7 +188,7 @@ def publish_new_version(
     publisher_ip: Optional[str] = None,
     publisher_user_agent: Optional[str] = None,
 ) -> models.LegalDocument:
-    """Pubblica una nuova versione di un documento legale: check duplicato, scrittura file, upsert `is_current`, auto-consenso del publisher ."""
+    """Pubblica una nuova versione: file, DB e consenso del publisher."""
     existing = (
         db.query(models.LegalDocument)
         .filter(
@@ -245,9 +239,9 @@ def publish_new_version(
             note=(note or None),
         )
         db.add(new_document)
-        db.flush()  # serve l'id del nuovo documento per la riga consents sotto
+        db.flush()  # serve l'id per il consenso
 
-        # Evita che consent_enforcement blocchi subito l'admin per il documento appena pubblicato.
+        # auto-consenso, sennò il middleware blocca l'admin
         if publisher_user_id is not None:
             auto_consent = models.Consent(
                 user_id=publisher_user_id,

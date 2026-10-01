@@ -26,7 +26,7 @@ class BackupCreatePayload(BaseModel):
 def get_parameter_backup_folders(
     db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)
 ):
-    """Cartelle: raggruppa le ParameterSubmission per `submitted_at`."""
+    """Cartelle di backup, raggruppate per timestamp."""
     results = (
         db.query(
             models.ParameterSubmission.submitted_at,
@@ -63,7 +63,7 @@ def get_parameter_backup_folder_details(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Lista parametri salvati in un preciso timestamp."""
+    """Parametri salvati con quel timestamp."""
     submissions = (
         db.query(models.ParameterSubmission)
         .filter(models.ParameterSubmission.submitted_at == timestamp)
@@ -90,7 +90,7 @@ def get_parameter_submission_detail(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Dettaglio: definizione del parametro + questions + motivations ammesse."""
+    """Parametro con le sue question e motivazioni ammesse."""
     sub = (
         db.query(models.ParameterSubmission)
         .options(
@@ -155,8 +155,7 @@ def export_parameter_submission_xlsx(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Scarica il backup di un parametro come xlsx (3 sheet: Info, Questions,
-    AllowedMotivations). Equivalente al download .xlsx degli altri backup."""
+    """Backup di un parametro in xlsx (Info, Questions, AllowedMotivations)."""
     sub = (
         db.query(models.ParameterSubmission)
         .options(
@@ -189,7 +188,7 @@ def trigger_global_parameters_backup(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Backup globale: uno snapshot per ogni parametro, stesso timestamp."""
+    """Backup di tutti i parametri con lo stesso timestamp."""
     try:
         return parameter_backup_service.create_all_parameters_backup(
             db, current_user.id, payload.note
@@ -205,7 +204,7 @@ def trigger_single_parameter_backup(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Backup di un singolo parametro (cartella dedicata)."""
+    """Backup di un solo parametro."""
     parameter = db.query(models.ParameterDef).filter(
         models.ParameterDef.id == parameter_id
     ).first()
@@ -225,7 +224,7 @@ def delete_parameter_backup_folder(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Elimina tutte le ParameterSubmission con quel timestamp."""
+    """Elimina i backup con quel timestamp."""
     deleted = (
         db.query(models.ParameterSubmission)
         .filter(models.ParameterSubmission.submitted_at == timestamp)

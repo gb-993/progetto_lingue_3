@@ -79,7 +79,7 @@ def _run_import_in_background(contents: bytes, wipe: bool, job_id: str) -> None:
 
 
 @router.post("/import-bundle")
-async def post_import_migration_bundle(
+def post_import_migration_bundle(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     wipe: bool = True,
@@ -90,7 +90,7 @@ async def post_import_migration_bundle(
         raise HTTPException(status_code=400, detail="Upload a .zip file")
 
     try:
-        contents = await file.read()
+        contents = file.file.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not read the file: {e}")
 

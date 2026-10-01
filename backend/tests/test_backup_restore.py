@@ -1,10 +1,4 @@
-"""
-Test end-to-end del flusso backup → wipe → restore.
-
-Verifica che il bundle ZIP prodotto da build_backup_zip_bytes sia restorable
-tramite restore_backup_bundle: le lingue, parametri, domande, motivazioni,
-glossario e i dati di compilazione devono tornare uguali dopo un wipe + restore.
-"""
+"""Backup → wipe → restore: i dati tornano uguali."""
 import pytest
 
 import models
@@ -72,60 +66,48 @@ def _seed_full(db_session):
 
 
 def test_backup_restore_roundtrip(db_session):
-    """Backup completo → wipe → restore: lo stato del DB dev'essere ripristinato."""
     user = _seed_full(db_session)
 
-    # 1. Genera bundle
     languages = db_session.query(models.Language).all()
     zip_bytes = build_backup_zip_bytes(db_session, languages)
 
-    # 2. Restore con wipe=True su una sessione "sporca": ripulisce e re-importa
     report = restore_backup_bundle(db_session, zip_bytes, user.id, wipe=True)
     db_session.commit()
 
-    # Nessun errore atteso (o al massimo errori non bloccanti per le motivazioni
-    # — ma in questo seed minimale tutto dovrebbe filare liscio)
+    # errori sulle motivazioni non bloccano
     blocking = [e for e in report.errors if "Motivation" not in e.get("reason", "")]
     assert blocking == [], f"Errori bloccanti: {blocking}"
 
-    # 3. Verifica DB ripristinato
-    # Lingue
     lang = db_session.query(models.Language).filter_by(id="ITA").one()
     assert lang.name_full == "Italiano"
     assert lang.family == "Romance"
     assert lang.isocode == "it"
     assert float(lang.latitude) == 42.5
 
-    # Schema (parametri / domande / motivazioni)
     p = db_session.query(models.ParameterDef).filter_by(id="FGM").one()
     assert p.name == "Feature Geometry Marker"
     assert db_session.query(models.Question).filter_by(parameter_id="FGM").count() == 2
     assert db_session.query(models.Motivation).filter_by(code="MOT_X").count() == 1
 
-    # Risposte + esempi + motivazioni: ripristinate dal Database_model
     answers = db_session.query(models.Answer).filter_by(language_id="ITA").all()
     by_qid = {a.question_id: a for a in answers}
     assert by_qid["FGM_01"].response_text == "yes"
     assert by_qid["FGM_02"].response_text == "no"
     assert len(by_qid["FGM_01"].examples) == 1
-    # Motivation MOT_X ripristinata sull'answer FGM_02
     mot_codes = [
         db_session.get(models.Motivation, am.motivation_id).code
         for am in by_qid["FGM_02"].answer_motivations
     ]
     assert "MOT_X" in mot_codes
 
-    # Admin note ripristinata
     s = db_session.query(models.LanguageParameterStatus).filter_by(
         language_id="ITA", parameter_id="FGM"
     ).one()
     assert s.admin_note == "Nota admin"
 
-    # Glossario ripristinato
     g = db_session.query(models.Glossary).filter_by(word="alpha").one()
     assert g.description == "first letter"
 
-    # Files processati
     assert "schema.xlsx" in report.files_processed
     assert "languages_metadata.xlsx" in report.files_processed
     assert "glossary.xlsx" in report.files_processed
@@ -134,7 +116,7 @@ def test_backup_restore_roundtrip(db_session):
 
 
 def test_backup_restore_bad_zip(db_session):
-    """Bundle non valido → errore esplicito, no crash."""
+    """Zip non valido: errore, niente crash."""
     user = _seed_full(db_session)
 
     report = restore_backup_bundle(db_session, b"not a zip", user.id, wipe=False)
@@ -143,8 +125,7 @@ def test_backup_restore_bad_zip(db_session):
 
 
 def _seed_extras(db_session, user):
-    """Aggiunge dati per le tabelle extras: site_content, submission,
-    parameter_submission, archived_question (con figli)."""
+    """Dati per le tabelle extras."""
     db_session.add(models.SiteContent(
         key="how_to_cite_body",
         content="<p>Cite this work as...</p>",
@@ -222,7 +203,6 @@ def _seed_extras(db_session, user):
 
 
 def test_create_language_submission_copies_is_test(db_session):
-    """Lo snapshot di backup copia il flag is_test dall'Example originale."""
     from services.backup_service import create_language_submission
     user = _seed_full(db_session)
     ex = db_session.query(models.Example).first()
@@ -239,14 +219,13 @@ def test_create_language_submission_copies_is_test(db_session):
 
 
 def test_full_backup_restore_roundtrip(db_session):
-    """Bundle full → wipe → restore: anche le tabelle extras tornano identiche."""
+    """Bundle full: tornano anche le tabelle extras."""
     user = _seed_full(db_session)
     _seed_extras(db_session, user)
 
     languages = db_session.query(models.Language).all()
     zip_bytes = build_full_backup_zip_bytes(db_session, languages)
 
-    # Verifica che il bundle contenga la cartella extras/
     import zipfile, io
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         names = zf.namelist()
@@ -255,19 +234,16 @@ def test_full_backup_restore_roundtrip(db_session):
     assert "extras/parameter_submissions.xlsx" in names
     assert "extras/archived_questions.xlsx" in names
 
-    # Restore con wipe → estras vengono ripopolati
     report = restore_backup_bundle(db_session, zip_bytes, user.id, wipe=True)
     db_session.commit()
 
     blocking = [e for e in report.errors if "Motivation" not in e.get("reason", "")]
     assert blocking == [], f"Errori bloccanti: {blocking}"
 
-    # SiteContent: upsert per key
     sc = db_session.query(models.SiteContent).filter_by(key="how_to_cite_body").one()
     assert sc.page == "HowToCite"
     assert "Cite this work" in sc.content
 
-    # Submission + figlie
     subs = db_session.query(models.Submission).all()
     assert len(subs) == 1
     sub = subs[0]
@@ -277,13 +253,12 @@ def test_full_backup_restore_roundtrip(db_session):
     assert sub.answers[0].response_text == "yes"
     assert len(sub.examples) == 1
     assert sub.examples[0].textarea == "Esempio sub"
-    assert sub.examples[0].is_test is True  # il flag esempio-di-test sopravvive al round-trip zip
+    assert sub.examples[0].is_test is True
     assert len(sub.answer_motivations) == 1
     assert sub.answer_motivations[0].motivation_code == "MOT_X"
     assert len(sub.params) == 1
     assert sub.params[0].value_orig == "+"
 
-    # ParameterSubmission + figlie
     psubs = db_session.query(models.ParameterSubmission).all()
     assert len(psubs) == 1
     psub = psubs[0]
@@ -295,7 +270,6 @@ def test_full_backup_restore_roundtrip(db_session):
     assert len(psq.allowed_motivations) == 1
     assert psq.allowed_motivations[0].motivation_code == "MOT_X"
 
-    # ArchivedQuestion + figli/nipoti
     aqs = db_session.query(models.ArchivedQuestion).all()
     assert len(aqs) == 1
     aq = aqs[0]
@@ -312,16 +286,13 @@ def test_full_backup_restore_roundtrip(db_session):
 
 
 def test_full_backup_restore_no_wipe_skips_snapshots(db_session):
-    """Senza wipe: site_content viene comunque upsertato (chiave naturale),
-    ma submissions/parameter_submissions/archived_questions sono saltati per
-    evitare duplicati su PK auto-increment."""
+    """Senza wipe: site_content aggiornato, snapshot saltati (niente duplicati)."""
     user = _seed_full(db_session)
     _seed_extras(db_session, user)
 
     languages = db_session.query(models.Language).all()
     zip_bytes = build_full_backup_zip_bytes(db_session, languages)
 
-    # Conta quanti record ci sono PRIMA del restore
     n_subs_before = db_session.query(models.Submission).count()
     n_psubs_before = db_session.query(models.ParameterSubmission).count()
     n_aqs_before = db_session.query(models.ArchivedQuestion).count()
@@ -329,30 +300,23 @@ def test_full_backup_restore_no_wipe_skips_snapshots(db_session):
     report = restore_backup_bundle(db_session, zip_bytes, user.id, wipe=False)
     db_session.commit()
 
-    # site_content: upsertato comunque
     assert "extras/site_content.xlsx" in report.files_processed
     sc = db_session.query(models.SiteContent).filter_by(key="how_to_cite_body").one()
     assert "Cite this work" in sc.content
 
-    # snapshot tables: saltate
     assert "extras/submissions.xlsx" in report.files_skipped
     assert "extras/parameter_submissions.xlsx" in report.files_skipped
     assert "extras/archived_questions.xlsx" in report.files_skipped
 
-    # E i conteggi non sono cambiati
     assert db_session.query(models.Submission).count() == n_subs_before
     assert db_session.query(models.ParameterSubmission).count() == n_psubs_before
     assert db_session.query(models.ArchivedQuestion).count() == n_aqs_before
 
 
 def test_full_backup_restores_change_logs_and_flags(db_session):
-    """parameter_change_logs e i flag unsure/needs_review sopravvivono al
-    wipe+restore (prima venivano persi: il wipe li cancellava e il bundle
-    non li conteneva)."""
     user = _seed_full(db_session)
     _seed_extras(db_session, user)
 
-    # Flag accesi sulla riga di status creata da _seed_full
     status = db_session.query(models.LanguageParameterStatus).filter_by(
         language_id="ITA", parameter_id="FGM").one()
     status.is_unsure = True
@@ -368,9 +332,7 @@ def test_full_backup_restores_change_logs_and_flags(db_session):
     assert "extras/parameter_change_logs.xlsx" in names
     assert "extras/parameter_flags.xlsx" in names
 
-    # La riga di status caricata sopra resta nella identity map: il wipe la
-    # cancella via SQL raw e il restore la ricrea con la stessa PK -> senza
-    # expunge SQLAlchemy emette un SAWarning di identity conflict.
+    # senza expunge: SAWarning (il restore ricrea la stessa PK)
     user_id = user.id
     db_session.expunge_all()
 
@@ -380,14 +342,13 @@ def test_full_backup_restores_change_logs_and_flags(db_session):
     blocking = [e for e in report.errors if "Motivation" not in e.get("reason", "")]
     assert blocking == [], f"Errori bloccanti: {blocking}"
 
-    # Change log ripristinato, autore risolto via email
+    # autore risolto via email
     logs = db_session.query(models.ParameterChangeLog).all()
     assert len(logs) == 1
     assert logs[0].parameter_id == "FGM"
     assert logs[0].change_note == "Refined definition"
     assert logs[0].user_id == user.id
 
-    # Flag ripristinati; l'admin note (dal file lingua) convive coi flag
     s = db_session.query(models.LanguageParameterStatus).filter_by(
         language_id="ITA", parameter_id="FGM").one()
     assert s.is_unsure is True
@@ -396,8 +357,7 @@ def test_full_backup_restores_change_logs_and_flags(db_session):
 
 
 def test_flags_upsert_without_wipe_change_logs_skipped(db_session):
-    """Senza wipe: i flag vengono comunque riallineati al bundle (upsert su
-    chiave naturale), i change log invece sono saltati per evitare duplicati."""
+    """Senza wipe: flag riallineati al bundle, change log saltati."""
     user = _seed_full(db_session)
     _seed_extras(db_session, user)
 
@@ -409,7 +369,7 @@ def test_flags_upsert_without_wipe_change_logs_skipped(db_session):
     languages = db_session.query(models.Language).all()
     zip_bytes = build_full_backup_zip_bytes(db_session, languages)
 
-    # Dopo l'export i flag cambiano: il restore deve riportarli al bundle
+    # dopo l'export i flag cambiano
     status.is_unsure = False
     status.needs_review = True
     db_session.commit()
@@ -424,13 +384,12 @@ def test_flags_upsert_without_wipe_change_logs_skipped(db_session):
 
     s = db_session.query(models.LanguageParameterStatus).filter_by(
         language_id="ITA", parameter_id="FGM").one()
-    assert s.is_unsure is True      # tornato com'era nel bundle
+    assert s.is_unsure is True  # com'era nel bundle
     assert s.needs_review is False  # nel bundle era spento
 
 
 def test_full_backup_restores_aliases(db_session):
-    """Gli alias storici (lingue/parametri/question) sopravvivono al
-    wipe+restore e l'upsert per old_id non crea duplicati al secondo giro."""
+    """Alias ripristinati, senza duplicati al secondo giro."""
     user = _seed_full(db_session)
     db_session.add_all([
         models.LanguageAlias(language_id="ITA", old_id="OIT"),
@@ -461,7 +420,7 @@ def test_full_backup_restores_aliases(db_session):
     qa = db_session.query(models.QuestionAlias).one()
     assert (qa.old_id, qa.question_id) == ("FGX_01", "FGM_01")
 
-    # Secondo restore senza wipe: upsert, niente duplicati
+    # secondo restore: niente duplicati
     report2 = restore_backup_bundle(db_session, zip_bytes, user_id, wipe=False)
     db_session.commit()
     assert "extras/aliases.xlsx" in report2.files_processed
@@ -471,10 +430,7 @@ def test_full_backup_restores_aliases(db_session):
 
 
 def test_full_backup_restores_legal_documents_consents_and_pdfs(db_session, tmp_path, monkeypatch):
-    """Documenti legali, consensi e PDF viaggiano nel bundle full: dopo una
-    perdita totale (righe cancellate + PDF sparito) il restore li ricrea,
-    is_current viene rinormalizzato sull'ultima versione e il secondo
-    restore non duplica nulla."""
+    """Documenti legali, consensi e PDF: ricreati dopo una perdita totale, senza duplicati."""
     from datetime import datetime
     import services.excel_export as excel_export_mod
     import services.backup_restore as backup_restore_mod
@@ -511,10 +467,10 @@ def test_full_backup_restores_legal_documents_consents_and_pdfs(db_session, tmp_
         names = zf.namelist()
     assert "extras/legal_documents.xlsx" in names
     assert "extras/legal_pdfs/tou_v11.pdf" in names
-    # tou_v1.pdf non esiste su disco: nel bundle c'e' solo il metadato
+    # tou_v1.pdf non è su disco: solo metadato
     assert "extras/legal_pdfs/tou_v1.pdf" not in names
 
-    # Perdita totale: righe cancellate e PDF sparito
+    # perdita totale
     db_session.query(models.Consent).delete()
     db_session.query(models.LegalDocument).delete()
     db_session.commit()
@@ -543,10 +499,9 @@ def test_full_backup_restores_legal_documents_consents_and_pdfs(db_session, tmp_
     assert consents[0].vexatious_clauses_approved is True
     assert consents[0].ip_address == "1.2.3.4"
 
-    # PDF rimaterializzato
     assert (tmp_path / "tou_v11.pdf").read_bytes() == b"%PDF-1.4 fake"
 
-    # Secondo restore: upsert, niente duplicati
+    # secondo restore: niente duplicati
     report2 = restore_backup_bundle(db_session, zip_bytes, user_id, wipe=False)
     db_session.commit()
     assert db_session.query(models.LegalDocument).count() == 2
@@ -554,9 +509,7 @@ def test_full_backup_restores_legal_documents_consents_and_pdfs(db_session, tmp_
 
 
 def test_full_backup_restores_entity_versions(db_session):
-    """La History (entity_versions) viaggia come jsonl nel bundle full:
-    insert-if-missing idempotente, snapshot JSON preservato fedelmente
-    anche oltre il limite di 32k caratteri di una cella Excel."""
+    """La History viaggia come jsonl: niente limite di 32k caratteri di Excel."""
     from datetime import datetime
     user = _seed_full(db_session)
 
@@ -582,7 +535,7 @@ def test_full_backup_restores_entity_versions(db_session):
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         assert "extras/entity_versions.jsonl" in zf.namelist()
 
-    # Perdita delle righe (la tabella non e' nel wipe: simulo cancellazione)
+    # la tabella non è nel wipe: cancello a mano
     db_session.query(models.EntityVersion).delete()
     db_session.commit()
 
@@ -594,9 +547,7 @@ def test_full_backup_restores_entity_versions(db_session):
     blocking = [e for e in report.errors if "Motivation" not in e.get("reason", "")]
     assert blocking == [], f"Errori bloccanti: {blocking}"
 
-    # NB: il restore stesso genera altre righe di History (l'import versiona
-    # le entità che tocca), quindi si asserisce sulle due righe seminate, non
-    # sull'intera tabella.
+    # il restore crea altra History: controllo solo le righe seminate
     fgm = db_session.query(models.EntityVersion).filter_by(
         entity_id="FGM", created_at=datetime(2026, 3, 1, 12, 0)).one()
     assert fgm.snapshot == big_snapshot
@@ -609,7 +560,7 @@ def test_full_backup_restores_entity_versions(db_session):
     assert ita.source == "excel_import"
     assert ita.user_id is None
 
-    # Secondo restore: dedupe, le righe seminate non vengono duplicate
+    # secondo restore: niente duplicati
     restore_backup_bundle(db_session, zip_bytes, user_id, wipe=False)
     db_session.commit()
     assert db_session.query(models.EntityVersion).filter_by(
@@ -619,10 +570,7 @@ def test_full_backup_restores_entity_versions(db_session):
 
 
 def test_full_backup_restores_users_without_password(db_session):
-    """Gli utenti viaggiano nel bundle SENZA hash password: su un DB privo di
-    quell'utente il restore lo ricrea (password inutilizzabile, ruolo e stato
-    preservati) e rimette l'assegnazione lingua->utente; la password degli
-    utenti gia' esistenti non viene mai toccata."""
+    """Utenti nel bundle senza hash password: ricreati con password inutilizzabile."""
     user = _seed_full(db_session)
     bob = models.User(
         id=2, email="bob@test.it", hashed_password="bob-secret-hash",
@@ -640,7 +588,6 @@ def test_full_backup_restores_users_without_password(db_session):
     from openpyxl import load_workbook
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
         assert "extras/users.xlsx" in zf.namelist()
-        # L'hash password NON deve stare nel file
         wb = load_workbook(io.BytesIO(zf.read("extras/users.xlsx")))
         all_cells = " ".join(
             str(c.value) for row in wb["Users"].iter_rows() for c in row if c.value
@@ -648,7 +595,7 @@ def test_full_backup_restores_users_without_password(db_session):
         assert "bob-secret-hash" not in all_cells
         assert "bob@test.it" in all_cells
 
-    # Bob sparisce (simula restore su DB che non lo ha)
+    # Bob manca nel DB di destinazione
     lang.assigned_user_id = None
     db_session.commit()
     db_session.query(models.User).filter_by(email="bob@test.it").delete()
@@ -666,22 +613,19 @@ def test_full_backup_restores_users_without_password(db_session):
     assert bob2.role == "user"
     assert bob2.is_active is False
     assert bob2.name == "Bob"
-    # Password inutilizzabile, NON quella originale
     assert bob2.hashed_password != "bob-secret-hash"
     assert bob2.hashed_password.startswith("$2")  # hash bcrypt valido
 
-    # Alice esisteva gia': password intatta
+    # Alice esisteva già: password intatta
     alice = db_session.query(models.User).filter_by(email="alice@test.it").one()
     assert alice.hashed_password == "x"
 
-    # Assegnazione lingua ripristinata sul nuovo id di Bob
     lang = db_session.query(models.Language).filter_by(id="ITA").one()
     assert lang.assigned_user_id == bob2.id
 
 
 def test_standard_backup_compat_with_extras_aware_restore(db_session):
-    """Il bundle standard (senza extras/) resta restorable con la nuova
-    versione del restore — retrocompatibilità."""
+    """Bundle standard (senza extras/) ancora ripristinabile."""
     user = _seed_full(db_session)
 
     languages = db_session.query(models.Language).all()
@@ -690,6 +634,5 @@ def test_standard_backup_compat_with_extras_aware_restore(db_session):
     report = restore_backup_bundle(db_session, zip_bytes, user.id, wipe=True)
     db_session.commit()
 
-    # Nessun file extras/* dovrebbe apparire
     assert not any(p.startswith("extras/") for p in report.files_processed)
     assert "ITA" in report.languages_restored

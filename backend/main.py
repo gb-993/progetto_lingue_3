@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from config import CORS_ORIGINS, CORS_ORIGIN_REGEX, IS_PROD, LEGAL_DOCUMENTS_DIR
 from consent_enforcement import ConsentEnforcementMiddleware
 from rate_limit import limiter
+from services import excel_safety
 from services.admin_bootstrap import bootstrap_first_admin
 from routers import (auth,
                      consents,
@@ -59,6 +60,8 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+excel_safety.install()
 
 app.add_middleware(ConsentEnforcementMiddleware)
 

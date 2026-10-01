@@ -9,11 +9,11 @@ from pyparsing import (
 ParserElement.enablePackrat()
 
 def build_parser():
-    """Parser per espressioni booleane su token tri-stato (`+P`, `-P`, `0P`) con operatori `& | NOT`."""
+    """Parser delle condizioni (+P, -P, 0P) con NOT, AND, OR."""
     sign = oneOf("+ - 0")
     param = Word(alphanums + "_")
 
-    # Combine vieta qualsiasi spazio fra segno e parametro, incluso il NBSP
+    # niente spazi fra segno e parametro
     operand = Combine(sign + param).setParseAction(
         lambda t: (t[0][0], t[0][1:].upper())  # '+FGM' -> ('+', 'FGM')
     )
@@ -34,13 +34,12 @@ def build_parser():
     return expr
 
 
-# Riconosce un singolo operando `segno + parametro` come parola intera:
-# rinominando 'P1' non tocca '+P12' né '+P1A' (vedi DEV-NOTES.md)
+# operando a parola intera: rinominando P1 non tocca +P12 (DEV-NOTES)
 _OPERAND_RE = re.compile(r'(?<![A-Za-z0-9_])([+\-0])([A-Za-z0-9_]+)')
 
 
 def rename_param_in_expression(expr: str | None, old_id: str, new_id: str) -> str:
-    """Sostituisce ogni operando che cita `old_id` con `new_id`, preservando segno e spaziatura."""
+    """Rinomina un parametro dentro la formula, tenendo il segno."""
     if not expr or old_id == new_id:
         return expr or ""
     old_up = old_id.upper()
@@ -101,7 +100,7 @@ def eval_node(node, values: dict[str, str]) -> bool:
 
 
 def evaluate_with_parser(expression: str, values: dict[str, str]) -> bool:
-    """True se l'espressione è soddisfatta dai valori correnti; qualsiasi errore di parsing dà False."""
+    """True se la condizione è vera; errore di parsing -> False."""
     expr = (expression or "").strip()
     if not expr:
         return True
@@ -118,13 +117,13 @@ def evaluate_with_parser(expression: str, values: dict[str, str]) -> bool:
 
 
 def validate_expression(expression: str) -> None:
-    """Solleva ParseException se l'espressione non rispetta la grammatica del parser."""
+    """Solleva ParseException se la sintassi è sbagliata."""
     parser = build_parser()
     parser.parseString((expression or ""), parseAll=True)
 
 
 def pretty_print_expression(expression: str) -> str:
-    """Rende l'espressione leggibile: `+FGM | -FGK` -> `(FGM=+ OR FGK=-)`; vuota -> stringa vuota."""
+    """`+FGM | -FGK` -> `(FGM=+ OR FGK=-)`."""
     expr = (expression or "").strip()
     if not expr:
         return ""
@@ -171,7 +170,7 @@ def pretty_print_expression(expression: str) -> str:
     return render(root)
 
 def trace_evaluation_tree(node, values: dict[str, str]) -> dict:
-    """Genera l'albero JSON di valutazione usato dal diagramma grafico in React."""
+    """Albero di valutazione per il diagramma in React."""
     if isinstance(node, tuple):
         sign, param = node
         actual_val = values.get(param)

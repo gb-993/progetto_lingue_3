@@ -7,12 +7,13 @@ from typing import List, Optional, Dict, Any
 import io
 import csv
 import math
+import threading
 import zipfile
 from itertools import combinations
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg') # Necessario per il rendering server-side
+matplotlib.use('Agg')  # niente display sul server
 import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import squareform
@@ -34,6 +35,23 @@ from services.citation import (
 )
 
 router = APIRouter(prefix="/api/tablea", tags=["Table A"])
+
+# export pesanti (grafici, PCA, Mantel): uno alla volta, per non esaurire RAM e processore
+HEAVY_EXPORT_WAIT_SECONDS = 60
+_heavy_export_lock = threading.Lock()
+
+
+def heavy_export_slot():
+    """Aspetta il proprio turno (al massimo HEAVY_EXPORT_WAIT_SECONDS) e lo tiene fino a fine richiesta."""
+    if not _heavy_export_lock.acquire(timeout=HEAVY_EXPORT_WAIT_SECONDS):
+        raise HTTPException(
+            status_code=503,
+            detail="Another heavy export is in progress. Please try again in a minute.",
+        )
+    try:
+        yield
+    finally:
+        _heavy_export_lock.release()
 
 class TableAFilterRequest(BaseModel):
     view: str = "params"
@@ -58,11 +76,11 @@ class MantelRequest(TableAFilterRequest):
 
 class ClusterMapRequest(TableAFilterRequest):
     distance: str = "hamming"          # "hamming" | "jaccard"
-    threshold_coeff: float = 0.56      # cluster cut at coeff * max(linkage_distance), come 01_plot_clusters.py
+    threshold_coeff: float = 0.56  # taglio a coeff * distanza massima, come 01_plot_clusters.py
 
 
 def _hamming_core(symbols_a, symbols_b) -> float:
-    """Calcola distanza di Hamming su simboli + e -."""
+    """Distanza di Hamming sui soli + e -."""
     identities, differences = 0.0, 0.0
     for symbol_a, symbol_b in zip(symbols_a, symbols_b):
         if symbol_a == symbol_b and symbol_a in ("+", "-"): identities += 1
@@ -70,7 +88,7 @@ def _hamming_core(symbols_a, symbols_b) -> float:
     return differences / (identities + differences) if (identities + differences) > 0 else 0.0
 
 def _jaccard_core(symbols_a, symbols_b, identity="+") -> float:
-    """Calcola distanza di Jaccard sull'identità scelta."""
+    """Distanza di Jaccard sull'identità scelta."""
     identities, differences = 0.0, 0.0
     for symbol_a, symbol_b in zip(symbols_a, symbols_b):
         if symbol_a == symbol_b == identity: identities += 1
@@ -78,7 +96,7 @@ def _jaccard_core(symbols_a, symbols_b, identity="+") -> float:
     return differences / (identities + differences) if (identities + differences) > 0 else 0.0
 
 def _get_filtered_data(db: Session, filters: TableAFilterRequest):
-    """Replicazione esatta della logica get_tablea_filtered_data."""
+    """Lingue e righe della Tabella A secondo i filtri."""
     language_query = db.query(models.Language)
     if filters.f_lang_top_family: language_query = language_query.filter(models.Language.top_level_family == filters.f_lang_top_family)
     if filters.f_lang_family: language_query = language_query.filter(models.Language.family == filters.f_lang_family)
@@ -103,8 +121,13 @@ def _get_filtered_data(db: Session, filters: TableAFilterRequest):
 
         items = question_query.order_by(models.ParameterDef.position, models.Question.id).all()
         item_ids = [question.id for question in items]
-        answers = db.query(models.Answer).filter(models.Answer.question_id.in_(item_ids), models.Answer.language_id.in_(lang_ids)).all()
-        answer_by_question_and_lang = {(answer.question_id, answer.language_id): (answer.response_text or "").upper() for answer in answers}
+        answers = db.query(
+            models.Answer.question_id, models.Answer.language_id, models.Answer.response_text,
+        ).filter(models.Answer.question_id.in_(item_ids), models.Answer.language_id.in_(lang_ids)).all()
+        answer_by_question_and_lang = {
+            (question_id, language_id): (response_text or "").upper()
+            for question_id, language_id, response_text in answers
+        }
 
         for question in items:
             matrix.append({
@@ -153,7 +176,7 @@ def _get_symbol_data(db: Session, filters: TableAFilterRequest):
 
 @router.get("/options")
 def get_tablea_options(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Restituisce le opzioni univoche per popolare i filtri."""
+    """Valori distinti per i filtri."""
     def distinct(col): return [row[0] for row in db.query(col).filter(col != None, col != "", col != "none").distinct().order_by(col).all()]
     return {
         "opt_top_families": distinct(models.Language.top_level_family),
@@ -439,7 +462,7 @@ def export_geo_distances_zip(filters: TableAFilterRequest, db: Session = Depends
     return StreamingResponse(buffer, media_type="application/zip", headers=headers)
 
 @router.post("/export/dendrograms")
-def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin), _slot: None = Depends(heavy_export_slot)):
     langs, rows = _get_symbol_data(db, filters)
     lang_vectors = [[row["cells"][lang_index] for row in rows] for lang_index in range(len(langs))]
     labels = [language.id for language in langs]
@@ -471,7 +494,7 @@ def export_dendrograms_png(filters: TableAFilterRequest, db: Session = Depends(g
                              headers={"Content-Disposition": f"attachment; filename=dendrograms_{filters.view}.zip"})
 
 @router.post("/export/cluster_map")
-def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin), _slot: None = Depends(heavy_export_slot)):
 
     if filters.distance not in ("hamming", "jaccard"):
         raise HTTPException(400, "distance must be 'hamming' or 'jaccard'")
@@ -544,7 +567,7 @@ def export_cluster_map_html(filters: ClusterMapRequest, db: Session = Depends(ge
     return Response(content=html, media_type="text/html", headers=headers)
 
 @router.post("/export/pca")
-def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin), _slot: None = Depends(heavy_export_slot)):
     langs, rows = _get_symbol_data(db, filters)
     if not langs or len(rows) < 2: raise HTTPException(400, "Insufficient data for PCA")
 
@@ -581,7 +604,6 @@ def export_pca_png(filters: TableAFilterRequest, db: Session = Depends(get_db), 
                     headers={"Content-Disposition": f"attachment; filename=pca_scatterplot_{filters.view}.png"})
 
 
-
 def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
     x1, y1 = math.radians(lat1), math.radians(lon1)
@@ -591,10 +613,7 @@ def _gcd_nautical_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> f
 
 
 def _gcd_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance in km (modello sferico, R = 6371.0088 km).
-
-    Stesso raggio usato da geopy.distance.great_circle (script 11).
-    """
+    """Distanza great-circle in km (stesso raggio di geopy, script 11)."""
     R_km = 6371.0088
     x1, y1 = math.radians(lat1), math.radians(lon1)
     x2, y2 = math.radians(lat2), math.radians(lon2)
@@ -687,7 +706,7 @@ def _mantel_test(mat_a: np.ndarray, mat_b: np.ndarray, method: str,
 
 
 @router.post("/export/mantel")
-def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def export_mantel_zip(filters: MantelRequest, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin), _slot: None = Depends(heavy_export_slot)):
 
     selected = []
     if filters.include_gcd: selected.append("gcd")

@@ -4,9 +4,7 @@ import api from '../../api';
 
 const MAX_DEPTH = 20;
 
-// Cella di espansione: freccia L (verticale + orizzontale + arrowhead) a sinistra,
-// contenuto annidato a destra. La freccia parte dal bordo superiore della cella, cosi'
-// visivamente si aggancia alla riga padre.
+// cella con freccia a L verso la riga padre
 function ExpandedCell({ children }) {
     const arrowColor = 'var(--text-muted, #888)';
     return (
@@ -52,7 +50,7 @@ const STATUS_META = {
 };
 
 export default function BlameTable({ q3Response, langId, depth = 0, cache: parentCache }) {
-    // Stable Map that survives re-renders; shared with nested instances when passed as prop.
+    // cache condivisa con le tabelle annidate
     const cache = useMemo(() => parentCache ?? new Map(), [parentCache]);
 
     const [nested, setNested] = useState({});
@@ -154,7 +152,7 @@ export default function BlameTable({ q3Response, langId, depth = 0, cache: paren
                                 type="button"
                                 className="btn"
                                 style={{ background: 'transparent', padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
-                                onClick={() => setShowAnswers(s => !s)}
+                                onClick={() => setShowAnswers(shown => !shown)}
                             >
                                 {showAnswers ? '▾' : '▸'} Answers given for this parameter ({explanation.answers.length})
                             </button>
@@ -276,7 +274,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                         type="button"
                         className="btn"
                         style={{ background: 'transparent', padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
-                        onClick={() => setShowOther(s => !s)}
+                        onClick={() => setShowOther(shown => !shown)}
                     >
                         {showOther ? '▾' : '▸'} Other tokens in condition ({other.length})
                     </button>
@@ -316,8 +314,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
 }
 
 function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedResp, langId, depth, cache }) {
-    // Effective satisfaction takes the NOT context into account: a leaf "passes" when its
-    // boolean eval matches its required polarity (i.e., XOR with negated).
+    // passa se il valore rispetta il "not"
     const effectivePass = leaf.leaf_eval !== leaf.negated;
     const rowBg = !effectivePass ? 'rgba(220,53,69,0.05)' : 'transparent';
     return (
@@ -386,20 +383,20 @@ export function AnswersList({ answers, languageId, title, emptyMessage, embedded
                         </tr>
                     </thead>
                     <tbody>
-                        {answers.map(a => (
-                            <tr key={a.q_id}>
+                        {answers.map(answer => (
+                            <tr key={answer.q_id}>
                                 <td style={{
                                     textAlign: 'center', fontWeight: 700,
-                                    color: a.response === 'yes' ? '#28a745' : a.response === 'no' ? '#dc3545' : '#6c757d'
+                                    color: answer.response === 'yes' ? '#28a745' : answer.response === 'no' ? '#dc3545' : '#6c757d'
                                 }}>
-                                    {(a.response || '—').toUpperCase()}
+                                    {(answer.response || '—').toUpperCase()}
                                 </td>
                                 <td>
-                                    <Link to={`/languages/${languageId}/data#q-${a.q_id}`}>
-                                        <span className="muted small" style={{ marginRight: '0.4rem' }}>[{a.q_id}]</span>
-                                        {a.q_text}
+                                    <Link to={`/languages/${languageId}/data#q-${answer.q_id}`}>
+                                        <span className="muted small" style={{ marginRight: '0.4rem' }}>[{answer.q_id}]</span>
+                                        {answer.q_text}
                                     </Link>
-                                    {a.is_stop_question && <span className="muted small" style={{ marginLeft: '0.5rem' }}>(stop)</span>}
+                                    {answer.is_stop_question && <span className="muted small" style={{ marginLeft: '0.5rem' }}>(stop)</span>}
                                 </td>
                             </tr>
                         ))}
@@ -426,34 +423,34 @@ function ParentsList({ parents, canExpand, nested, loading, error, onExpand, lan
                         </tr>
                     </thead>
                     <tbody>
-                        {parents.map(p => (
-                            <Fragment key={p.id}>
+                        {parents.map(parent => (
+                            <Fragment key={parent.id}>
                                 <tr>
-                                    <td><strong>{p.id}</strong> — {p.name}</td>
+                                    <td><strong>{parent.id}</strong> — {parent.name}</td>
                                     <td style={{ textAlign: 'center' }}>
                                         {canExpand ? (
                                             <button
                                                 type="button"
                                                 className="btn btn--primary"
                                                 style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
-                                                onClick={() => onExpand(p.id)}
-                                                disabled={!!loading[p.id]}
+                                                onClick={() => onExpand(parent.id)}
+                                                disabled={!!loading[parent.id]}
                                             >
-                                                {loading[p.id] ? '...' : nested[p.id] ? 'Hide' : 'Why?'}
+                                                {loading[parent.id] ? '...' : nested[parent.id] ? 'Hide' : 'Why?'}
                                             </button>
                                         ) : (
                                             <span className="muted small">—</span>
                                         )}
                                     </td>
                                 </tr>
-                                {nested[p.id] && (
+                                {nested[parent.id] && (
                                     <tr>
                                         <td colSpan={2} style={{ padding: 0 }}>
                                             <ExpandedCell>
-                                                {error[p.id] ? (
-                                                    <div className="alert alert-error" style={{ margin: 0 }}>{error[p.id]}</div>
+                                                {error[parent.id] ? (
+                                                    <div className="alert alert-error" style={{ margin: 0 }}>{error[parent.id]}</div>
                                                 ) : (
-                                                    <BlameTable q3Response={nested[p.id]} langId={langId} depth={depth + 1} cache={cache} />
+                                                    <BlameTable q3Response={nested[parent.id]} langId={langId} depth={depth + 1} cache={cache} />
                                                 )}
                                             </ExpandedCell>
                                         </td>

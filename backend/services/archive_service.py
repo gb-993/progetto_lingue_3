@@ -1,4 +1,4 @@
-"""Servizio archivio domande obsolete: sposta Answer/Example/AnswerMotivation in tabelle archive quando una Question cambia in modo incompatibile con i dati raccolti."""
+"""Archivio delle domande: copia i dati nelle tabelle archive."""
 from __future__ import annotations
 from typing import Dict
 from datetime import datetime
@@ -17,7 +17,7 @@ from services.citation import apply_excel_citation
 
 
 def count_linked_data(db: Session, question_id: str) -> Dict[str, int]:
-    """Quante Answer/Example/lingue sarebbero archiviate dal wipe."""
+    """Quante risposte/esempi/lingue verrebbero archiviate."""
     answers_count = (
         db.query(func.count(models.Answer.id))
         .filter(models.Answer.question_id == question_id)
@@ -50,8 +50,7 @@ def snapshot_question_data(
     user_id: int | None,
     archive_note: str | None = None,
 ) -> models.ArchivedQuestion:
-    """Snapshot della question e copia di Answer/Example/AnswerMotivation nelle tabelle archive, senza cancellare i dati attivi (non committa)."""
-    # Nome parametro congelato nello snapshot (denormalizzato).
+    """Copia domanda e dati nelle tabelle archive, senza cancellare. Non committa."""
     parameter_def = (
         db.query(models.ParameterDef)
         .filter(models.ParameterDef.id == question.parameter_id)
@@ -79,7 +78,6 @@ def snapshot_question_data(
     db.add(archived_question)
     db.flush()
 
-    # Code e label delle motivazioni congelati nello snapshot.
     allowed_motivations = (
         db.query(models.QuestionAllowedMotivation, models.Motivation)
         .join(models.Motivation, models.QuestionAllowedMotivation.motivation_id == models.Motivation.id)
@@ -93,7 +91,6 @@ def snapshot_question_data(
             motivation_label=motivation.label or "",
         ))
 
-    # Nome lingua denormalizzato per ogni Answer.
     language_name_by_id: Dict[str, str] = {
         language.id: language.name_full
         for language in db.query(models.Language.id, models.Language.name_full).all()
@@ -153,10 +150,10 @@ def archive_and_wipe(
     user_id: int | None,
     archive_note: str | None = None,
 ) -> models.ArchivedQuestion:
-    """Snapshot della question (va chiamata PRIMA di modificarne il testo) + cancellazione dei dati attivi; non committa."""
+    """Archivia e cancella i dati; da chiamare prima di cambiare il testo. Non committa."""
     archived_question = snapshot_question_data(db, question, user_id, archive_note)
 
-    # Le cascade "all, delete-orphan" gestiscono Example/AnswerMotivation.
+    # esempi e motivazioni vanno via in cascata
     answers = (
         db.query(models.Answer)
         .filter(models.Answer.question_id == question.id)
@@ -221,7 +218,7 @@ def _style_table(worksheet, name: str, column_count: int, column_widths):
 def build_archived_question_workbook(
     db: Session, archived_question: models.ArchivedQuestion
 ) -> Workbook:
-    """Workbook con un solo sheet "Database_model": una riga per lingua, tutta l'info dallo snapshot archive (niente lookup vivi)."""
+    """Excel della domanda archiviata: una riga per lingua, solo dati dello snapshot."""
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Database_model"
@@ -230,7 +227,6 @@ def build_archived_question_workbook(
 
     answers = sorted(archived_question.answers, key=lambda a: a.language_id)
     for answer in answers:
-        # Stringa in stile vecchio progetto (YES/NO).
         if answer.response_text == "yes":
             answer_label = "YES"
         elif answer.response_text == "no":

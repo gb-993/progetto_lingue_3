@@ -4,14 +4,7 @@ import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
 import usePersistentState from '../../utils/usePersistentState';
 
-// ==========================================
-// Tab "Old questions archive" della pagina History.
-// Archivio risposte/esempi delle question modificate in modo non
-// compatibile con i dati raccolti (bottone "Save and delete the linked
-// data" nell'edit di una question). La lista e' raggruppata per
-// question_id, ogni gruppo si espande e mostra le versioni archiviate
-// in ordine cronologico (piu' recente per primo).
-// ==========================================
+// Archivio delle question salvate con "Save and delete the linked data"
 export default function OldQuestionsTab() {
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -48,16 +41,16 @@ export default function OldQuestionsTab() {
             const res = await api.get(`/api/admin/archived-questions/${versionId}/xlsx`, {
                 responseType: 'blob',
             });
-            const cd = res.headers['content-disposition'] || '';
-            const m = cd.match(/filename="?([^"]+)"?/);
-            const fname = m ? m[1] : `archived_question_${versionId}.xlsx`;
+            const contentDisposition = res.headers['content-disposition'] || '';
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            const fname = filenameMatch ? filenameMatch[1] : `archived_question_${versionId}.xlsx`;
             const url = window.URL.createObjectURL(new Blob([res.data]));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fname;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fname;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
             window.URL.revokeObjectURL(url);
         } catch {
             alert('Could not download the archive.');
@@ -74,15 +67,15 @@ export default function OldQuestionsTab() {
         }
     };
 
-    const filteredGroups = groups.filter(g => {
+    const filteredGroups = groups.filter(group => {
         if (!search.trim()) return true;
-        const s = search.toLowerCase();
-        if ((g.original_question_id || '').toLowerCase().includes(s)) return true;
-        if ((g.parameter_id || '').toLowerCase().includes(s)) return true;
-        if ((g.parameter_name || '').toLowerCase().includes(s)) return true;
-        return (g.versions || []).some(v =>
-            (v.text_preview || '').toLowerCase().includes(s) ||
-            (v.archive_note || '').toLowerCase().includes(s)
+        const query = search.toLowerCase();
+        if ((group.original_question_id || '').toLowerCase().includes(query)) return true;
+        if ((group.parameter_id || '').toLowerCase().includes(query)) return true;
+        if ((group.parameter_name || '').toLowerCase().includes(query)) return true;
+        return (group.versions || []).some(version =>
+            (version.text_preview || '').toLowerCase().includes(query) ||
+            (version.archive_note || '').toLowerCase().includes(query)
         );
     });
 
@@ -119,21 +112,21 @@ export default function OldQuestionsTab() {
                         {!loading && filteredGroups.length === 0 && (
                             <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>No archived question yet.</td></tr>
                         )}
-                        {!loading && filteredGroups.map((g) => {
-                            const key = g.original_question_id;
+                        {!loading && filteredGroups.map((group) => {
+                            const key = group.original_question_id;
                             const isOpen = expanded.has(key);
-                            const latest = g.versions?.[0];
+                            const latest = group.versions?.[0];
                             return (
                                 <Fragment key={key}>
                                     <tr style={{ cursor: 'pointer' }} onClick={() => toggleExpanded(key)}>
                                         <td style={{ textAlign: 'center', fontSize: '0.9rem' }}>{isOpen ? '▾' : '▸'}</td>
                                         <td style={{ fontWeight: 'bold' }}>{key}</td>
                                         <td>
-                                            <code style={{ fontSize: '0.8rem' }}>{g.parameter_id}</code>
-                                            <span className="muted" style={{ marginLeft: '0.4rem', fontSize: '0.8rem' }}>{g.parameter_name}</span>
+                                            <code style={{ fontSize: '0.8rem' }}>{group.parameter_id}</code>
+                                            <span className="muted" style={{ marginLeft: '0.4rem', fontSize: '0.8rem' }}>{group.parameter_name}</span>
                                         </td>
                                         <td>
-                                            <span className="badge rounded-pill bg-secondary">{g.versions.length}</span>
+                                            <span className="badge rounded-pill bg-secondary">{group.versions.length}</span>
                                         </td>
                                         <td>
                                             <small>
@@ -143,46 +136,46 @@ export default function OldQuestionsTab() {
                                         </td>
 
                                     </tr>
-                                    {isOpen && g.versions.map((v) => (
-                                        <tr key={v.id} style={{ background: 'var(--surface-2, #f8fafc)' }}>
+                                    {isOpen && group.versions.map((version) => (
+                                        <tr key={version.id} style={{ background: 'var(--surface-2, #f8fafc)' }}>
                                             <td></td>
                                             <td colSpan="2" style={{ fontSize: '0.85rem' }}>
                                                 <div style={{ marginBottom: '0.25rem' }}>
-                                                    <strong>{formatBackendDate(v.archived_at)}</strong>
-                                                    {' '}— by <em>{v.archived_by}</em>
+                                                    <strong>{formatBackendDate(version.archived_at)}</strong>
+                                                    {' '}— by <em>{version.archived_by}</em>
                                                 </div>
-                                                {v.archive_note && (
+                                                {version.archive_note && (
                                                     <div className="muted" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
-                                                        Note: {v.archive_note}
+                                                        Note: {version.archive_note}
                                                     </div>
                                                 )}
                                                 <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>
-                                                    "{v.text_preview}{v.text_preview && v.text_preview.length >= 160 ? '…' : ''}"
+                                                    "{version.text_preview}{version.text_preview && version.text_preview.length >= 160 ? '…' : ''}"
                                                 </div>
                                             </td>
                                             <td style={{ fontSize: '0.85rem' }}>
-                                                <div><strong>{v.answers_count}</strong> answers</div>
-                                                <div className="muted" style={{ fontSize: '0.78rem' }}>{v.examples_count} examples</div>
+                                                <div><strong>{version.answers_count}</strong> answers</div>
+                                                <div className="muted" style={{ fontSize: '0.78rem' }}>{version.examples_count} examples</div>
                                             </td>
                                             <td></td>
                                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                                 <div style={{ display: 'inline-flex', gap: '8px', justifyContent: 'flex-end' }}>
                                                     <Link
                                                         className="btn btn-sm btn-primary"
-                                                        to={`/admin/archived-questions/${v.id}`}
+                                                        to={`/admin/archived-questions/${version.id}`}
                                                     >
                                                         View data
                                                     </Link>
                                                     <button
                                                         className="btn btn-sm"
-                                                        onClick={() => handleDownloadXlsx(v.id)}
+                                                        onClick={() => handleDownloadXlsx(version.id)}
                                                     >
                                                         Download .xlsx
                                                     </button>
                                                     <button
                                                         className="btn btn-sm btn-danger"
                                                         style={{ backgroundColor: '#dc3545', borderColor: '#dc3545', color: 'white' }}
-                                                        onClick={() => handleDelete(v.id)}
+                                                        onClick={() => handleDelete(version.id)}
                                                     >
                                                         Delete
                                                     </button>

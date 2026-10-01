@@ -1,6 +1,4 @@
-"""
-Blocca con 403 le richieste autenticate di utenti che non hanno accettato
-"""
+"""Blocca con 403 chi non ha accettato i documenti legali in vigore."""
 from __future__ import annotations
 
 import logging
@@ -8,6 +6,8 @@ import logging
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import models
@@ -63,38 +63,48 @@ class ConsentEnforcementMiddleware(BaseHTTPMiddleware):
         if not sub:
             return await call_next(request)
 
-        db = SessionLocal()
-        try:
-            user = resolve_user_from_sub(db, sub)
-            if user is None:
-                return await call_next(request)
-
-            current_docs = (
-                db.query(models.LegalDocument)
-                .filter(models.LegalDocument.is_current == True)  # noqa: E712
-                .all()
+        # query sincrone: in un thread, così l'attesa di una connessione non ferma il server
+        if await run_in_threadpool(_sub_missing_consent, sub):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Acceptance of latest legal documents required.",
+                    "required_acceptance": True,
+                },
             )
-
-            for doc in current_docs:
-                has_consent = (
-                    db.query(models.Consent.id)
-                    .filter(
-                        models.Consent.user_id == user.id,
-                        models.Consent.legal_document_id == doc.id,
-                        models.Consent.revoked_at.is_(None),
-                    )
-                    .first()
-                    is not None
-                )
-                if not has_consent:
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "detail": "Acceptance of latest legal documents required.",
-                            "required_acceptance": True,
-                        },
-                    )
-        finally:
-            db.close()
-
         return await call_next(request)
+
+
+def _sub_missing_consent(sub) -> bool:
+    db = SessionLocal()
+    try:
+        return user_missing_consent(db, sub)
+    finally:
+        db.close()
+
+
+def user_missing_consent(db: Session, sub) -> bool:
+    """True se l'utente del token non ha accettato tutti i documenti legali in vigore."""
+    user = resolve_user_from_sub(db, sub)
+    if user is None:
+        return False
+
+    current_docs = (
+        db.query(models.LegalDocument)
+        .filter(models.LegalDocument.is_current == True)  # noqa: E712
+        .all()
+    )
+    for doc in current_docs:
+        has_consent = (
+            db.query(models.Consent.id)
+            .filter(
+                models.Consent.user_id == user.id,
+                models.Consent.legal_document_id == doc.id,
+                models.Consent.revoked_at.is_(None),
+            )
+            .first()
+            is not None
+        )
+        if not has_consent:
+            return True
+    return False

@@ -6,7 +6,6 @@ import BackupsTab from './BackupsTab';
 import OldQuestionsTab from './OldQuestionsTab';
 import { formatBackendDate } from '../../utils/dateFormat';
 
-// Etichette user-friendly per i tipi di entità
 const ENTITY_LABELS = {
     parameter: { name: 'Parameter', color: '#3b82f6' },
     question: { name: 'Question', color: '#8b5cf6' },
@@ -27,8 +26,6 @@ const SOURCE_LABELS = {
     system: { label: 'System' },
 };
 
-// Delega al helper centrale che corregge il timezone (i timestamp backend
-// arrivano UTC senza suffisso Z; vedi utils/dateFormat.js).
 const fmtDateTime = (iso) => formatBackendDate(iso);
 const fmtValue = (v) => {
     if (v === null || v === undefined) return <span className="muted">—</span>;
@@ -37,7 +34,6 @@ const fmtValue = (v) => {
     if (Array.isArray(v)) {
         if (v.length === 0) return <span className="muted">(none)</span>;
         if (typeof v[0] === 'object' && v[0] !== null) {
-            // lista di oggetti (es. examples) -> render compatto
             return (
                 <ol style={{ margin: 0, paddingLeft: '1.2em' }}>
                     {v.map((item, i) => (
@@ -56,7 +52,6 @@ const fmtValue = (v) => {
     return String(v);
 };
 
-// ============================================================================
 export default function History() {
     const [searchParams, setSearchParams] = useSearchParams();
     const initialTab = searchParams.get('tab') || 'versions';
@@ -69,7 +64,6 @@ export default function History() {
 
             </header>
 
-            {/* Tab nav */}
             <div style={{ display: 'flex', gap: '0.35rem', borderBottom: '1px solid var(--border)', marginBottom: '1.25rem' }}>
                 {[
                     { id: 'versions', label: 'Change history' },
@@ -114,12 +108,6 @@ export default function History() {
     );
 }
 
-// ============================================================================
-// TAB CRONOLOGIA MODIFICHE
-// ============================================================================
-// Props:
-//   lockEntityType: se passato, filtra solo quel type e nasconde il dropdown
-//   excludeEntityType: se passato, esclude quel type dai risultati e dal dropdown
 function VersionsTab({ lockEntityType, excludeEntityType }) {
     const [items, setItems] = useState([]);
     const [total, setTotal] = useState(0);
@@ -130,7 +118,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
     const [options, setOptions] = useState({ entity_types: [], sources: [], operations: [], users: [] });
     const [openVersion, setOpenVersion] = useState(null);
 
-    // Filtri — chiave distinta per le due istanze (change history vs answer changes)
     const scope = lockEntityType ? `lock-${lockEntityType}` : `excl-${excludeEntityType || 'none'}`;
     const [filters, setFilters] = usePersistentState(`history:versions:${scope}:filters`, {
         entity_type: '',
@@ -180,7 +167,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
     const onApply = () => fetchVersions(1);
     const onReset = () => {
         setFilters({ entity_type: '', entity_id: '', user_id: '', source: '', operation: '', since: '', until: '', search: '' });
-        // refresh subito senza filtri
         setTimeout(() => fetchVersions(1), 0);
     };
 
@@ -189,7 +175,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
 
     return (
         <div>
-            {/* Pannello filtri */}
             <div className="card" style={{ padding: 'var(--filter-card-pad, 1rem 1.25rem)', marginBottom: '1rem', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--filter-card-gap, 0.75rem)', alignItems: 'end' }}>
                     {!lockEntityType && (
@@ -260,7 +245,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                 </div>
             </div>
 
-            {/* Tabella */}
             {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
 
             <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
@@ -321,7 +305,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                 </table>
             </div>
 
-            {/* Paginazione */}
             {totalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem', alignItems: 'center' }}>
                     <button className="btn btn--small" disabled={page <= 1} onClick={() => fetchVersions(page - 1)}>‹ Previous</button>
@@ -330,7 +313,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                 </div>
             )}
 
-            {/* Drawer dettaglio */}
             {openVersion && (
                 <VersionDetailDrawer
                     versionId={openVersion}
@@ -341,7 +323,6 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
     );
 }
 
-// ============================================================================
 function VersionDetailDrawer({ versionId, onClose }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -419,7 +400,6 @@ function VersionDiffView({ data, onClose }) {
 
     return (
         <>
-            {/* Header info */}
             <div style={{
                 background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text)',
                 padding: '0.85rem', borderRadius: '6px', marginBottom: '1rem',
@@ -447,7 +427,6 @@ function VersionDiffView({ data, onClose }) {
                 )}
             </div>
 
-            {/* Diff */}
             {changedFields.length > 0 && (
                 <>
                     <h3 style={{ marginBottom: '0.5rem' }}>Modified fields ({changedFields.length})</h3>
@@ -478,7 +457,6 @@ function VersionDiffView({ data, onClose }) {
                 </>
             )}
 
-            {/* Snapshot completo (collassato di default; il diff sopra è sempre visibile) */}
             <button
                 type="button"
                 onClick={() => setSnapshotOpen(o => !o)}
@@ -520,7 +498,6 @@ function VersionDiffView({ data, onClose }) {
     );
 }
 
-// ============================================================================
 const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {

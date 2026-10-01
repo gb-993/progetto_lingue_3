@@ -5,9 +5,7 @@ import { Search, RotateCcw, Workflow, Maximize2 } from 'lucide-react';
 import api from '../../api';
 import usePersistentState from '../../utils/usePersistentState';
 
-// --- Palette dei valori finali (post-DAG). Coerente col vecchio progetto:
-// + verde, - rosso, 0 blu, ? grigio scuro, unset bianco. -----------------
-const VAL_COLORS = {
+const VALUE_COLORS = {
     '+': { bg: '#1B5E20', border: '#0B3D13', text: '#ffffff' },
     '-': { bg: '#B71C1C', border: '#7F0000', text: '#ffffff' },
     '0': { bg: '#0D47A1', border: '#002171', text: '#ffffff' },
@@ -16,21 +14,20 @@ const VAL_COLORS = {
 };
 
 const CHAIN_COLORS = {
-    focus: '#FFD600',  // bordo giallo: nodo cliccato
-    up: '#4CAF50',     // verde: antecedenti (incoming) -- bordo nodo + linea edge
-    down: '#FF9800',   // arancione: conseguenti (outgoing) -- bordo nodo + linea edge
+    focus: '#FFD600', // nodo cliccato
+    up: '#4CAF50',    // antecedenti (incoming)
+    down: '#FF9800',  // conseguenti (outgoing)
 };
 
 const INITIAL_FILTERS = { schema: '', param_type: '', level: '' };
 
-// Stile cytoscape: definito una volta, non dipende dallo stato React.
 const CY_STYLE = [
     {
         selector: 'node',
         style: {
-            'background-color': VAL_COLORS.unset.bg,
-            'border-color': VAL_COLORS.unset.border,
-            'color': VAL_COLORS.unset.text,
+            'background-color': VALUE_COLORS.unset.bg,
+            'border-color': VALUE_COLORS.unset.border,
+            'color': VALUE_COLORS.unset.text,
             'label': 'data(label)',
             'font-size': 14,
             'font-weight': 'bold',
@@ -43,19 +40,16 @@ const CY_STYLE = [
             'border-width': 1,
         },
     },
-    { selector: 'node.val-plus',  style: { 'background-color': VAL_COLORS['+'].bg, 'border-color': VAL_COLORS['+'].border, 'color': VAL_COLORS['+'].text } },
-    { selector: 'node.val-minus', style: { 'background-color': VAL_COLORS['-'].bg, 'border-color': VAL_COLORS['-'].border, 'color': VAL_COLORS['-'].text } },
-    { selector: 'node.val-zero',  style: { 'background-color': VAL_COLORS['0'].bg, 'border-color': VAL_COLORS['0'].border, 'color': VAL_COLORS['0'].text } },
-    { selector: 'node.val-question', style: { 'background-color': VAL_COLORS['?'].bg, 'border-color': VAL_COLORS['?'].border, 'color': VAL_COLORS['?'].text } },
-    { selector: 'node.val-unset', style: { 'background-color': VAL_COLORS.unset.bg, 'border-color': VAL_COLORS.unset.border, 'color': VAL_COLORS.unset.text } },
+    { selector: 'node.val-plus',  style: { 'background-color': VALUE_COLORS['+'].bg, 'border-color': VALUE_COLORS['+'].border, 'color': VALUE_COLORS['+'].text } },
+    { selector: 'node.val-minus', style: { 'background-color': VALUE_COLORS['-'].bg, 'border-color': VALUE_COLORS['-'].border, 'color': VALUE_COLORS['-'].text } },
+    { selector: 'node.val-zero',  style: { 'background-color': VALUE_COLORS['0'].bg, 'border-color': VALUE_COLORS['0'].border, 'color': VALUE_COLORS['0'].text } },
+    { selector: 'node.val-question', style: { 'background-color': VALUE_COLORS['?'].bg, 'border-color': VALUE_COLORS['?'].border, 'color': VALUE_COLORS['?'].text } },
+    { selector: 'node.val-unset', style: { 'background-color': VALUE_COLORS.unset.bg, 'border-color': VALUE_COLORS.unset.border, 'color': VALUE_COLORS.unset.text } },
 
-    // Bordo della catena: si sovrascrive al border-color dei valori, ma si
-    // distingue grazie a uno spessore maggiore.
     { selector: 'node.focus', style: { 'border-color': CHAIN_COLORS.focus, 'border-width': 5 } },
     { selector: 'node.up',    style: { 'border-color': CHAIN_COLORS.up,    'border-width': 4 } },
     { selector: 'node.down',  style: { 'border-color': CHAIN_COLORS.down,  'border-width': 4 } },
 
-    // Inattivi: tratteggio fisso del bordo.
     { selector: 'node.is-inactive', style: { 'border-style': 'dashed', 'opacity': 0.6 } },
 
     { selector: 'node.dimmed', style: { 'opacity': 0.18 } },
@@ -69,8 +63,7 @@ const CY_STYLE = [
             'width': 1.2,
             'line-color': '#90A4AE',
             'target-arrow-color': '#90A4AE',
-            // niente label di default: il segno appare solo sulla catena
-            // del nodo cliccato (vedi chain-incoming/chain-outgoing).
+            // il segno si vede solo sulla catena selezionata
             'font-size': 11,
             'font-weight': 'bold',
             'color': '#000000',
@@ -81,8 +74,6 @@ const CY_STYLE = [
         },
     },
 
-    // Edge della catena del nodo cliccato. displaySign include 'NOT ' se la
-    // foglia e' negata (es. 'NOT +' per `not +FGM`).
     {
         selector: 'edge.chain-incoming',
         style: {
@@ -101,19 +92,12 @@ const CY_STYLE = [
             'label': 'data(displaySign)',
         },
     },
-    // In modalita' lingua, gli edge della catena non soddisfatti vengono
-    // tratteggiati e attenuati per distinguerli a colpo d'occhio.
     { selector: 'edge.unsatisfied', style: { 'line-style': 'dashed', 'opacity': 0.55 } },
 
     { selector: 'edge.dimmed', style: { 'opacity': 0.12 } },
     { selector: 'edge.hidden', style: { 'display': 'none' } },
 ];
 
-// breadthfirst del cytoscape nativo produce un layout a livelli (TB) molto
-// piu' compatto e leggibile di dagre per questo grafo: i parametri senza
-// condizione finiscono al rank 0 in alto, i loro dipendenti sotto, e cosi'
-// via. spacingFactor 1.2 + fit: true riproduce esattamente il layout del
-// vecchio progetto Django.
 const ACTIVE_LAYOUT = {
     name: 'breadthfirst',
     directed: true,
@@ -122,37 +106,29 @@ const ACTIVE_LAYOUT = {
     fit: true,
 };
 
-// =============================================================================
-// COMPONENTE
-// =============================================================================
 export default function ParameterGraph() {
     const navigate = useNavigate();
 
-    const [graph, setGraph] = useState(null);                  // {nodes, edges}
+    const [graph, setGraph] = useState(null);
     const [includeInactive, setIncludeInactive] = usePersistentState('graph:includeInactive', false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     const [langOptions, setLangOptions] = useState([]);
     const [selectedLang, setSelectedLang] = usePersistentState('graph:selectedLang', '');
-    const [langValues, setLangValues] = useState(null);        // {language, nodes:[{id,final,...}], edges:[{source,target,sign,satisfied}]}
+    const [langValues, setLangValues] = useState(null);
 
     const [options, setOptions] = useState({ schemas: [], types: [], levels: [] });
     const [filters, setFilters] = usePersistentState('graph:filters', INITIAL_FILTERS);
     const [search, setSearch] = usePersistentState('graph:search', '');
 
     const [selectedId, setSelectedId] = useState(null);
-    const [conditionTree, setConditionTree] = useState(null); // {expression, tree, evaluated, error}
+    const [conditionTree, setConditionTree] = useState(null);
 
     const containerRef = useRef(null);
     const cyRef = useRef(null);
-    // Mappa parameter_id -> 'final' value (per la vista lingua, anche fuori
-    // dal cytoscape — lo usa il recap per mostrare "(P12 +)" accanto agli ID).
-    const valuesMapRef = useRef({});
+    const finalValuesRef = useRef({});
 
-    // -----------------------------------------------------------------
-    // FETCH iniziali
-    // -----------------------------------------------------------------
     const fetchGraph = useCallback(async () => {
         setLoading(true); setError('');
         try {
@@ -170,67 +146,58 @@ export default function ParameterGraph() {
     useEffect(() => { fetchGraph(); }, [fetchGraph]);
 
     useEffect(() => {
-        api.get('/api/tablea/options').then(r => {
+        api.get('/api/tablea/options').then(res => {
             setOptions({
-                schemas: r.data.opt_schemas || [],
-                types:   r.data.opt_types || [],
-                levels:  r.data.opt_levels || [],
+                schemas: res.data.opt_schemas || [],
+                types:   res.data.opt_types || [],
+                levels:  res.data.opt_levels || [],
             });
-            setLangOptions((r.data.opt_all_languages || []).slice());
+            setLangOptions((res.data.opt_all_languages || []).slice());
         }).catch(() => {});
     }, []);
 
-    // -----------------------------------------------------------------
-    // FETCH valori per lingua
-    // -----------------------------------------------------------------
     useEffect(() => {
         if (!selectedLang) {
             setLangValues(null);
-            valuesMapRef.current = {};
+            finalValuesRef.current = {};
             return;
         }
         api.get('/api/admin/parameters/graph/lang-values', {
             params: { lang: selectedLang, include_inactive: includeInactive },
         })
-            .then(r => {
-                setLangValues(r.data);
-                const map = {};
-                (r.data.nodes || []).forEach(n => { map[n.id] = n.final; });
-                valuesMapRef.current = map;
+            .then(res => {
+                setLangValues(res.data);
+                const finalById = {};
+                (res.data.nodes || []).forEach(node => { finalById[node.id] = node.final; });
+                finalValuesRef.current = finalById;
             })
-            .catch(() => { setLangValues(null); valuesMapRef.current = {}; });
+            .catch(() => { setLangValues(null); finalValuesRef.current = {}; });
     }, [selectedLang, includeInactive]);
 
-    // -----------------------------------------------------------------
-    // FETCH albero condizione del nodo selezionato
-    // -----------------------------------------------------------------
     useEffect(() => {
         if (!selectedId) { setConditionTree(null); return; }
         const params = selectedLang ? { lang: selectedLang } : {};
         api.get(`/api/admin/parameters/graph/condition-tree/${selectedId}`, { params })
-            .then(r => setConditionTree(r.data))
+            .then(res => setConditionTree(res.data))
             .catch(() => setConditionTree(null));
     }, [selectedId, selectedLang]);
 
-    // -----------------------------------------------------------------
-    // INIT / UPDATE cytoscape quando arriva un nuovo grafo
-    // -----------------------------------------------------------------
     useEffect(() => {
         if (!graph || !containerRef.current) return;
 
         const elements = [
-            ...graph.nodes.map(n => ({
-                data: { id: n.id, label: n.label, name: n.name, schema: n.schema, ptype: n.param_type, level: n.level_of_comparison },
-                classes: n.is_active ? '' : 'is-inactive',
+            ...graph.nodes.map(node => ({
+                data: { id: node.id, label: node.label, name: node.name, schema: node.schema, ptype: node.param_type, level: node.level_of_comparison },
+                classes: node.is_active ? '' : 'is-inactive',
             })),
-            ...graph.edges.map(e => ({
+            ...graph.edges.map(edge => ({
                 data: {
-                    id: e.id,
-                    source: e.source,
-                    target: e.target,
-                    sign: e.sign,
-                    negated: !!e.negated,
-                    displaySign: `${e.negated ? 'NOT ' : ''}${e.sign}`,
+                    id: edge.id,
+                    source: edge.source,
+                    target: edge.target,
+                    sign: edge.sign,
+                    negated: !!edge.negated,
+                    displaySign: `${edge.negated ? 'NOT ' : ''}${edge.sign}`,
                 },
             })),
         ];
@@ -249,16 +216,13 @@ export default function ParameterGraph() {
         cy.on('dbltap', 'node', evt => navigate(`/admin/parameters/${evt.target.id()}/edit`));
         cy.on('tap', evt => { if (evt.target === cy) setSelectedId(null); });
 
-        const ro = new ResizeObserver(() => cy.resize());
-        ro.observe(containerRef.current);
+        const resizeObserver = new ResizeObserver(() => cy.resize());
+        resizeObserver.observe(containerRef.current);
 
         cyRef.current = cy;
-        return () => { ro.disconnect(); cy.destroy(); cyRef.current = null; };
+        return () => { resizeObserver.disconnect(); cy.destroy(); cyRef.current = null; };
     }, [graph, navigate]);
 
-    // -----------------------------------------------------------------
-    // APPLY classi valore + soddisfacibilita' edge in modalita' lingua
-    // -----------------------------------------------------------------
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
@@ -269,34 +233,29 @@ export default function ParameterGraph() {
             if (!langValues) return;
 
             const finalById = {};
-            (langValues.nodes || []).forEach(n => { finalById[n.id] = n.final; });
+            (langValues.nodes || []).forEach(node => { finalById[node.id] = node.final; });
 
-            cy.nodes().forEach(n => {
-                const v = finalById[n.id()];
-                if (v === '+') n.addClass('val-plus');
-                else if (v === '-') n.addClass('val-minus');
-                else if (v === '0') n.addClass('val-zero');
-                else if (v === '?') n.addClass('val-question');
-                else n.addClass('val-unset');
+            cy.nodes().forEach(node => {
+                const value = finalById[node.id()];
+                if (value === '+') node.addClass('val-plus');
+                else if (value === '-') node.addClass('val-minus');
+                else if (value === '0') node.addClass('val-zero');
+                else if (value === '?') node.addClass('val-question');
+                else node.addClass('val-unset');
             });
         });
     }, [langValues, graph]);
 
-    // Mappa edge_id -> satisfied calcolata dal backend, usata sotto per
-    // tratteggiare in modalita' lingua i soli edge della catena.
-    const edgeSatMap = useMemo(() => {
-        const m = {};
-        if (!langValues) return m;
-        (langValues.edges || []).forEach(e => {
-            const eid = `${e.source}__${e.negated ? 'n' : ''}${e.sign}__${e.target}`;
-            m[eid] = e.satisfied;
+    const edgeSatisfiedById = useMemo(() => {
+        const satisfiedById = {};
+        if (!langValues) return satisfiedById;
+        (langValues.edges || []).forEach(edge => {
+            const edgeId = `${edge.source}__${edge.negated ? 'n' : ''}${edge.sign}__${edge.target}`;
+            satisfiedById[edgeId] = edge.satisfied;
         });
-        return m;
+        return satisfiedById;
     }, [langValues]);
 
-    // -----------------------------------------------------------------
-    // APPLY catena (focus / up / down / dimmed) al click su un nodo
-    // -----------------------------------------------------------------
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
@@ -308,10 +267,10 @@ export default function ParameterGraph() {
             const node = cy.getElementById(selectedId);
             if (!node || node.empty()) return;
 
-            const up = node.incomers('node');           // antecedenti (chi punta a noi)
-            const down = node.outgoers('node');         // conseguenti (chi e' puntato da noi)
-            const incoming = node.incomers('edge');     // archi entranti
-            const outgoing = node.outgoers('edge');     // archi uscenti
+            const up = node.incomers('node');
+            const down = node.outgoers('node');
+            const incoming = node.incomers('edge');
+            const outgoing = node.outgoers('edge');
             const chainNodes = up.union(down).union(node);
             const chainEdges = incoming.union(outgoing);
 
@@ -321,28 +280,22 @@ export default function ParameterGraph() {
             incoming.addClass('chain-incoming');
             outgoing.addClass('chain-outgoing');
 
-            // Dash sugli edge della catena la cui foglia non e' soddisfatta
-            // (solo se siamo in modalita' lingua).
             if (langValues) {
-                chainEdges.forEach(e => {
-                    if (edgeSatMap[e.id()] === false) e.addClass('unsatisfied');
+                chainEdges.forEach(edge => {
+                    if (edgeSatisfiedById[edge.id()] === false) edge.addClass('unsatisfied');
                 });
             }
 
             cy.nodes().not(chainNodes).addClass('dimmed');
             cy.edges().not(chainEdges).addClass('dimmed');
         });
-    }, [selectedId, langValues, graph, edgeSatMap]);
+    }, [selectedId, langValues, graph, edgeSatisfiedById]);
 
-    // -----------------------------------------------------------------
-    // APPLY visibility (filtri schema/type/level + include_inactive +
-    // search dims). Search non nasconde, smorza solo.
-    // -----------------------------------------------------------------
     useEffect(() => {
         const cy = cyRef.current;
         if (!cy) return;
 
-        const q = search.trim().toLowerCase();
+        const query = search.trim().toLowerCase();
         const matches = (data) => {
             if (filters.schema && data.schema !== filters.schema) return false;
             if (filters.param_type && data.ptype !== filters.param_type) return false;
@@ -354,23 +307,21 @@ export default function ParameterGraph() {
             cy.nodes().removeClass('hidden');
             cy.edges().removeClass('hidden');
 
-            cy.nodes().forEach(n => {
-                if (!matches(n.data())) n.addClass('hidden');
+            cy.nodes().forEach(node => {
+                if (!matches(node.data())) node.addClass('hidden');
             });
-            // Nascondiamo gli edge che toccano nodi nascosti.
-            cy.edges().forEach(e => {
-                if (e.source().hasClass('hidden') || e.target().hasClass('hidden')) {
-                    e.addClass('hidden');
+            cy.edges().forEach(edge => {
+                if (edge.source().hasClass('hidden') || edge.target().hasClass('hidden')) {
+                    edge.addClass('hidden');
                 }
             });
         });
 
-        if (q) {
-            // Trova il primo match per centrare la viewport.
-            const hit = cy.nodes().filter(n =>
-                !n.hasClass('hidden') && (
-                    n.id().toLowerCase().includes(q) ||
-                    (n.data('name') || '').toLowerCase().includes(q)
+        if (query) {
+            const hit = cy.nodes().filter(node =>
+                !node.hasClass('hidden') && (
+                    node.id().toLowerCase().includes(query) ||
+                    (node.data('name') || '').toLowerCase().includes(query)
                 )
             ).first();
             if (hit && hit.nonempty()) {
@@ -379,26 +330,23 @@ export default function ParameterGraph() {
         }
     }, [filters, search]);
 
-    // -----------------------------------------------------------------
-    // Helpers per il pannello recap
-    // -----------------------------------------------------------------
     const chain = useMemo(() => {
         if (!selectedId || !cyRef.current) return null;
-        const n = cyRef.current.getElementById(selectedId);
-        if (!n || n.empty()) return null;
-        const up = n.incomers('node').map(x => ({ id: x.id(), label: x.data('label') })).sort((a, b) => a.id.localeCompare(b.id));
-        const down = n.outgoers('node').map(x => ({ id: x.id(), label: x.data('label') })).sort((a, b) => a.id.localeCompare(b.id));
-        return { id: n.id(), label: n.data('label'), up, down };
+        const node = cyRef.current.getElementById(selectedId);
+        if (!node || node.empty()) return null;
+        const up = node.incomers('node').map(neighbor => ({ id: neighbor.id(), label: neighbor.data('label') })).sort((a, b) => a.id.localeCompare(b.id));
+        const down = node.outgoers('node').map(neighbor => ({ id: neighbor.id(), label: neighbor.data('label') })).sort((a, b) => a.id.localeCompare(b.id));
+        return { id: node.id(), label: node.data('label'), up, down };
     }, [selectedId, graph]);
 
-    const symFor = (id) => valuesMapRef.current[id] || null;
+    const finalValueOf = (id) => finalValuesRef.current[id] || null;
 
     const jumpTo = useCallback((id) => {
         const cy = cyRef.current;
         if (!cy) return;
-        const n = cy.getElementById(id);
-        if (!n || n.empty()) return;
-        cy.animate({ center: { eles: n }, zoom: Math.max(cy.zoom(), 1.2), duration: 300 });
+        const node = cy.getElementById(id);
+        if (!node || node.empty()) return;
+        cy.animate({ center: { eles: node }, zoom: Math.max(cy.zoom(), 1.2), duration: 300 });
         setSelectedId(id);
     }, []);
 
@@ -407,18 +355,15 @@ export default function ParameterGraph() {
         if (selectedLang) {
             api.get('/api/admin/parameters/graph/lang-values', {
                 params: { lang: selectedLang, include_inactive: includeInactive },
-            }).then(r => {
-                setLangValues(r.data);
-                const map = {};
-                (r.data.nodes || []).forEach(n => { map[n.id] = n.final; });
-                valuesMapRef.current = map;
+            }).then(res => {
+                setLangValues(res.data);
+                const finalById = {};
+                (res.data.nodes || []).forEach(node => { finalById[node.id] = node.final; });
+                finalValuesRef.current = finalById;
             }).catch(() => {});
         }
     };
 
-    // -----------------------------------------------------------------
-    // RENDER
-    // -----------------------------------------------------------------
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', minHeight: 'calc(100vh - 8rem)' }}>
             <header style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -430,40 +375,39 @@ export default function ParameterGraph() {
                 </span>
             </header>
 
-            {/* Toolbar */}
             <div className="card" style={{ padding: '0.6rem 0.8rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
                     <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         Language
                         <select value={selectedLang} onChange={e => setSelectedLang(e.target.value)} style={{ minWidth: 160 }}>
                             <option value="">— none —</option>
-                            {langOptions.map(l => (
-                                <option key={l.id} value={l.id}>{l.id} — {l.name}</option>
+                            {langOptions.map(lang => (
+                                <option key={lang.id} value={lang.id}>{lang.id} — {lang.name}</option>
                             ))}
                         </select>
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         Schema
-                        <select value={filters.schema} onChange={e => setFilters(f => ({ ...f, schema: e.target.value }))}>
+                        <select value={filters.schema} onChange={e => setFilters(prev => ({ ...prev, schema: e.target.value }))}>
                             <option value="">All</option>
-                            {options.schemas.map(s => <option key={s} value={s}>{s}</option>)}
+                            {options.schemas.map(schema => <option key={schema} value={schema}>{schema}</option>)}
                         </select>
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         Type
-                        <select value={filters.param_type} onChange={e => setFilters(f => ({ ...f, param_type: e.target.value }))}>
+                        <select value={filters.param_type} onChange={e => setFilters(prev => ({ ...prev, param_type: e.target.value }))}>
                             <option value="">All</option>
-                            {options.types.map(s => <option key={s} value={s}>{s}</option>)}
+                            {options.types.map(type => <option key={type} value={type}>{type}</option>)}
                         </select>
                     </label>
 
                     <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         Level
-                        <select value={filters.level} onChange={e => setFilters(f => ({ ...f, level: e.target.value }))}>
+                        <select value={filters.level} onChange={e => setFilters(prev => ({ ...prev, level: e.target.value }))}>
                             <option value="">All</option>
-                            {options.levels.map(s => <option key={s} value={s}>{s}</option>)}
+                            {options.levels.map(level => <option key={level} value={level}>{level}</option>)}
                         </select>
                     </label>
 
@@ -499,7 +443,6 @@ export default function ParameterGraph() {
                 </div>
             </div>
 
-            {/* Main grid: graph + side panel */}
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '0.75rem', flex: 1, minHeight: 500 }}>
                 <div className="card" style={{ position: 'relative', minHeight: 500, padding: 0, overflow: 'hidden' }}>
                     {loading && (
@@ -514,13 +457,12 @@ export default function ParameterGraph() {
                     )}
                     <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: 500 }} />
 
-                    {/* Legend overlay */}
                     <Legend hasLang={!!selectedLang} />
                 </div>
 
                 <SidePanel
                     chain={chain}
-                    symFor={symFor}
+                    finalValueOf={finalValueOf}
                     onJump={jumpTo}
                     conditionTree={conditionTree}
                     selectedLang={selectedLang}
@@ -531,22 +473,18 @@ export default function ParameterGraph() {
     );
 }
 
-// =============================================================================
-// LEGEND (overlay nell'angolo)
-// =============================================================================
-// Item/colorBox/lineBox a livello di modulo: definirli dentro Legend li
-// ricreava a ogni render (lint react-hooks/static-components).
+// fuori da Legend per non ricrearli a ogni render
 const Item = ({ swatch, label }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem' }}>
         {swatch}
         <span>{label}</span>
     </div>
 );
-const colorBox = (c, border) => (
-    <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: c, border: `1px solid ${border || c}` }} />
+const colorBox = (color, border) => (
+    <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: color, border: `1px solid ${border || color}` }} />
 );
-const lineBox = (c, dashed) => (
-    <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${c}` }} />
+const lineBox = (color, dashed) => (
+    <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${color}` }} />
 );
 
 function Legend({ hasLang }) {
@@ -560,10 +498,10 @@ function Legend({ hasLang }) {
             {hasLang && (
                 <>
                     <strong style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>VALUE</strong>
-                    <Item swatch={colorBox(VAL_COLORS['+'].bg)} label="+" />
-                    <Item swatch={colorBox(VAL_COLORS['-'].bg)} label="−" />
-                    <Item swatch={colorBox(VAL_COLORS['0'].bg)} label="0" />
-                    <Item swatch={colorBox(VAL_COLORS.unset.bg, VAL_COLORS.unset.border)} label="unset" />
+                    <Item swatch={colorBox(VALUE_COLORS['+'].bg)} label="+" />
+                    <Item swatch={colorBox(VALUE_COLORS['-'].bg)} label="−" />
+                    <Item swatch={colorBox(VALUE_COLORS['0'].bg)} label="0" />
+                    <Item swatch={colorBox(VALUE_COLORS.unset.bg, VALUE_COLORS.unset.border)} label="unset" />
                 </>
             )}
             <strong style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: hasLang ? 4 : 0 }}>CHAIN (on click)</strong>
@@ -575,12 +513,9 @@ function Legend({ hasLang }) {
     );
 }
 
-// =============================================================================
-// SIDE PANEL: recap catena + albero condizione
-// =============================================================================
-function SidePanel({ chain, symFor, onJump, conditionTree, selectedLang, langValues }) {
+function SidePanel({ chain, finalValueOf, onJump, conditionTree, selectedLang, langValues }) {
     const finalForSelected = chain && langValues
-        ? (langValues.nodes || []).find(n => n.id === chain.id)
+        ? (langValues.nodes || []).find(node => node.id === chain.id)
         : null;
 
     return (
@@ -603,8 +538,8 @@ function SidePanel({ chain, symFor, onJump, conditionTree, selectedLang, langVal
                 )}
                 {chain && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                        <ChainList title="Antecedents" subtitle="(this depends on)" items={chain.up} symFor={symFor} onJump={onJump} hasLang={!!selectedLang} />
-                        <ChainList title="Consequents" subtitle="(depend on this)" items={chain.down} symFor={symFor} onJump={onJump} hasLang={!!selectedLang} />
+                        <ChainList title="Antecedents" subtitle="(this depends on)" items={chain.up} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
+                        <ChainList title="Consequents" subtitle="(depend on this)" items={chain.down} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
                     </div>
                 )}
             </div>
@@ -617,7 +552,7 @@ function SidePanel({ chain, symFor, onJump, conditionTree, selectedLang, langVal
     );
 }
 
-function ChainList({ title, subtitle, items, symFor, onJump, hasLang }) {
+function ChainList({ title, subtitle, items, finalValueOf, onJump, hasLang }) {
     return (
         <div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -627,20 +562,20 @@ function ChainList({ title, subtitle, items, symFor, onJump, hasLang }) {
                 <p className="muted small" style={{ margin: '0.2rem 0' }}>—</p>
             ) : (
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                    {items.map(it => {
-                        const sym = hasLang ? symFor(it.id) : null;
+                    {items.map(item => {
+                        const finalValue = hasLang ? finalValueOf(item.id) : null;
                         return (
-                            <li key={it.id} style={{ marginTop: '0.15rem' }}>
+                            <li key={item.id} style={{ marginTop: '0.15rem' }}>
                                 <button
                                     type="button"
-                                    onClick={() => onJump(it.id)}
-                                    title={it.label}
+                                    onClick={() => onJump(item.id)}
+                                    title={item.label}
                                     style={{
                                         background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                                         color: 'var(--brand)', textAlign: 'left', font: 'inherit', fontSize: '0.8rem',
                                     }}
                                 >
-                                    {it.id}{sym && sym !== 'unset' ? ` (${sym === 'unset' ? '—' : sym})` : ''}
+                                    {item.id}{finalValue && finalValue !== 'unset' ? ` (${finalValue === 'unset' ? '—' : finalValue})` : ''}
                                 </button>
                             </li>
                         );
@@ -651,9 +586,6 @@ function ChainList({ title, subtitle, items, symFor, onJump, hasLang }) {
     );
 }
 
-// -----------------------------------------------------------------------------
-// Albero della implicational condition con check/cross.
-// -----------------------------------------------------------------------------
 function ConditionTreeView({ data }) {
     if (!data) return <p className="muted small" style={{ margin: 0 }}>—</p>;
     if (!data.expression) return <p className="muted small" style={{ margin: 0 }}>This parameter has no implicational condition.</p>;
@@ -679,7 +611,7 @@ function ConditionTreeView({ data }) {
 
 function TreeNode({ node, evaluated, depth = 0 }) {
     const isLeaf = node.type === 'LEAF';
-    const ok = node.result === true;
+    const isSatisfied = node.result === true;
     return (
         <li style={{ marginBottom: '0.2rem' }}>
             <div style={{
@@ -687,8 +619,8 @@ function TreeNode({ node, evaluated, depth = 0 }) {
                 paddingLeft: `${depth * 0.9}rem`, fontSize: '0.8rem',
             }}>
                 {evaluated && (
-                    <span style={{ color: ok ? 'var(--ok)' : 'var(--bad)', fontWeight: 700, minWidth: '0.9rem' }}>
-                        {ok ? '✓' : '✗'}
+                    <span style={{ color: isSatisfied ? 'var(--ok)' : 'var(--bad)', fontWeight: 700, minWidth: '0.9rem' }}>
+                        {isSatisfied ? '✓' : '✗'}
                     </span>
                 )}
                 <span style={{ fontWeight: isLeaf ? 600 : 700, color: isLeaf ? 'inherit' : 'var(--text-muted)' }}>
@@ -702,8 +634,8 @@ function TreeNode({ node, evaluated, depth = 0 }) {
             </div>
             {node.children?.length > 0 && (
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {node.children.map((c, i) => (
-                        <TreeNode key={i} node={c} evaluated={evaluated} depth={depth + 1} />
+                    {node.children.map((child, index) => (
+                        <TreeNode key={index} node={child} evaluated={evaluated} depth={depth + 1} />
                     ))}
                 </ul>
             )}

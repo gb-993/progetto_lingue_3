@@ -1,14 +1,4 @@
-"""Test della copia "solo esempi" tra question (services/question_transfer).
-
-Comportamento atteso (richiesta linguisti 2026-06):
-  - gli esempi della sorgente vengono DUPLICATI sulle risposte della
-    destinazione, lingua per lingua; risposta/motivazioni/testi intatti
-  - la sorgente non viene toccata (e' una copia, non uno spostamento)
-  - lingue senza risposta in destinazione -> saltate e riportate
-  - idempotente: rilanciare la copia non crea doppioni
-  - la numerazione degli esempi copiati prosegue quella esistente
-  - nessuna marcatura di provenienza sugli esempi copiati
-"""
+"""Copia dei soli esempi tra due question; la sorgente resta intatta."""
 import models
 from services.question_transfer import (
     copy_examples_only,
@@ -50,7 +40,6 @@ def _example(db, answer, number, text, reference="ref"):
 
 def test_copy_appends_examples_and_leaves_source_untouched(db_session):
     _seed(db_session)
-    # ita: sorgente con 2 esempi, destinazione con 1 esempio gia' suo
     src_a = _answer(db_session, "ita", "PSC_Qb", "no")
     _example(db_session, src_a, "1", "src uno")
     _example(db_session, src_a, "2", "src due")
@@ -65,16 +54,14 @@ def test_copy_appends_examples_and_leaves_source_untouched(db_session):
     assert result["languages_processed"] == 1
     assert result["languages_skipped"] == []
 
-    # Destinazione: 1 esempio originale + 2 copiati, numerati a seguire (2, 3)
+    # numerazione a seguire
     dest_examples = sorted(dst_a.examples, key=lambda e: int(e.number))
     assert [e.textarea for e in dest_examples] == ["dest uno", "src uno", "src due"]
     assert [e.number for e in dest_examples] == ["1", "2", "3"]
 
-    # Nessuna marcatura di provenienza (richiesta esplicita): i campi sono
-    # copiati identici alla sorgente.
+    # nessuna marcatura di provenienza
     assert all("PSC_Qb" not in (e.reference or "") for e in dest_examples)
 
-    # Sorgente intatta: risposta e i suoi 2 esempi ancora li'.
     src_after = (
         db_session.query(models.Answer)
         .filter_by(language_id="ita", question_id="PSC_Qb").one()
@@ -107,10 +94,9 @@ def test_copy_is_idempotent(db_session):
 
 def test_languages_without_dest_answer_are_skipped(db_session):
     _seed(db_session)
-    # fra: la sorgente ha esempi ma la destinazione NON ha risposta
+    # fra: nessuna risposta in destinazione
     src_fra = _answer(db_session, "fra", "PSC_Qb")
     _example(db_session, src_fra, "1", "fra uno")
-    # deu: copiabile normalmente
     src_deu = _answer(db_session, "deu", "PSC_Qb")
     _example(db_session, src_deu, "1", "deu uno")
     _answer(db_session, "deu", "PSC_Qa")
@@ -121,7 +107,6 @@ def test_languages_without_dest_answer_are_skipped(db_session):
 
     assert result["languages_skipped"] == ["fra"]
     assert result["examples_copied"] == 1
-    # fra non deve avere risposte fantasma create in destinazione
     assert (
         db_session.query(models.Answer)
         .filter_by(language_id="fra", question_id="PSC_Qa").first()
@@ -134,7 +119,7 @@ def test_preview_matches_copy(db_session):
     _example(db_session, src_ita, "1", "ita uno")
     _example(db_session, src_ita, "2", "ita dup")
     dst_ita = _answer(db_session, "ita", "PSC_Qa")
-    # duplicato gia' presente in destinazione (stesso contenuto di "ita dup")
+    # già presente in destinazione
     _example(db_session, dst_ita, "1", "ita dup")
     src_fra = _answer(db_session, "fra", "PSC_Qb")
     _example(db_session, src_fra, "1", "fra uno")

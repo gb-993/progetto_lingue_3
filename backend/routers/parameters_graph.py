@@ -15,42 +15,26 @@ from services.logic_parser import (
 router = APIRouter(prefix="/api/admin/parameters/graph", tags=["Parameters Graph"])
 
 
-# ---------------------------------------------------------------------------
-# Estrazione antecedenti dall'AST della implicational_condition.
-#
-# Riusiamo il parser pyparsing definito in services/logic_parser. Il vecchio
-# progetto usava una regex che perdeva il segno richiesto (+P uguale a -P) e
-# non gestiva 'not'/parentesi. Qui scendiamo l'albero parso e raccogliamo le
-# foglie (sign, param_id), mantenendo il segno per disegnarlo sull'edge.
-# ---------------------------------------------------------------------------
-
 def _iter_leaves(node: Any, negated: bool = False) -> Iterator[Tuple[str, str, bool]]:
-    """Yield (sign, param_id, negated) per ogni foglia.
-
-    `negated` riflette il numero (mod 2) di NOT che racchiudono la foglia
-    nell'AST: '+P1' -> negated=False; 'not +P1' -> True; 'not not +P1' -> False.
-    Questo serve per disegnare correttamente l'edge con etichetta 'NOT +' e
-    per calcolare la soddisfacibilita' dell'edge in modalita' lingua.
-    """
+    """Foglie (segno, parametro, negata); negata se sotto un numero dispari di NOT."""
     if isinstance(node, tuple) and len(node) == 2 and isinstance(node[0], str) and isinstance(node[1], str):
         yield node[0], node[1], negated
         return
     node = _as_list(node)
     if isinstance(node, list):
-        # Pattern NOT: ['not', <sub-espressione>]: invertiamo la polarita' e
-        # ricorriamo solo nel figlio.
+        # NOT: inverte la polarità
         if len(node) == 2 and isinstance(node[0], str) and node[0].lower() == 'not':
             yield from _iter_leaves(node[1], not negated)
             return
         for child in node:
-            # gli operatori (and/or, &, |) sono stringhe nude: skip
+            # operatori and/or: salta
             if isinstance(child, str):
                 continue
             yield from _iter_leaves(child, negated)
 
 
 def _parse_safe(expr: str):
-    """Parsa l'espressione e ritorna il root come lista/tupla. None se vuota o errore."""
+    """Radice dell'espressione parsata, None se vuota o non valida."""
     expr = (expr or "").strip()
     if not expr:
         return None
@@ -64,7 +48,7 @@ def _parse_safe(expr: str):
 
 
 def _load_lang_values(db: Session, lang_id: str) -> Dict[str, str]:
-    """Mappa parameter_id -> value_eval finale per la lingua data."""
+    """parameter_id -> value_eval per la lingua."""
     rows = (
         db.query(
             models.LanguageParameter.parameter_id,
@@ -83,10 +67,6 @@ def _load_lang_values(db: Session, lang_id: str) -> Dict[str, str]:
             out[pid] = val
     return out
 
-
-# ---------------------------------------------------------------------------
-# 1) Topologia del grafo (no lingua).
-# ---------------------------------------------------------------------------
 
 @router.get("")
 def get_graph(
@@ -139,11 +119,7 @@ def get_graph(
     return {"nodes": nodes, "edges": edges}
 
 
-# ---------------------------------------------------------------------------
-# 2) Valori finali per la lingua selezionata + soddisfacibilità di archi e
-#    intera condizione. Usato per colorare nodi (background) e tratteggiare
-#    edge non soddisfatti in modalità lingua.
-# ---------------------------------------------------------------------------
+# valori della lingua: colorano nodi e archi
 
 @router.get("/lang-values")
 def get_lang_values(
@@ -213,11 +189,7 @@ def get_lang_values(
     }
 
 
-# ---------------------------------------------------------------------------
-# 3) Albero della condition decomposto (per il pannello laterale al click).
-#    Riusa trace_evaluation_tree: ogni nodo ha label, type, result, children
-#    e — se la lingua è data — actual_value per ogni foglia.
-# ---------------------------------------------------------------------------
+# albero della condizione per il pannello laterale
 
 @router.get("/condition-tree/{param_id}")
 def get_condition_tree(

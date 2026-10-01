@@ -25,7 +25,7 @@ def update_site_content(
         db: Session = Depends(get_db),
         current_user: models.User = Depends(require_admin)
 ):
-    """Aggiorna il contenuto (Solo Admin)"""
+    """Aggiorna il contenuto (solo admin)."""
     item = db.query(models.SiteContent).filter(models.SiteContent.key == key).first()
 
     if not item:

@@ -6,7 +6,7 @@ import models
 from dependencies import get_db, require_admin
 from services.logic_parser import build_parser, pretty_print_expression, eval_node, _as_list
 
-# endpoint aggiunti in futuro: nessun endpoint qui dentro deve restare aperto.
+# admin a livello di router: vale anche per gli endpoint futuri
 router = APIRouter(
     prefix="/api/queries",
     tags=["Queries"],

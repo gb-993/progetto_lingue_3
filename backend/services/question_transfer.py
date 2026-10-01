@@ -1,6 +1,4 @@
-"""
-Servizio "copia esempi" tra question 
-"""
+"""Copia degli esempi fra domande."""
 from __future__ import annotations
 
 from sqlalchemy.orm import Session, selectinload
@@ -74,18 +72,7 @@ def preview_examples_copy(db: Session, source_id: str, dest_id: str) -> dict:
 
 
 def copy_examples_only(db: Session, source_id: str, dest_id: str) -> dict:
-    """Copia gli esempi della sorgente sulle risposte della destinazione.
-
-    Per ogni lingua in cui la sorgente ha esempi:
-      - destinazione con risposta -> duplica gli esempi in coda (numerazione
-        che prosegue quella esistente); gli esempi identici gia' presenti
-        vengono saltati (idempotente);
-      - destinazione senza risposta -> lingua saltata (vedi report).
-
-    Nessuna marcatura sugli esempi copiati (richiesta esplicita dei
-    linguisti): la tracciabilita' sta nel ParameterChangeLog del chiamante.
-    Ritorna i conteggi. NON committa.
-    """
+    """Copia gli esempi in coda, saltando i duplicati. Non committa."""
     source_answers = _load_answers_with_examples(db, source_id)
     dest_answer_by_lang = {answer.language_id: answer for answer in _load_answers_with_examples(db, dest_id)}
 

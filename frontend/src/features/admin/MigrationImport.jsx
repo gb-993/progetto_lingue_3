@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-// Ordine e pesi delle fasi del backend (in services/migration_import.py).
-// I pesi sono stime: compilation e dag sono di gran lunga le fasi più lunghe.
+// fasi del backend (migration_import.py)
 const PHASE_ORDER = [
     'queued',
     'opening_zip',
@@ -43,20 +42,20 @@ const TOTAL_WEIGHT = Object.values(PHASE_WEIGHTS).reduce((a, b) => a + b, 0);
 function computeOverallPercent(state) {
     if (!state) return 0;
     if (state.finished) return state.error ? 0 : 100;
-    const idx = PHASE_ORDER.indexOf(state.phase);
-    if (idx < 0) return 0;
+    const phaseIndex = PHASE_ORDER.indexOf(state.phase);
+    if (phaseIndex < 0) return 0;
     let cumulative = 0;
-    for (let i = 0; i < idx; i++) {
+    for (let i = 0; i < phaseIndex; i++) {
         cumulative += PHASE_WEIGHTS[PHASE_ORDER[i]] || 0;
     }
     const phaseWeight = PHASE_WEIGHTS[state.phase] || 0;
     const phaseFraction = state.total > 0 ? Math.min(1, (state.current || 0) / state.total) : 0;
     cumulative += phaseWeight * phaseFraction;
-    // Cap a 99 finché il backend non risponde finished:true (così il 100% rappresenta solo il done effettivo).
+    // 100% solo a fine job
     return Math.min(99, Math.round((cumulative / TOTAL_WEIGHT) * 100));
 }
 
-function fmtElapsed(seconds) {
+function formatElapsed(seconds) {
     if (seconds == null) return '';
     const s = Math.max(0, Math.floor(seconds));
     const m = Math.floor(s / 60);
@@ -72,7 +71,6 @@ export default function MigrationImport() {
     const [report, setReport] = useState(null);
     const [error, setError] = useState('');
 
-    // Job tracking
     const [jobId, setJobId] = useState(null);
     const [jobState, setJobState] = useState(null);
     const [elapsed, setElapsed] = useState(0);
@@ -98,11 +96,11 @@ export default function MigrationImport() {
         setJobState(null);
         startedAtRef.current = Date.now();
         try {
-            const fd = new FormData();
-            fd.append('file', file);
+            const formData = new FormData();
+            formData.append('file', file);
             const res = await api.post(
                 `/api/admin/migration/import-bundle?wipe=${wipe ? 'true' : 'false'}`,
-                fd,
+                formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
             if (res.data?.job_id) {
@@ -117,11 +115,7 @@ export default function MigrationImport() {
         }
     };
 
-    // Polling dello stato del job.
-    // Bug precedente: il guard `if (jobState?.finished)` dentro l'intervallo
-    // leggeva una closure stale, quindi le richieste continuavano anche dopo
-    // che il job era finito. Ora fermiamo l'interval esplicitamente appena la
-    // response dice finished:true.
+    // ferma il polling appena il job è finito
     useEffect(() => {
         if (!jobId) return;
         let cancelled = false;
@@ -165,15 +159,14 @@ export default function MigrationImport() {
         };
     }, [jobId]);
 
-    // Timer "elapsed" lato client
     useEffect(() => {
         if (!busy) return;
-        const id = setInterval(() => {
+        const timer = setInterval(() => {
             if (startedAtRef.current) {
                 setElapsed((Date.now() - startedAtRef.current) / 1000);
             }
         }, 500);
-        return () => clearInterval(id);
+        return () => clearInterval(timer);
     }, [busy]);
 
     return (
@@ -312,7 +305,7 @@ function ProgressPanel({ jobState, elapsed }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0 }}>Migration in progress</h3>
                 <span className="small muted">
-                    Elapsed: {fmtElapsed(elapsed)}
+                    Elapsed: {formatElapsed(elapsed)}
                 </span>
             </div>
 
@@ -395,20 +388,20 @@ function MigrationReport({ report }) {
                     </thead>
                     <tbody>
                         {sections.map((name) => {
-                            const s = report.by_section[name] || {};
+                            const sectionStats = report.by_section[name] || {};
                             return (
                                 <tr key={name}>
                                     <td><strong>{name}</strong></td>
-                                    <td style={{ textAlign: 'right' }}>{s.rows_total || 0}</td>
-                                    <td style={{ textAlign: 'right', color: s.inserted > 0 ? '#15803d' : 'inherit' }}>{s.inserted || 0}</td>
-                                    <td style={{ textAlign: 'right', color: s.updated > 0 ? '#15803d' : 'inherit' }}>{s.updated || 0}</td>
-                                    <td style={{ textAlign: 'right' }}>{s.skipped || 0}</td>
+                                    <td style={{ textAlign: 'right' }}>{sectionStats.rows_total || 0}</td>
+                                    <td style={{ textAlign: 'right', color: sectionStats.inserted > 0 ? '#15803d' : 'inherit' }}>{sectionStats.inserted || 0}</td>
+                                    <td style={{ textAlign: 'right', color: sectionStats.updated > 0 ? '#15803d' : 'inherit' }}>{sectionStats.updated || 0}</td>
+                                    <td style={{ textAlign: 'right' }}>{sectionStats.skipped || 0}</td>
                                     <td style={{
                                         textAlign: 'right',
-                                        color: s.errors > 0 ? '#b91c1c' : 'inherit',
-                                        fontWeight: s.errors > 0 ? 'bold' : 'normal',
+                                        color: sectionStats.errors > 0 ? '#b91c1c' : 'inherit',
+                                        fontWeight: sectionStats.errors > 0 ? 'bold' : 'normal',
                                     }}>
-                                        {s.errors || 0}
+                                        {sectionStats.errors || 0}
                                     </td>
                                 </tr>
                             );
@@ -421,8 +414,8 @@ function MigrationReport({ report }) {
                 <>
                     <h4 style={{ marginBottom: '0.5rem' }}>Languages with failed DAG ({report.languages_dag_failed.length})</h4>
                     <ul className="small" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)', color: '#b91c1c' }}>
-                        {report.languages_dag_failed.map((d, i) => (
-                            <li key={i}><strong>{d.language_id}</strong>: {d.error}</li>
+                        {report.languages_dag_failed.map((failure, index) => (
+                            <li key={index}><strong>{failure.language_id}</strong>: {failure.error}</li>
                         ))}
                     </ul>
                 </>
@@ -446,15 +439,15 @@ function MigrationReport({ report }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {report.errors.map((e, i) => (
-                                    <tr key={i}>
-                                        <td className="small">{e.section}</td>
-                                        <td className="small">{e.row || '—'}</td>
-                                        <td className="small muted">{e.column || '—'}</td>
+                                {report.errors.map((errorEntry, index) => (
+                                    <tr key={index}>
+                                        <td className="small">{errorEntry.section}</td>
+                                        <td className="small">{errorEntry.row || '—'}</td>
+                                        <td className="small muted">{errorEntry.column || '—'}</td>
                                         <td className="small" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>
-                                            {e.value || '—'}
+                                            {errorEntry.value || '—'}
                                         </td>
-                                        <td className="small" style={{ color: '#b91c1c' }}>{e.reason}</td>
+                                        <td className="small" style={{ color: '#b91c1c' }}>{errorEntry.reason}</td>
                                     </tr>
                                 ))}
                             </tbody>

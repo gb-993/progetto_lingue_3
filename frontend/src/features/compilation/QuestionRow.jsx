@@ -35,9 +35,6 @@ const reactSelectStyles = {
     clearIndicator: (base) => ({ ...base, color: 'var(--text-muted)' }),
 };
 
-// Stile per i "campi" read-only del banner clipboard: imitano l'aspetto dei
-// textarea degli esempi reali (stesso padding, sfondo, bordo) ma senza essere
-// editabili — sono solo un'anteprima.
 const clipboardFieldStyle = {
     width: '100%',
     minHeight: '3.4rem',
@@ -51,56 +48,43 @@ const clipboardFieldStyle = {
     color: 'var(--text)',
 };
 
-const formatExampleOption = (ex) => {
-    // I linguisti lavorano spesso su lingue che non conoscono: la frase originale
-    // (textarea) non li aiuta a riconoscere quale esempio stanno cercando. Mostriamo
-    // quindi la GLOSSA come identificatore nei risultati di "Import from". Se la
-    // glossa manca, si ripiega direttamente sulla frase originale (textarea), così
-    // l'etichetta non resta mai vuota (la ricerca lato server copre comunque
-    // textarea/translation/gloss).
-    const primary = (ex.gloss || ex.textarea || '').trim();
+const formatExampleOption = (example) => {
+    // la glossa aiuta a riconoscere l'esempio
+    const primary = (example.gloss || example.textarea || '').trim();
     const snippet = primary.length > 70 ? `${primary.slice(0, 70)}…` : primary;
     return {
-        value: ex.id,
-        label: `[${ex.language_id} · ${ex.question_id}] ${snippet}`,
-        example: ex,
+        value: example.id,
+        label: `[${example.language_id} · ${example.question_id}] ${snippet}`,
+        example: example,
     };
 };
 
 export default function QuestionRow({ question, value, onChange, isReadOnly, currentLangId, isHighlighted, isAdmin = false }) {
     const [localError, setLocalError] = useState('');
 
-    // Card della question: serve il ref per scrollare in vista quando il
-    // backend segnala "missing_examples" su questa specifica question.
     const cardRef = useRef(null);
     useEffect(() => {
         if (!isHighlighted) return;
         cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, [isHighlighted]);
 
-    // Clipboard interno per copia/incolla esempi tra question (anche di parametri
-    // diversi) della stessa lingua. Persistente in localStorage e cross-tab.
     const { copied, copy: copyToClipboard, clear: clearClipboard } = useExampleClipboard();
-    // Flash "Copied!" temporaneo sul bottone Copy dell'esempio cliccato.
     const [recentlyCopiedTempId, setRecentlyCopiedTempId] = useState(null);
     useEffect(() => {
         if (recentlyCopiedTempId == null) return;
-        const t = setTimeout(() => setRecentlyCopiedTempId(null), 1500);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => setRecentlyCopiedTempId(null), 1500);
+        return () => clearTimeout(timer);
     }, [recentlyCopiedTempId]);
-    // Flash "✓ Copied N" temporaneo sul bottone "Copy all" (0 = spento).
     const [copiedAllCount, setCopiedAllCount] = useState(0);
     useEffect(() => {
         if (!copiedAllCount) return;
-        const t = setTimeout(() => setCopiedAllCount(0), 1500);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => setCopiedAllCount(0), 1500);
+        return () => clearTimeout(timer);
     }, [copiedAllCount]);
 
-    // Validazione base in tempo reale per gli esempi: anche 'unsure' richiede 2 esempi.
     useEffect(() => {
         if (value.response_text === 'yes' || value.response_text === 'unsure') {
-            // FIX: Aggiunto (ex.textarea || '') per evitare il crash su valori null dal database
-            const validExamples = value.examples.filter(ex => (ex.textarea || '').trim() !== '');
+            const validExamples = value.examples.filter(example => (example.textarea || '').trim() !== '');
             if (value.examples.length > 0 && validExamples.length < 2) {
                 setLocalError('Reminder: If you select YES or UNSURE, you should provide at least two valid examples.');
             } else {
@@ -110,8 +94,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             setLocalError('');
         }
     }, [value.response_text, value.examples]);
-
-    // --- GESTORI DI EVENTI ---
 
     const handleMotivationToggle = (motivationId) => {
         const newIds = value.motivation_ids.includes(motivationId)
@@ -131,29 +113,27 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
 
     const handleRemoveExample = (tempId) => {
         onChange({
-            examples: value.examples.filter(ex => ex.tempId !== tempId)
+            examples: value.examples.filter(example => example.tempId !== tempId)
         });
     };
 
-    const handleExampleChange = (tempId, field, val) => {
+    const handleExampleChange = (tempId, field, newValue) => {
         onChange({
-            examples: value.examples.map(ex =>
-                ex.tempId === tempId ? { ...ex, [field]: val } : ex
+            examples: value.examples.map(example =>
+                example.tempId === tempId ? { ...example, [field]: newValue } : example
             )
         });
     };
 
-    const handleCopyExample = (ex) => {
-        copyToClipboard([ex], currentLangId, question.id);
-        setRecentlyCopiedTempId(ex.tempId);
+    const handleCopyExample = (example) => {
+        copyToClipboard([example], currentLangId, question.id);
+        setRecentlyCopiedTempId(example.tempId);
     };
 
-    // Vero se l'esempio ha almeno un campo valorizzato (esclude le righe vuote).
-    const exampleHasContent = (ex) =>
-        [ex.textarea, ex.transliteration, ex.gloss, ex.translation, ex.reference]
-            .some(v => (v || '').trim() !== '');
+    const exampleHasContent = (example) =>
+        [example.textarea, example.transliteration, example.gloss, example.translation, example.reference]
+            .some(fieldValue => (fieldValue || '').trim() !== '');
 
-    // Copia in un colpo solo tutti gli esempi non vuoti di questa question.
     const handleCopyAllExamples = () => {
         const nonEmpty = value.examples.filter(exampleHasContent);
         if (nonEmpty.length === 0) return;
@@ -161,51 +141,44 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
         setCopiedAllCount(nonEmpty.length);
     };
 
-    // Sposta un esempio su (dir=-1) o giù (dir=+1) scambiandolo col vicino.
-    const handleMoveExample = (tempId, dir) => {
-        const idx = value.examples.findIndex(ex => ex.tempId === tempId);
-        const target = idx + dir;
+    // -1 = su, +1 = giù
+    const handleMoveExample = (tempId, direction) => {
+        const idx = value.examples.findIndex(example => example.tempId === tempId);
+        const target = idx + direction;
         if (idx < 0 || target < 0 || target >= value.examples.length) return;
         const next = [...value.examples];
         [next[idx], next[target]] = [next[target], next[idx]];
         onChange({ examples: next });
     };
 
-    // Incolla in coda TUTTI gli esempi copiati come nuovi esempi in questa
-    // question. Non svuota il clipboard: il linguista può fare paste in più
-    // question di fila.
+    // il clipboard resta pieno
     const handlePasteFromClipboard = () => {
         if (!copied || !copied.examples?.length) return;
-        const base = Date.now();
+        const baseTempId = Date.now();
         onChange({
             examples: [
                 ...value.examples,
-                ...copied.examples.map((ex, i) => ({
-                    tempId: base + i,
+                ...copied.examples.map((example, index) => ({
+                    tempId: baseTempId + index,
                     id: null,
-                    textarea: ex.textarea || '',
-                    transliteration: ex.transliteration || '',
-                    gloss: ex.gloss || '',
-                    translation: ex.translation || '',
-                    reference: ex.reference || '',
-                    is_test: !!ex.is_test,
+                    textarea: example.textarea || '',
+                    transliteration: example.transliteration || '',
+                    gloss: example.gloss || '',
+                    translation: example.translation || '',
+                    reference: example.reference || '',
+                    is_test: !!example.is_test,
                 }))
             ]
         });
     };
 
-    // --- IMPORT ESEMPI (server-side search) ---
-    // Ricerca sempre ristretta alla lingua corrente: gli esempi delle altre
-    // lingue non sono utili per la compilazione. Nessun limite frontend → il
-    // backend restituisce tutti gli esempi della lingua, filtrati lato server
-    // anche su translation/gloss (campi non presenti nel label).
     const debounceRef = useRef(null);
 
-    const fetchExamples = useCallback(async (q) => {
+    const fetchExamples = useCallback(async (query) => {
         try {
             const res = await api.get('/api/languages/examples/search', {
                 params: {
-                    q: q || '',
+                    q: query || '',
                     language_id: currentLangId,
                 },
             });
@@ -216,8 +189,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
         }
     }, [currentLangId]);
 
-    // Debounce 300ms su loadOptions: AsyncSelect chiama loadOptions a ogni keystroke
-    // ma noi accumuliamo in un timer e risolviamo solo l'ultima richiesta.
+    // debounce: parte solo l'ultima ricerca
     const loadExampleOptions = useCallback((inputValue) => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current.timer);
@@ -234,24 +206,22 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
 
     const handleImportExample = (selected) => {
         if (!selected) return;
-        const ex = selected.example;
+        const example = selected.example;
         onChange({
             examples: [
                 ...value.examples,
                 {
                     tempId: Date.now(),
-                    id: null, // nuovo esempio (verrà inserito al save)
-                    textarea: ex.textarea || '',
-                    transliteration: ex.transliteration || '',
-                    gloss: ex.gloss || '',
-                    translation: ex.translation || '',
-                    reference: ex.reference || ''
+                    id: null,
+                    textarea: example.textarea || '',
+                    transliteration: example.transliteration || '',
+                    gloss: example.gloss || '',
+                    translation: example.translation || '',
+                    reference: example.reference || ''
                 }
             ]
         });
     };
-
-    // --- RENDER ---
 
     return (
         <div
@@ -260,7 +230,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
             style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', background: 'var(--surface, #fff)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', marginBottom: 'var(--form-field-mb, 1rem)' }}
         >
 
-            {/* Header Domanda */}
             <div className="q-head" style={{ display: 'grid', gridTemplateColumns: '1fr auto', columnGap: '1rem', borderLeft: '3px solid var(--brand)', paddingLeft: '0.85rem', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <strong className="q-id" style={{ color: 'var(--brand)', fontSize: '1.1rem' }}>{question.id}</strong>
@@ -286,7 +255,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 )}
             </div>
 
-            {/* Istruzione Generale */}
             {question.instruction && (
                 <div className="info-row muted">
                     <div className="info-row__label">Instructions</div>
@@ -294,7 +262,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* Example YES (illustrativo, sempre visibile) */}
             {question.example_yes && (
                 <div className="info-row muted">
                     <div className="info-row__label">Example YES</div>
@@ -302,9 +269,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* Istruzione condizionale YES/NO. instruction_yes mostrato anche per
-                'unsure' e 'missing' (replicano il flusso di YES; 'missing' senza
-                obbligo di esempi). */}
             {(value.response_text === 'yes' || value.response_text === 'unsure' || value.response_text === 'missing') && question.instruction_yes && (
                 <div className="info-row instructions-yn instructions-yn--yes">
                     <div className="info-row__label">Instructions (YES)</div>
@@ -319,7 +283,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* Select Risposta */}
             <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <label className="info-row__label">Answer</label>
                 <div className="info-row__content">
@@ -338,22 +301,21 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             </div>
 
-            {/* BLOCCO NO: Motivazioni */}
             {value.response_text === 'no' && (
                 <div className="info-row">
                     <div className="info-row__label">Motivations</div>
                     <div className="info-row__content">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--surface-2)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '6px' }}>
                             {question.allowed_motivations.length > 0 ? (
-                                question.allowed_motivations.map(m => (
-                                    <label key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
+                                question.allowed_motivations.map(motivation => (
+                                    <label key={motivation.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
                                         <input
                                             type="checkbox"
-                                            checked={value.motivation_ids.includes(m.id)}
-                                            onChange={() => handleMotivationToggle(m.id)}
+                                            checked={value.motivation_ids.includes(motivation.id)}
+                                            onChange={() => handleMotivationToggle(motivation.id)}
                                             disabled={isReadOnly}
                                         />
-                                        <strong>{m.label}</strong>
+                                        <strong>{motivation.label}</strong>
                                     </label>
                                 ))
                             ) : (
@@ -366,9 +328,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* BLOCCO Esempi: visibile per yes/no/unsure/missing. La validazione
-                "≥2 esempi" vale solo per yes/unsure; per 'no' e 'missing' sono
-                facoltativi (zero o più). */}
             {(value.response_text === 'yes' || value.response_text === 'no' || value.response_text === 'unsure' || value.response_text === 'missing') && (
                 <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                     <div className="info-row__label">
@@ -378,25 +337,19 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
 
                         {localError && <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)', fontWeight: 'bold' }}>{localError}</div>}
 
-                        {/*
-                            Layout responsive: su schermi larghi (≥ ~880px) gli esempi
-                            stanno a coppie affiancati; sotto si impilano in verticale.
-                            La classe `examples-grid` neutralizza la regola globale
-                            `.card + .card { margin-top }` (vedi index.css), che
-                            altrimenti farebbe scendere la 2ª card spaiandola dalla 1ª.
-                        */}
+                        {/* examples-grid tiene allineate le card (vedi index.css) */}
                         <div className="examples-grid" style={{
                             display: 'grid',
                             gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
                             gap: 'var(--form-grid-gap, 1rem)',
                             marginBottom: value.examples.length > 0 ? '1rem' : 0,
                         }}>
-                            {value.examples.map((ex, index) => (
-                                <div key={ex.tempId} className="card" style={{ padding: 'var(--form-box-pad, 1rem)', background: 'var(--surface-2)', position: 'relative' }}>
+                            {value.examples.map((example, index) => (
+                                <div key={example.tempId} className="card" style={{ padding: 'var(--form-box-pad, 1rem)', background: 'var(--surface-2)', position: 'relative' }}>
                                     <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.25rem' }}>
                                         <button
                                             type="button"
-                                            onClick={() => handleMoveExample(ex.tempId, -1)}
+                                            onClick={() => handleMoveExample(example.tempId, -1)}
                                             disabled={isReadOnly || index === 0}
                                             className="btn btn--small"
                                             style={{ borderColor: 'transparent', padding: '0.2rem 0.45rem' }}
@@ -407,7 +360,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => handleMoveExample(ex.tempId, 1)}
+                                            onClick={() => handleMoveExample(example.tempId, 1)}
                                             disabled={isReadOnly || index === value.examples.length - 1}
                                             className="btn btn--small"
                                             style={{ borderColor: 'transparent', padding: '0.2rem 0.45rem' }}
@@ -418,61 +371,55 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => handleCopyExample(ex)}
+                                            onClick={() => handleCopyExample(example)}
                                             disabled={isReadOnly}
                                             className="btn btn--small"
-                                            style={{ borderColor: 'transparent', color: recentlyCopiedTempId === ex.tempId ? '#16a34a' : 'inherit' }}
+                                            style={{ borderColor: 'transparent', color: recentlyCopiedTempId === example.tempId ? '#16a34a' : 'inherit' }}
                                             title="Copy this example to the clipboard (paste it into any question of this language)"
                                         >
-                                            {recentlyCopiedTempId === ex.tempId ? '✓ Copied!' : 'Copy'}
+                                            {recentlyCopiedTempId === example.tempId ? '✓ Copied!' : 'Copy'}
                                         </button>
-                                        <button type="button" onClick={() => handleRemoveExample(ex.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
+                                        <button type="button" onClick={() => handleRemoveExample(example.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
                                     </div>
                                     <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
 
-                                    {/* Esempio "di test"/segnaposto: solo gli admin possono marcarlo.
-                                        Conta per il vincolo dei 2 esempi ma rende giallo il quadratino. */}
+                                    {/* solo gli admin marcano gli esempi di test */}
                                     {isAdmin ? (
-                                        <label className="small" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem', cursor: isReadOnly ? 'not-allowed' : 'pointer', color: ex.is_test ? '#a16207' : 'var(--text-muted)', fontWeight: ex.is_test ? 700 : 400 }}>
+                                        <label className="small" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem', cursor: isReadOnly ? 'not-allowed' : 'pointer', color: example.is_test ? '#a16207' : 'var(--text-muted)', fontWeight: example.is_test ? 700 : 400 }}>
                                             <input
                                                 type="checkbox"
-                                                checked={!!ex.is_test}
-                                                onChange={e => handleExampleChange(ex.tempId, 'is_test', e.target.checked)}
+                                                checked={!!example.is_test}
+                                                onChange={e => handleExampleChange(example.tempId, 'is_test', e.target.checked)}
                                                 disabled={isReadOnly}
                                             />
                                             Mark as test example 
                                         </label>
-                                    ) : (ex.is_test && (
+                                    ) : (example.is_test && (
                                         <div className="small" style={{ display: 'inline-block', marginBottom: '0.6rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: '#e8a317', color: '#3a2c00', fontWeight: 700 }}>
                                             TEST EXAMPLE
                                         </div>
                                     ))}
 
-                                    {/* In modalità appaiata ogni card occupa metà larghezza,
-                                        quindi i 5 campi sono impilati verticalmente per non
-                                        comprimere i textarea. `rows={1}` parte compatto: chi
-                                        ha esempi lunghi può comunque ingrandire col drag
-                                        (resize: vertical). */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
                                         <div>
                                             <label className="small">Example text</label>
-                                            <textarea rows="1" value={ex.textarea || ''} onChange={e => handleExampleChange(ex.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
+                                            <textarea rows="1" value={example.textarea || ''} onChange={e => handleExampleChange(example.tempId, 'textarea', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Transliteration</label>
-                                            <textarea rows="1" value={ex.transliteration || ''} onChange={e => handleExampleChange(ex.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
+                                            <textarea rows="1" value={example.transliteration || ''} onChange={e => handleExampleChange(example.tempId, 'transliteration', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Gloss</label>
-                                            <textarea rows="1" value={ex.gloss || ''} onChange={e => handleExampleChange(ex.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
+                                            <textarea rows="1" value={example.gloss || ''} onChange={e => handleExampleChange(example.tempId, 'gloss', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">English Translation</label>
-                                            <textarea rows="1" value={ex.translation || ''} onChange={e => handleExampleChange(ex.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
+                                            <textarea rows="1" value={example.translation || ''} onChange={e => handleExampleChange(example.tempId, 'translation', e.target.value)} disabled={isReadOnly} style={{ width: '100%', resize: 'vertical', minHeight: 'unset' }} />
                                         </div>
                                         <div>
                                             <label className="small">Reference</label>
-                                            <input type="text" value={ex.reference || ''} onChange={e => handleExampleChange(ex.tempId, 'reference', e.target.value)} disabled={isReadOnly} style={{ width: '100%', padding: '0.4rem' }} />
+                                            <input type="text" value={example.reference || ''} onChange={e => handleExampleChange(example.tempId, 'reference', e.target.value)} disabled={isReadOnly} style={{ width: '100%', padding: '0.4rem' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -519,8 +466,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     {copied.sourceQuestionId ? ` · from ${copied.sourceQuestionId}` : ''}
                                 </h4>
 
-                                {/* Un solo esempio: anteprima completa a 5 campi. Più esempi:
-                                    lista compatta numerata col solo testo, per non gonfiare il banner. */}
                                 {copied.examples.length === 1 ? (
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--form-grid-gap, 1rem)' }}>
                                         <div>
@@ -546,11 +491,11 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                        {copied.examples.map((ex, i) => (
-                                            <div key={i} style={{ ...clipboardFieldStyle, minHeight: 'auto', display: 'flex', gap: '0.6rem', alignItems: 'baseline' }}>
-                                                <span style={{ fontWeight: 700, color: '#dc2626', flex: '0 0 auto' }}>#{i + 1}</span>
+                                        {copied.examples.map((example, index) => (
+                                            <div key={index} style={{ ...clipboardFieldStyle, minHeight: 'auto', display: 'flex', gap: '0.6rem', alignItems: 'baseline' }}>
+                                                <span style={{ fontWeight: 700, color: '#dc2626', flex: '0 0 auto' }}>#{index + 1}</span>
                                                 <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                                    {ex.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>(empty)</span>}
+                                                    {example.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>(empty)</span>}
                                                 </span>
                                             </div>
                                         ))}
@@ -595,7 +540,6 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                 </div>
             )}
 
-            {/* Commenti liberi */}
             <div className="info-row" style={{ marginTop: 'var(--form-col-gap, 1.5rem)' }}>
                 <label className="info-row__label">Comments</label>
                 <div className="info-row__content">

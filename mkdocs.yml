@@ -111,5 +111,5 @@ extra:
       link: https://hub.parametricomparison.unimore.it
       name: PCM-Hub (sito di produzione)
 
-# Tolleranza sui link rotti (i manuali puntano spesso a file di codice nel repo)
+# i manuali linkano file del repo: niente errore sui link rotti
 strict: false

@@ -18,15 +18,11 @@ def get_db():
         db.close()
 
 
-# Schema per estrarre il token dalle richieste (cerca l'header Authorization: Bearer <token>)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def resolve_user_from_sub(db: Session, sub) -> models.User | None:
-    """
-    Risolve un utente dal sub del JWT (id numerico o email).
-    Restituisce None se non esiste.
-    """
+    """Utente dal sub del JWT (id o email), None se non esiste."""
     if sub is None:
         return None
     s = str(sub)

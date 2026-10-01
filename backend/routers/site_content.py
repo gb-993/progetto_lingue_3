@@ -8,7 +8,6 @@ from dependencies import get_db, require_admin
 
 router = APIRouter(tags=["Site Content"])
 
-# --- SCHEMI PYDANTIC ---
 class MapDataResponse(BaseModel):
     id: str
     name: str
@@ -54,7 +53,7 @@ def update_site_content(key: str, data: SiteContentUpdate, db: Session = Depends
     if not content_obj:
         content_obj = models.SiteContent(
             key=key,
-            page="how_to_cite",  # Default page logico
+            page="how_to_cite",
             content=data.content,
             updated_by_id=current_user.id
         )

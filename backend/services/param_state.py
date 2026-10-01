@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Tuple
 
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 import models
@@ -12,10 +13,13 @@ RED = "red"
 YELLOW = "yellow"
 GREEN = "green"
 
-# Completamento a livello di LINGUA (asse A). Riassume i colori dei quadratini.
+# completamento della lingua (riassume i colori)
 EMPTY = "empty"
 INCOMPLETE = "incomplete"
 COMPLETE = "complete"
+
+# gli stessi spazi che toglie str.strip(): un esempio "vuoto" per il DB lo è anche per Python
+_WHITESPACE = "".join(chr(c) for c in range(0x3001) if chr(c).isspace())
 
 def param_color(
     question_ids: List[str],
@@ -24,19 +28,17 @@ def param_color(
     has_test_example: bool,
     needs_review: bool,
 ) -> str:
-    """Calcola il colore di un parametro per una lingua (funzione pura); `response_by_qid` usa i valori 'yes'/'no'/'unsure'/'missing'/None."""
+    """Colore di un parametro per una lingua."""
     if not question_ids:
         return GREY
 
     responses = [response_by_qid.get(qid) for qid in question_ids]
     if all(response is None for response in responses):
         return GREY
-    # Domanda senza risposta o UNSURE: manca una risoluzione vera → RED.
-    # MISSING invece non blocca (vedi YELLOW sotto).
+    # risposta vuota o unsure: rosso
     if any(response is None or response == "unsure" for response in responses):
         return RED
 
-    # Qui ogni domanda ha yes/no/missing (nessuna vuota, nessuna unsure).
     has_missing = any(response == "missing" for response in responses)
     examples_missing = any(
         response_by_qid.get(qid) == "yes" and example_count_by_qid.get(qid, 0) < 2
@@ -52,40 +54,43 @@ def compute_colors(
     lang_ids: Iterable[str],
     param_questions: Dict[str, List[str]],
 ) -> Dict[Tuple[str, str], str]:
-    """Calcola il colore per molte coppie (lingua, parametro) con poche query; ritorna {(language_id, parameter_id): color}."""
+    """Colori per molte coppie (lingua, parametro), con poche query."""
     lang_ids = list(lang_ids)
     param_ids = list(param_questions.keys())
     all_qids = [qid for qids in param_questions.values() for qid in qids]
 
     response_by_lang_and_question: Dict[Tuple[str, str], str | None] = {}
-    answer_id_by_lang_and_question: Dict[Tuple[str, str], int] = {}
+    example_count_by_lang_and_question: Dict[Tuple[str, str], int] = {}
+    lang_and_questions_with_test: set[Tuple[str, str]] = set()
     if lang_ids and all_qids:
-        for answer_id, language_id, question_id, response_text in db.query(
-            models.Answer.id,
-            models.Answer.language_id,
-            models.Answer.question_id,
-            models.Answer.response_text,
-        ).filter(
-            models.Answer.language_id.in_(lang_ids),
-            models.Answer.question_id.in_(all_qids),
-        ).all():
-            response_by_lang_and_question[(language_id, question_id)] = response_text
-            answer_id_by_lang_and_question[(language_id, question_id)] = answer_id
-
-    # Esempi: conteggio non vuoti + presenza di is_test, per answer_id.
-    example_count_by_answer_id: Dict[int, int] = {}
-    answer_ids_with_test_example: set[int] = set()
-    answer_ids = list(answer_id_by_lang_and_question.values())
-    if answer_ids:
-        for answer_id, textarea, is_test in db.query(
-            models.Example.answer_id,
-            models.Example.textarea,
-            models.Example.is_test,
-        ).filter(models.Example.answer_id.in_(answer_ids)).all():
-            if (textarea or "").strip():
-                example_count_by_answer_id[answer_id] = example_count_by_answer_id.get(answer_id, 0) + 1
-            if is_test:
-                answer_ids_with_test_example.add(answer_id)
+        # gli esempi li conta il DB: niente testi scaricati né IN con migliaia di id
+        example_has_text = func.trim(func.coalesce(models.Example.textarea, ""), _WHITESPACE) != ""
+        rows = (
+            db.query(
+                models.Answer.language_id,
+                models.Answer.question_id,
+                models.Answer.response_text,
+                func.count(case((example_has_text, 1))),
+                func.max(case((models.Example.is_test == True, 1), else_=0)),  # noqa: E712
+            )
+            .outerjoin(models.Example, models.Example.answer_id == models.Answer.id)
+            .filter(
+                models.Answer.language_id.in_(lang_ids),
+                models.Answer.question_id.in_(all_qids),
+            )
+            .group_by(
+                models.Answer.id,
+                models.Answer.language_id,
+                models.Answer.question_id,
+                models.Answer.response_text,
+            )
+        )
+        for language_id, question_id, response_text, example_count, has_test in rows:
+            key = (language_id, question_id)
+            response_by_lang_and_question[key] = response_text
+            example_count_by_lang_and_question[key] = example_count
+            if has_test:
+                lang_and_questions_with_test.add(key)
 
     needs_review_by_lang_and_param: Dict[Tuple[str, str], bool] = {}
     if lang_ids and param_ids:
@@ -104,14 +109,12 @@ def compute_colors(
         for parameter_id in param_ids:
             question_ids = param_questions.get(parameter_id, [])
             response_by_qid = {qid: response_by_lang_and_question.get((language_id, qid)) for qid in question_ids}
-            example_count_by_qid: Dict[str, int] = {}
-            has_test = False
-            for qid in question_ids:
-                answer_id = answer_id_by_lang_and_question.get((language_id, qid))
-                if answer_id is not None:
-                    example_count_by_qid[qid] = example_count_by_answer_id.get(answer_id, 0)
-                    if answer_id in answer_ids_with_test_example:
-                        has_test = True
+            example_count_by_qid = {
+                qid: example_count_by_lang_and_question[(language_id, qid)]
+                for qid in question_ids
+                if (language_id, qid) in example_count_by_lang_and_question
+            }
+            has_test = any((language_id, qid) in lang_and_questions_with_test for qid in question_ids)
             result[(language_id, parameter_id)] = param_color(
                 question_ids, response_by_qid, example_count_by_qid, has_test,
                 needs_review_by_lang_and_param.get((language_id, parameter_id), False),
@@ -120,7 +123,7 @@ def compute_colors(
 
 
 def active_param_questions(db: Session) -> Dict[str, List[str]]:
-    """{param_id: [question_id ATTIVE]} per i parametri attivi; evita ai chiamanti (lista lingue, dashboard) di duplicare la query. I parametri senza domande attive non compaiono."""
+    """Domande attive per ogni parametro attivo."""
     rows = (
         db.query(models.Question.parameter_id, models.Question.id)
         .join(models.ParameterDef, models.ParameterDef.id == models.Question.parameter_id)
@@ -134,7 +137,7 @@ def active_param_questions(db: Session) -> Dict[str, List[str]]:
 
 
 def language_completion_from_colors(colors: List[str]) -> str:
-    """Riduce i colori dei parametri rispondibili di una lingua al completamento: EMPTY se nessuno o tutti grigi, COMPLETE se tutti verdi, INCOMPLETE altrimenti."""
+    """Dai colori al completamento della lingua."""
     if not colors or all(color == GREY for color in colors):
         return EMPTY
     if all(color == GREEN for color in colors):
@@ -148,7 +151,7 @@ def compute_language_completion(
     param_questions: Dict[str, List[str]],
     override_by_lang: Dict[str, str | None] | None = None,
 ) -> Dict[str, str]:
-    """Completamento (empty/incomplete/complete) per ogni lingua in batch; l'override per-lingua in `override_by_lang` vince sul calcolo automatico se valorizzato."""
+    """Completamento di ogni lingua; l'override, se c'è, vince."""
     lang_ids = list(lang_ids)
     override_by_lang = override_by_lang or {}
     answerable = {pid: qids for pid, qids in param_questions.items() if qids}
@@ -165,7 +168,7 @@ def compute_language_completion(
 
 
 def flag_parameter_needs_review(db: Session, param_id: str) -> None:
-    """Accende `needs_review` per il parametro su tutte le lingue con già una risposta a una sua question (crea la riga di stato se manca); da chiamare dopo una modifica seria alla question, non committa."""
+    """Segna needs_review sulle lingue che hanno già risposto. Non committa."""
     question_ids = [row[0] for row in db.query(models.Question.id).filter(
         models.Question.parameter_id == param_id
     ).all()]

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin/backup-restore", tags=["BackupRestore"])
 
 
-# Stessi limiti del migration import per coerenza.
+# stessi limiti di migration.py
 MAX_BUNDLE_SIZE = 200 * 1024 * 1024            # 200 MB compresso
 MAX_UNCOMPRESSED_TOTAL = 500 * 1024 * 1024     # 500 MB decompresso totale
 MAX_UNCOMPRESSED_PER_FILE = 100 * 1024 * 1024  # 100 MB per singolo file
@@ -81,7 +81,7 @@ def _run_restore_in_background(
 
 
 @router.post("")
-async def post_backup_restore(
+def post_backup_restore(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     wipe: bool = False,
@@ -92,7 +92,7 @@ async def post_backup_restore(
         raise HTTPException(status_code=400, detail="Upload a .zip file")
 
     try:
-        contents = await file.read()
+        contents = file.file.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not read the file: {e}")
 

@@ -1,33 +1,4 @@
-"""
-Script computazionali di TableA sulla vista Questions.
-
-Trasposizione concordata con C. Guardiano (email, giugno 2026):
-  - yes → '+', no → '-'
-  - unsure / missing / vuoto → missing character ('0'), quindi saltati da
-    _hamming_core/_jaccard_core esattamente come gli 0/?/vuoto dei parametri
-  - ogni question è un item indipendente: nessuna ri-pesatura per parametro
-    (un parametro con più domande pesa di più — comportamento voluto).
-
-I test chiamano le funzioni endpoint direttamente col db_session del conftest
-(stesso stile degli altri test del repo, niente TestClient); i corpi delle
-StreamingResponse vengono drenati con un piccolo helper asyncio.
-
-Dati seminati (3 lingue con coordinate, 1 parametro, 4 domande attive):
-
-            P1_01   P1_02   P1_03    P1_04
-    AAA     yes     yes     no       missing
-    BBB     yes     no      unsure   yes
-    CCC     no      no      yes      (nessuna riga Answer)
-
-Simboli attesi (yes→+, no→-, resto→0):
-    AAA: [+, +, -, 0]
-    BBB: [+, -, 0, +]
-    CCC: [-, -, +, 0]
-
-Distanze attese (calcolate a mano, coppie senza confronto saltate):
-    hamming : AAA-BBB 0.5   AAA-CCC 1.0   BBB-CCC 0.5
-    jaccard+: AAA-BBB 0.5   AAA-CCC 1.0   BBB-CCC 1.0
-"""
+"""Script di Tabella A in vista questions: yes→+, no→-, il resto→0 (saltato)."""
 import asyncio
 import io
 import zipfile
@@ -56,12 +27,8 @@ from services.dag_eval import run_dag_for_language
 PNG_MAGIC = b"\x89PNG"
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _read_body(resp) -> bytes:
-    """Estrae i bytes da una Response/StreamingResponse di FastAPI."""
+    """Bytes del body, anche da StreamingResponse."""
     if hasattr(resp, "body_iterator"):
         async def _drain():
             return b"".join([chunk async for chunk in resp.body_iterator])
@@ -70,10 +37,7 @@ def _read_body(resp) -> bytes:
 
 
 def _parse_dist_txt(text: str):
-    """Parsa un TSV di distanze (ignora le righe-commento '#' della citazione).
-
-    Ritorna un dict {(id_riga, id_colonna): float}.
-    """
+    """TSV di distanze → {(riga, colonna): valore}, senza le righe '#'."""
     lines = [ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
     header = lines[0].split("\t")[1:]
     mat = {}
@@ -85,7 +49,7 @@ def _parse_dist_txt(text: str):
 
 
 def _seed_questions(db):
-    """3 lingue con coordinate + 1 parametro con 4 domande (vedi docstring modulo)."""
+    """3 lingue con coordinate, 1 parametro con 4 domande."""
     db.add_all([
         models.Language(id="AAA", name_full="Lang A", position=1, latitude=41.9, longitude=12.5),
         models.Language(id="BBB", name_full="Lang B", position=2, latitude=48.85, longitude=2.35),
@@ -122,10 +86,6 @@ def _assert_matrix(mat, expected):
         assert mat[(lid, lid)] == pytest.approx(0.0), f"diagonale {lid}"
 
 
-# ---------------------------------------------------------------------------
-# Mappatura risposte → simboli
-# ---------------------------------------------------------------------------
-
 def test_symbol_mapping_questions_view(db_session):
     """yes→+, no→-, unsure/missing/assente→0, nell'ordine giusto."""
     _seed_questions(db_session)
@@ -140,7 +100,7 @@ def test_symbol_mapping_questions_view(db_session):
 
 
 def test_symbol_data_params_view_unchanged(db_session):
-    """In vista params _get_symbol_data non deve toccare le celle."""
+    """Vista params: celle invariate."""
     _seed_questions(db_session)
     lp = models.LanguageParameter(language_id="AAA", parameter_id="P1", value_orig="+")
     db_session.add(lp); db_session.flush()
@@ -154,10 +114,6 @@ def test_symbol_data_params_view_unchanged(db_session):
     assert rows_a == rows_b
 
 
-# ---------------------------------------------------------------------------
-# Distances (.txt zip)
-# ---------------------------------------------------------------------------
-
 def test_distances_questions_view(db_session):
     _seed_questions(db_session)
     resp = export_distances_txt(TableAFilterRequest(view="questions"), db_session)
@@ -170,11 +126,7 @@ def test_distances_questions_view(db_session):
 
 
 def test_distances_params_view_regression(db_session):
-    """La vista params continua a usare value_eval, senza alcuna mappatura.
-
-    Eval seminati: P1 → AAA '+', BBB '-', CCC '+'; P2 → AAA '+', BBB '+', CCC '?'.
-    hamming: AAA-BBB 0.5 | AAA-CCC 0.0 ('?' saltato) | BBB-CCC 1.0
-    """
+    """Vista params: usa value_eval così com'è ('?' saltato)."""
     db_session.add_all([
         models.Language(id="AAA", name_full="Lang A", position=1),
         models.Language(id="BBB", name_full="Lang B", position=2),
@@ -199,24 +151,16 @@ def test_distances_params_view_regression(db_session):
     _assert_matrix(mat, {("AAA", "BBB"): 0.5, ("AAA", "CCC"): 0.0, ("BBB", "CCC"): 1.0})
 
 
-# ---------------------------------------------------------------------------
-# Geographic distances (indipendenti dalla vista)
-# ---------------------------------------------------------------------------
-
 def test_geo_distances_questions_view(db_session):
     _seed_questions(db_session)
     resp = export_geo_distances_zip(TableAFilterRequest(view="questions"), db_session)
     with zipfile.ZipFile(io.BytesIO(_read_body(resp))) as zf:
         assert sorted(zf.namelist()) == ["crow_flies_km.txt", "gcd_km.txt"]
         mat = _parse_dist_txt(zf.read("gcd_km.txt").decode())
-    # Roma-Parigi ~1105 km in great-circle: sanity check, non porting test.
+    # Roma-Parigi ~1105 km
     assert mat[("AAA", "BBB")] == pytest.approx(1105, abs=15)
     assert mat[("AAA", "AAA")] == 0.0
 
-
-# ---------------------------------------------------------------------------
-# Dendrograms / PCA / Cluster map
-# ---------------------------------------------------------------------------
 
 def test_dendrograms_questions_view(db_session):
     _seed_questions(db_session)
@@ -246,10 +190,6 @@ def test_cluster_map_questions_view(db_session):
     assert b"plotly" in body
 
 
-# ---------------------------------------------------------------------------
-# Mantel test
-# ---------------------------------------------------------------------------
-
 def test_mantel_questions_view(db_session):
     _seed_questions(db_session)
     resp = export_mantel_zip(MantelRequest(view="questions"), db_session)
@@ -258,29 +198,20 @@ def test_mantel_questions_view(db_session):
     with zipfile.ZipFile(io.BytesIO(_read_body(resp))) as zf:
         names = set(zf.namelist())
         assert {"gcd.txt", "hamming.txt", "jaccard[+].txt", "mantel_results.csv"} <= names
-        # Le matrici dentro il Mantel devono coincidere con l'export distances.
+        # stesse matrici dell'export distances
         _assert_matrix(_parse_dist_txt(zf.read("hamming.txt").decode()), EXPECTED_HAMMING_Q)
         _assert_matrix(_parse_dist_txt(zf.read("jaccard[+].txt").decode()), EXPECTED_JACCARD_Q)
-        # 3 coppie di matrici → 3 scatterplot png + 3 html.
+        # 3 coppie di matrici
         assert sum(n.endswith("_mantel_scatterplot.png") for n in names) == 3
         assert sum(n.endswith("_mantel_scatterplot_interactive.html") for n in names) == 3
         results = zf.read("mantel_results.csv").decode()
-    # 3 coppie × 3 metodi = 9 righe risultato (+ header, + citazione '#').
+    # 3 coppie x 3 metodi, più l'header
     data_lines = [ln for ln in results.splitlines() if ln.strip() and not ln.startswith("#")]
     assert len(data_lines) == 1 + 9
 
 
-# ---------------------------------------------------------------------------
-# Risposte su parametri azzerati dall'implicazione (warning UI)
-# ---------------------------------------------------------------------------
-
 def _seed_implication(db):
-    """P1 senza condizione, P2 con condizione '+P1' (1 domanda ciascuno).
-
-        AAA: P1 no  -> P1 '-' -> P2 azzerato,  ma ha risposto 'no' a P2  -> ORFANA
-        BBB: P1 yes -> P1 '+' -> P2 attivo,    ha risposto 'yes' a P2    -> regolare
-        CCC: P1 no  -> P1 '-' -> P2 azzerato,  nessuna risposta su P2    -> nulla
-    """
+    """P2 dipende da +P1: AAA risponde a P2 anche con P1 '-' (risposta orfana)."""
     db.add_all([
         models.Language(id="AAA", name_full="Lang A", position=1),
         models.Language(id="BBB", name_full="Lang B", position=2),
@@ -316,7 +247,7 @@ def _seed_implication(db):
 def test_orphan_answers_detected(db_session):
     """Solo AAA ha risposto a un parametro che l'implicazione azzera."""
     _seed_implication(db_session)
-    # Precondizione: P2 di AAA e' davvero '0', quello di BBB no.
+    # P2 di AAA è davvero '0'
     _, rows = _get_symbol_data(db_session, TableAFilterRequest(view="params"))
     p2 = next(r for r in rows if r["id"] == "P2")
     assert p2["cells"] == ["0", "+", "0"]
@@ -328,7 +259,6 @@ def test_orphan_answers_detected(db_session):
 
 
 def test_orphan_answers_exposed_only_in_questions_view(db_session):
-    """/matrix riporta il conteggio in vista questions, mai in vista params."""
     _seed_implication(db_session)
 
     q = get_tablea_matrix(TableAFilterRequest(view="questions"), db_session)
@@ -340,7 +270,6 @@ def test_orphan_answers_exposed_only_in_questions_view(db_session):
 
 
 def test_orphan_answers_none_when_no_implication(db_session):
-    """Dataset senza condizioni implicazionali: nessuna risposta orfana."""
     _seed_questions(db_session)
     res = get_tablea_matrix(TableAFilterRequest(view="questions"), db_session)
     assert res["orphan_answers"]["count"] == 0

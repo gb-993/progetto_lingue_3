@@ -1,24 +1,16 @@
 import { useState, useEffect } from 'react';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 import SegmentedToggle from '../../components/SegmentedToggle';
 
-// Stessa logica del toggle tema (data-theme): la densita' del layout vive in
-// un attributo data-density su <html>, persistito in localStorage e applicato
-// gia' in index.html per evitare il flash al reload.
 const DENSITY_STORAGE_KEY = 'pcm-density';
 const THEME_STORAGE_KEY = 'pcm-theme';
 
 function getInitialDensity() {
     if (typeof window === 'undefined') return 'compact';
-    // Default = "compact". Solo la scelta esplicita 'zoom' dell'utente attiva la
-    // modalita' grande, e resta salvata in localStorage (rispettata per sempre,
-    // anche dopo i deploy). Ogni altro valore (null o il vecchio 'comfortable')
-    // ricade sul default compact.
+    // default compact; zoom solo se scelto dall'utente
     return localStorage.getItem(DENSITY_STORAGE_KEY) === 'zoom' ? 'zoom' : 'compact';
 }
 
-// Il tema (data-theme) e' gia' applicato da index.html prima di React, quindi
-// lo leggiamo dall'attributo: e' la verita' corrente, coerente con la top bar.
 function getInitialTheme() {
     if (typeof document === 'undefined') return 'light';
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -41,9 +33,6 @@ export default function MyAccount() {
         localStorage.setItem(DENSITY_STORAGE_KEY, value);
     };
 
-    // Cambia il tema e notifica la top bar (e ogni altro toggle) via evento,
-    // così restano sempre in sync. Stessa sorgente di verità: data-theme +
-    // localStorage. La top bar fa esattamente lo stesso quando viene cliccata.
     const applyTheme = (value) => {
         setTheme(value);
         document.documentElement.setAttribute('data-theme', value);
@@ -51,7 +40,6 @@ export default function MyAccount() {
         window.dispatchEvent(new CustomEvent('pcm-theme-change', { detail: value }));
     };
 
-    // Tiene allineato questo toggle quando il tema cambia dalla top bar.
     useEffect(() => {
         const handler = (e) => setTheme(prev => (prev === e.detail ? prev : e.detail));
         window.addEventListener('pcm-theme-change', handler);

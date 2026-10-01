@@ -3,8 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
 
-// Accordion riusato dallo stile di BackupDetail (ripetuto per evitare di
-// dover esportare il sotto-componente da un altro file).
 const AccordionItem = ({ title, defaultOpen = false, children }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
@@ -90,7 +88,6 @@ export default function ParameterBackupDetail() {
                 </button>
             </header>
 
-            {/* HEADER CARD */}
             <div className="card" style={{ padding: 'var(--ld-header-pad, 1.5rem 2rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
                 <div style={{ marginBottom: '1.5rem' }}>
                     <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--brand)' }}>

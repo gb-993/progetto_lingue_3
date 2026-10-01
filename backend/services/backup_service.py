@@ -1,6 +1,4 @@
-"""Backup 'submission': 
-snapshot storico di una o tutte le lingue (Answer/Example/Motivation/Parametri congelati in tabelle Submission*) 
-con pruning automatico, più l'export xlsx di una submission salvata."""
+"""Backup delle lingue (snapshot nelle tabelle Submission) ed export xlsx."""
 
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
@@ -18,7 +16,7 @@ from services.citation import apply_excel_citation
 MAX_PER_LANGUAGE = 10
 
 def create_language_submission(db: Session, language: models.Language, user_id: int, note: str = "", fixed_time: datetime = None):
-    """Crea uno snapshot 'full' di una lingua (Submission + risposte/motivazioni/esempi/parametri), con pruning automatico oltre MAX_PER_LANGUAGE."""
+    """Snapshot completo di una lingua; tiene solo gli ultimi MAX_PER_LANGUAGE."""
     now = fixed_time or utc_now()
 
     submission = models.Submission(
@@ -106,7 +104,7 @@ def create_language_submission(db: Session, language: models.Language, user_id: 
 def create_all_languages_backup(db: Session, user_id: int, note: str = "Global backup"):
     languages = db.query(models.Language).all()
 
-    # Azzeriamo i microsecondi così tutto il backup appartiene alla stessa identica data.
+    # stesso timestamp per tutte le lingue
     fixed_time = utc_now().replace(microsecond=0)
 
     total_pruned = 0
@@ -138,7 +136,7 @@ def _bold_header_row(worksheet, column_count: int) -> None:
 
 
 def _style_table(worksheet, name: str, column_count: int, column_widths) -> None:
-    """TableStyleMedium2 ha fondo header blu: necessario perché _bold_header_row imposta font bianco, altrimenti illeggibile."""
+    """Stile con header blu: serve al font bianco dell'header."""
     if worksheet.max_row >= 2:
         table_range = f"A1:{get_column_letter(column_count)}{worksheet.max_row}"
         table = Table(displayName=name, ref=table_range)
@@ -162,7 +160,7 @@ _EXAMPLES_HEADERS = ["Question", "Example text", "Transliteration", "Gloss", "Tr
 
 
 def build_submission_workbook(db: Session, submission: models.Submission) -> Workbook:
-    """Workbook con 4 sheet (Info, Parameters, Answers, Examples) per il backup di una lingua; tutti i dati vengono dallo snapshot Submission, niente lookup sulle tabelle vive."""
+    """Excel del backup di una lingua, solo dai dati dello snapshot."""
     workbook = Workbook()
 
     info_sheet = workbook.active
@@ -198,7 +196,6 @@ def build_submission_workbook(db: Session, submission: models.Submission) -> Wor
         ])
     _style_table(parameters_sheet, "BackupParameters", len(_PARAMS_HEADERS), [16, 14, 14, 14, 14])
 
-    # Label delle motivations per question_code, con fallback su code se manca la label.
     motivations_by_question_code: dict[str, list[str]] = {}
     for answer_motivation in submission.answer_motivations:
         label = answer_motivation.motivation_label or answer_motivation.motivation_code or ""

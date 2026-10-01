@@ -1,6 +1,3 @@
-"""
-Test per il sistema di versionamento (EntityVersion).
-"""
 import pytest
 import models
 from services.versioning import (
@@ -98,7 +95,7 @@ def test_compute_diff_basic():
 
 
 def test_compute_diff_create():
-    """Senza prev, tutti i campi non-null sono 'new'."""
+    """Senza versione precedente: ogni campo pieno è 'new'."""
     diff = compute_diff(None, {"name": "A", "comment": ""})
     assert "name" in diff
     assert "comment" not in diff  # vuoto = ignorato

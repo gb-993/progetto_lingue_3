@@ -1,17 +1,4 @@
-"""Test end-to-end della cancellazione "vera" di una Language.
-
-Verifica:
-  - DELETE rimuove la lingua e a cascata answers/examples/answer_motivations,
-    language_parameters/evals/statuses, submissions e relative children,
-    language_aliases.
-  - Le motivations (dizionario globale) NON vengono toccate.
-  - Le archived_answers (snapshot storici di question rimosse) NON vengono toccate
-    anche se contengono il language_id della lingua cancellata.
-  - Una entry operation="delete" viene aggiunta in entity_versions.
-
-Tutto orchestrato su SQLite in-memory con PRAGMA foreign_keys=ON, cosi'
-l'ON DELETE CASCADE che abbiamo dichiarato a livello DB si attiva.
-"""
+"""Cancellazione lingua: FK attive su SQLite per far scattare le cascade."""
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -37,8 +24,7 @@ def _admin(db) -> models.User:
 
 
 def _seed_populated_language(db, lid: str = "ENG"):
-    """Lingua + risposte + esempi + motivazioni + parametri/eval/statuses
-    + alias + submission con tutte le children."""
+    """Lingua con tutti i dati collegati."""
     lang = models.Language(id=lid, name_full=f"Lang {lid}", position=1)
     db.add(lang)
 
@@ -80,25 +66,20 @@ def _seed_populated_language(db, lid: str = "ENG"):
 
 
 def test_delete_cascades_everything_operative(db_fk):
-    """La cancellazione della lingua deve azzerare tutte le tabelle figlie/nipote."""
+    """Spariscono tutti i dati collegati alla lingua."""
     user = _admin(db_fk)
     _seed_populated_language(db_fk, "ENG")
 
     delete_admin_language("ENG", db=db_fk, current_user=user)
 
-    # Lingua sparita
     assert db_fk.query(models.Language).filter_by(id="ENG").first() is None
-    # Risposte + esempi + motivation-link
     assert db_fk.query(models.Answer).filter_by(language_id="ENG").count() == 0
     assert db_fk.query(models.Example).count() == 0
     assert db_fk.query(models.AnswerMotivation).count() == 0
-    # Parametri + eval + status
     assert db_fk.query(models.LanguageParameter).filter_by(language_id="ENG").count() == 0
     assert db_fk.query(models.LanguageParameterEval).count() == 0
     assert db_fk.query(models.LanguageParameterStatus).filter_by(language_id="ENG").count() == 0
-    # Alias
     assert db_fk.query(models.LanguageAlias).filter_by(language_id="ENG").count() == 0
-    # Submissions e children
     assert db_fk.query(models.Submission).filter_by(language_id="ENG").count() == 0
     assert db_fk.query(models.SubmissionAnswer).count() == 0
     assert db_fk.query(models.SubmissionExample).count() == 0
@@ -107,19 +88,17 @@ def test_delete_cascades_everything_operative(db_fk):
 
 
 def test_delete_does_not_touch_motivations_dictionary(db_fk):
-    """Il dizionario globale delle Motivations resta intatto."""
     user = _admin(db_fk)
     _seed_populated_language(db_fk, "ENG")
     assert db_fk.query(models.Motivation).filter_by(code="MOT_X").count() == 1
 
     delete_admin_language("ENG", db=db_fk, current_user=user)
 
-    # Motivation row ancora presente (e' un dizionario condiviso)
     assert db_fk.query(models.Motivation).filter_by(code="MOT_X").count() == 1
 
 
 def test_delete_does_not_touch_question_allowed_motivations(db_fk):
-    """Il join QuestionAllowedMotivation non e' figlio della lingua: non va toccato."""
+    """QuestionAllowedMotivation non dipende dalla lingua."""
     user = _admin(db_fk)
     _seed_populated_language(db_fk, "ENG")
     assert db_fk.query(models.QuestionAllowedMotivation).count() == 1
@@ -130,10 +109,9 @@ def test_delete_does_not_touch_question_allowed_motivations(db_fk):
 
 
 def test_delete_does_not_touch_archived_answers(db_fk):
-    """archived_answers ha language_id denormalizzato senza FK: resta storico."""
+    """archived_answers non ha FK sulla lingua: resta come storico."""
     user = _admin(db_fk)
     _seed_populated_language(db_fk, "ENG")
-    # Crea un archived_question + archived_answer che cita "ENG"
     aq = models.ArchivedQuestion(
         original_question_id="QOLD", parameter_id="P1",
         text="old text", archive_note="bumped",
@@ -148,13 +126,11 @@ def test_delete_does_not_touch_archived_answers(db_fk):
 
     delete_admin_language("ENG", db=db_fk, current_user=user)
 
-    # archived_answers conserva il language_id "ENG" anche dopo la cancellazione
     aas = db_fk.query(models.ArchivedAnswer).filter_by(language_id="ENG").all()
     assert len(aas) == 1
 
 
 def test_delete_creates_history_entry(db_fk):
-    """Una entry operation=delete deve essere registrata in entity_versions."""
     user = _admin(db_fk)
     _seed_populated_language(db_fk, "ENG")
 
@@ -179,7 +155,6 @@ def test_delete_404_on_missing(db_fk):
 
 
 def test_delete_empty_language_still_works(db_fk):
-    """Lingua senza nessun dato operativo: il DELETE deve funzionare comunque."""
     user = _admin(db_fk)
     db_fk.add(models.Language(id="EMPTY", name_full="E", position=1))
     db_fk.commit()

@@ -46,7 +46,7 @@ def _ensure_can_modify(language: models.Language, current_user: models.User):
 
 router = APIRouter(prefix="/api/languages", tags=["Compilation & Workflow"])
 
-# --- SCHEMI PYDANTIC ---
+# schemi Pydantic
 class ExampleInput(BaseModel):
     id: Optional[int] = None
     number: str = ""
@@ -510,7 +510,7 @@ def save_parameter_block(lang_id: str, param_id: str, payload: ParameterBlockSav
     }
 
 
-# --- WORKFLOW ENDPOINTS ---
+# workflow
 class NotePayload(BaseModel):
     note: Optional[str] = ""
 
@@ -530,7 +530,7 @@ def submit_language(lang_id: str, db: Session = Depends(get_db), current_user: m
 
     language.status = "submitted"
     language.submitted_at = utc_now()
-    language.rejection_note = None  # ripuliamo eventuale nota di rimando precedente
+    language.rejection_note = None
     db.commit()
     return {"detail": "Language confirmed and submitted for review.", "status": language.status}
 
@@ -573,10 +573,7 @@ def send_back_language(lang_id: str, payload: NotePayload, db: Session = Depends
 
 @router.post("/{lang_id}/workflow/reopen")
 def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    validated -> draft. Solo admin. Sblocca una lingua già validata per poterla
-    modificare di nuovo (esce dalla sola lettura).
-    """
+    """validated -> draft: riapre una lingua validata (solo admin)."""
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
     if language.status != "validated":
@@ -588,7 +585,7 @@ def reopen_language(lang_id: str, db: Session = Depends(get_db), current_user: m
     return {"detail": "Language reopened.", "status": language.status}
 
 
-# --- ASSE A: override manuale del completamento (solo super-admin) ---
+# override manuale del completamento (solo super-admin)
 class CompletionOverridePayload(BaseModel):
     override: Optional[str] = None
 
@@ -634,7 +631,7 @@ def get_language_debug_data(lang_id: str, db: Session = Depends(get_db), current
     warni_by_pid = {}
     final_by_pid = {}
     warnf_by_pid = {}
-    cond_values = {} # Dizionario per valutare le condizioni in tempo reale
+    cond_values = {}
 
     for lp in lps:
         pid = lp.parameter_id

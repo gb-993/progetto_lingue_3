@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-// Fasi del backend in services/backup_restore.py.
+// fasi del backend (backup_restore.py)
 const PHASE_ORDER = [
     'queued',
     'wipe',
@@ -14,7 +14,7 @@ const PHASE_ORDER = [
     'recompute',
     'done',
 ];
-// Compilation è la fase che domina nel tempo: contiene un xlsx per lingua.
+// compilation è la fase più lunga
 const PHASE_WEIGHTS = {
     queued: 0,
     wipe: 1,
@@ -31,10 +31,10 @@ const TOTAL_WEIGHT = Object.values(PHASE_WEIGHTS).reduce((a, b) => a + b, 0);
 function computeOverallPercent(state) {
     if (!state) return 0;
     if (state.finished) return state.error ? 0 : 100;
-    const idx = PHASE_ORDER.indexOf(state.phase);
-    if (idx < 0) return 0;
+    const phaseIndex = PHASE_ORDER.indexOf(state.phase);
+    if (phaseIndex < 0) return 0;
     let cumulative = 0;
-    for (let i = 0; i < idx; i++) {
+    for (let i = 0; i < phaseIndex; i++) {
         cumulative += PHASE_WEIGHTS[PHASE_ORDER[i]] || 0;
     }
     const phaseWeight = PHASE_WEIGHTS[state.phase] || 0;
@@ -43,7 +43,7 @@ function computeOverallPercent(state) {
     return Math.min(99, Math.round((cumulative / TOTAL_WEIGHT) * 100));
 }
 
-function fmtElapsed(seconds) {
+function formatElapsed(seconds) {
     if (seconds == null) return '';
     const s = Math.max(0, Math.floor(seconds));
     const m = Math.floor(s / 60);
@@ -64,7 +64,6 @@ export default function BackupRestore() {
     const [elapsed, setElapsed] = useState(0);
     const startedAtRef = useRef(null);
 
-    // Export full backup: stato indipendente dal restore. { jobId, state, error }
     const [exportJob, setExportJob] = useState(null);
     const [exporting, setExporting] = useState(false);
     const [exportElapsed, setExportElapsed] = useState(0);
@@ -90,11 +89,11 @@ export default function BackupRestore() {
         setJobState(null);
         startedAtRef.current = Date.now();
         try {
-            const fd = new FormData();
-            fd.append('file', file);
+            const formData = new FormData();
+            formData.append('file', file);
             const res = await api.post(
                 `/api/admin/backup-restore?wipe=${wipe ? 'true' : 'false'}`,
-                fd,
+                formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
             if (res.data?.job_id) {
@@ -109,7 +108,6 @@ export default function BackupRestore() {
         }
     };
 
-    // Polling status job
     useEffect(() => {
         if (!jobId) return;
         let cancelled = false;
@@ -153,18 +151,16 @@ export default function BackupRestore() {
         };
     }, [jobId]);
 
-    // Timer client-side
     useEffect(() => {
         if (!busy) return;
-        const id = setInterval(() => {
+        const timer = setInterval(() => {
             if (startedAtRef.current) {
                 setElapsed((Date.now() - startedAtRef.current) / 1000);
             }
         }, 500);
-        return () => clearInterval(id);
+        return () => clearInterval(timer);
     }, [busy]);
 
-    // Export full backup: avvia il job, fa polling, scarica al termine.
     const handleStartFullBackup = async () => {
         setExporting(true);
         setExportJob(null);
@@ -180,7 +176,6 @@ export default function BackupRestore() {
         }
     };
 
-    // Polling export job + auto-download a fine job
     useEffect(() => {
         if (!exportJob?.jobId) return;
         const exportJobId = exportJob.jobId;
@@ -200,14 +195,14 @@ export default function BackupRestore() {
                     `/api/admin/export/full-backup/zip/download/${exportJobId}`,
                     { responseType: 'blob' }
                 );
-                const cd = res.headers['content-disposition'] || '';
-                const m = cd.match(/filename="?([^";]+)"?/);
-                const filename = m ? m[1] : 'PCM_full_backup.zip';
+                const contentDisposition = res.headers['content-disposition'] || '';
+                const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+                const filename = filenameMatch ? filenameMatch[1] : 'PCM_full_backup.zip';
                 const blob = new Blob([res.data]);
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click(); a.remove();
+                const link = document.createElement('a');
+                link.href = url; link.download = filename;
+                document.body.appendChild(link); link.click(); link.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
                 alert(err.response?.data?.detail || 'Could not download the full backup file.');
@@ -249,15 +244,14 @@ export default function BackupRestore() {
         };
     }, [exportJob?.jobId]);
 
-    // Timer client-side per export
     useEffect(() => {
         if (!exporting) return;
-        const id = setInterval(() => {
+        const timer = setInterval(() => {
             if (exportStartedAtRef.current) {
                 setExportElapsed((Date.now() - exportStartedAtRef.current) / 1000);
             }
         }, 500);
-        return () => clearInterval(id);
+        return () => clearInterval(timer);
     }, [exporting]);
 
     return (
@@ -271,7 +265,6 @@ export default function BackupRestore() {
                 </p>
             </header>
 
-            {/* === Export full backup === */}
             <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Export full backup</h3>
                 <p className="small" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
@@ -324,7 +317,6 @@ export default function BackupRestore() {
                 )}
             </div>
 
-            {/* === Restore section === */}
             <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>How to get the bundle for restore</h3>
                 <ol className="small" style={{ lineHeight: 1.7, marginTop: 0, marginBottom: '0.75rem', paddingLeft: '1.25rem' }}>
@@ -451,7 +443,7 @@ function ProgressPanel({ jobState, elapsed }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0 }}>Restore in progress</h3>
                 <span className="small muted">
-                    Elapsed: {fmtElapsed(elapsed)}
+                    Elapsed: {formatElapsed(elapsed)}
                 </span>
             </div>
 
@@ -496,10 +488,7 @@ function ProgressPanel({ jobState, elapsed }) {
     );
 }
 
-
 function ExportProgressPanel({ jobState, elapsed, error }) {
-    // Export ha una sola fase ("building"): la percentuale è semplicemente
-    // current/total. Più semplice del restore che ha più fasi pesate.
     const current = jobState?.current || 0;
     const total = jobState?.total || 0;
     const percent = total > 0 ? Math.min(99, Math.round((current / total) * 100)) : 0;
@@ -513,7 +502,7 @@ function ExportProgressPanel({ jobState, elapsed, error }) {
                 <span className="small"><strong>{label}</strong></span>
                 <span className="small muted">
                     {total > 0 && `${current} / ${total} · `}
-                    Elapsed: {fmtElapsed(elapsed)}
+                    Elapsed: {formatElapsed(elapsed)}
                 </span>
             </div>
             <div style={{
@@ -592,13 +581,13 @@ function RestoreReport({ report }) {
                         Show {errors.length} error(s)
                     </summary>
                     <ul className="small" style={{ marginTop: '0.5rem', maxHeight: '300px', overflow: 'auto' }}>
-                        {errors.slice(0, 200).map((e, i) => (
-                            <li key={i}>
-                                <code>{e._file || e.sheet || '?'}</code>
-                                {e.row ? `, row ${e.row}` : ''}
-                                {e.value ? ` (${e.value})` : ''}
+                        {errors.slice(0, 200).map((errorEntry, index) => (
+                            <li key={index}>
+                                <code>{errorEntry._file || errorEntry.sheet || '?'}</code>
+                                {errorEntry.row ? `, row ${errorEntry.row}` : ''}
+                                {errorEntry.value ? ` (${errorEntry.value})` : ''}
                                 {' — '}
-                                {e.reason}
+                                {errorEntry.reason}
                             </li>
                         ))}
                         {errors.length > 200 && (

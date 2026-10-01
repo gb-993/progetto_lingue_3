@@ -15,7 +15,6 @@ export default function BackupFolder() {
         const fetchFolderContents = async () => {
             setLoading(true);
             try {
-                // Passiamo il timestamp come parametro query all'API
                 const res = await api.get(`/api/admin/backups/folder?timestamp=${encodeURIComponent(timestamp)}`);
                 setSubmissions(res.data || []);
             } catch (err) {
@@ -31,7 +30,6 @@ export default function BackupFolder() {
         }
     }, [timestamp]);
 
-    // Filtro di ricerca per nome lingua o ID
     const filteredSubmissions = submissions.filter((sub) => {
         const term = search.toLowerCase().trim();
         if (!term) return true;
@@ -41,7 +39,6 @@ export default function BackupFolder() {
         );
     });
 
-    // Formattiamo la data per renderla più leggibile nell'header
     const displayDate = formatBackendDate(timestamp);
 
     return (

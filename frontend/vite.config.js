@@ -1,32 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // TinyMCE ships CSS using `:nth-child(An of <selector>)` which lightningcss
-  // (Vite's default CSS minifier in v8+) currently mis-parses. Fall back to
-  // esbuild's CSS minifier, which handles it correctly.
+  // workaround: il minifier CSS di Vite rompe il CSS di TinyMCE
   build: {
     cssMinify: false,
   },
   server: {
-    // Docker su Windows: gli eventi del filesystem NON si propagano dal disco
-    // host (Windows) al container (Linux) attraverso il bind mount, quindi il
-    // watcher di default di Vite non vede le modifiche ai file e l'HMR non
-    // scatta. usePolling forza Vite a interrogare periodicamente i file: piu'
-    // CPU ma il live-reload torna affidabile dentro il container.
+    // Docker su Windows: senza polling il live-reload non vede le modifiche
     watch: {
       usePolling: true,
       interval: 300,
     },
-    // In dev non c'e' Caddy davanti, quindi le rotte non-SPA come
-    // /legal-docs/* (PDF dei documenti legali caricati via UI admin)
-    // restano scoperte: il browser le chiederebbe a Vite (5173) e
-    // riceverebbe 404. Proxie a backend (8000), che ha un endpoint
-    // dedicato che serve i file da LEGAL_DOCUMENTS_DIR. In prod questo
-    // proxy non e' attivo (npm run build non lo legge) e Caddy intercetta
-    // /legal-docs/* PRIMA del backend, servendo direttamente dal volume.
+    // in dev non c'è Caddy: i PDF legali li serve il backend
     proxy: {
       '/legal-docs': {
         target: 'http://backend:8000',

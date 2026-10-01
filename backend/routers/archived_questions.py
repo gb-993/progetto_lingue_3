@@ -1,4 +1,4 @@
-"""Router archivio domande obsolete (admin only)."""
+"""Archivio delle domande obsolete (solo admin)."""
 from __future__ import annotations
 import io
 
@@ -59,7 +59,6 @@ def list_archived_questions(
             "text_preview": (archived_question.text or "")[:160],
         })
 
-    # Ordine: per ultimo archiviato (versione più recente).
     groups = list(groups_by_question_id.values())
     groups.sort(
         key=lambda group: (

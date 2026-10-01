@@ -13,7 +13,6 @@ from services.backup_service import (
 )
 from services.citation import apply_excel_citation
 
-# Massimo numero di snapshot mantenuti per ogni parametro
 MAX_PER_PARAMETER = 10
 
 
@@ -24,11 +23,7 @@ def create_parameter_submission(
     note: str = "",
     fixed_time: datetime = None,
 ):
-    """Snapshot 'full' della *definizione* di un parametro.
-
-    Salva: ParameterDef + tutte le Question + motivations ammesse per ciascuna
-    Question. Niente dati delle lingue (quelli vivono nei Submission).
-    """
+    """Snapshot della definizione di un parametro (con domande), senza dati delle lingue."""
     now = fixed_time or utc_now()
 
     sub = models.ParameterSubmission(
@@ -90,7 +85,6 @@ def create_parameter_submission(
 
     db.flush()
 
-    # Pruning: tieni i più recenti N
     subs = (
         db.query(models.ParameterSubmission.id)
         .filter(models.ParameterSubmission.parameter_id == parameter.id)
@@ -118,9 +112,7 @@ def create_parameter_submission(
 def create_all_parameters_backup(
     db: Session, user_id: int, note: str = "Global parameters backup"
 ):
-    """Backup globale: uno snapshot per ogni parametro, accomunati dallo stesso
-    timestamp (microsecondi azzerati) per formare la stessa "cartella".
-    """
+    """Uno snapshot per parametro, stesso timestamp: una sola cartella."""
     parameters = db.query(models.ParameterDef).all()
     fixed_time = utc_now().replace(microsecond=0)
     total_pruned = 0
@@ -146,7 +138,6 @@ def create_all_parameters_backup(
 def create_single_parameter_backup(
     db: Session, parameter: models.ParameterDef, user_id: int, note: str = ""
 ):
-    """Backup di un singolo parametro: cartella dedicata col proprio timestamp."""
     fixed_time = utc_now().replace(microsecond=0)
     try:
         sub, pruned = create_parameter_submission(db, parameter, user_id, note, fixed_time)
@@ -163,8 +154,6 @@ def create_single_parameter_backup(
         raise
 
 
-# Export di una ParameterSubmission in xlsx (download del backup parametro).
-
 _PINFO_HEADERS = ["Field", "Value"]
 _PQUESTIONS_HEADERS = [
     "Question ID", "Text", "Template type", "Instruction",
@@ -175,16 +164,9 @@ _PQAM_HEADERS = ["Question ID", "Allowed motivation"]
 
 
 def build_parameter_submission_workbook(db: Session, sub: models.ParameterSubmission) -> Workbook:
-    """Workbook per una singola ParameterSubmission (backup di un parametro).
-
-    Sheet:
-      - Info       : id, name, descrizioni, formula, is_active, position
-      - Questions  : 1 riga per question dello snapshot
-      - AllowedMot : 1 riga per (question, motivation_label) consentita
-    """
+    """Excel del backup di un parametro."""
     wb = Workbook()
 
-    # === Info ===
     ws_info = wb.active
     ws_info.title = "Info"
     ws_info.append(_PINFO_HEADERS)
@@ -216,7 +198,6 @@ def build_parameter_submission_workbook(db: Session, sub: models.ParameterSubmis
         ws_info.append([k, v])
     _style_table(ws_info, "ParamBackupInfo", len(_PINFO_HEADERS), [28, 70])
 
-    # === Questions ===
     ws_q = wb.create_sheet("Questions")
     ws_q.append(_PQUESTIONS_HEADERS)
     _bold_header_row(ws_q, len(_PQUESTIONS_HEADERS))
@@ -237,7 +218,6 @@ def build_parameter_submission_workbook(db: Session, sub: models.ParameterSubmis
     _style_table(ws_q, "ParamBackupQuestions", len(_PQUESTIONS_HEADERS),
                  [16, 36, 16, 24, 24, 24, 24, 22, 12, 10])
 
-    # === Allowed motivations ===
     ws_qam = wb.create_sheet("AllowedMotivations")
     ws_qam.append(_PQAM_HEADERS)
     _bold_header_row(ws_qam, len(_PQAM_HEADERS))

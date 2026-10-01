@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-// OpenLayers imports corretti per Vite
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -12,8 +11,8 @@ import Overlay from 'ol/Overlay';
 import { fromLonLat } from 'ol/proj';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
-import VectorLayer from 'ol/layer/Vector';   // CORRETTO
-import VectorSource from 'ol/source/Vector'; // CORRETTO
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
 import { Style, Circle, Fill, Stroke } from 'ol/style';
 
 function dimHsl(cssColor, alpha) {
@@ -40,7 +39,6 @@ export default function PublicHome() {
                 const response = await api.get('/api/public/map-data');
                 const langs = response.data;
 
-                // Hue distribuita sulle top-level family (alfabetico)
                 const tops = [...new Set(langs.map(l => l.family).filter(Boolean))]
                     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
                 const colorByFamily = {};
@@ -84,9 +82,6 @@ export default function PublicHome() {
                         }),
                     });
 
-                    // Tooltip su hover del marker (nome lingua) + cursore pointer.
-                    // OL Overlay sposta l'elemento dentro il viewport della
-                    // mappa, quindi tooltipRef serve solo come hook iniziale.
                     const tooltipOverlay = new Overlay({
                         element: tooltipRef.current,
                         offset: [10, 0],
@@ -133,7 +128,6 @@ export default function PublicHome() {
         };
     }, []);
 
-    // Aggiorna lo stile dei marker quando cambia la voce di legenda sotto al mouse
     useEffect(() => {
         const src = vectorSourceRef.current;
         if (!src) return;
@@ -165,7 +159,6 @@ export default function PublicHome() {
                 </div>
             </header>
 
-            {/* MAPPA INTERATTIVA */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--form-col-gap, 3rem)' }}>
                 <div ref={mapRef} style={{ width: '100%', height: '450px' }}>
                     {loading && (

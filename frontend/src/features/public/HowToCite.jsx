@@ -8,7 +8,6 @@ export default function HowToCite() {
     const [loading, setLoading] = useState(true);
     const [copyStatus, setCopyStatus] = useState({ params: 'Copy', data: 'Copy' });
 
-    // Verifichiamo se l'utente è admin per mostrare i tasti "Edit"
     const isAdmin = localStorage.getItem('role') === 'admin';
 
     useEffect(() => {
@@ -45,7 +44,6 @@ export default function HowToCite() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--form-col-gap, 2rem)' }}>
 
-                {/* CARD 1: PARAMETERS */}
                 <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Admins and Users</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Parameters & Manifestations</h3>
@@ -82,7 +80,6 @@ export default function HowToCite() {
                     )}
                 </div>
 
-                {/* CARD 2: DATA & MAP */}
                 <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
                     <small style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>For Public and Admins</small>
                     <h3 style={{ margin: '0.5rem 0' }}>Updated language list & map, analyses, graphs and scripts</h3>

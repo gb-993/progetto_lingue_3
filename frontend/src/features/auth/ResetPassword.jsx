@@ -35,7 +35,6 @@ export default function ResetPassword() {
                 new_password: password1,
             });
             setDone(true);
-            // Dopo 2.5s reindirizziamo al login per chiudere il flusso.
             setTimeout(() => navigate('/login'), 2500);
         } catch (err) {
             const detail = err?.response?.data?.detail;

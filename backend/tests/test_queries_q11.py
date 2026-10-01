@@ -1,13 +1,4 @@
-"""Test dell'endpoint GET /api/queries/q11 (question senza risposta per lingua).
-
-Definizione operativa di "senza risposta":
-  - non esiste una row in `answers` per quella combinazione (lingua, question), OPPURE
-  - esiste una row in `answers` ma con `response_text IS NULL`
-
-'unsure' e' considerata una risposta data: la sua question NON rientra.
-
-Scope: solo question con is_active=True di parametri con is_active=True.
-"""
+"""Q11: question senza risposta (nessuna riga o response_text NULL; 'unsure' conta come risposta)."""
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import text
@@ -23,32 +14,27 @@ def db_fk(db_session):
 
 
 def _seed_base(db):
-    """Setup: 1 lingua + 2 parametri attivi + 1 parametro disattivato."""
     db.add(models.Language(id="ENG", name_full="English", position=1))
 
     db.add(models.ParameterDef(id="P_ACT_1", position=1, name="Active 1", is_active=True))
     db.add(models.ParameterDef(id="P_ACT_2", position=2, name="Active 2", is_active=True))
     db.add(models.ParameterDef(id="P_OFF", position=3, name="Disabled", is_active=False))
 
-    # 4 question attive su parametri attivi (le useremo nei vari scenari)
     db.add(models.Question(id="Q_NO_ROW", parameter_id="P_ACT_1", text="No row in answers", is_active=True))
     db.add(models.Question(id="Q_NULL", parameter_id="P_ACT_1", text="Has row but NULL", is_active=True))
     db.add(models.Question(id="Q_YES", parameter_id="P_ACT_2", text="Answered yes", is_active=True))
     db.add(models.Question(id="Q_NO", parameter_id="P_ACT_2", text="Answered no", is_active=True))
     db.add(models.Question(id="Q_UNSURE", parameter_id="P_ACT_2", text="Answered unsure", is_active=True))
 
-    # 1 question DISATTIVATA su parametro attivo (deve essere esclusa anche se senza risposta)
     db.add(models.Question(id="Q_INACTIVE", parameter_id="P_ACT_1", text="Inactive question", is_active=False))
 
-    # 1 question ATTIVA su parametro DISATTIVATO (deve essere esclusa)
     db.add(models.Question(id="Q_ORPHAN", parameter_id="P_OFF", text="Active q in off param", is_active=True))
 
-    # Answers di test
     db.add(models.Answer(language_id="ENG", question_id="Q_NULL", response_text=None, status="pending"))
     db.add(models.Answer(language_id="ENG", question_id="Q_YES", response_text="yes", status="approved"))
     db.add(models.Answer(language_id="ENG", question_id="Q_NO", response_text="no", status="approved"))
     db.add(models.Answer(language_id="ENG", question_id="Q_UNSURE", response_text="unsure", status="approved"))
-    # Q_NO_ROW: nessuna row, intenzionalmente
+    # Q_NO_ROW: nessuna riga, apposta
 
     db.commit()
 
@@ -92,8 +78,6 @@ def test_q11_excludes_questions_of_inactive_parameters(db_fk):
 
 
 def test_q11_returns_only_no_row_and_null(db_fk):
-    """Sanity check finale: esattamente Q_NO_ROW e Q_NULL devono apparire,
-    nessuna altra."""
     _seed_base(db_fk)
     res = query_11_unanswered("ENG", db=db_fk)
     qids = sorted(a["q_id"] for a in res["answers"])
@@ -101,7 +85,7 @@ def test_q11_returns_only_no_row_and_null(db_fk):
 
 
 def test_q11_response_shape_matches_q89(db_fk):
-    """Stesso payload di Q8/Q9 (language + answers[{q_id,text,p_id}])."""
+    """Stesso formato di Q8/Q9."""
     _seed_base(db_fk)
     res = query_11_unanswered("ENG", db=db_fk)
     assert res["language"]["id"] == "ENG"
@@ -125,7 +109,6 @@ def test_q11_unknown_language_returns_404(db_fk):
 
 
 def test_q11_empty_when_every_question_answered(db_fk):
-    """Se ogni question attiva ha una risposta valida, la lista e' vuota."""
     db_fk.add(models.Language(id="ITA", name_full="Italiano", position=1))
     db_fk.add(models.ParameterDef(id="P1", position=1, name="P", is_active=True))
     db_fk.add(models.Question(id="Q1", parameter_id="P1", text="?", is_active=True))

@@ -1,4 +1,4 @@
-"""Servizio di invio mail transazionali via SMTP."""
+"""Invio mail via SMTP."""
 from __future__ import annotations
 
 import logging
@@ -24,7 +24,7 @@ def send_email(
     body_text: str,
     body_html: str | None = None,
 ) -> bool:
-    """Invia una mail e ritorna True/False; su SMTP down o credenziali sbagliate non solleva, logga l'errore e ritorna False."""
+    """Ritorna False se l'invio fallisce, senza sollevare."""
     if not SMTP_ENABLED:
         logger.warning(
             "SMTP non configurato, skip invio mail a %s (subject=%r). "

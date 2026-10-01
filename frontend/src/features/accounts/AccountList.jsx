@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 import usePersistentState from '../../utils/usePersistentState';
 
 export default function AccountList() {

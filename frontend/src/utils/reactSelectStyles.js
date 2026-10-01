@@ -1,12 +1,4 @@
-// react-select non legge i CSS variable del tema: in dark mode il menu resta
-// bianco con testo bianco (illeggibile). Qui mappiamo le sue parti sui token
-// del tema così segue automaticamente light/dark.
-//
-// Nota: in QuestionForm.jsx e features/compilation/QuestionRow.jsx vivono
-// versioni inline molto simili a questa, con extra specifici (multiValue per
-// la prima, loadingMessage/clearIndicator per la seconda). Quando capiterà
-// di toccarle, conviene migrarle a questo file (eventualmente tramite spread)
-// per evitare drift quando si aggiorna il tema.
+// colori di react-select presi dal tema (per il dark mode)
 
 const reactSelectStyles = {
     control: (base, state) => ({

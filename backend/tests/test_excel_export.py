@@ -1,20 +1,4 @@
-"""
-Test per l'export Excel.
-
-Due livelli:
-  1. Test "header" — verifica che gli header dei 3 sheet "vecchi" (Database_model,
-     Examples, Answers) siano IDENTICI a quelli del vecchio progetto Django.
-     I valori del vecchio progetto sono stati copiati letteralmente da
-     core/views/languages.py::_build_language_workbook (vedi _OLD_HEADERS).
-
-  2. Test "round-trip" — crea un mini-DB con dati realistici, genera il workbook,
-     lo riapre con openpyxl e verifica:
-     - Sheet names + ordine
-     - Header riga 1 di ogni sheet
-     - Numero righe coerenti con i dati
-     - Multi-line concatenation degli esempi nel sheet Database_model
-     - Round-trip: salva su BytesIO, riapri, contenuto identico.
-"""
+"""Export Excel: header fissi e round-trip su un mini-DB."""
 import io
 import zipfile
 from datetime import datetime
@@ -42,18 +26,6 @@ from services.excel_export import (
 )
 
 
-# ============================================================================
-# 1) HEADER TEST — confronto bit-per-bit con il vecchio progetto Django
-# ============================================================================
-
-# Valori COPIATI letteralmente dal vecchio _build_language_workbook in
-# core/views/languages.py (vedi messaggio dell'utente). Qualsiasi modifica
-# accidentale all'ordine o ai nomi delle colonne fa fallire questo test.
-
-# Database_model è stato ristrutturato (2026-05): le 3 colonne ridondanti
-# rispetto allo schema globale (Question, Question_Examples_YES,
-# Question_Intructions_Comments) sono state rimosse, e in coda sono state
-# aggiunte 2 colonne per backup lossless: Motivations, Admin_Note.
 _EXPECTED_DATABASE_MODEL_HEADERS = [
     "Language",
     "Parameter_Label",
@@ -111,13 +83,8 @@ def test_answers_headers_count():
     assert len(ANSWERS_HEADERS) == 9
 
 
-# ============================================================================
-# 2) ROUND-TRIP TEST con mini-DB
-# ============================================================================
-
 def _seed_basic(db_session):
-    """Popola il DB con: 1 lingua, 1 parametro attivo, 2 domande,
-    2 risposte (yes + no), 3 esempi sulla risposta yes, 1 motivazione."""
+    """Mini-DB: 1 lingua, 1 parametro, 2 domande con risposta."""
     user = models.User(
         email="alice@test.it", hashed_password="x", name="Alice", surname="Smith", role="user"
     )
@@ -188,16 +155,14 @@ def _seed_basic(db_session):
 
 
 def _read_workbook_from_memory(wb: Workbook) -> Workbook:
-    """Salva e riapre il workbook (verifica round-trip serializzazione)."""
+    """Salva e riapre il workbook."""
     buf = io.BytesIO()
     wb.save(buf); buf.seek(0)
     return load_workbook(buf, data_only=True)
 
 
 def test_language_workbook_admin_has_four_sheets(db_session):
-    """Da 2026-05 i fogli schema (Motivations/Parameters/Questions/QAM) NON
-    sono più replicati in ogni per-lingua xlsx (vivono in schema.xlsx separato).
-    L'admin riceve 4 sheet: Database_model + Answers + Examples + Admin Notes."""
+    """Admin: 4 sheet, senza i fogli di schema."""
     lang = _seed_basic(db_session)
     wb = build_language_workbook(db_session, lang, is_admin=True)
     wb2 = _read_workbook_from_memory(wb)
@@ -223,8 +188,7 @@ def test_database_model_sheet_headers_and_count(db_session):
 
 
 def test_database_model_shows_missing_answer(db_session):
-    """'missing' è un valore valido dell'enum response_types e l'export lo
-    scrive come 'MISSING' nel foglio Database_model (parallelo a UNSURE)."""
+    """'missing' esce come 'MISSING'."""
     user = models.User(email="b@test.it", hashed_password="x", name="B", surname="B", role="user")
     db_session.add(user); db_session.flush()
     db_session.add(models.Language(id="ENG", name_full="English", position=1))
@@ -245,8 +209,7 @@ def test_database_model_shows_missing_answer(db_session):
 
 
 def test_parameter_data_matrix_workbook(db_session):
-    """Matrice di un parametro: righe = lingue, colonne = question attive,
-    celle = frasi d'esempio (textarea) numerate e separate da riga vuota."""
+    """Righe = lingue, colonne = question, celle = esempi numerati."""
     _seed_basic(db_session)
     param = db_session.query(models.ParameterDef).filter_by(id="FGM").first()
     wb = build_parameter_data_matrix_workbook(db_session, param)
@@ -254,19 +217,15 @@ def test_parameter_data_matrix_workbook(db_session):
 
     assert wb2.sheetnames == ["Data"]
     ws = wb2["Data"]
-    # Angolo + intestazioni question (ordinate per is_stop_question, id).
+    # question ordinate per is_stop_question, id
     assert ws["A1"].value == "Language"
     assert ws["B1"].value == "FGM_01"
     assert ws["C1"].value == "FGM_02"
     assert ws["B2"].value == "Does it have FGM marker?"
-    # Riga lingua.
     assert ws["A3"].value == "ITA — Italiano"
-    # FGM_01 ha 3 esempi → numerati e separati da riga vuota.
     assert ws["B3"].value == "1) Esempio uno\n\n2) Esempio due\n\n3) Esempio tre"
-    # FGM_02 non ha esempi → cella vuota.
     assert (ws["C3"].value or "") == ""
 
-    # 2 question rows (FGM_01 e FGM_02), entrambe attive
     data_rows = [r for r in ws.iter_rows(min_row=2, values_only=True)]
     assert len(data_rows) == 2
 
@@ -276,7 +235,6 @@ def test_database_model_sheet_examples_concatenation(db_session):
     wb = build_language_workbook(db_session, lang, is_admin=True)
     wb2 = _read_workbook_from_memory(wb)
     ws = wb2["Database_model"]
-    # Indici colonna by name, robusto a future ristrutturazioni
     h = {name: i for i, name in enumerate(_EXPECTED_DATABASE_MODEL_HEADERS)}
     for row in ws.iter_rows(min_row=2, values_only=True):
         if row[h["Question_ID"]] == "FGM_01":
@@ -297,10 +255,8 @@ def test_examples_sheet_one_row_per_example(db_session):
     ws = wb2["Examples"]
     headers = [c.value for c in ws[1]]
     assert headers == _OLD_EXAMPLES_HEADERS
-    # 3 esempi totali
     rows = [r for r in ws.iter_rows(min_row=2, values_only=True)]
     assert len(rows) == 3
-    # primo esempio: ITA, FGM_01, "1", "Esempio uno", ...
     assert rows[0][0] == "ITA"
     assert rows[0][1] == "FGM_01"
     assert rows[0][2] == "1"
@@ -314,7 +270,6 @@ def test_answers_sheet_headers_and_motivations(db_session):
     ws = wb2["Answers"]
     headers = [c.value for c in ws[1]]
     assert headers == _OLD_ANSWERS_HEADERS
-    # FGM_02 deve avere "Not applicable" in Motivation
     rows = [r for r in ws.iter_rows(min_row=2, values_only=True)]
     fgm02 = next(r for r in rows if r[2] == "FGM_02")
     assert fgm02[5] == "no"  # Answer
@@ -339,21 +294,17 @@ def test_schema_workbook_data_rows(db_session):
     wb = build_schema_workbook(db_session)
     wb2 = _read_workbook_from_memory(wb)
 
-    # Motivations: 1 entry
     rows = list(wb2["Motivations"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1
     assert rows[0][1] == "MOT_X"
 
-    # Parameters: 1 entry
     rows = list(wb2["Parameters"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1
     assert rows[0][0] == "FGM"
 
-    # Questions: 2 entries
     rows = list(wb2["Questions"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 2
 
-    # QAM: 1 entry (FGM_02 -> MOT_X)
     rows = list(wb2["QuestionAllowedMotivations"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1
     assert rows[0] == ("FGM_02", "MOT_X")
@@ -369,16 +320,14 @@ def test_language_list_workbook(db_session):
     assert headers == LANGUAGE_LIST_HEADERS
     rows = list(wb2["Languages"].iter_rows(min_row=2, values_only=True))
     assert len(rows) == 1
-    # Verifica un paio di celle chiave
     assert rows[0][0] == "Italiano"  # Name
     assert rows[0][1] == "ITA"       # ID
     assert rows[0][5] == "it"        # ISO code
-    assert rows[0][12] == "No"       # Historical (mapped to "Yes"/"No")
+    assert rows[0][12] == "No"  # Historical
     assert rows[0][14] == "draft"  # Status
 
 
 def test_language_list_user_metadata_export_works_with_zero_languages(db_session):
-    """Edge case: nessuna lingua → workbook con solo header."""
     wb = build_language_list_workbook(db_session, [])
     wb2 = _read_workbook_from_memory(wb)
     ws = wb2["Languages"]
@@ -387,12 +336,7 @@ def test_language_list_user_metadata_export_works_with_zero_languages(db_session
     assert [c.value for c in ws[1]] == LANGUAGE_LIST_HEADERS
 
 
-# ============================================================================
-# 3) GLOSSARY WORKBOOK
-# ============================================================================
-
 def test_glossary_workbook_empty_db(db_session):
-    """DB senza glossario → workbook con solo header."""
     wb = build_glossary_workbook(db_session)
     wb2 = _read_workbook_from_memory(wb)
     assert wb2.sheetnames == ["Glossary"]
@@ -413,17 +357,11 @@ def test_glossary_workbook_with_entries(db_session):
     wb2 = _read_workbook_from_memory(wb)
     ws = wb2["Glossary"]
     rows = list(ws.iter_rows(min_row=2, values_only=True))
-    # Ordinati alfabeticamente
     assert rows == [("alpha", "first letter"), ("beta", "second letter")]
 
 
-# ============================================================================
-# 4) BACKUP ZIP — struttura del bundle completo
-# ============================================================================
-
 def test_backup_zip_structure(db_session):
-    """Il backup zip deve contenere: schema.xlsx, languages_metadata.xlsx,
-    glossary.xlsx, e una entry languages/<ID>.xlsx per ogni lingua."""
+    """Lo zip ha schema, metadati, glossario e un xlsx per lingua."""
     _seed_basic(db_session)
     db_session.add(models.Glossary(word="hub", description="central node"))
     db_session.commit()
@@ -438,14 +376,13 @@ def test_backup_zip_structure(db_session):
         assert "glossary.xlsx" in names
         assert "languages/ITA.xlsx" in names
 
-        # Schema dentro lo zip ha i 4 sheet attesi
         with zf.open("schema.xlsx") as f:
             schema_wb = load_workbook(io.BytesIO(f.read()), data_only=True)
             assert schema_wb.sheetnames == [
                 "Motivations", "Parameters", "Questions", "QuestionAllowedMotivations",
             ]
 
-        # Per-lingua dentro lo zip ha solo i 4 sheet (no più schema replicato)
+        # niente fogli di schema nel file per lingua
         with zf.open("languages/ITA.xlsx") as f:
             lang_wb = load_workbook(io.BytesIO(f.read()), data_only=True)
             assert lang_wb.sheetnames == [
@@ -454,7 +391,7 @@ def test_backup_zip_structure(db_session):
 
 
 def test_backup_zip_progress_callback(db_session):
-    """on_language deve essere chiamato (idx, total, lang) per ciascuna lingua."""
+    """on_language chiamato una volta per lingua."""
     _seed_basic(db_session)
     languages = db_session.query(models.Language).all()
 

@@ -8,7 +8,7 @@ import NoticeToast from '../../components/NoticeToast';
 import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
 import LanguageMap from './LanguageMap';
 
-// ASSE B — Compilazione/review. NEUTRO (niente colori): i colori restano all'asse A.
+// Asse B (review): senza colori
 const STATUS_BADGE = {
     draft: { label: 'Draft', cls: '' },
     submitted: { label: 'Under review', cls: '' },
@@ -24,7 +24,7 @@ function StatusBadge({ status }) {
     );
 }
 
-// ASSE A — Completamento. Colori come i quadratini: vuoto→grigio, incompleto→giallo, completo→verde.
+// Asse A (completamento): colori dei quadratini
 const COMPLETION_BADGE = {
     empty: { label: 'Empty', cls: '' },
     incomplete: { label: 'Incomplete', cls: 'warn' },
@@ -45,25 +45,24 @@ function CompletionBadge({ completion, forced }) {
 }
 
 const INITIAL_FILTERS = {
-    top_family: [],        // multi-select: [] significa tutte
-    family: [],            // multi-select: [] significa tutte
-    grp: [],               // multi-select: [] significa tutti
-    historical: 'all',     // 'all' | 'yes' | 'no'
-    status: 'all',         // ASSE B: 'all' | draft | submitted | validated
-    completion: 'all',     // ASSE A: 'all' | empty | incomplete | complete
+    top_family: [],
+    family: [],
+    grp: [],
+    historical: 'all',
+    status: 'all',
+    completion: 'all',
 };
 
-// Download helper: forza il browser a scaricare la blob ricevuta
 async function downloadBlob(request, fallbackName) {
     const res = await request;
-    const cd = res.headers['content-disposition'] || '';
-    const m = cd.match(/filename="?([^";]+)"?/);
-    const filename = m ? m[1] : fallbackName;
+    const contentDisposition = res.headers['content-disposition'] || '';
+    const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+    const filename = filenameMatch ? filenameMatch[1] : fallbackName;
     const blob = new Blob([res.data]);
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
     URL.revokeObjectURL(url);
 }
 
@@ -74,30 +73,17 @@ export default function LanguageList() {
     const [options, setOptions] = useState({ opt_top_families: [], opt_families: [], opt_groups: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    // Esclusioni manuali: lingue spuntate via checkbox per essere ESCLUSE dal set
-    // effettivo (mappa, distanze, export). Default vuoto = tutte incluse.
-    // Le esclusioni persistono tra cambi di filtro: lingue non più visibili
-    // restano nel set ma sono inerti finché non riappaiono.
+    // lingue escluse a mano
     const [excludedIds, setExcludedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
     const [toolsOpen, setToolsOpen] = useState(false);
     const [globalBackup, setGlobalBackup] = useState(false);
-    // Mappa collassabile: chi lavora sulla tabella la chiude una volta e la
-    // ritrova chiusa (sessionStorage, come i filtri).
     const [mapOpen, setMapOpen] = usePersistentState('languages:mapOpen', true);
-    // Solo mobile (<=960px): filter card chiusa di default, si apre col toggle.
-    // Su desktop lo stato e' ignorato (la barra-toggle e' display:none).
     const [filtersOpen, setFiltersOpen] = useState(false);
-    // Dialogo di conferma corrente (null = chiuso) e toast esito operazioni.
     const [dialog, setDialog] = useState(null);
     const [notice, setNotice] = useState(null);
-    // Job di export backup (asincrono): { jobId, state, error }.
-    // state è il payload restituito da /status: { phase, phase_label, current,
-    // total, finished, error, ... }. Quando finished:true scatta il download.
     const [exportJob, setExportJob] = useState(null);
     const exportStartedAtRef = useRef(null);
-    // Job di "Recompute final values for all languages": stesso pattern del
-    // backup ma senza download — finito = success notification.
     const [recomputeJob, setRecomputeJob] = useState(null);
     const [recomputing, setRecomputing] = useState(false);
     const toolsRef = useRef(null);
@@ -107,7 +93,7 @@ export default function LanguageList() {
     const role = localStorage.getItem('role');
     const isAdmin = role === 'admin';
 
-    // Identità stabile per il timer di auto-dismiss del NoticeToast.
+    // funzione stabile per il timer del toast
     const dismissNotice = useCallback(() => setNotice(null), []);
     const notify = (type, text) => setNotice({ type, text });
 
@@ -140,8 +126,7 @@ export default function LanguageList() {
     }, []);
 
     const onDuplicate = (lang) => {
-        // Default suggerito: id/nome senza cifre finali + "2" (stessa logica
-        // del fallback automatico lato server). L'admin puo' sovrascriverlo.
+        // default: id + "2"
         const baseId = (lang.id || '').replace(/\d+$/, '') || lang.id;
         const baseName = (lang.name_full || '').replace(/\d+$/, '') || lang.name_full;
 
@@ -153,13 +138,11 @@ export default function LanguageList() {
                 { name: 'name', label: 'New language name', initial: `${baseName}2` },
             ],
             confirmLabel: 'Duplicate',
-            confirmEnabled: (v) => v.id.trim().length > 0,
-            // Promise: il dialogo resta aperto con "Working…" e mostra
-            // eventuali errori API (es. ID già esistente) senza chiudersi.
-            onConfirm: async (v) => {
+            confirmEnabled: (values) => values.id.trim().length > 0,
+            onConfirm: async (values) => {
                 const res = await api.post(
                     `/api/admin/languages/${encodeURIComponent(lang.id)}/duplicate`,
-                    { new_id: v.id.trim(), new_name: v.name.trim() || undefined }
+                    { new_id: values.id.trim(), new_name: values.name.trim() || undefined }
                 );
                 await reloadLanguages();
                 notify('success', `Created "${res.data.name_full}" (${res.data.id}).`);
@@ -167,10 +150,6 @@ export default function LanguageList() {
         });
     };
 
-    // Eliminazione "vera" della lingua: rimuove la riga e in cascata tutti i
-    // dati operativi (risposte, parametri, backup, alias). Il dizionario
-    // Motivations e gli archivi storici non vengono toccati. Doppia conferma:
-    // l'admin deve digitare esattamente l'id della lingua per procedere.
     const onDelete = (lang) => {
         setDialog({
             title: `Delete "${lang.name_full}" (${lang.id})`,
@@ -195,7 +174,7 @@ export default function LanguageList() {
                 { name: 'confirm', label: `Type the language ID (${lang.id}) to confirm`, placeholder: lang.id, autoFocus: true },
             ],
             confirmLabel: 'Delete permanently',
-            confirmEnabled: (v) => v.confirm.trim() === lang.id,
+            confirmEnabled: (values) => values.confirm.trim() === lang.id,
             onConfirm: async () => {
                 await api.delete(`/api/admin/languages/${encodeURIComponent(lang.id)}`);
                 await reloadLanguages();
@@ -209,8 +188,6 @@ export default function LanguageList() {
         setFilters(prev => ({ ...prev, [name]: value }));
     };
 
-    // Cambio multi-select con pulizia transitiva: cambiando top_family invalido
-    // le subfamily/group non più appartenenti; cambiando family invalido i group.
     const handleMultiFilter = (name, value) => {
         setFilters(prev => {
             const next = { ...prev, [name]: value };
@@ -218,27 +195,27 @@ export default function LanguageList() {
                 if (value.length > 0) {
                     const allowedFamilies = new Set(
                         languages
-                            .filter(l => value.includes(l.top_level_family))
-                            .map(l => l.family)
+                            .filter(lang => value.includes(lang.top_level_family))
+                            .map(lang => lang.family)
                             .filter(Boolean)
                     );
-                    next.family = prev.family.filter(f => allowedFamilies.has(f));
+                    next.family = prev.family.filter(family => allowedFamilies.has(family));
                 }
             }
             if (name === 'top_family' || name === 'family') {
-                const tops = next.top_family;
-                const fams = next.family;
-                if (tops.length > 0 || fams.length > 0) {
+                const topFamilies = next.top_family;
+                const families = next.family;
+                if (topFamilies.length > 0 || families.length > 0) {
                     const allowedGroups = new Set(
                         languages
-                            .filter(l =>
-                                (tops.length === 0 || tops.includes(l.top_level_family)) &&
-                                (fams.length === 0 || fams.includes(l.family))
+                            .filter(lang =>
+                                (topFamilies.length === 0 || topFamilies.includes(lang.top_level_family)) &&
+                                (families.length === 0 || families.includes(lang.family))
                             )
-                            .map(l => l.grp)
+                            .map(lang => lang.grp)
                             .filter(Boolean)
                     );
-                    next.grp = prev.grp.filter(g => allowedGroups.has(g));
+                    next.grp = prev.grp.filter(group => allowedGroups.has(group));
                 }
             }
             return next;
@@ -250,31 +227,29 @@ export default function LanguageList() {
         setSearch('');
     };
 
-    // Opzioni concatenate: subfamily ristretta dalle top_family scelte,
-    // group ristretto da top_family/family scelti. Array vuoto = nessun vincolo.
     const filteredFamilyOptions = useMemo(() => {
         if (filters.top_family.length === 0) return options.opt_families;
-        const set = new Set(
+        const families = new Set(
             languages
-                .filter(l => filters.top_family.includes(l.top_level_family))
-                .map(l => l.family)
+                .filter(lang => filters.top_family.includes(lang.top_level_family))
+                .map(lang => lang.family)
                 .filter(Boolean)
         );
-        return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        return [...families].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     }, [languages, options.opt_families, filters.top_family]);
 
     const filteredGroupOptions = useMemo(() => {
         if (filters.top_family.length === 0 && filters.family.length === 0) return options.opt_groups;
-        const set = new Set(
+        const groups = new Set(
             languages
-                .filter(l =>
-                    (filters.top_family.length === 0 || filters.top_family.includes(l.top_level_family)) &&
-                    (filters.family.length === 0 || filters.family.includes(l.family))
+                .filter(lang =>
+                    (filters.top_family.length === 0 || filters.top_family.includes(lang.top_level_family)) &&
+                    (filters.family.length === 0 || filters.family.includes(lang.family))
                 )
-                .map(l => l.grp)
+                .map(lang => lang.grp)
                 .filter(Boolean)
         );
-        return [...set].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        return [...groups].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     }, [languages, options.opt_groups, filters.top_family, filters.family]);
 
     const filteredLanguages = useMemo(() => {
@@ -286,7 +261,6 @@ export default function LanguageList() {
             if (filters.historical === 'no' && lang.historical_language) return false;
             if (filters.status !== 'all' && lang.status !== filters.status) return false;
             if (filters.completion !== 'all' && lang.completion !== filters.completion) return false;
-            // ricerca testuale su tutti i campi rilevanti
             return searchMatches(lang, search, [
                 'id', 'name_full', 'family', 'top_level_family', 'grp',
                 'status', 'completion', 'rejection_note',
@@ -305,23 +279,19 @@ export default function LanguageList() {
         (filters.completion !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
 
-    // Set effettivo (fonte di verità unica): filtri − esclusioni manuali.
-    // Usato da mappa, distanze GCD, tutti gli export, count "X of Y".
+    // lingue usate da mappa, distanze ed export
     const effectiveLanguages = useMemo(
-        () => filteredLanguages.filter(l => !excludedIds.has(l.id)),
+        () => filteredLanguages.filter(lang => !excludedIds.has(lang.id)),
         [filteredLanguages, excludedIds]
     );
-    const targetIds = effectiveLanguages.map(l => l.id);
+    const targetIds = effectiveLanguages.map(lang => lang.id);
 
-    // Numero di lingue attualmente visibili (filtrate) che sono escluse manualmente.
-    // Le esclusioni "fuori filtro" sono ignorate qui — restano nel set ma inerti.
     const visibleExcludedCount = filteredLanguages.reduce(
-        (acc, l) => acc + (excludedIds.has(l.id) ? 1 : 0),
+        (acc, lang) => acc + (excludedIds.has(lang.id) ? 1 : 0),
         0
     );
     const allFilteredIncluded = filteredLanguages.length > 0 && visibleExcludedCount === 0;
 
-    // Click sulla checkbox di riga: aggiunge o rimuove la lingua dalle esclusioni.
     const toggleRow = (id) => {
         setExcludedIds(prev => {
             const next = new Set(prev);
@@ -330,22 +300,18 @@ export default function LanguageList() {
         });
     };
 
-    // Checkbox in testa: se tutte le visibili sono incluse → escludile tutte;
-    // altrimenti → includile tutte (rimuove dalle esclusioni solo le visibili,
-    // lasciando intatte le esclusioni "fuori filtro").
     const toggleAll = () => {
         setExcludedIds(prev => {
             const next = new Set(prev);
             if (allFilteredIncluded) {
-                filteredLanguages.forEach(l => next.add(l.id));
+                filteredLanguages.forEach(lang => next.add(lang.id));
             } else {
-                filteredLanguages.forEach(l => next.delete(l.id));
+                filteredLanguages.forEach(lang => next.delete(lang.id));
             }
             return next;
         });
     };
 
-    // Reset rapido: rimuove tutte le esclusioni (anche quelle fuori filtro).
     const clearExclusions = () => setExcludedIds(new Set());
 
     const onExportMetadata = async () => {
@@ -365,8 +331,6 @@ export default function LanguageList() {
         }
     };
 
-    // Backup zip async: POST → {job_id} → poll status → GET download quando finished.
-    // La barra di progresso appare in basso a destra finché il job è attivo.
     const onStartExportZip = async () => {
         setExporting(true);
         setExportJob(null);
@@ -386,13 +350,11 @@ export default function LanguageList() {
     };
 
     const onCancelExport = () => {
-        // Nessun cancel server-side: smettiamo solo il polling/UI. Il job
-        // continua in background ma il file verrà purgato dal TTL (1h).
+        // il job continua sul server
         setExporting(false);
         setExportJob(null);
     };
 
-    // Polling stato + auto-download a fine job.
     useEffect(() => {
         if (!exportJob?.jobId) return;
         const jobId = exportJob.jobId;
@@ -412,14 +374,14 @@ export default function LanguageList() {
                     `/api/admin/export/languages/zip/download/${jobId}`,
                     { responseType: 'blob' }
                 );
-                const cd = res.headers['content-disposition'] || '';
-                const m = cd.match(/filename="?([^";]+)"?/);
-                const filename = m ? m[1] : 'PCM_backup.zip';
+                const contentDisposition = res.headers['content-disposition'] || '';
+                const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+                const filename = filenameMatch ? filenameMatch[1] : 'PCM_backup.zip';
                 const blob = new Blob([res.data]);
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = filename;
-                document.body.appendChild(a); a.click(); a.remove();
+                const link = document.createElement('a');
+                link.href = url; link.download = filename;
+                document.body.appendChild(link); link.click(); link.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
                 notify('error', getApiErrorMessage(err, 'Could not download the backup file.'));
@@ -462,15 +424,11 @@ export default function LanguageList() {
         };
     }, [exportJob?.jobId]);
 
-    // Recompute final values per TUTTE le lingue. Stessa meccanica del job
-    // di backup (POST start → polling status → done) ma senza download.
     const onStartRecompute = () => {
         setDialog({
             title: 'Recompute final values',
             message: 'Re-runs the parameter DAG and consolidate step on every language. Can take some minutes on large datasets.',
             confirmLabel: 'Recompute',
-            // Non-Promise: il dialogo si chiude subito, il progresso vive
-            // nel toast di job già esistente.
             onConfirm: () => { startRecompute(); },
         });
     };
@@ -490,8 +448,7 @@ export default function LanguageList() {
     };
 
     const onCancelRecompute = () => {
-        // Nessun cancel server-side: chiudiamo solo il toast, il job
-        // continua e termina da solo (TTL 1h).
+        // il job continua sul server
         setRecomputing(false);
         setRecomputeJob(null);
     };
@@ -521,8 +478,6 @@ export default function LanguageList() {
                     } else {
                         const errCount = res.data.report?.errors_count || 0;
                         const total = res.data.report?.languages_processed || 0;
-                        // Notifica anche il successo: senza, il job spariva in
-                        // silenzio e l'utente non sapeva se aveva finito.
                         if (errCount > 0) {
                             notify('error', `Recompute completed with ${errCount} error(s) over ${total} language(s). See server logs for details.`);
                         } else {
@@ -558,11 +513,11 @@ export default function LanguageList() {
         setExporting(true);
         try {
             const blob = await mapExportRef.current.exportPng();
-            const ts = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `PCM_map_${ts}.png`;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = `PCM_map_${dateStamp}.png`;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
         } catch (err) {
             console.error(err);
@@ -589,17 +544,17 @@ export default function LanguageList() {
                     ids.join(', ')
                 );
             }
-            const cd = res.headers['content-disposition'] || '';
-            const m = cd.match(/filename="?([^";]+)"?/);
-            const filename = m ? m[1] : 'gcd.txt';
+            const contentDisposition = res.headers['content-disposition'] || '';
+            const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+            const filename = filenameMatch ? filenameMatch[1] : 'gcd.txt';
             const blob = new Blob([res.data], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = filename;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
         } catch (err) {
-            // Il backend può restituire un dettaglio di errore in JSON dentro il blob
+            // l'errore può arrivare come JSON dentro il blob
             let msg = "Error while exporting the GCD distances.";
             const blob = err?.response?.data;
             if (blob instanceof Blob) {
@@ -624,9 +579,7 @@ export default function LanguageList() {
                 { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
             ],
             confirmLabel: 'Start backup',
-            // Fire-and-forget: il dialogo si chiude subito, l'esito arriva
-            // col toast (la voce nel menu Tools resta "Backing up…" intanto).
-            onConfirm: (v) => { runGlobalBackup(v.note); },
+            onConfirm: (values) => { runGlobalBackup(values.note); },
         });
     };
 
@@ -643,7 +596,6 @@ export default function LanguageList() {
         }
     };
 
-    // Chiusura dropdown Tools al click fuori
     useEffect(() => {
         if (!toolsOpen) return;
         const onDocClick = (e) => {
@@ -661,7 +613,6 @@ export default function LanguageList() {
                 <h1>Languages</h1>
             </header>
 
-            {/* ==== FILTRI ==== */}
             <div className={`card filter-card${filtersOpen ? '' : ' is-collapsed'}`} style={{
                 padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
@@ -677,7 +628,7 @@ export default function LanguageList() {
                 <button
                     type="button"
                     className="filter-card-toggle"
-                    onClick={() => setFiltersOpen(o => !o)}
+                    onClick={() => setFiltersOpen(open => !open)}
                     aria-expanded={filtersOpen}
                 >
                     <span>{filtersOpen ? '▾' : '▸'} Filters</span>
@@ -698,7 +649,7 @@ export default function LanguageList() {
                         <MultiSelect
                             value={filters.top_family}
                             options={options.opt_top_families}
-                            onChange={(v) => handleMultiFilter('top_family', v)}
+                            onChange={(selected) => handleMultiFilter('top_family', selected)}
                             placeholder="All"
                         />
                     </FilterField>
@@ -706,7 +657,7 @@ export default function LanguageList() {
                         <MultiSelect
                             value={filters.family}
                             options={filteredFamilyOptions}
-                            onChange={(v) => handleMultiFilter('family', v)}
+                            onChange={(selected) => handleMultiFilter('family', selected)}
                             placeholder="All"
                         />
                     </FilterField>
@@ -714,7 +665,7 @@ export default function LanguageList() {
                         <MultiSelect
                             value={filters.grp}
                             options={filteredGroupOptions}
-                            onChange={(v) => handleMultiFilter('grp', v)}
+                            onChange={(selected) => handleMultiFilter('grp', selected)}
                             placeholder="All"
                         />
                     </FilterField>
@@ -765,14 +716,11 @@ export default function LanguageList() {
                             </button>
                         )}
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        {/* Tools ▾ in tre sezioni: Download (i 4 export coi nomi
-                            storici), Maintenance (recompute + backup globale),
-                            Import. Fuori restano solo Reset e Add Language. */}
                         {isAdmin && (
                             <div ref={toolsRef} style={{ position: 'relative' }}>
                                 <button
                                     type="button"
-                                    onClick={() => setToolsOpen(o => !o)}
+                                    onClick={() => setToolsOpen(open => !open)}
                                     className="btn btn--small"
                                     aria-haspopup="menu"
                                     aria-expanded={toolsOpen}
@@ -831,15 +779,11 @@ export default function LanguageList() {
                 </div>
             </div>
 
-            {/* ==== MAPPA (collassabile) ====
-                La mappa occupa 420px tra filtri e tabella: chi lavora sulle
-                righe la chiude e la preferenza viene ricordata (sessionStorage).
-                Quando è chiusa il componente è smontato (OpenLayers non rende
-                bene in display:none) e l'export PNG nel menu Tools si disabilita. */}
+            {/* da chiusa la mappa non viene montata */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: '1rem' }}>
                 <button
                     type="button"
-                    onClick={() => setMapOpen(o => !o)}
+                    onClick={() => setMapOpen(open => !open)}
                     aria-expanded={mapOpen}
                     style={{
                         width: '100%',
@@ -926,10 +870,6 @@ export default function LanguageList() {
                                 <td className="muted hide-mobile">{lang.family || '—'}</td>
                                 <td className="muted small hide-mobile">{lang.grp || '—'}</td>
                                 <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
-                                    {/* Progressive disclosure: visibili solo le azioni
-                                        quotidiane (Data, Edit); Duplicate/Debug/Delete
-                                        nel menu ⋯ — meno rumore e niente Delete a un
-                                        click di distanza su ogni riga. */}
                                     <div className="row-actions" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                                         <Link to={`/languages/${lang.id}/data`} className="btn btn--primary">Data</Link>
                                         {isAdmin && (
@@ -955,7 +895,6 @@ export default function LanguageList() {
                 </table>
             </div>
 
-            {/* ==== TOAST PROGRESSO BACKUP ==== */}
             {(exporting || exportJob) && (
                 <ExportProgressToast
                     job={exportJob}
@@ -964,7 +903,6 @@ export default function LanguageList() {
                 />
             )}
 
-            {/* ==== TOAST PROGRESSO RECOMPUTE ==== */}
             {(recomputing || recomputeJob) && (
                 <ProgressToast
                     job={recomputeJob}
@@ -977,16 +915,13 @@ export default function LanguageList() {
                 />
             )}
 
-            {/* ==== DIALOGO DI CONFERMA (duplicate/delete/backup/recompute) ==== */}
             {dialog && <ConfirmDialog config={dialog} onClose={() => setDialog(null)} />}
 
-            {/* ==== TOAST ESITO OPERAZIONI ==== */}
             <NoticeToast notice={notice} onClose={dismissNotice} />
         </div>
     );
 }
 
-// ===== Helper UI =====
 const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {
@@ -1002,20 +937,20 @@ function FilterField({ label, children }) {
 
 function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef(null);
+    const containerRef = useRef(null);
 
     useEffect(() => {
         if (!open) return;
         const onDocClick = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+            if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
         };
         document.addEventListener('mousedown', onDocClick);
         return () => document.removeEventListener('mousedown', onDocClick);
     }, [open]);
 
-    const toggle = (opt) => {
-        if (value.includes(opt)) onChange(value.filter(v => v !== opt));
-        else onChange([...value, opt]);
+    const toggle = (option) => {
+        if (value.includes(option)) onChange(value.filter(selected => selected !== option));
+        else onChange([...value, option]);
     };
 
     const clear = (e) => {
@@ -1030,10 +965,10 @@ function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
             : `${value.slice(0, 2).join(', ')} +${value.length - 2}`;
 
     return (
-        <div ref={ref} style={{ position: 'relative' }}>
+        <div ref={containerRef} style={{ position: 'relative' }}>
             <button
                 type="button"
-                onClick={() => setOpen(o => !o)}
+                onClick={() => setOpen(prev => !prev)}
                 style={{
                     ...inputStyle,
                     textAlign: 'left',
@@ -1104,11 +1039,11 @@ function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
                         <div style={{ padding: '0.6rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                             No options
                         </div>
-                    ) : options.map(opt => {
-                        const checked = value.includes(opt);
+                    ) : options.map(option => {
+                        const checked = value.includes(option);
                         return (
                             <label
-                                key={opt}
+                                key={option}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1124,11 +1059,11 @@ function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
                                 <input
                                     type="checkbox"
                                     checked={checked}
-                                    onChange={() => toggle(opt)}
+                                    onChange={() => toggle(option)}
                                     style={{ flexShrink: 0 }}
                                 />
                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {opt}
+                                    {option}
                                 </span>
                             </label>
                         );
@@ -1139,9 +1074,6 @@ function MultiSelect({ value, options, onChange, placeholder = 'All' }) {
     );
 }
 
-// Toast fisso in basso a destra per l'avanzamento di un job backend basato su
-// migration_progress (POST → polling /status → done). Titoli e posizione
-// verticale configurabili così istanze multiple non si sovrappongono.
 function ProgressToast({
     job, starting, onClose,
     titleBuilding = 'Working…',
@@ -1238,9 +1170,6 @@ function ProgressToast({
     );
 }
 
-// Wrapper specifico per il toast del backup: stesso UI di ProgressToast con
-// preset di etichette. Tenuto come componente separato così il call-site
-// rimane terso ("<ExportProgressToast .../>") senza props ridondanti.
 function ExportProgressToast(props) {
     return (
         <ProgressToast

@@ -2,22 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api';
 import CopyExamplesModal from './CopyExamplesModal';
 
-/**
- * Dialogo UNICO di disattivazione di una question, condiviso da QuestionList
- * e ParameterForm: la disattivazione deve comportarsi allo stesso modo
- * ovunque (stesse opzioni, stesso testo). Qualunque modifica futura va fatta
- * SOLO qui.
- *
- * Si occupa di tutto da solo: carica le stats dei dati collegati, offre
- * "Copy examples, then deactivate…" (solo se ci sono esempi), esegue la
- * PATCH di disattivazione.
- *
- * Props:
- *   questionId      : id della question da disattivare
- *   onClose()       : annulla, nessuna disattivazione
- *   onDeactivated() : chiamata DOPO la disattivazione riuscita
- *                     (il chiamante chiude e ricarica la sua lista)
- */
+/** Usato da QuestionList e ParameterForm: modificare solo qui. */
 export default function DeactivateQuestionDialog({ questionId, onClose, onDeactivated }) {
     const [stats, setStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);
@@ -50,8 +35,6 @@ export default function DeactivateQuestionDialog({ questionId, onClose, onDeacti
         }
     };
 
-    // Copia esempi scelta dal dialogo: a copia confermata e riepilogo chiuso
-    // si disattiva; Cancel a metà copia = nessuna disattivazione.
     if (copyOpen) {
         return (
             <CopyExamplesModal

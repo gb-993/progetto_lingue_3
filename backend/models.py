@@ -6,7 +6,6 @@ from time_utils import utc_now
 class Base(DeclarativeBase):
     pass
 
-# ==========================================
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -53,7 +52,6 @@ class EditingSession(Base):
     )
 
 
-# ==========================================
 class LegalDocument(Base):
     
     __tablename__ = "legal_documents"
@@ -101,8 +99,7 @@ class Consent(Base):
     legal_document = relationship("LegalDocument", back_populates="consents")
 
 
-
-# prima della migrazione senza rifiutarli. I valori nuovi passano invariati.
+# vecchi status lingua -> nuovi (per import Excel e restore)
 LEGACY_LANGUAGE_STATUS_MAP = {
     "pending": "draft",
     "rejected": "draft",
@@ -187,7 +184,6 @@ class LanguageAlias(Base):
     language = relationship("Language", back_populates="aliases")
 
 
-# ==========================================
 class TopFamily(Base):
     __tablename__ = "top_families"
     id = Column(Integer, primary_key=True)
@@ -218,7 +214,6 @@ class Group(Base):
     family = relationship("Family", back_populates="groups")
 
 
-# ==========================================
 class ParameterDef(Base):
     __tablename__ = "parameter_defs"
     id = Column(String(10), primary_key=True)
@@ -318,7 +313,6 @@ class QuestionAlias(Base):
 
     question = relationship("Question", back_populates="aliases")
 
-# ==========================================
 class Answer(Base):
     __tablename__ = "answers"
     id = Column(Integer, primary_key=True)
@@ -373,7 +367,6 @@ class AnswerMotivation(Base):
     answer = relationship("Answer", back_populates="answer_motivations")
     motivation = relationship("Motivation")
 
-# ==========================================
 class Glossary(Base):
     __tablename__ = "glossary"
     id = Column(Integer, primary_key=True, index=True)
@@ -410,12 +403,11 @@ class LanguageParameterEval(Base):
     language_parameter = relationship("LanguageParameter", back_populates="eval")
 
 
-# ==========================================
 class SiteContent(Base):
     __tablename__ = "site_contents"
-    key = Column(String(50), primary_key=True)  # Es: "instr_body"
-    content = Column(Text, nullable=False)      # Il codice HTML generato dall'editor
-    page = Column(String(100))                 # Riferimento alla pagina (es: "Instructions")
+    key = Column(String(50), primary_key=True)  # es. "instr_body"
+    content = Column(Text, nullable=False)  # HTML dell'editor
+    page = Column(String(100))
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     updated_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
@@ -434,7 +426,6 @@ class WhatsNewView(Base):
     seen_at = Column(DateTime, default=utc_now, nullable=False)
 
 
-# ==========================================
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, index=True)
@@ -502,7 +493,6 @@ class SubmissionParam(Base):
     submission = relationship("Submission", back_populates="params")
 
 
-# ==========================================
 class ParameterSubmission(Base):
     __tablename__ = "parameter_submissions"
     id = Column(Integer, primary_key=True, index=True)
@@ -573,7 +563,6 @@ class ParameterSubmissionAllowedMotivation(Base):
     )
 
 
-# ==========================================
 class EntityVersion(Base):
     
     __tablename__ = "entity_versions"
@@ -594,7 +583,6 @@ class EntityVersion(Base):
     )
 
 
-# ==========================================
 class ArchivedQuestion(Base):
     __tablename__ = "archived_questions"
     id = Column(Integer, primary_key=True)

@@ -1,17 +1,4 @@
-"""Test del quick-fill answers per un parametro.
-
-Endpoint: POST /api/admin/parameters/{id}/quick-fill-answers
-
-Comportamento atteso:
-  - crea Answer 'no' su question normali, 'yes' su stop, dove la combinazione
-    (lingua, question) non ha gia' un'Answer
-  - non sovrascrive risposte gia' presenti
-  - ignora le question is_active=False
-  - parametro disattivato -> 409
-  - parametro senza question attive -> 400
-  - 404 se id sconosciuto
-  - una EntityVersion aggregata viene registrata
-"""
+"""Quick-fill: 'no' sulle question normali, 'yes' sulle stop, senza toccare le risposte esistenti."""
 import pytest
 from fastapi import HTTPException, BackgroundTasks
 from sqlalchemy import text
@@ -66,19 +53,16 @@ def test_quick_fill_creates_no_on_normal_and_yes_on_stop(db_fk):
     assert res["skipped_existing"] == 0
     assert res["languages_touched"] == 3
 
-    # I valori sono coerenti col tipo della question
     norms = db_fk.query(models.Answer).filter(models.Answer.question_id.like("Q_NORM_%")).all()
     stops = db_fk.query(models.Answer).filter(models.Answer.question_id == "Q_STOP").all()
     assert len(norms) == 6 and all(a.response_text == "no" for a in norms)
     assert len(stops) == 3 and all(a.response_text == "yes" for a in stops)
-    # Status di default
     assert all(a.status == "pending" for a in norms + stops)
 
 
 def test_quick_fill_does_not_overwrite_existing(db_fk):
     user = _admin(db_fk)
     _seed(db_fk, with_stop=False, n_langs=2)
-    # Risposta pre-esistente "yes" su (L0, Q_NORM_1)
     db_fk.add(models.Answer(
         language_id="L0", question_id="Q_NORM_1",
         response_text="yes", status="approved", comments="manual",
@@ -90,11 +74,10 @@ def test_quick_fill_does_not_overwrite_existing(db_fk):
     )
     db_fk.commit()
 
-    # 2 lingue x 2 normal = 4 combinazioni - 1 esistente = 3 created
+    # 2x2 combinazioni meno 1 già presente
     assert res["created"] == 3
     assert res["skipped_existing"] == 1
 
-    # La risposta pre-esistente e' stata preservata identica
     a = db_fk.query(models.Answer).filter_by(language_id="L0", question_id="Q_NORM_1").one()
     assert a.response_text == "yes"
     assert a.status == "approved"
@@ -110,7 +93,7 @@ def test_quick_fill_ignores_inactive_questions(db_fk):
     )
     db_fk.commit()
 
-    # Solo 2 question attive x 2 lingue = 4 (Q_DEAD non viene toccata)
+    # 2 question attive x 2 lingue
     assert res["created"] == 4
     assert db_fk.query(models.Answer).filter_by(question_id="Q_DEAD").count() == 0
 
@@ -127,7 +110,6 @@ def test_quick_fill_blocked_when_no_active_questions(db_fk):
     user = _admin(db_fk)
     param = models.ParameterDef(id="EMPTY", position=1, name="E", is_active=True)
     db_fk.add(param)
-    # Una sola question, ma disattivata
     db_fk.add(models.Question(id="Q_DEAD", parameter_id="EMPTY", text="?", is_active=False))
     db_fk.add(models.Language(id="L0", name_full="L", position=1))
     db_fk.commit()
@@ -156,17 +138,14 @@ def test_quick_fill_records_aggregate_history_entry(db_fk):
         .filter_by(entity_type="parameter", entity_id="P1")
         .all()
     )
-    # Una SOLA entry aggregata
     assert len(versions) == 1
     v = versions[0]
     assert v.operation == "update"
     assert "Quick-fill" in (v.note or "")
-    # La nota riporta i conteggi totali
-    assert "6" in v.note  # 2 lingue x 3 question = 6 created
+    assert "6" in v.note  # 2 lingue x 3 question
 
 
 def test_quick_fill_empty_when_no_languages(db_fk):
-    """Senza lingue il fill non fa nulla ma non esplode."""
     user = _admin(db_fk)
     param = models.ParameterDef(id="P1", position=1, name="P", is_active=True)
     db_fk.add(param)
@@ -179,20 +158,8 @@ def test_quick_fill_empty_when_no_languages(db_fk):
     assert res["languages_touched"] == 0
 
 
-# ============================================================================
-# Test end-to-end con recompute reale.
-#
-# Il quick-fill schedula `recompute_parameter_for_all_languages` come
-# BackgroundTask. Nei test BackgroundTasks() non esegue nulla, quindi qui
-# replichiamo a mano la logica del wrapper (consolidate + DAG per ogni
-# lingua) usando la stessa session del test. Verifichiamo che dopo
-# quick-fill + recompute la tabella `language_parameters` rifletta i nuovi
-# value_orig coerenti con le regole di consolidamento.
-# ============================================================================
-
 def _recompute_param_for_all_langs(db, parameter_id: str) -> None:
-    """Equivalente del wrapper recompute_parameter_for_all_languages ma
-    usando la session del test invece di aprirne una propria via SessionLocal."""
+    """Recompute sulla session del test (nei test BackgroundTasks non gira)."""
     from services.param_consolidate import recompute_and_persist_language_parameter
     from services.dag_eval import run_dag_for_language
     for (lang_id,) in db.query(models.Language.id).all():
@@ -202,8 +169,7 @@ def _recompute_param_for_all_langs(db, parameter_id: str) -> None:
 
 
 def test_quick_fill_then_recompute_gives_minus_with_stop_yes(db_fk):
-    """Dopo quick-fill (stop=yes, normali=no), value_orig deve essere '-'
-    su tutte le lingue: nessun YES su normali, almeno una stop YES → caso 2."""
+    """Stop yes e normali no: '-' su tutte le lingue."""
     user = _admin(db_fk)
     _seed(db_fk, with_stop=True, n_langs=3)
 
@@ -220,7 +186,7 @@ def test_quick_fill_then_recompute_gives_minus_with_stop_yes(db_fk):
 
 
 def test_quick_fill_then_recompute_gives_minus_only_normals(db_fk):
-    """Solo question normali, tutte risposte NO → caso 3 → '-'."""
+    """Solo normali, tutte no: '-'."""
     user = _admin(db_fk)
     _seed(db_fk, with_stop=False, n_langs=2)
 
@@ -236,8 +202,7 @@ def test_quick_fill_then_recompute_gives_minus_only_normals(db_fk):
 
 
 def test_quick_fill_then_recompute_respects_pre_existing_yes(db_fk):
-    """L0 ha gia' 'yes' su una normale: dopo quick-fill + recompute il suo
-    value_orig deve essere '+' (caso 1). L1 invece resta '-'."""
+    """L0 ha già un yes su una normale: '+'; L1 resta '-'."""
     user = _admin(db_fk)
     _seed(db_fk, with_stop=False, n_langs=2)
     db_fk.add(models.Answer(

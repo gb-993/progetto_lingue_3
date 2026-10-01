@@ -7,16 +7,12 @@ const TYPE_LABELS = {
     privacy_notice: 'Privacy Notice',
 };
 
-// Hint testuale mostrato sotto al titolo di ogni card di upload. La copia
-// e' "type-specific" — anche se il backend in realta' riconosce il tipo
-// leggendo il PDF a prescindere dalla card in cui e' stato caricato, l'admin
-// vede istruzioni mirate al singolo documento per coerenza visiva.
 const TYPE_HINTS = {
     terms_of_use: 'The PDF must contain "Terms of Use" in the title and the string "version X.Y" in the text (e.g. version 1.0, usually in the header/footer).',
     privacy_notice: 'The PDF must contain "Informativa" in the title and the string "version X.Y" in the text (e.g. version 1.0, usually in the header/footer).',
 };
 
-function fmtDate(iso) {
+function formatDate(iso) {
     if (!iso) return '—';
     try {
         return new Date(iso).toLocaleString();
@@ -25,17 +21,6 @@ function fmtDate(iso) {
     }
 }
 
-/**
- * Pagina admin per gestire i documenti legali.
- *
- * Layout: due card di upload affiancate (Terms of Use / Privacy Notice) +
- * tabella in fondo con lo storico completo. Le due card sono visivamente
- * separate per coerenza con i due tipi di documento: tecnicamente fanno
- * la stessa identica chiamata al backend, e il backend riconosce il tipo
- * leggendo il PDF (non si fida del "type" suggerito dal frontend). Se in
- * futuro nascesse un terzo tipo di documento, aggiungere una terza card
- * e una entry in TYPE_LABELS / TYPE_HINTS.
- */
 export default function LegalDocuments() {
     const [docs, setDocs] = useState([]);
     const [loadingList, setLoadingList] = useState(true);
@@ -69,8 +54,6 @@ export default function LegalDocuments() {
                 </p>
             </header>
 
-            {/* Due card di upload affiancate. In viewport stretti vanno
-                in colonna (auto-fit). */}
             <div
                 style={{
                     display: 'grid',
@@ -119,20 +102,20 @@ export default function LegalDocuments() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {docs.map(d => (
-                                    <tr key={d.id} style={d.is_current ? { background: 'var(--surface-2, #f1f5f9)' } : undefined}>
-                                        <td><strong>{TYPE_LABELS[d.type] || d.type}</strong></td>
-                                        <td>{d.version}</td>
-                                        <td className="small">{fmtDate(d.published_at)}</td>
+                                {docs.map(doc => (
+                                    <tr key={doc.id} style={doc.is_current ? { background: 'var(--surface-2, #f1f5f9)' } : undefined}>
+                                        <td><strong>{TYPE_LABELS[doc.type] || doc.type}</strong></td>
+                                        <td>{doc.version}</td>
+                                        <td className="small">{formatDate(doc.published_at)}</td>
                                         <td>
-                                            {d.is_current ? (
+                                            {doc.is_current ? (
                                                 <span style={{ color: '#15803d', fontWeight: 600 }}>● current</span>
                                             ) : (
                                                 <span className="muted small">superseded</span>
                                             )}
                                         </td>
                                         <td>
-                                            <a href={d.public_url} target="_blank" rel="noopener noreferrer" className="btn small">
+                                            <a href={doc.public_url} target="_blank" rel="noopener noreferrer" className="btn small">
                                                 Open
                                             </a>
                                         </td>
@@ -151,18 +134,7 @@ export default function LegalDocuments() {
     );
 }
 
-
-/**
- * Card singola di upload. Indipendente dalle altre: ha il suo state
- * (file selezionato, preview, success/error). `type` e' usato SOLO per
- * generare l'id univoco dell'input file (cosi' i reset visivi non
- * confliggono tra le due card); il backend ignora qualunque type passato
- * dal client e riconosce il documento leggendo il PDF.
- *
- * Flow:
- *   1) Select file -> Analyze -> mostra mini-preview (type + version)
- *   2) Confirm -> publish -> banner verde + reset form + refresh tabella
- */
+// type serve solo all'id dell'input
 function UploadCard({ type, title, hint, onPublished }) {
     const inputId = `legal-doc-file-${type}`;
 
@@ -197,11 +169,11 @@ function UploadCard({ type, title, hint, onPublished }) {
         setPreview(null);
         setPreviewError('');
         try {
-            const fd = new FormData();
-            fd.append('file', file);
+            const formData = new FormData();
+            formData.append('file', file);
             const res = await api.post(
                 '/api/admin/legal-documents/preview',
-                fd,
+                formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
             setPreview(res.data);
@@ -217,11 +189,11 @@ function UploadCard({ type, title, hint, onPublished }) {
         setPublishing(true);
         setPublishError('');
         try {
-            const fd = new FormData();
-            fd.append('file', file);
+            const formData = new FormData();
+            formData.append('file', file);
             await api.post(
                 '/api/admin/legal-documents',
-                fd,
+                formData,
                 { headers: { 'Content-Type': 'multipart/form-data' } }
             );
             const published = TYPE_LABELS[preview.type] || preview.type;
@@ -235,13 +207,10 @@ function UploadCard({ type, title, hint, onPublished }) {
         }
     };
 
-    // Banner di successo: sparisce da solo dopo 4 secondi. Senza un cleanup
-    // di useEffect basta cosi' (lo state si resetta al prossimo upload o
-    // rimane finche' l'utente non interagisce di nuovo).
     useEffect(() => {
         if (!successMsg) return;
-        const id = setTimeout(() => setSuccessMsg(''), 4000);
-        return () => clearTimeout(id);
+        const timer = setTimeout(() => setSuccessMsg(''), 4000);
+        return () => clearTimeout(timer);
     }, [successMsg]);
 
     return (

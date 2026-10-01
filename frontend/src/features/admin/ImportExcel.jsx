@@ -13,12 +13,12 @@ export default function ImportExcel() {
 
     useEffect(() => {
         if (!busy) return;
-        const id = setInterval(() => {
+        const timer = setInterval(() => {
             if (startedAtRef.current) {
                 setElapsed(Math.floor((Date.now() - startedAtRef.current) / 1000));
             }
         }, 500);
-        return () => clearInterval(id);
+        return () => clearInterval(timer);
     }, [busy]);
 
     const handleFile = (e) => {
@@ -36,9 +36,9 @@ export default function ImportExcel() {
         setElapsed(0);
         startedAtRef.current = Date.now();
         try {
-            const fd = new FormData();
-            fd.append('file', file);
-            const res = await api.post('/api/admin/import/excel', fd, {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.post('/api/admin/import/excel', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setReport(res.data);
@@ -57,14 +57,14 @@ export default function ImportExcel() {
                 target_language_id: report.target_language_id,
                 target_language_name: report.target_language_name,
             }, { responseType: 'blob' });
-            const cd = res.headers['content-disposition'] || '';
-            const m = cd.match(/filename="?([^";]+)"?/);
-            const filename = m ? m[1] : 'PCM_import_errors.xlsx';
+            const contentDisposition = res.headers['content-disposition'] || '';
+            const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+            const filename = filenameMatch ? filenameMatch[1] : 'PCM_import_errors.xlsx';
             const blob = new Blob([res.data]);
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = filename;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
         } catch {
             alert("Error downloading the report.");
@@ -180,7 +180,6 @@ function ImportReport({ report, onDownloadErrors }) {
                 </p>
             )}
 
-            {/* Summary per sheet */}
             <h4 style={{ marginBottom: '0.5rem' }}>Per-sheet summary</h4>
             {sheets.length === 0 ? (
                 <p className="small muted">No sheet recognised in the file.</p>
@@ -217,7 +216,6 @@ function ImportReport({ report, onDownloadErrors }) {
                 </table>
             )}
 
-            {/* Lista errori */}
             {hasErrors && (
                 <>
                     <h4 style={{ marginBottom: '0.5rem' }}>Errors ({totalErrors})</h4>
@@ -236,15 +234,15 @@ function ImportReport({ report, onDownloadErrors }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {report.errors.map((e, i) => (
-                                    <tr key={i}>
-                                        <td className="small">{e.sheet}</td>
-                                        <td className="small">{e.row || '—'}</td>
-                                        <td className="small muted">{e.column || '—'}</td>
+                                {report.errors.map((errorEntry, index) => (
+                                    <tr key={index}>
+                                        <td className="small">{errorEntry.sheet}</td>
+                                        <td className="small">{errorEntry.row || '—'}</td>
+                                        <td className="small muted">{errorEntry.column || '—'}</td>
                                         <td className="small" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>
-                                            {e.value || '—'}
+                                            {errorEntry.value || '—'}
                                         </td>
-                                        <td className="small" style={{ color: '#b91c1c' }}>{e.reason}</td>
+                                        <td className="small" style={{ color: '#b91c1c' }}>{errorEntry.reason}</td>
                                     </tr>
                                 ))}
                             </tbody>

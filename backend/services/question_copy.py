@@ -1,6 +1,4 @@
-"""
-Clona Answer + Example + AnswerMotivation da una question all'altra.
-"""
+"""Copia risposte, esempi e motivazioni da una domanda all'altra."""
 from __future__ import annotations
 from typing import Dict
 

@@ -1,117 +1,81 @@
-/* =========================================================
-   Stile COMPATTO ("gestionale") — additivo, non sostitutivo.
-   Si attiva SOLO quando <html> ha l'attributo data-density="compact"
-   (impostato dalla tendina in My Account + script in index.html).
-   Senza l'attributo il sito resta identico a index.css.
+/* Stile compatto: attivo con data-density="compact" su <html> */
 
-   Regole: stessi colori e stessa disposizione di index.css.
-   Cambiano solo dimensioni, raggi, spaziature e densita'.
-   Intensita': STRETTA (revisione piu' compatta della MEDIA precedente).
-   Tutti i valori vivono qui: cambiando questi si ricalibra l'intero sito.
-   ========================================================= */
-
-/* ---------------------------------------------------------
-   1) Ridefinizione dei design token.
-   La maggior parte dei componenti deriva da questi, quindi
-   toccarli qui propaga la compattezza in modo coerente.
-   I colori NON sono toccati.
-   --------------------------------------------------------- */
+/* Design token */
 :root[data-density="compact"] {
   /* Angoli piu' squadrati */
   --radius: 5px;
   --radius-sm: 3px;
 
-  /* Ombre piu' leggere (look piu' piatto / gestionale) */
+  /* Ombre più leggere */
   --shadow: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.04);
 
-  /* Tipografia: base invariata, titoli piu' piccoli */
+  /* Titoli più piccoli */
   --fs-2: 1rem;
   --fs-3: 1.08rem;
   --fs-4: 1.2rem;
   --fs-5: 1.4rem;
 
-  /* Spaziature: ricalibriamo l'INTERA scala, non solo i passi grandi.
-     Quasi tutti gli spazi (padding card, gap form/grid, margini fra
-     card, padding del body...) derivano da questi token: comprimerli
-     qui propaga la densita' in modo coerente ovunque. I passi
-     piccolissimi (--sp-1/--sp-2) restano. */
-  --sp-3: .4rem;    /* era .75rem */
-  --sp-4: .5rem;    /* era 1rem   */
-  --sp-5: .65rem;   /* era 1.25rem */
-  --sp-6: .8rem;    /* era 1.5rem */
-  --sp-8: 1rem;     /* era 2rem   */
+  /* Spaziature: tutta la scala più stretta */
+  --sp-3: .4rem;
+  --sp-4: .5rem;
+  --sp-5: .65rem;
+  --sp-6: .8rem;
+  --sp-8: 1rem;
 
   /* Top-bar piu' bassa */
   --topbar-height: 2.85rem;
 
-  /* Spaziature della pagina My Account. Sono referenziate via var() negli
-     stili inline del JSX con fallback ai valori comodi: cosi' in modalita'
-     comfortable la pagina resta IDENTICA (i fallback valgono), in compact
-     subentrano questi valori piu' stretti. */
-  --acc-page-top: .75rem;   /* fallback 2rem   */
-  --acc-section-gap: .5rem; /* fallback 2rem   */
-  --acc-header-gap: .35rem; /* fallback 1.5rem */
-  --acc-action-top: .2rem;  /* fallback 1rem   */
-  --acc-alert-gap: .4rem;   /* fallback 1rem   */
+  /* My Account */
+  --acc-page-top: .75rem;
+  --acc-section-gap: .5rem;
+  --acc-header-gap: .35rem;
+  --acc-action-top: .2rem;
+  --acc-alert-gap: .4rem;
 
-  /* Card filtri sticky in cima alle pagine-lista (Languages, Parameters,
-     Questions...): stessa struttura inline nel JSX, fallback = comfortable.
-     Stringiamo padding, gap della griglia filtri, margine della riga azioni e
-     padding degli input filtro per allinearli alla densita'. */
-  --filter-card-pad: .45rem .65rem;      /* fallback 1rem 1.25rem */
-  --filter-card-gap: .4rem;              /* fallback 0.75rem      */
-  --filter-card-actions-top: .4rem;      /* fallback 0.85rem      */
-  --filter-card-input-pad: .3rem;        /* fallback 0.45rem      */
+  /* Card filtri delle liste */
+  --filter-card-pad: .45rem .65rem;
+  --filter-card-gap: .4rem;
+  --filter-card-actions-top: .4rem;
+  --filter-card-input-pad: .3rem;
 
-  /* Pagine-form (Add/Edit Parameter, Add/Edit Question...): tante spaziature
-     fisse inline. Vars generiche con fallback = comfortable. */
-  --form-page-top: .75rem;        /* container marginTop, fallback 2rem    */
-  --form-aside-gap: .75rem;       /* gap form|sidebar, fallback 2rem        */
-  --form-col-gap: .55rem;         /* gap fra card del form, fallback 1.5rem */
-  --form-card-header-mb: .45rem;  /* header card marginBottom, fb 1.5rem    */
-  --form-field-mb: .4rem;         /* marginBottom campi, fallback 1rem      */
-  --form-input-pad: .3rem;        /* padding input/select/textarea, fb .5rem*/
-  --form-box-pad: .5rem;          /* box evidenziati piccoli, fallback 1rem */
-  --form-box-pad-lg: .65rem;      /* box nota modifica, fallback 1.5rem     */
-  --form-grid-gap: .5rem;         /* gap griglie interne, fallback 1/1.5rem */
-  --form-hr-margin: .7rem;        /* hr separatore, fallback 2rem           */
-  --form-row-pad: .35rem .5rem;   /* righe lista question, fb 0.75rem 0.9rem*/
-  --form-row-radius: 5px;         /* raggio righe question, fallback 0.6rem */
-  --modal-pad: .9rem;             /* padding modali, fallback 2rem          */
+  /* Pagine-form */
+  --form-page-top: .75rem;
+  --form-aside-gap: .75rem;
+  --form-col-gap: .55rem;
+  --form-card-header-mb: .45rem;
+  --form-field-mb: .4rem;
+  --form-input-pad: .3rem;
+  --form-box-pad: .5rem;
+  --form-box-pad-lg: .65rem;
+  --form-grid-gap: .5rem;
+  --form-hr-margin: .7rem;
+  --form-row-pad: .35rem .5rem;
+  --form-row-radius: 5px;
+  --modal-pad: .9rem;
 
-  /* LanguageData (compilazione lingua): header lingua, banner di stato e
-     griglia metadati hanno spaziature da pagina larga. */
-  --ld-header-pad: .65rem .9rem;  /* card header lingua, fallback 1.5rem 2rem */
-  --ld-banner-pad: .5rem .7rem;   /* banner di stato, fallback 1rem 1.25rem   */
-  --ld-meta-colgap: 1.1rem;       /* gap fra le 2 colonne metadati, fb 4rem   */
+  /* LanguageData */
+  --ld-header-pad: .65rem .9rem;
+  --ld-banner-pad: .5rem .7rem;
+  --ld-meta-colgap: 1.1rem;
 
-  /* Filters/Queries: i tab del menu laterale sono alti 64px ciascuno. */
-  --queries-tab-h: 38px;          /* fallback 64px              */
-  --queries-tab-pad: .4rem .85rem;/* fallback 0.85rem 1rem      */
+  /* Filters/Queries: tab del menu */
+  --queries-tab-h: 38px;
+  --queries-tab-pad: .4rem .85rem;
 }
 
-/* Ombra dedicata per dark + compact (specificita' superiore cosi'
-   non viene sovrascritta dall'ombra dark di index.css). */
+/* ombra per dark + compact */
 :root[data-theme="dark"][data-density="compact"] {
   --shadow: 0 1px 2px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.4);
 }
 
-/* ---------------------------------------------------------
-   2) Layout: piu' spazio al body centrale.
-   Sidebar piu' stretta + padding ridotti intorno al contenuto.
-   I max-width delle pagine NON sono toccati.
-   --------------------------------------------------------- */
+/* Layout: più spazio al contenuto */
 
-/* Sidebar 280 -> 212px in compact: il font delle voci e' piu' piccolo
-   (.88rem) quindi le etichette ci stanno comunque. :not(.is-sidebar-collapsed)
-   cosi' lo stato "collassato" (64px) continua a vincere quando attivo. */
+/* sidebar più stretta (non quando è ristretta) */
 :root[data-density="compact"] .app-wrapper:not(.is-sidebar-collapsed) {
   --sidebar-width: 212px;
 }
 
-/* Padding interno della sidebar: un filo piu' di margine orizzontale (0.75rem)
-   cosi' le voci non risultano incollate al bordo dello schermo (versione in
-   scala del margine che ha la modalita' zoom). */
+/* padding della sidebar */
 :root[data-density="compact"] .sidebar {
   padding: var(--sp-4) 0.75rem;
 }
@@ -126,11 +90,7 @@
   font-size: 1.2rem;
 }
 
-/* ---------------------------------------------------------
-   3) Bottoni.
-   I valori (padding/radius) sono hardcoded in index.css, quindi
-   vanno ridichiarati esplicitamente.
-   --------------------------------------------------------- */
+/* Bottoni */
 :root[data-density="compact"] .btn,
 :root[data-density="compact"] button.btn {
   padding: .28rem .55rem;
@@ -178,9 +138,7 @@
   font-size: .76rem;
 }
 
-/* ---------------------------------------------------------
-   4) Form / input
-   --------------------------------------------------------- */
+/* Form / input */
 :root[data-density="compact"] input,
 :root[data-density="compact"] select,
 :root[data-density="compact"] textarea {
@@ -194,9 +152,7 @@
   margin-bottom: var(--sp-3);
 }
 
-/* ---------------------------------------------------------
-   5) Card, form e toolbar
-   --------------------------------------------------------- */
+/* Card, form e toolbar */
 
 /* Padding interno card piu' contenuto (verticale soprattutto). */
 :root[data-density="compact"] .card {
@@ -215,8 +171,7 @@
   margin-bottom: var(--sp-3);
 }
 
-/* Heading di pagina senza classe (es. "My Account"): di default l'h1 ha
-   margini UA enormi. In compact li riduciamo (solo i margini, non il font). */
+/* h1 senza classe: margini più piccoli */
 :root[data-density="compact"] .main-container h1 {
   margin-top: .15rem;
   margin-bottom: var(--sp-3);
@@ -225,16 +180,12 @@
 :root[data-density="compact"] .toolbar {
   margin-bottom: var(--sp-3);
 }
-/* Riga azioni (es. "Save Profile") in fondo a una card/form: il margine
-   inferiore qui sommato al padding della card creava un vuoto sproporzionato
-   sotto al bottone. Da ultimo figlio non serve. */
+/* riga azioni in fondo: niente margine sotto */
 :root[data-density="compact"] .card .toolbar:last-child {
   margin-bottom: 0;
 }
 
-/* ---------------------------------------------------------
-   6) Tiles dashboard
-   --------------------------------------------------------- */
+/* Tiles dashboard */
 :root[data-density="compact"] .dash-tile {
   min-height: 2.5rem;
   border-radius: 6px;
@@ -246,9 +197,7 @@
   padding: .5rem .85rem;
 }
 
-/* ---------------------------------------------------------
-   7) Titoli con clamp hardcoded (non derivano dai token)
-   --------------------------------------------------------- */
+/* Titoli */
 :root[data-density="compact"] .page-title {
   font-size: clamp(1.3rem, 1rem + 1.2vw, 1.7rem);
 }
@@ -256,9 +205,7 @@
   font-size: clamp(1.3rem, 1rem + 1.2vw, 1.7rem);
 }
 
-/* ---------------------------------------------------------
-   8) Paginazione
-   --------------------------------------------------------- */
+/* Paginazione */
 :root[data-density="compact"] .pagination a,
 :root[data-density="compact"] .pagination .current {
   min-width: 1.55rem;
@@ -266,25 +213,19 @@
   border-radius: 4px;
 }
 
-/* ---------------------------------------------------------
-   9) Navigazione filtri (Queries)
-   --------------------------------------------------------- */
+/* Menu Queries */
 :root[data-density="compact"] .queries-page .queries-nav a {
   padding: .35rem .6rem;
   border-radius: 5px;
 }
 
-/* ---------------------------------------------------------
-   10) Wizard parameter nav (quadratini): un filo piu' piccoli
-   --------------------------------------------------------- */
+/* Quadratini dei parametri */
 :root[data-density="compact"] .param-nav .param-btn {
   width: 1.85rem;
   height: 1.85rem;
 }
 
-/* ---------------------------------------------------------
-   11) Tabelle: celle un po' piu' compatte
-   --------------------------------------------------------- */
+/* Tabelle */
 :root[data-density="compact"] .table thead th {
   padding: .4rem .55rem;
 }
@@ -292,91 +233,77 @@
   padding: .35rem .55rem;
 }
 
-/* ---------------------------------------------------------
-   11b) Dashboard (admin + user)
-   Gap e padding tarati "comodi": li stringiamo per la densita'.
-   --------------------------------------------------------- */
+/* Dashboard */
 :root[data-density="compact"] .dashboard-grid-admin {
-  gap: var(--sp-4);          /* era 1.5rem */
+  gap: var(--sp-4);
 }
 :root[data-density="compact"] .admin-counters {
-  gap: var(--sp-2);          /* era 0.6rem */
+  gap: var(--sp-2);
 }
 :root[data-density="compact"] .admin-big-number {
-  font-size: 1.15rem;        /* era 1.4rem */
+  font-size: 1.15rem;
 }
 :root[data-density="compact"] .latest-changes-head {
-  padding: var(--sp-3) var(--sp-4) var(--sp-2); /* era 1.25/1.5/0.75rem */
+  padding: var(--sp-3) var(--sp-4) var(--sp-2);
 }
 :root[data-density="compact"] .dashboard-flex {
-  gap: var(--sp-4);          /* era 1.5rem */
+  gap: var(--sp-4);
 }
 :root[data-density="compact"] .dashboard-columns {
-  gap: var(--sp-4);          /* era 1.5rem */
+  gap: var(--sp-4);
 }
 :root[data-density="compact"] .dashboard-section {
-  gap: var(--sp-4);          /* era 1rem */
+  gap: var(--sp-4);
 }
 :root[data-density="compact"] .stats-grid,
 :root[data-density="compact"] .dashboard-links-grid {
-  gap: var(--sp-3);          /* era 1rem */
+  gap: var(--sp-3);
 }
 :root[data-density="compact"] .news-item {
-  padding: var(--sp-2) 0;    /* era 0.6rem 0 */
+  padding: var(--sp-2) 0;
 }
 
-/* ---------------------------------------------------------
-   11c) Drawer (edit question dentro un parametro)
-   --------------------------------------------------------- */
+/* Drawer */
 :root[data-density="compact"] .drawer-body {
-  padding: var(--sp-4) var(--sp-4) var(--sp-5);  /* era 1.25rem 1.25rem 1.5rem */
+  padding: var(--sp-4) var(--sp-4) var(--sp-5);
 }
 
-/* ---------------------------------------------------------
-   11d) LanguageData: wizard dei parametri (quadratini numerati)
-   --------------------------------------------------------- */
+/* LanguageData: quadratini */
 :root[data-density="compact"] .param-nav {
-  padding: var(--sp-3);          /* era 0.75rem */
-  gap: .3rem;                    /* era 0.5rem  */
+  padding: var(--sp-3);
+  gap: .3rem;
   margin-bottom: var(--form-col-gap, 1.5rem);
 }
 
-/* ---------------------------------------------------------
-   11e) Instructions: pagina di testo (HTML renderizzato).
-   Font invariati per leggibilita': stringiamo solo interlinea,
-   margini di titoli/paragrafi/liste e padding delle celle tabella.
-   --------------------------------------------------------- */
+/* Instructions: meno spazio, stessi font */
 :root[data-density="compact"] .instructions-view {
-  line-height: 1.45;            /* era 1.6 */
+  line-height: 1.45;
 }
 :root[data-density="compact"] .instructions-view h2 {
-  margin: .6rem 0 .3rem;        /* era 1.25rem 0 .6rem */
+  margin: .6rem 0 .3rem;
 }
 :root[data-density="compact"] .instructions-view h3 {
-  margin: .5rem 0 .3rem;        /* era 1.1rem 0 .5rem */
+  margin: .5rem 0 .3rem;
 }
 :root[data-density="compact"] .instructions-view p {
-  margin: .3rem 0;              /* era .6rem 0 */
+  margin: .3rem 0;
 }
 :root[data-density="compact"] .instructions-view ul,
 :root[data-density="compact"] .instructions-view ol {
-  margin: .3rem 0 .4rem 1.2rem; /* era .5rem 0 .8rem 1.4rem */
+  margin: .3rem 0 .4rem 1.2rem;
 }
 :root[data-density="compact"] .instructions-view li {
-  margin: .1rem 0;              /* era .25rem 0 */
+  margin: .1rem 0;
 }
 :root[data-density="compact"] .instructions-view table {
-  margin: .5rem 0 .6rem;        /* era 1rem 0 1.25rem */
+  margin: .5rem 0 .6rem;
 }
 :root[data-density="compact"] .instructions-view table th,
 :root[data-density="compact"] .instructions-view table td {
-  padding: .3rem .45rem;        /* era .55rem .75rem */
+  padding: .3rem .45rem;
 }
 
-/* ---------------------------------------------------------
-   11f) Pagine pubbliche / auth (page-* e auth-*)
-   Si applica solo se un utente loggato con compact le apre.
-   --------------------------------------------------------- */
+/* Pagine pubbliche / auth */
 :root[data-density="compact"] .page-hero {
   margin-bottom: var(--form-col-gap, 2rem);
 }
@@ -385,53 +312,43 @@
 }
 :root[data-density="compact"] .page-actions,
 :root[data-density="compact"] .auth-actions {
-  margin-top: .45rem;         /* era 1.25rem */
+  margin-top: .45rem;
 }
 :root[data-density="compact"] .auth-shell {
-  padding: .8rem;             /* era 2rem 1rem */
+  padding: .8rem;
 }
 :root[data-density="compact"] .auth-title {
-  margin-bottom: .45rem;      /* era 1rem */
+  margin-bottom: .45rem;
 }
 
-/* ---------------------------------------------------------
-   12) Footer: in comfortable e' tarato come footer "vetrina"
-   (margin-top 5rem, padding 3rem, gap 3rem...). In compact lo
-   ridimensioniamo a un footer da gestionale: poca aria, niente
-   fascia vuota gigante sopra.
-   --------------------------------------------------------- */
+/* Footer più compatto */
 :root[data-density="compact"] .site-footer {
-  margin-top: 1.1rem;   /* era 5rem  */
-  padding-top: .9rem;   /* era 3rem  */
-  padding-bottom: .8rem;/* era 2rem  */
+  margin-top: 1.1rem;
+  padding-top: .9rem;
+  padding-bottom: .8rem;
 }
 :root[data-density="compact"] .footer-grid {
-  gap: 1.1rem;            /* era 3rem */
-  margin-bottom: .9rem;   /* era 3rem */
+  gap: 1.1rem;
+  margin-bottom: .9rem;
 }
 :root[data-density="compact"] .footer-col h4 {
-  margin-bottom: .4rem;   /* era 1rem */
+  margin-bottom: .4rem;
 }
 :root[data-density="compact"] .footer-col .muted-text {
-  line-height: 1.4;       /* era 1.6  */
-  margin-bottom: .6rem;   /* era 1.5rem */
+  line-height: 1.4;
+  margin-bottom: .6rem;
 }
 :root[data-density="compact"] .footer-links {
-  gap: .3rem;             /* era .7rem */
+  gap: .3rem;
 }
 :root[data-density="compact"] .footer-parent-project {
-  padding: .7rem;         /* era 1.5rem */
+  padding: .7rem;
 }
 :root[data-density="compact"] .footer-bottom {
-  padding-top: .8rem;     /* era 2rem */
+  padding-top: .8rem;
 }
 
-/* ---------------------------------------------------------
-   13) Touch (dito): in compact i controlli sono tarati per il
-   mouse (quadratini 1.85rem, paginazione 1.55rem, voci sidebar
-   ~29px). Su schermi touch li riportiamo a misura di dito;
-   su desktop con mouse non cambia nulla.
-   --------------------------------------------------------- */
+/* Touch: controlli più grandi */
 @media (pointer: coarse){
   :root[data-density="compact"] .param-nav .param-btn{
     width: 2.35rem;

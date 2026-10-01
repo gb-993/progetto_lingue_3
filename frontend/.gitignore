@@ -1,4 +1,3 @@
-# Logs
 logs
 *.log
 npm-debug.log*
@@ -8,12 +7,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-# dist NON ignorata: la SPA viene buildata sul PC (npm run build) e committata.
-# Caddy in prod la serve direttamente via bind-mount, senza buildare sulla VM.
+# dist non va ignorata: si committa perché la VM non fa il build
 dist-ssr
 *.local
 
-# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea

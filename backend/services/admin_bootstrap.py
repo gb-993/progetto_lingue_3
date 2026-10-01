@@ -1,22 +1,3 @@
-"""
-Bootstrap del primo admin all'avvio dell'app.
-
-Il primo deploy (locale o in produzione) parte con la tabella `users`
-vuota: senza un admin nessuno puo' loggare e l'unica via di accesso
-sarebbe creare l'utente a mano col `docker exec` sulla console del
-container. Per evitarlo, all'avvio FastAPI esegue questo bootstrap:
-
-  - se la tabella `users` e' vuota -> crea un admin con
-    `ADMIN_EMAIL`/`ADMIN_PASSWORD` (in dev fallback a `admin@local`/`admin`);
-  - se esiste anche un solo utente -> NO-OP: niente sovrascritture,
-    niente reset password, niente log rumorosi. Idempotente sui
-    riavvii successivi del container.
-
-Affine a `_ensure_default_admin` di services/migration_import.py: entrambi
-sono idempotenti e creano l'admin di env solo se manca, senza mai toccare
-record gia' presenti. Quel secondo gira a fine import bundle, questo
-all'avvio del processo.
-"""
 from __future__ import annotations
 import logging
 
@@ -33,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def bootstrap_first_admin() -> None:
-    """Crea il primo admin se la tabella users e' vuota. No-op altrimenti."""
+    """Crea il primo admin se non ci sono utenti."""
     db: Session = SessionLocal()
     try:
         if db.query(models.User).first() is not None:
@@ -42,9 +23,7 @@ def bootstrap_first_admin() -> None:
         email = (ADMIN_EMAIL or "admin@local").strip().lower()
         password = ADMIN_PASSWORD or "admin"
 
-        # Difesa in profondita': il guard sta gia' in config.py, ma qui
-        # ribadiamo per essere certi che in prod non si arrivi mai a
-        # creare l'admin con le credenziali di fallback dev.
+        # sicurezza: in prod mai le credenziali di fallback dev
         if IS_PROD and (not ADMIN_EMAIL or not ADMIN_PASSWORD):
             raise RuntimeError(
                 "Bootstrap admin abortito: ADMIN_EMAIL/ADMIN_PASSWORD mancanti in prod."

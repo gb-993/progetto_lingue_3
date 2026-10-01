@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import api from '../../api';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
-// TinyMCE is heavy (~500 KB gzip). Load it only when an admin opens the
-// editor, not on every page render.
 const InstructionsEditor = lazy(() => import('./InstructionsEditor'));
 
 const CONTENT_KEY = 'instr_body';

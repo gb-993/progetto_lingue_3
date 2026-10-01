@@ -42,12 +42,11 @@ def post_import_excel(
 
     if len(contents) == 0:
         raise HTTPException(status_code=400, detail="Empty file")
-    if len(contents) > 50 * 1024 * 1024:  # 50 MB
+    if len(contents) > 50 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large (max 50 MB)")
 
     report = import_excel(db, contents, current_user.id)
     return report.to_dict()
-
 
 
 class ImportErrorRow(BaseModel):

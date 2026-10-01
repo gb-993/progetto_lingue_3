@@ -1,8 +1,4 @@
-"""Citazione di attribuzione per i file scaricabili (xlsx/csv/txt/png/html/pdf).
-
-Il testo si compone da EDITORS / YEAR / WORK_TITLE / VERSION: modificare quelle
-costanti aggiorna la dicitura ovunque. Vedi DEV-NOTES.md per i limiti per formato.
-"""
+"""Citazione da mettere in ogni file scaricabile."""
 from __future__ import annotations
 
 import html as _html
@@ -23,7 +19,7 @@ YEAR = "2026"
 WORK_TITLE = "The PCM_Hub"
 VERSION = "version 1"
 
-# Core properties del documento Excel (File -> Informazioni)
+# proprietà del file Excel
 DOC_TITLE = "PCM_Hub - Data Export"
 DOC_CREATOR = "PCM_Hub"
 DOC_SUBJECT = "Linguistic parameter data"
@@ -40,7 +36,7 @@ def _format_date(dt: datetime) -> str:
 
 
 def build_citation_text(when: Optional[datetime] = None) -> str:
-    """Citazione su due righe, con la data di download come "Accessed on"."""
+    """Citazione su due righe, con la data di download."""
     when = when or utc_now()
     accessed = _format_date(when)
     return (
@@ -50,18 +46,16 @@ def build_citation_text(when: Optional[datetime] = None) -> str:
     )
 
 
-# Excel
-
 def apply_excel_citation(wb: Workbook, when: Optional[datetime] = None) -> None:
-    """Applica la citazione come footer di stampa su ogni sheet e nelle proprieta' del workbook."""
+    """Footer di stampa su ogni sheet + proprietà del file."""
     text = build_citation_text(when)
-    footer_text = "&8" + text  # `&8` imposta il font a 8 pt nella sintassi footer di Excel
+    footer_text = "&8" + text  # &8 = font 8 pt
 
     for ws in wb.worksheets:
         ws.oddFooter.center.text = footer_text
         ws.evenFooter.center.text = footer_text
         ws.firstFooter.center.text = footer_text
-        # Il footer su 2 righe a 8pt richiede circa 1 pollice
+        # spazio per il footer su due righe
         ws.page_margins.bottom = 1.0
         ws.page_margins.footer = 0.3
 
@@ -73,18 +67,16 @@ def apply_excel_citation(wb: Workbook, when: Optional[datetime] = None) -> None:
     p.subject = DOC_SUBJECT
     p.keywords = DOC_KEYWORDS
     p.category = DOC_CATEGORY
-    p.version = VERSION.split()[-1]  # "1" da "version 1"
+    p.version = VERSION.split()[-1]
     p.language = DOC_LANGUAGE
 
 
-# PDF (fpdf2)
-
-# Da passare a `pdf.set_auto_page_break(auto=True, margin=PDF_FOOTER_MARGIN_MM)`
+# margine per set_auto_page_break
 PDF_FOOTER_MARGIN_MM = 28
 
 
 def render_pdf_citation_footer(pdf, font_family: str) -> None:
-    """Disegna linea separatrice, citazione e numero di pagina; da chiamare in `FPDF.footer()`."""
+    """Linea, citazione e numero pagina; da chiamare in FPDF.footer()."""
     pdf.set_y(-22)
     pdf.set_draw_color(218, 221, 226)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
@@ -100,18 +92,14 @@ def render_pdf_citation_footer(pdf, font_family: str) -> None:
     pdf.cell(0, 5, f"Page {pdf.page_no()}", align="C")
 
 
-# Testo semplice (CSV / TSV / TXT)
-
 def build_citation_comment(prefix: str = "# ", when: Optional[datetime] = None) -> str:
-    """Citazione come righe-commento prefissate, da concatenare davanti a un file di testo."""
+    """Citazione come righe di commento, per CSV/TXT."""
     text = build_citation_text(when)
     return "".join(f"{prefix}{line}\n" for line in text.split("\n"))
 
 
-# HTML (pagine plotly autonome)
-
 def render_html_citation_footer(when: Optional[datetime] = None) -> str:
-    """Snippet HTML con la citazione, da iniettare in fondo a una pagina."""
+    """Footer HTML con la citazione."""
     text = _html.escape(build_citation_text(when)).replace("\n", "<br>")
     return (
         '<footer style="font-family:Arial,Helvetica,sans-serif;font-size:11px;'
@@ -121,17 +109,15 @@ def render_html_citation_footer(when: Optional[datetime] = None) -> str:
 
 
 def inject_html_citation(html_str: str, when: Optional[datetime] = None) -> str:
-    """Inserisce il footer di citazione prima di ``</body>`` (fallback: in coda)."""
+    """Mette il footer prima di </body>, o in coda."""
     footer = render_html_citation_footer(when)
     if "</body>" in html_str:
         return html_str.replace("</body>", footer + "</body>", 1)
     return html_str + footer
 
 
-# Immagini matplotlib (PNG)
-
 def apply_matplotlib_citation(fig, when: Optional[datetime] = None) -> None:
-    """Scrive la citazione come caption della figura; va chiamata dopo `tight_layout()` e prima di `savefig`."""
+    """Citazione sotto la figura; dopo tight_layout(), prima di savefig."""
     fig.subplots_adjust(bottom=0.15)
     fig.text(
         0.5, 0.01, build_citation_text(when),

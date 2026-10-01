@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-// ===== Status di compilazione — ASSE B (coerente con LanguageList / LanguageData).
-// Neutro (niente colori): i colori restano all'asse A (completamento). =====
+// Asse B (review): senza colori
 const STATUS_BADGE = {
     draft: { label: 'Draft', cls: '' },
     submitted: { label: 'Under review', cls: '' },
@@ -19,8 +18,7 @@ function StatusBadge({ status }) {
     );
 }
 
-// ===== Completamento — ASSE A. Stessi colori dei quadratini e dello stesso
-// badge in LanguageList: vuoto→grigio, incompleto→giallo, completo→verde. =====
+// Asse A (completamento): colori dei quadratini
 const COMPLETION_BAR = {
     empty: { label: 'Empty', color: 'var(--text-muted)' },
     incomplete: { label: 'Incomplete', color: 'var(--warn)' },
@@ -31,9 +29,6 @@ const completionMeta = (completion) => COMPLETION_BAR[completion] || COMPLETION_
 
 const fmtDateShort = (iso) => iso ? new Date(iso).toLocaleDateString() : '—';
 
-// ============================================================================
-// Dashboard Root
-// ============================================================================
 export default function Dashboard() {
     const role = localStorage.getItem('role');
     const name = localStorage.getItem('name') || '';
@@ -49,9 +44,6 @@ export default function Dashboard() {
     );
 }
 
-// ============================================================================
-// ADMIN — layout 50/50 (left: 4 counter card; right: latest changes table)
-// ============================================================================
 function AdminDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -84,7 +76,6 @@ function AdminDashboard() {
     );
 }
 
-// ----- Card 1: Pending Approvals -----
 function PendingApprovalsCard({ count, items }) {
     return (
         <div className="card counter-card">
@@ -110,7 +101,6 @@ function PendingApprovalsCard({ count, items }) {
     );
 }
 
-// ----- Card 2: Languages by Status -----
 function LanguagesByStatusCard({ byStatus, byStatusList }) {
     const safe = byStatus || {};
     const lists = byStatusList || {};
@@ -121,7 +111,6 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
         (safe.submitted || 0) +
         (safe.validated || 0);
 
-    // Colori "neutri" (asse B): niente verde/giallo/rosso, che restano all'asse A.
     const cells = [
         { key: 'draft', label: 'Draft', color: 'var(--text-muted)' },
         { key: 'submitted', label: 'Under review', color: 'var(--brand)' },
@@ -216,7 +205,6 @@ function LanguagesByStatusCard({ byStatus, byStatusList }) {
     );
 }
 
-// ----- Card 3: Red Parameters (unsure or partially compiled) -----
 function RedParamsCard({ total, languages }) {
     const list = languages || [];
     return (
@@ -227,10 +215,7 @@ function RedParamsCard({ total, languages }) {
             </p>
             <div className="admin-big-number">{total || 0}</div>
             {list.length > 0 ? (
-                /* flex:1 + minHeight:0 (non maxHeight fissa): la card e' l'ultima
-                   della colonna e si allunga fino al bordo di Latest Changes
-                   (vedi .admin-counters .counter-card:last-child in index.css);
-                   la lista usa tutto lo spazio e scrolla solo se non basta. */
+                /* si allunga fino a Latest Changes e scrolla se serve */
                 <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '0.4rem', marginTop: '0.25rem' }}>
                     {list.map(l => (
                         <div
@@ -259,7 +244,6 @@ function RedParamsCard({ total, languages }) {
     );
 }
 
-// ----- Right column: Latest Changes table -----
 function truncateWords(text, n) {
     if (!text) return '';
     const words = text.split(/\s+/);
@@ -350,9 +334,6 @@ function LatestChangesCard({ items }) {
     );
 }
 
-// ============================================================================
-// USER (immutato, dashboard semplice)
-// ============================================================================
 function UserDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);

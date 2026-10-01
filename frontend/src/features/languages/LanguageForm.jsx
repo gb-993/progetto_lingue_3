@@ -8,14 +8,11 @@ export default function LanguageForm() {
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
 
-    // Presence anonima: numero di ALTRI utenti che stanno modificando questa
-    // stessa scheda lingua adesso (solo in edit). Pill discreta in header,
-    // coerente con Edit Parameter/Question.
     const othersEditing = usePresence('language', id, isEditMode && !!id);
 
     const [formData, setFormData] = useState({
         id: '', name_full: '', position: 0,
-        // Stringhe (mantenute per compat con filtri/export)
+        // nomi testuali, per filtri ed export
         family: '', top_level_family: '', grp: '',
         // FK alla tassonomia
         top_family_id: '', family_id: '', group_id: '',
@@ -28,9 +25,7 @@ export default function LanguageForm() {
     const [users, setUsers] = useState([]);
     const [taxonomy, setTaxonomy] = useState({ top_families: [], orphan_families: [], orphan_groups: [] });
     const [error, setError] = useState('');
-    // ID caricato all'apertura del form: serve a sapere se l'utente sta
-    // rinominando l'identificatore (il backend ha ON UPDATE CASCADE sulle
-    // FK, ma non sui dati storici come archived_answers / entity_versions).
+    // per avvisare se l'id cambia
     const [originalId, setOriginalId] = useState('');
 
     useEffect(() => {
@@ -40,7 +35,7 @@ export default function LanguageForm() {
                     api.get('/api/admin/accounts'),
                     api.get('/api/admin/taxonomy/tree'),
                 ]);
-                setUsers(usersRes.data.filter(u => u.role === 'user'));
+                setUsers(usersRes.data.filter(user => user.role === 'user'));
                 setTaxonomy(taxRes.data);
 
                 if (isEditMode) {
@@ -63,43 +58,39 @@ export default function LanguageForm() {
         fetchData();
     }, [id, isEditMode]);
 
-    // Liste flat per lookup veloci
     const allFamilies = useMemo(() => [
-        ...taxonomy.top_families.flatMap(t => t.families.map(f => ({ ...f, _topName: t.name }))),
-        ...taxonomy.orphan_families.map(f => ({ ...f, _topName: null })),
+        ...taxonomy.top_families.flatMap(topFamily => topFamily.families.map(family => ({ ...family, _topName: topFamily.name }))),
+        ...taxonomy.orphan_families.map(family => ({ ...family, _topName: null })),
     ], [taxonomy]);
 
     const allGroups = useMemo(() => [
-        ...taxonomy.top_families.flatMap(t =>
-            t.families.flatMap(f => f.groups.map(g => ({ ...g, _famName: f.name, _topName: t.name, _famTopId: t.id })))
+        ...taxonomy.top_families.flatMap(topFamily =>
+            topFamily.families.flatMap(family => family.groups.map(group => ({ ...group, _famName: family.name, _topName: topFamily.name, _famTopId: topFamily.id })))
         ),
-        ...taxonomy.orphan_families.flatMap(f =>
-            f.groups.map(g => ({ ...g, _famName: f.name, _topName: null, _famTopId: null }))
+        ...taxonomy.orphan_families.flatMap(family =>
+            family.groups.map(group => ({ ...group, _famName: family.name, _topName: null, _famTopId: null }))
         ),
-        ...(taxonomy.orphan_groups || []).map(g => ({ ...g, _famName: null, _topName: null, _famTopId: null })),
+        ...(taxonomy.orphan_groups || []).map(group => ({ ...group, _famName: null, _topName: null, _famTopId: null })),
     ], [taxonomy]);
 
-    // Filtri dinamici per i dropdown
     const familiesForSelect = useMemo(() => {
         if (!formData.top_family_id) return allFamilies;
-        const tid = Number(formData.top_family_id);
-        return allFamilies.filter(f => f.top_family_id === tid);
+        const topFamilyId = Number(formData.top_family_id);
+        return allFamilies.filter(family => family.top_family_id === topFamilyId);
     }, [formData.top_family_id, allFamilies]);
 
     const groupsForSelect = useMemo(() => {
         if (!formData.family_id) {
-            // se nessuna family scelta ma c'è una top, mostra i group sotto le family di quella top
             if (formData.top_family_id) {
-                const tid = Number(formData.top_family_id);
-                return allGroups.filter(g => g._famTopId === tid);
+                const topFamilyId = Number(formData.top_family_id);
+                return allGroups.filter(group => group._famTopId === topFamilyId);
             }
             return allGroups;
         }
-        const fid = Number(formData.family_id);
-        return allGroups.filter(g => g.family_id === fid);
+        const familyId = Number(formData.family_id);
+        return allGroups.filter(group => group.family_id === familyId);
     }, [formData.family_id, formData.top_family_id, allGroups]);
 
-    // ---------- handlers ----------
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
@@ -108,12 +99,12 @@ export default function LanguageForm() {
         }));
     };
 
-    // Quando cambia top → se family selezionata non è coerente, azzera family + group
+    // azzera family e group se non c'entrano più
     const handleTopChange = (e) => {
         const newTop = e.target.value;
         const newTopNum = newTop === '' ? null : Number(newTop);
         const currentFam = formData.family_id === '' ? null : Number(formData.family_id);
-        const famObj = currentFam !== null ? allFamilies.find(f => f.id === currentFam) : null;
+        const famObj = currentFam !== null ? allFamilies.find(family => family.id === currentFam) : null;
         let nextFam = formData.family_id;
         let nextGrp = formData.group_id;
         if (famObj && famObj.top_family_id !== newTopNum && newTopNum !== null) {
@@ -123,32 +114,32 @@ export default function LanguageForm() {
         setFormData(prev => ({ ...prev, top_family_id: newTop, family_id: nextFam, group_id: nextGrp }));
     };
 
-    // Quando cambia family → auto-imposta il top dal parent. Se il group scelto non è coerente, azzeralo.
+    // la top segue la family
     const handleFamilyChange = (e) => {
         const newFam = e.target.value;
         const newFamNum = newFam === '' ? null : Number(newFam);
-        const famObj = newFamNum !== null ? allFamilies.find(f => f.id === newFamNum) : null;
+        const famObj = newFamNum !== null ? allFamilies.find(family => family.id === newFamNum) : null;
         const newTop = famObj ? (famObj.top_family_id ?? '') : formData.top_family_id;
         let nextGrp = formData.group_id;
         const currentGrp = formData.group_id === '' ? null : Number(formData.group_id);
         if (currentGrp !== null) {
-            const grpObj = allGroups.find(g => g.id === currentGrp);
+            const grpObj = allGroups.find(group => group.id === currentGrp);
             if (grpObj && grpObj.family_id !== newFamNum) nextGrp = '';
         }
         setFormData(prev => ({ ...prev, family_id: newFam, top_family_id: newTop === null ? '' : newTop, group_id: nextGrp }));
     };
 
-    // Quando cambia group → auto-imposta family + top dai parent.
+    // family e top seguono il group
     const handleGroupChange = (e) => {
         const newGrp = e.target.value;
         const newGrpNum = newGrp === '' ? null : Number(newGrp);
-        const grpObj = newGrpNum !== null ? allGroups.find(g => g.id === newGrpNum) : null;
+        const grpObj = newGrpNum !== null ? allGroups.find(group => group.id === newGrpNum) : null;
         let nextFam = formData.family_id;
         let nextTop = formData.top_family_id;
         if (grpObj) {
             if (grpObj.family_id !== null && grpObj.family_id !== undefined) {
                 nextFam = grpObj.family_id;
-                const famObj = allFamilies.find(f => f.id === grpObj.family_id);
+                const famObj = allFamilies.find(family => family.id === grpObj.family_id);
                 if (famObj && famObj.top_family_id !== null) nextTop = famObj.top_family_id;
             }
         }
@@ -185,19 +176,18 @@ export default function LanguageForm() {
         }
     };
 
-    // Avviso se la lingua ha una stringa che non corrisponde a nessuna entità in tassonomia
-    const orphanText = (() => {
+    const unknownTaxonomyWarnings = (() => {
         const messages = [];
         if (formData.top_level_family && !formData.top_family_id) {
-            const found = taxonomy.top_families.find(t => t.name === formData.top_level_family);
+            const found = taxonomy.top_families.find(topFamily => topFamily.name === formData.top_level_family);
             if (!found) messages.push(`Top-Family "${formData.top_level_family}" is not in the taxonomy yet`);
         }
         if (formData.family && !formData.family_id) {
-            const found = allFamilies.find(f => f.name === formData.family);
+            const found = allFamilies.find(family => family.name === formData.family);
             if (!found) messages.push(`Family "${formData.family}" is not in the taxonomy yet`);
         }
         if (formData.grp && !formData.group_id) {
-            const found = allGroups.find(g => g.name === formData.grp);
+            const found = allGroups.find(group => group.name === formData.grp);
             if (!found) messages.push(`Group "${formData.grp}" is not in the taxonomy yet`);
         }
         return messages;
@@ -210,9 +200,6 @@ export default function LanguageForm() {
                     marginBottom: '1.5rem',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '1rem', flexWrap: 'wrap',
-                    // Coerenza con Edit Parameter/Question: con un altro utente presente
-                    // l'header (titolo + badge) si aggancia sotto la topbar scrollando,
-                    // così l'avviso resta visibile. Senza altri utenti: header normale.
                     ...(othersEditing > 0 ? {
                         position: 'sticky',
                         top: 'var(--topbar-height)',
@@ -285,8 +272,8 @@ export default function LanguageForm() {
                                     style={{ width: '100%', padding: '0.45rem' }}
                                 >
                                     <option value="">— None —</option>
-                                    {taxonomy.top_families.map(t => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    {taxonomy.top_families.map(topFamily => (
+                                        <option key={topFamily.id} value={topFamily.id}>{topFamily.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -298,9 +285,9 @@ export default function LanguageForm() {
                                     style={{ width: '100%', padding: '0.45rem' }}
                                 >
                                     <option value="">— None —</option>
-                                    {familiesForSelect.map(f => (
-                                        <option key={f.id} value={f.id}>
-                                            {f._topName ? `${f.name}` : `${f.name} (no top)`}
+                                    {familiesForSelect.map(family => (
+                                        <option key={family.id} value={family.id}>
+                                            {family._topName ? `${family.name}` : `${family.name} (no top)`}
                                         </option>
                                     ))}
                                 </select>
@@ -313,19 +300,19 @@ export default function LanguageForm() {
                                     style={{ width: '100%', padding: '0.45rem' }}
                                 >
                                     <option value="">— None —</option>
-                                    {groupsForSelect.map(g => (
-                                        <option key={g.id} value={g.id}>
-                                            {g._famName ? `${g.name}` : `${g.name} (no family)`}
+                                    {groupsForSelect.map(group => (
+                                        <option key={group.id} value={group.id}>
+                                            {group._famName ? `${group.name}` : `${group.name} (no family)`}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         </div>
 
-                        {orphanText.length > 0 && (
+                        {unknownTaxonomyWarnings.length > 0 && (
                             <div className="alert alert-warning" style={{ marginTop: '0.6rem', padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}>
                                 <strong>Heads up:</strong>{' '}
-                                {orphanText.join('; ')}.
+                                {unknownTaxonomyWarnings.join('; ')}.
                                 Promote them in <Link to="/admin/taxonomy">/admin/taxonomy</Link> or pick replacements above.
                             </div>
                         )}
@@ -383,9 +370,9 @@ export default function LanguageForm() {
                         <label style={{display: 'block', fontWeight: 'bold'}}>Assign to a user</label>
                         <select name="assigned_user_id" value={formData.assigned_user_id} onChange={handleChange} style={{width: '100%', padding: '0.5rem', marginTop: '0.25rem'}}>
                             <option value="">-- No user assigned --</option>
-                            {users.map(u => (
-                                <option key={u.id} value={u.id}>
-                                    {u.name} {u.surname} ({u.email})
+                            {users.map(user => (
+                                <option key={user.id} value={user.id}>
+                                    {user.name} {user.surname} ({user.email})
                                 </option>
                             ))}
                         </select>

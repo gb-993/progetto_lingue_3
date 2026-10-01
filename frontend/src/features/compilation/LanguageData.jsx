@@ -6,9 +6,7 @@ import ParameterBlock from './ParameterBlock';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
 
-// ASSE B — Stato di compilazione/review (draft → submitted → validated).
-// Volutamente NEUTRO (niente colori traffico): i colori restano all'asse A
-// (completamento) per non confondere i due assi.
+// Asse B (review): senza colori
 const STATUS_META = {
     draft: {
         label: 'Draft',
@@ -24,16 +22,13 @@ const STATUS_META = {
     },
 };
 
-// ASSE A — Completamento della lingua (calcolato dai quadratini). I colori
-// rispecchiano i quadratini: vuoto→grigio, incompleto→giallo, completo→verde.
+// Asse A (completamento): colori dei quadratini
 const COMPLETION_META = {
     empty: { label: 'Empty', cls: '' },
     incomplete: { label: 'Incomplete', cls: 'warn' },
     complete: { label: 'Complete', cls: 'ok' },
 };
 
-// Mappa il colore calcolato dal backend (grey/red/yellow/green) alla classe CSS
-// del quadratino e a un tooltip leggibile.
 const COLOR_CLASS = { green: 'is-complete', red: 'is-incomplete', yellow: 'is-warning', grey: 'is-empty' };
 const COLOR_TITLE = {
     green: 'Complete',
@@ -52,20 +47,12 @@ export default function LanguageData() {
     const [actionInProgress, setActionInProgress] = useState(false);
     const [showSendBackModal, setShowSendBackModal] = useState(false);
     const [sendBackNote, setSendBackNote] = useState('');
-    // Tracciamento delle modifiche non salvate del parametro corrente, sollevate
-    // entrambe dal ParameterBlock:
-    //  - adminNoteDirty: solo per admin, copre il textarea della admin note
-    //  - blockDirty: copre risposte, comments, motivazioni ed esempi di tutte
-    //    le questions del parametro (i dati di compilazione del linguista)
-    // Insieme attivano il guard di navigazione e il confirm al cambio parametro.
     const [adminNoteDirty, setAdminNoteDirty] = useState(false);
     const [blockDirty, setBlockDirty] = useState(false);
     const anyDirty = adminNoteDirty || blockDirty;
     const [overrideMenuOpen, setOverrideMenuOpen] = useState(false);
     const overrideMenuRef = useRef(null);
 
-    // Ricerca parametro nel wizard: fa lampeggiare il quadratino trovato per
-    // qualche istante, senza cambiare il parametro attivo (niente discard).
     const [searchTerm, setSearchTerm] = useState('');
     const [foundId, setFoundId] = useState(null);
     const [searchMsg, setSearchMsg] = useState('');
@@ -83,18 +70,11 @@ export default function LanguageData() {
         return () => document.removeEventListener('mousedown', onDocClick);
     }, [overrideMenuOpen]);
 
-    // Guard unificato: copre chiusura tab/refresh (beforeunload) e navigazione
-    // interna React Router (Link, breadcrumb, back-button). Sostituisce il
-    // beforeunload custom che proteggeva solo la admin-note: ora copre anche
-    // risposte/esempi/motivazioni del blocco corrente.
     useUnsavedChangesGuard(
         anyDirty,
         'You have unsaved changes for this parameter. If you leave now they will be lost. Continue?'
     );
 
-    // Chiamato prima di cambiare parametro nel wizard. Il cambio parametro
-    // rimonta ParameterBlock e scarta lo stato locale, quindi qui chiediamo
-    // conferma esplicita.
     const confirmDiscardCurrentBlock = () => {
         if (!anyDirty) return true;
         return window.confirm(
@@ -102,13 +82,11 @@ export default function LanguageData() {
         );
     };
 
-    // Scroll automatico in cima al wizard quando si cambia parametro.
-    // Evitato al primo mount così l'utente non viene "saltato" su all'apertura.
     const wizardTopRef = useRef(null);
-    const skipScrollRef = useRef(true);
+    const skipInitialScrollRef = useRef(true);
     useEffect(() => {
-        if (skipScrollRef.current) {
-            skipScrollRef.current = false;
+        if (skipInitialScrollRef.current) {
+            skipInitialScrollRef.current = false;
             return;
         }
         if (wizardTopRef.current) {
@@ -132,12 +110,9 @@ export default function LanguageData() {
 
     useEffect(() => { fetchCompilationData(); }, [id]);
 
-    // Pulisce il clipboard degli esempi quando si entra in una lingua diversa
-    // da quella di origine. Evita di trascinare un esempio orfano (con campi
-    // di un'altra lingua) attraverso le sessioni di compilazione.
     useEffect(() => {
-        const c = readExampleClipboard();
-        if (c && c.langId !== id) {
+        const clipboard = readExampleClipboard();
+        if (clipboard && clipboard.langId !== id) {
             clearExampleClipboard();
         }
     }, [id]);
@@ -155,19 +130,16 @@ export default function LanguageData() {
         }
     };
 
-    // Utente assegnato: conferma la compilazione (draft → submitted)
     const handleSubmit = () => {
         if (!window.confirm("Confirm this language? Once confirmed you will not be able to edit it until an admin reviews it.")) return;
         callWorkflow('submit');
     };
 
-    // Admin: valida (submitted → validated). Diventa sola lettura per tutti; fa girare il DAG.
     const handleValidate = () => {
         if (!window.confirm('Validate this language? It becomes read-only for everyone until an admin reopens it. The DAG will run in background.')) return;
         callWorkflow('validate');
     };
 
-    // Admin: rimanda indietro (submitted → draft) con nota opzionale per l'utente
     const handleSendBack = () => {
         setSendBackNote('');
         setShowSendBackModal(true);
@@ -178,13 +150,12 @@ export default function LanguageData() {
         setShowSendBackModal(false);
     };
 
-    // Admin: riapre una lingua validata (validated → draft)
     const handleReopen = () => {
         if (!window.confirm("Reopen this validated language? It goes back to draft and becomes editable again.")) return;
         callWorkflow('reopen');
     };
 
-    // Super-admin: forza/azzera il completamento (asse A). value: 'empty' | 'incomplete' | 'complete' | null (auto)
+    // super-admin: null = calcolo automatico
     const handleSetCompletionOverride = async (value) => {
         setOverrideMenuOpen(false);
         try {
@@ -198,17 +169,15 @@ export default function LanguageData() {
         }
     };
 
-    // Cerca un parametro per id (match esatto, poi sottostringa) o per nome e
-    // ne fa lampeggiare il quadratino per ~2,5s. Non apre il parametro.
     const handleParamSearch = (e) => {
         if (e) e.preventDefault();
         const term = searchTerm.trim().toLowerCase();
         if (!term) return;
         const list = (data && data.parameters) || [];
         const match =
-            list.find(p => (p.id || '').toLowerCase() === term) ||
-            list.find(p => (p.id || '').toLowerCase().includes(term)) ||
-            list.find(p => (p.name || '').toLowerCase().includes(term));
+            list.find(param => (param.id || '').toLowerCase() === term) ||
+            list.find(param => (param.id || '').toLowerCase().includes(term)) ||
+            list.find(param => (param.name || '').toLowerCase().includes(term));
         if (!match) {
             setFoundId(null);
             setSearchMsg('No parameter found.');
@@ -216,8 +185,7 @@ export default function LanguageData() {
         }
         setSearchMsg('');
         if (foundTimerRef.current) clearTimeout(foundTimerRef.current);
-        // Azzera e re-imposta al frame successivo così l'animazione riparte
-        // anche cercando lo stesso parametro due volte di fila.
+        // così l'animazione riparte ogni volta
         setFoundId(null);
         requestAnimationFrame(() => {
             setFoundId(match.id);
@@ -234,21 +202,16 @@ export default function LanguageData() {
     const isAdmin = user?.role === 'admin';
     const isSuperAdmin = !!user?.is_super_admin;
 
-    // Asse B (review)
     const status = language.status || 'draft';
     const meta = STATUS_META[status] || STATUS_META.draft;
-    // Asse A (completamento, calcolato dal backend; può essere forzato dal super-admin)
     const completion = language.completion || 'empty';
     const completionMeta = COMPLETION_META[completion] || COMPLETION_META.empty;
     const hasOverride = !!language.completion_override;
-    // Lock di scrittura: l'admin può SEMPRE editare (anche submitted/validated);
-    // l'utente assegnato solo in draft.
     const isReadOnly = isAdmin ? false : status !== 'draft';
 
     return (
         <main className="container" style={{ marginTop: 'var(--form-page-top, 2rem)', paddingBottom: '10rem' }}>
 
-            {/* Header Lingua */}
             <div className="card lang-header-card" style={{ marginBottom: '1rem', padding: 'var(--ld-header-pad, 1.5rem 2rem)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                     <h2 style={{ margin: 0 }}>
@@ -260,7 +223,6 @@ export default function LanguageData() {
                 <LanguageMetaGrid language={language} isAdmin={isAdmin} />
             </div>
 
-            {/* Banner Status */}
             <div className={`status-banner is-${status}`} style={{
                 padding: 'var(--ld-banner-pad, 1rem 1.25rem)',
                 borderRadius: '8px',
@@ -289,16 +251,13 @@ export default function LanguageData() {
                     )}
                 </div>
 
-                {/* Bottoni di workflow */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                    {/* --- UTENTE ASSEGNATO: conferma (draft → submitted) --- */}
                     {!isAdmin && status === 'draft' && (
                         <button className="btn btn--primary" disabled={actionInProgress} onClick={handleSubmit}>
                             {actionInProgress ? '...' : 'Confirm'}
                         </button>
                     )}
 
-                    {/* --- ADMIN (tutti): review asse B + (super-admin) override asse A --- */}
                     {isAdmin && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-end' }}>
                             <span className="small muted">Admin actions</span>
@@ -333,14 +292,13 @@ export default function LanguageData() {
                                 )}
                             </div>
 
-                            {/* Solo super-admin: forza/azzera il completamento (asse A) */}
                             {isSuperAdmin && (
                                 <div ref={overrideMenuRef} style={{ position: 'relative' }}>
                                     <button
                                         type="button"
                                         className="btn btn--small"
                                         disabled={actionInProgress}
-                                        onClick={() => setOverrideMenuOpen(o => !o)}
+                                        onClick={() => setOverrideMenuOpen(open => !open)}
                                         title="Force or reset the completion (super-admin only)"
                                     >
                                         {actionInProgress ? '...' : `Completion: ${hasOverride ? completionMeta.label + ' (forced)' : 'Auto'} ▾`}
@@ -375,7 +333,6 @@ export default function LanguageData() {
                 </div>
             </div>
 
-            {/* Modal Send back */}
             {showSendBackModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                     <div className="card" style={{ width: '500px', maxWidth: '92vw', padding: 'var(--form-box-pad-lg, 1.5rem)' }}>
@@ -403,7 +360,6 @@ export default function LanguageData() {
                 </div>
             )}
 
-            {/* Ricerca parametro nel wizard (evidenzia il quadratino, non lo apre) */}
             <form
                 onSubmit={handleParamSearch}
                 style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}
@@ -420,20 +376,17 @@ export default function LanguageData() {
                 {searchMsg && <span className="small muted">{searchMsg}</span>}
             </form>
 
-            {/* Navigazione Wizard (Quadratini) */}
             <div ref={wizardTopRef} className="param-nav" style={{ scrollMarginTop: '1rem' }}>
-                {parameters.map((p, idx) => {
-                    const { answered = 0, total = 0 } = p.stats || {};
-                    // Colore calcolato dal backend: grey/red/yellow/green.
-                    const stateClass = COLOR_CLASS[p.color] || 'is-empty';
-                    // Giallo "da ricontrollare": una question è stata modificata.
-                    const needsReview = !!p.needs_review;
+                {parameters.map((param, idx) => {
+                    const { answered = 0, total = 0 } = param.stats || {};
+                    const stateClass = COLOR_CLASS[param.color] || 'is-empty';
+                    const needsReview = !!param.needs_review;
 
                     const isActive = idx === activeIndex;
 
                     return (
                         <button
-                            key={p.id}
+                            key={param.id}
                             onClick={() => {
                                 if (idx === activeIndex) return;
                                 if (!confirmDiscardCurrentBlock()) return;
@@ -441,10 +394,10 @@ export default function LanguageData() {
                                 setBlockDirty(false);
                                 setActiveIndex(idx);
                             }}
-                            className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}${p.id === foundId ? ' is-found' : ''}`}
-                            title={`${COLOR_TITLE[p.color] || ''} — ${answered}/${total} answered${needsReview ? ' — ✎ a modified question needs re-check & re-save' : ''}`}
+                            className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}${param.id === foundId ? ' is-found' : ''}`}
+                            title={`${COLOR_TITLE[param.color] || ''} — ${answered}/${total} answered${needsReview ? ' — ✎ a modified question needs re-check & re-save' : ''}`}
                         >
-                            {p.id}
+                            {param.id}
                             {needsReview && (
                                 <span
                                     className="badge-review"
@@ -458,7 +411,6 @@ export default function LanguageData() {
                 })}
             </div>
 
-            {/* Blocco Parametro Corrente */}
             {currentParam && (
                 <ParameterBlock
                     key={currentParam.id}
@@ -469,11 +421,7 @@ export default function LanguageData() {
                     onAdminNoteDirtyChange={setAdminNoteDirty}
                     onBlockDirtyChange={setBlockDirty}
                     onSaved={async () => {
-                        // Aspetta il refetch PRIMA di cambiare parametro: altrimenti
-                        // setLoading(true) di fetchCompilationData smonta il wizard
-                        // (`Loading...` lo sostituisce) e il ref usato per lo scroll
-                        // diventa null nel render in cui activeIndex cambia,
-                        // facendo perdere lo scroll automatico in cima.
+                        // prima ricarica, poi avanza
                         await fetchCompilationData();
                         if (activeIndex < parameters.length - 1) {
                             setAdminNoteDirty(false);
@@ -507,7 +455,7 @@ function MetaRow({ label, value }) {
 }
 
 function LanguageMetaGrid({ language, isAdmin }) {
-    const fmtCoord = (v) => (v === null || v === undefined ? null : Number(v).toFixed(2));
+    const formatCoord = (value) => (value === null || value === undefined ? null : Number(value).toFixed(2));
     const assigned = language.assigned_user
         ? `${language.assigned_user.name || ''} ${language.assigned_user.surname || ''}`.trim() || null
         : null;
@@ -520,13 +468,6 @@ function LanguageMetaGrid({ language, isAdmin }) {
             rowGap: '0.8rem',
             alignItems: 'flex-start',
         }}>
-            {/* Colonna sinistra: classificazione linguistica + identificatori.
-                Ha solo valori corti, quindi prende lo spazio dei suoi contenuti
-                (con un tetto): tutto il resto va alla colonna destra, che
-                contiene i campi lunghi (Source) e arriva fino al margine
-                destro della card. Prima erano due colonne al 50% e le fonti,
-                strette, si allungavano in verticale lasciando un grande vuoto
-                sotto la colonna sinistra. */}
             <div style={{ flex: '0 1 auto', minWidth: 'min(300px, 100%)', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Top-level family" value={language.top_level_family} />
                 <MetaRow label="Subfamily" value={language.family} />
@@ -535,11 +476,10 @@ function LanguageMetaGrid({ language, isAdmin }) {
                 <MetaRow label="ISO code" value={language.isocode} />
                 <MetaRow label="Glottocode" value={language.glottocode} />
             </div>
-            {/* Colonna destra: geografia + persone + provenienza. */}
             <div style={{ flex: '1 1 400px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <MetaRow label="Location" value={language.location} />
-                <MetaRow label="Latitude" value={fmtCoord(language.latitude)} />
-                <MetaRow label="Longitude" value={fmtCoord(language.longitude)} />
+                <MetaRow label="Latitude" value={formatCoord(language.latitude)} />
+                <MetaRow label="Longitude" value={formatCoord(language.longitude)} />
                 <MetaRow label="Supervisor" value={language.supervisor} />
                 <MetaRow label="Informant" value={language.informant} />
                 <MetaRow label="Source" value={language.source} />
@@ -549,21 +489,15 @@ function LanguageMetaGrid({ language, isAdmin }) {
     );
 }
 
-
-// Bottone export "Parametric data":
-//   - Admin: dropdown con Excel (.xlsx) + PDF (.pdf)
-//   - User assegnato: bottone semplice "Export examples (.xlsx)" (il backend
-//     restituisce comunque solo lo sheet Examples per i non-admin)
 function ExportParametricButton({ languageId, isAdmin }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
-    const ref = useRef(null);
+    const menuRef = useRef(null);
 
-    // Chiusura su click fuori dropdown
     useEffect(() => {
         if (!open) return;
         const onDocClick = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+            if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
         };
         document.addEventListener('mousedown', onDocClick);
         return () => document.removeEventListener('mousedown', onDocClick);
@@ -576,17 +510,17 @@ function ExportParametricButton({ languageId, isAdmin }) {
                 `/api/export/language/${languageId}/${format}`,
                 { responseType: 'blob' }
             );
-            const cd = res.headers['content-disposition'] || '';
-            const m = cd.match(/filename="?([^";]+)"?/);
+            const contentDisposition = res.headers['content-disposition'] || '';
+            const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
             const fallback = format === 'pdf'
                 ? `PCM_${languageId}.pdf`
                 : `PCM_${languageId}.xlsx`;
-            const filename = m ? m[1] : fallback;
+            const filename = filenameMatch ? filenameMatch[1] : fallback;
             const blob = new Blob([res.data]);
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = filename;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
         } catch {
             alert("Error during export.");
@@ -596,7 +530,6 @@ function ExportParametricButton({ languageId, isAdmin }) {
         }
     };
 
-    // Non-admin: bottone Excel diretto (il PDF e' admin-only)
     if (!isAdmin) {
         return (
             <button
@@ -611,13 +544,12 @@ function ExportParametricButton({ languageId, isAdmin }) {
         );
     }
 
-    // Admin: dropdown
     return (
-        <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+        <div ref={menuRef} style={{ position: 'relative', display: 'inline-block' }}>
             <button
                 type="button"
                 className="btn btn--small"
-                onClick={() => setOpen(o => !o)}
+                onClick={() => setOpen(prev => !prev)}
                 disabled={busy}
                 title="Export Database_model + Examples + Answers + Admin Notes"
                 aria-haspopup="menu"

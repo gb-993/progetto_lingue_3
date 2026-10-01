@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 
 export default function AccountCreate() {
     const navigate = useNavigate();

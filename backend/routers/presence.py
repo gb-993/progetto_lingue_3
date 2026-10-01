@@ -1,12 +1,11 @@
-"""
-avviso di modifica concorrente.
-"""
+"""Presence effimera per l'avviso di modifica concorrente: solo conteggi, mai chi."""
 import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, field_validator
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import models
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/presence", tags=["Presence"])
 
-PRESENCE_TTL_SECONDS = 25
+PRESENCE_TTL_SECONDS = 60
 
 _ALLOWED_ENTITY_TYPES = {"question", "parameter", "language", "language_parameter"}
 
@@ -51,15 +50,20 @@ def heartbeat(
 ):
     now = utc_now()
     cutoff = now - timedelta(seconds=PRESENCE_TTL_SECONDS)
-
-    row = db.query(models.EditingSession).filter(
+    same_entity = (
         models.EditingSession.entity_type == payload.entity_type,
         models.EditingSession.entity_id == payload.entity_id,
-        models.EditingSession.user_id == current_user.id,
-    ).first()
-    if row:
-        row.last_heartbeat = now
-    else:
+    )
+
+    # prima si tolgono le righe scadute, così non si cancella quella che si sta per aggiornare
+    db.query(models.EditingSession).filter(
+        *same_entity, models.EditingSession.last_heartbeat < cutoff,
+    ).delete(synchronize_session=False)
+
+    updated = db.query(models.EditingSession).filter(
+        *same_entity, models.EditingSession.user_id == current_user.id,
+    ).update({models.EditingSession.last_heartbeat: now}, synchronize_session=False)
+    if not updated:
         db.add(models.EditingSession(
             entity_type=payload.entity_type,
             entity_id=payload.entity_id,
@@ -67,13 +71,11 @@ def heartbeat(
             last_heartbeat=now,
         ))
 
-    db.query(models.EditingSession).filter(
-        models.EditingSession.entity_type == payload.entity_type,
-        models.EditingSession.entity_id == payload.entity_id,
-        models.EditingSession.last_heartbeat < cutoff,
-    ).delete(synchronize_session=False)
-
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # stesso utente in due schede: l'altra ha appena creato la riga
+        db.rollback()
 
     others = db.query(func.count(func.distinct(models.EditingSession.user_id))).filter(
         models.EditingSession.entity_type == payload.entity_type,

@@ -1,16 +1,3 @@
-"""Test del flusso di rename di Language.id.
-
-Verifica:
-  - rename via PUT salva l'alias storico
-  - cascata DB sui figli (answers, language_parameters, ...): grazie alle FK
-    `ON UPDATE CASCADE`. Su SQLite richiede `PRAGMA foreign_keys = ON`
-  - validazioni: id vuoto / troppo lungo / gia' in uso / gia' alias di altra lingua
-  - rename A->B->A rimuove l'alias auto-referenziale
-  - excel import metadata riconosce un id obsoleto via alias e aggiorna la
-    lingua corrente senza duplicare
-  - excel import segnala mismatch glottocode quando l'alias e' ambiguo
-  - backup_restore submissions usa l'id corrente quando il file ha l'old id
-"""
 import io
 
 import pytest
@@ -22,15 +9,9 @@ import models
 from routers.languages import update_admin_language, LanguageBase
 
 
-# ----------------------------------------------------------------------------
-# Helpers / fixture
-# ----------------------------------------------------------------------------
-
 @pytest.fixture
 def db_fk(db_session):
-    """Abilita FOREIGN_KEYS su SQLite in-memory (di default e' off).
-    Necessario per esercitare la cascade ON UPDATE/DELETE.
-    """
+    """Attiva le FK su SQLite (spente di default): servono per le cascade."""
     db_session.execute(text("PRAGMA foreign_keys = ON"))
     return db_session
 
@@ -55,7 +36,7 @@ def _seed_lang(db, lid: str = "ENG", glotto: str = "stan1293") -> models.Languag
 
 
 def _put_item_from(lang: models.Language, new_id: str) -> LanguageBase:
-    """Costruisce un payload PUT identico alla lingua, cambiando solo l'id."""
+    """Payload PUT uguale alla lingua, cambia solo l'id."""
     return LanguageBase(
         id=new_id,
         name_full=lang.name_full,
@@ -76,10 +57,6 @@ def _put_item_from(lang: models.Language, new_id: str) -> LanguageBase:
     )
 
 
-# ----------------------------------------------------------------------------
-# PUT — rename salvato come alias
-# ----------------------------------------------------------------------------
-
 def test_rename_creates_alias(db_fk):
     user = _admin(db_fk)
     lang = _seed_lang(db_fk, "ENG")
@@ -97,7 +74,6 @@ def test_rename_cascades_on_children(db_fk):
     user = _admin(db_fk)
     lang = _seed_lang(db_fk, "ENG")
 
-    # Param + question + answer + status agganciati alla lingua
     param = models.ParameterDef(id="P1", position=1, name="P", is_active=True)
     q = models.Question(id="Q1", parameter_id="P1", text="?")
     db_fk.add_all([param, q])
@@ -110,21 +86,17 @@ def test_rename_cascades_on_children(db_fk):
     payload = _put_item_from(lang, "EngTest")
     update_admin_language("ENG", payload, db=db_fk, current_user=user)
 
-    # Tutti i figli devono ora puntare al nuovo id grazie a ON UPDATE CASCADE
+    # i figli seguono il nuovo id (ON UPDATE CASCADE)
     assert db_fk.query(models.Answer).filter_by(language_id="EngTest").count() == 1
     assert db_fk.query(models.Answer).filter_by(language_id="ENG").count() == 0
     assert db_fk.query(models.LanguageParameter).filter_by(language_id="EngTest").count() == 1
     assert db_fk.query(models.LanguageParameterStatus).filter_by(language_id="EngTest").count() == 1
 
 
-# ----------------------------------------------------------------------------
-# PUT — validazioni
-# ----------------------------------------------------------------------------
-
 def test_rename_empty_id_rejected(db_fk):
     user = _admin(db_fk)
     lang = _seed_lang(db_fk, "ENG")
-    payload = _put_item_from(lang, "   ")  # solo spazi: strip -> vuoto
+    payload = _put_item_from(lang, "   ")  # solo spazi = vuoto
     with pytest.raises(HTTPException) as exc:
         update_admin_language("ENG", payload, db=db_fk, current_user=user)
     assert exc.value.status_code == 422
@@ -152,47 +124,34 @@ def test_rename_to_existing_id_rejected(db_fk):
 
 def test_rename_to_alias_of_other_language_rejected(db_fk):
     user = _admin(db_fk)
-    # Lingua A con alias "OldA"
     a = _seed_lang(db_fk, "A_NEW")
     db_fk.add(models.LanguageAlias(language_id="A_NEW", old_id="OldA"))
-    # Lingua B
     b = models.Language(id="B", name_full="B", position=2)
     db_fk.add(b)
     db_fk.commit()
-    # Provo a rinominare B in "OldA" -> conflitto con alias di A_NEW
+    # "OldA" è già alias di A_NEW
     payload = _put_item_from(b, "OldA")
     with pytest.raises(HTTPException) as exc:
         update_admin_language("B", payload, db=db_fk, current_user=user)
     assert exc.value.status_code == 409
 
 
-# ----------------------------------------------------------------------------
-# PUT — rename ciclico A -> B -> A
-# ----------------------------------------------------------------------------
-
 def test_rename_cycle_removes_self_alias(db_fk):
     user = _admin(db_fk)
     lang = _seed_lang(db_fk, "ENG")
 
-    # A -> B
     update_admin_language("ENG", _put_item_from(lang, "EngTest"), db=db_fk, current_user=user)
-    # B -> A
     lang2 = db_fk.query(models.Language).filter_by(id="EngTest").one()
     update_admin_language("EngTest", _put_item_from(lang2, "ENG"), db=db_fk, current_user=user)
 
-    # Stato finale: id corrente "ENG", alias "EngTest" presente, nessun alias "ENG"
     aliases = db_fk.query(models.LanguageAlias).filter_by(language_id="ENG").all()
     old_ids = sorted(a.old_id for a in aliases)
     assert "EngTest" in old_ids
     assert "ENG" not in old_ids
 
 
-# ----------------------------------------------------------------------------
-# Excel import metadata — alias lookup, no duplicati
-# ----------------------------------------------------------------------------
-
 def _build_languages_xlsx(rows: list[dict]) -> bytes:
-    """Build minimal Languages sheet xlsx in memoria."""
+    """Xlsx minimo con il solo sheet Languages."""
     wb = Workbook()
     wb.remove(wb.active)
     ws = wb.create_sheet("Languages")
@@ -206,7 +165,7 @@ def _build_languages_xlsx(rows: list[dict]) -> bytes:
 
 
 def test_excel_import_metadata_uses_alias(db_fk):
-    """Excel con id obsoleto deve aggiornare la lingua corrente, non duplicarne una."""
+    """Id vecchio nel file: aggiorna la lingua, non la duplica."""
     from services.excel_import import import_excel
     user = _admin(db_fk)
     _seed_lang(db_fk, "ENG", glotto="stan1293")
@@ -221,12 +180,12 @@ def test_excel_import_metadata_uses_alias(db_fk):
 
     langs = db_fk.query(models.Language).all()
     assert len(langs) == 1
-    assert langs[0].id == "ENG"  # id corrente, non sovrascritto dall'old id del file
-    assert langs[0].name_full == "English (renamed)"  # name aggiornato
+    assert langs[0].id == "ENG"  # resta l'id corrente
+    assert langs[0].name_full == "English (renamed)"
 
 
 def test_excel_import_metadata_glottocode_mismatch_reports_error(db_fk):
-    """File con id riconosciuto via alias ma glottocode incoerente -> riga in errore, nessun update."""
+    """Alias giusto ma glottocode diverso: riga in errore, nessun update."""
     from services.excel_import import import_excel
     user = _admin(db_fk)
     _seed_lang(db_fk, "ENG", glotto="stan1293")
@@ -239,8 +198,6 @@ def test_excel_import_metadata_glottocode_mismatch_reports_error(db_fk):
     report = import_excel(db_fk, data, user.id, create_missing=True)
     db_fk.commit()
 
-    # Almeno un errore di mismatch nel report
     assert any("Glottocode mismatch" in (e.reason or "") for e in report.errors)
-    # E la lingua NON deve essere stata sovrascritta
     lang = db_fk.query(models.Language).filter_by(id="ENG").one()
     assert lang.name_full != "WRONG LANGUAGE"

@@ -1,14 +1,4 @@
-"""
-Test per l'import Excel.
-
-Copre:
-  - Round-trip end-to-end: export → import → assert state corretto.
-  - Strict update per gli schema: ID inesistente → errore esplicito, no creazione.
-  - Replace totale per Database_model: vecchie risposte cancellate, nuove inserite.
-  - Skip righe con errore: domande svuotate, errore nel report.
-  - Cascade errors: QAM bloccata se motivation è fallita.
-  - Errori a cascata espliciti, mai silenziosi.
-"""
+"""Import Excel: round-trip, id sconosciuti rifiutati, errori a cascata espliciti."""
 import io
 import pytest
 from openpyxl import Workbook, load_workbook
@@ -21,13 +11,8 @@ from services.excel_export import (
 from services.excel_import import import_excel
 
 
-# ============================================================================
-# Helpers di seed
-# ============================================================================
-
 def _seed_full(db_session):
-    """Stato iniziale: 1 lingua, 1 user, 1 parametro, 2 domande, 1 motivazione,
-    1 risposta yes con 2 esempi."""
+    """1 lingua, 1 utente, 1 parametro, 2 domande, 1 motivazione, un yes con 2 esempi."""
     user = models.User(
         id=1, email="alice@test.it", hashed_password="x",
         name="Alice", surname="Smith", role="admin",
@@ -84,12 +69,7 @@ def _wb_to_bytes(wb: Workbook) -> bytes:
     return buf.read()
 
 
-# ============================================================================
-# Round-trip
-# ============================================================================
-
 def test_roundtrip_no_changes_keeps_state(db_session):
-    """Export → import senza modifiche: lo stato del DB deve restare invariato."""
     lang, user = _seed_full(db_session)
 
     wb = build_language_workbook(db_session, lang, is_admin=True)
@@ -98,10 +78,8 @@ def test_roundtrip_no_changes_keeps_state(db_session):
     report = import_excel(db_session, file_bytes, user.id)
     db_session.commit()
 
-    # Nessun errore atteso
     assert report.errors == [], f"Errori inattesi: {report.errors}"
 
-    # Risposte: deve essercene ancora 1 yes su FGM_01
     answers = db_session.query(models.Answer).filter(
         models.Answer.language_id == "ITA"
     ).all()
@@ -109,20 +87,15 @@ def test_roundtrip_no_changes_keeps_state(db_session):
     assert len(yes_answers) == 1
     assert yes_answers[0].question_id == "FGM_01"
 
-    # Esempi: 2 sulla yes answer
     yes_ans = yes_answers[0]
     assert len(yes_ans.examples) == 2
 
-    # Motivazione: invariata
     mot = db_session.query(models.Motivation).filter_by(code="MOT_X").one()
     assert mot.label == "Old label"
 
 
 def test_roundtrip_preserves_example_is_test(db_session):
-    """Export → import deve preservare il flag is_test degli esempi (foglio
-    Database_model, colonna Language_Example_Is_Test)."""
     lang, user = _seed_full(db_session)
-    # marca uno dei due esempi come "di test"
     ex = db_session.query(models.Example).order_by(models.Example.id).first()
     ex.is_test = True
     db_session.commit()
@@ -139,11 +112,6 @@ def test_roundtrip_preserves_example_is_test(db_session):
 
 
 def test_roundtrip_preserves_missing_response(db_session):
-    """Lingua con risposta missing -> export workbook -> import -> missing preservata.
-
-    Parallelo a test_roundtrip_preserves_unsure_response: senza il branch MISSING
-    in excel_import (e il valore nell'enum) questo test fallirebbe, esattamente
-    il sintomo "l'import non tiene la dicitura" segnalato dai linguisti."""
     lang, user = _seed_full(db_session)
 
     a_existing = db_session.query(models.Answer).filter_by(
@@ -165,14 +133,11 @@ def test_roundtrip_preserves_missing_response(db_session):
 
 
 def test_roundtrip_modify_param_via_schema_excel(db_session):
-    """Da 2026-05 lo schema vive solo nel workbook schema dedicato (NON più
-    replicato in ogni per-lingua xlsx). Modifico il name del parametro nel
-    file schema, re-importo: il DB riflette il cambio + ParameterChangeLog."""
+    """Lo schema si modifica dal workbook schema: nome aggiornato + change log."""
     lang, user = _seed_full(db_session)
 
     wb = build_schema_workbook(db_session)
 
-    # Modifica della cella "Name" del parametro FGM nel sheet Parameters
     ws_par = wb["Parameters"]
     headers = [c.value for c in ws_par[1]]
     name_idx = headers.index("Name") + 1  # openpyxl 1-based
@@ -190,19 +155,13 @@ def test_roundtrip_modify_param_via_schema_excel(db_session):
     p = db_session.query(models.ParameterDef).filter_by(id="FGM").one()
     assert p.name == "New name"
 
-    # ChangeLog creato
     log = db_session.query(models.ParameterChangeLog).filter_by(parameter_id="FGM").first()
     assert log is not None
     assert "Excel import" in log.change_note
     assert "name" in log.change_note
 
 
-# ============================================================================
-# Strict update: ID inesistente → errore (no creazione)
-# ============================================================================
-
 def test_unknown_param_id_not_created(db_session):
-    """Riga di Parameters con ID inesistente → errore, no nuovo parametro creato."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook()
@@ -212,18 +171,16 @@ def test_unknown_param_id_not_created(db_session):
     ws.append(PARAMETERS_HEADERS)
     ws.append([
         "FGB", 99, "I am new", "", "", "",
-        "short", "long", "", "", "Yes",  # FGB non esiste in DB
+        "short", "long", "", "", "Yes",
     ])
 
     file_bytes = _wb_to_bytes(wb)
     report = import_excel(db_session, file_bytes, user.id)
     db_session.commit()
 
-    # Nessun nuovo parametro creato
     fgb = db_session.query(models.ParameterDef).filter_by(id="FGB").first()
     assert fgb is None, "FGB NON deve essere creato"
 
-    # Un errore registrato
     assert len(report.errors) == 1
     assert report.errors[0].sheet == "Parameters"
     assert "does not exist" in report.errors[0].reason
@@ -260,25 +217,14 @@ def test_unknown_motivation_code_not_created(db_session):
     assert any(e.value == "MOT_NEW" and "does not exist" in e.reason for e in report.errors)
 
 
-# ============================================================================
-# Database_model: replace + skip righe errate (domande svuotate)
-# ============================================================================
-
 def test_database_model_replace_with_invalid_question_skipped(db_session):
-    """File con 2 righe valide + 1 con question_id inesistente.
-    Le 2 risposte vecchie vengono cancellate. Della riga errata, la domanda
-    resta non risposta (= visibile nel report)."""
+    """Le righe valide sostituiscono le vecchie risposte; quella errata resta senza risposta."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook(); wb.remove(wb.active)
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
     ws.append(DATABASE_MODEL_HEADERS)
-    # Layout colonne (12): Language, Parameter_Label, Question_ID,
-    # Language_Answer, Language_Comments, Language_Examples,
-    # Language_Example_Transliteration, Language_Example_Gloss,
-    # Language_Example_Translation, Language_References, Motivations, Admin_Note
-    # riga valida
     ws.append([
         "Italiano", "FGM", "FGM_01",
         "YES", "new comment",
@@ -286,12 +232,10 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
         "tr1\ntr2", "g1\ng2", "t1\nt2", "r1\nr2",
         "", "",
     ])
-    # riga valida (FGM_02 = no, no esempi)
     ws.append([
         "Italiano", "FGM", "FGM_02",
         "NO", "", "", "", "", "", "", "", "",
     ])
-    # riga errata (FGM_99 inesistente)
     ws.append([
         "Italiano", "FGM", "FGM_99",
         "YES", "should fail", "ex", "tl", "g", "t", "r", "", "",
@@ -300,26 +244,23 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()
 
-    # 2 risposte presenti, 0 per FGM_99
     answers = db_session.query(models.Answer).filter_by(language_id="ITA").all()
     by_qid = {a.question_id: a for a in answers}
     assert "FGM_01" in by_qid and by_qid["FGM_01"].response_text == "yes"
     assert "FGM_02" in by_qid and by_qid["FGM_02"].response_text == "no"
-    assert "FGM_99" not in by_qid  # SVUOTATA — la riga errata = non risposta
+    assert "FGM_99" not in by_qid  # riga errata = non risposta
 
-    # Nuovi esempi (2) sulla yes, vecchi 2 cancellati
+    # vecchi esempi cancellati
     fgm01_ans = by_qid["FGM_01"]
     assert len(fgm01_ans.examples) == 2
     texts = sorted(ex.textarea for ex in fgm01_ans.examples)
     assert texts == ["Esempio nuovo 1", "Esempio nuovo 2"]
-    # Traslitterazione importata e allineata per posizione agli esempi
+    # traslitterazione allineata per posizione
     by_num = {ex.number: ex for ex in fgm01_ans.examples}
     assert by_num["1"].transliteration == "tr1"
     assert by_num["2"].transliteration == "tr2"
-    # Comment aggiornato
     assert fgm01_ans.comments == "new comment"
 
-    # Errore reportato
     assert any("FGM_99" in e.value for e in report.errors)
     db_summary = report.by_sheet["Database_model"]
     assert db_summary.inserted == 2
@@ -327,7 +268,6 @@ def test_database_model_replace_with_invalid_question_skipped(db_session):
 
 
 def test_database_model_invalid_answer_value_skipped(db_session):
-    """Risposta non YES/NO/'' → riga saltata + errore."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook(); wb.remove(wb.active)
@@ -347,7 +287,7 @@ def test_database_model_invalid_answer_value_skipped(db_session):
 
 
 def test_database_model_unknown_language(db_session):
-    """Lingua non in DB → tutto il sheet fallisce con errore."""
+    """Lingua sconosciuta: tutto il sheet fallisce."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook(); wb.remove(wb.active)
@@ -359,24 +299,18 @@ def test_database_model_unknown_language(db_session):
         "YES", "", "", "", "", "", "", "", "",
     ])
 
-    # le risposte ITA esistenti devono restare invariate
     answers_before = db_session.query(models.Answer).filter_by(language_id="ITA").count()
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()
 
     answers_after = db_session.query(models.Answer).filter_by(language_id="ITA").count()
-    assert answers_after == answers_before  # ITA non toccato
+    assert answers_after == answers_before
     assert any("Klingon" in (e.value or "") for e in report.errors)
 
 
-# ============================================================================
-# Cascade errors
-# ============================================================================
-
 def test_cascade_qam_when_motivation_failed(db_session):
-    """Motivation con code inesistente → fallisce. La QAM che la referenzia
-    nel file deve dare errore CASCADE esplicito."""
+    """Motivation sconosciuta: anche la QAM che la usa dà errore a cascata."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook(); wb.remove(wb.active)
@@ -384,7 +318,6 @@ def test_cascade_qam_when_motivation_failed(db_session):
     ws_mot = wb.create_sheet("Motivations")
     from services.excel_export import MOTIVATIONS_HEADERS, QUESTION_ALLOWED_MOTIVATIONS_HEADERS
     ws_mot.append(MOTIVATIONS_HEADERS)
-    # MOT_BAD non esiste in DB → fallisce
     ws_mot.append([1, "MOT_BAD", "Bad mot", "Yes"])
 
     ws_qam = wb.create_sheet("QuestionAllowedMotivations")
@@ -394,20 +327,17 @@ def test_cascade_qam_when_motivation_failed(db_session):
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()
 
-    # Errore upstream sulla motivation
     mot_errors = [e for e in report.errors if e.sheet == "Motivations"]
     assert len(mot_errors) == 1
-    # Errore cascade sulla QAM
     qam_errors = [e for e in report.errors if e.sheet == "QuestionAllowedMotivations"]
     assert len(qam_errors) == 1
     assert "upstream error" in qam_errors[0].reason
 
 
 def test_qam_replaces_links_for_questions_in_file(db_session):
-    """Le QAM nel file rimpiazzano i link esistenti per le questions menzionate."""
+    """Le QAM nel file sostituiscono i link solo per le question citate."""
     lang, user = _seed_full(db_session)
 
-    # FGM_02 ha già link a MOT_X
     pre = db_session.query(models.QuestionAllowedMotivation).filter_by(
         question_id="FGM_02"
     ).count()
@@ -417,31 +347,25 @@ def test_qam_replaces_links_for_questions_in_file(db_session):
     ws = wb.create_sheet("QuestionAllowedMotivations")
     from services.excel_export import QUESTION_ALLOWED_MOTIVATIONS_HEADERS
     ws.append(QUESTION_ALLOWED_MOTIVATIONS_HEADERS)
-    # File NON contiene il link FGM_02 → MOT_X. Aggiunge solo FGM_01 → MOT_X
+    # il file cita solo FGM_01
     ws.append(["FGM_01", "MOT_X"])
 
     report = import_excel(db_session, _wb_to_bytes(wb), user.id)
     db_session.commit()
 
-    # FGM_02 NON è stato menzionato → link conservato
+    # FGM_02 non citata: link conservato
     fgm02_links = db_session.query(models.QuestionAllowedMotivation).filter_by(
         question_id="FGM_02"
     ).count()
     assert fgm02_links == 1
 
-    # FGM_01 ora ha 1 link (creato dal file)
     fgm01_links = db_session.query(models.QuestionAllowedMotivation).filter_by(
         question_id="FGM_01"
     ).count()
     assert fgm01_links == 1
 
 
-# ============================================================================
-# Edge cases
-# ============================================================================
-
 def test_unreadable_file_returns_error(db_session):
-    """File non valido → errore catastrofico nel report."""
     user = models.User(id=1, email="x@x.it", hashed_password="x", role="admin")
     db_session.add(user); db_session.commit()
 
@@ -451,7 +375,6 @@ def test_unreadable_file_returns_error(db_session):
 
 
 def test_param_invalid_condition_skipped(db_session):
-    """Parametro con condition syntax errata → riga saltata, parametro non aggiornato."""
     lang, user = _seed_full(db_session)
 
     wb = Workbook(); wb.remove(wb.active)
@@ -472,19 +395,13 @@ def test_param_invalid_condition_skipped(db_session):
     db_session.commit()
 
     p_after = db_session.query(models.ParameterDef).filter_by(id="FGM").one()
-    assert p_after.name == name_before  # NON aggiornato per errore di sintassi
+    assert p_after.name == name_before
     assert any("Wrong formula syntax" in e.reason for e in report.errors)
 
 
-# ============================================================================
-# Round-trip lossless: backup → restore preserva motivazioni e admin notes
-# ============================================================================
-
 def test_roundtrip_preserves_motivations(db_session):
-    """Lingua con motivazione su FGM_02 → export → wipe → import → motivazione
-    presente sull'answer di FGM_02 (round-trip lossless)."""
     lang, user = _seed_full(db_session)
-    # Aggiungo una motivazione all'answer FGM_02 (creandola: c'è solo FGM_01 in seed)
+    # FGM_02 non ha risposta nel seed: la creo
     ans2 = models.Answer(language_id="ITA", question_id="FGM_02",
                          response_text="no", comments="", status="approved")
     db_session.add(ans2)
@@ -500,7 +417,6 @@ def test_roundtrip_preserves_motivations(db_session):
     db_session.commit()
     assert report.errors == [], f"Errori inattesi: {report.errors}"
 
-    # Recupero answer FGM_02 dopo round-trip
     a = db_session.query(models.Answer).filter_by(
         language_id="ITA", question_id="FGM_02"
     ).one()
@@ -512,7 +428,6 @@ def test_roundtrip_preserves_motivations(db_session):
 
 
 def test_roundtrip_preserves_admin_note(db_session):
-    """Lingua con admin_note su FGM → export → import → admin_note ripristinata."""
     lang, user = _seed_full(db_session)
     db_session.add(models.LanguageParameterStatus(
         language_id="ITA", parameter_id="FGM",
@@ -534,15 +449,8 @@ def test_roundtrip_preserves_admin_note(db_session):
     assert s.admin_note == "Nota admin di prova\ncon a capo"
 
 
-# ============================================================================
-# UNSURE: l'export scrive UNSURE in Database_model.Language_Answer; l'import
-# deve riconoscerlo come response_text="unsure" (e accettare anche U / ?).
-# Test in coppia con il regression test in test_language_pdf che verifica il
-# lato export.
-# ============================================================================
-
 def test_database_model_unsure_uppercase_imports_as_unsure(db_session):
-    """'UNSURE' (formato canonico dell'export attuale) -> response_text='unsure'."""
+    """'UNSURE' (come nell'export) diventa 'unsure'."""
     lang, user = _seed_full(db_session)
     wb = Workbook(); wb.remove(wb.active)
     ws = wb.create_sheet("Database_model")
@@ -566,10 +474,9 @@ def test_database_model_unsure_uppercase_imports_as_unsure(db_session):
 
 
 def test_database_model_unsure_short_forms_also_accepted(db_session):
-    """Varianti 'U' e '?' (utile se l'utente compila a mano)."""
+    """Anche 'U' e '?' valgono unsure."""
     lang, user = _seed_full(db_session)
 
-    # Variante 'U' su FGM_01
     wb = Workbook(); wb.remove(wb.active)
     ws = wb.create_sheet("Database_model")
     from services.excel_export import DATABASE_MODEL_HEADERS
@@ -590,21 +497,14 @@ def test_database_model_unsure_short_forms_also_accepted(db_session):
 
 
 def test_roundtrip_preserves_unsure_response(db_session):
-    """Lingua con risposta unsure -> export workbook -> import -> unsure preservata.
-
-    E' il test critico contro la regression introdotta dal fix di export:
-    senza il branch UNSURE in excel_import, questo test farebbe errore.
-    """
     lang, user = _seed_full(db_session)
 
-    # Cambio FGM_01 da yes a unsure
     a_existing = db_session.query(models.Answer).filter_by(
         language_id="ITA", question_id="FGM_01"
     ).one()
     a_existing.response_text = "unsure"
     db_session.commit()
 
-    # Roundtrip
     wb = build_language_workbook(db_session, lang, is_admin=True)
     file_bytes = _wb_to_bytes(wb)
     report = import_excel(db_session, file_bytes, user.id)
@@ -619,8 +519,7 @@ def test_roundtrip_preserves_unsure_response(db_session):
 
 
 def test_database_model_invalid_answer_error_message_mentions_unsure(db_session):
-    """Il messaggio d'errore deve enumerare anche UNSURE tra i valori validi,
-    cosi' il linguista che apre il report capisce che 'unsure' e' supportato."""
+    """L'errore elenca anche UNSURE fra i valori validi."""
     lang, user = _seed_full(db_session)
     wb = Workbook(); wb.remove(wb.active)
     ws = wb.create_sheet("Database_model")

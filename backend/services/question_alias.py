@@ -1,9 +1,4 @@
-"""
-Usato da restore di backup ed Excel import per riconoscere una domanda anche
-quando il suo id corrente non corrisponde a quello salvato nel file (la
-domanda e' stata rinominata via UI admin dopo l'export).
-Speculare a services.language_alias
-"""
+"""Ritrova una domanda anche dopo un rename (via alias)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,7 +33,7 @@ def resolve_question(db: Session, file_id: str) -> QuestionResolveResult:
 
     q = db.get(models.Question, alias.question_id)
     if q is None:
-        # alias orfano (la domanda e' stata cancellata): trattalo come miss.
+        # alias orfano: domanda cancellata
         return QuestionResolveResult(question=None)
 
     return QuestionResolveResult(question=q, matched_via_alias=True)

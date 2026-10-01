@@ -52,7 +52,6 @@ if IS_PROD and (not ADMIN_EMAIL or not ADMIN_PASSWORD):
     )
 
 
-# ---------------------- Database ----------------------
 def _build_database_url() -> str:
     explicit = env("DATABASE_URL")
     if explicit:

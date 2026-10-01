@@ -14,8 +14,6 @@ function truncate(text, n = 70) {
 export default function QuestionList() {
     const [questions, setQuestions] = useState([]);
     const [search, setSearch] = usePersistentState('questions:search', '');
-    // Spunta accanto all'header "Is Active": nasconde dall'elenco le domande
-    // disattivate. Persistente come gli altri filtri della lista.
     const [hideInactive, setHideInactive] = usePersistentState('questions:hideInactive', false);
 
     const fetchQuestions = async () => {
@@ -32,14 +30,10 @@ export default function QuestionList() {
     }, []);
 
     const filteredQuestions = questions
-        .filter(q => !hideInactive || q.is_active !== false)
-        .filter(q => searchMatches(q, search));
+        .filter(question => !hideInactive || question.is_active !== false)
+        .filter(question => searchMatches(question, search));
 
-    // Flusso di disattivazione: tutto delegato al dialogo condiviso
-    // DeactivateQuestionDialog (stesso identico comportamento in ParameterForm).
     const [deactivateCandidate, setDeactivateCandidate] = useState(null);
-    // Eliminazione definitiva: disponibile solo per le question gia' disattivate
-    // (cestino accanto a Restore). Delegata al dialogo condiviso DeleteQuestionDialog.
     const [deleteCandidate, setDeleteCandidate] = useState(null);
 
     const doToggle = async (questionId) => {
@@ -51,15 +45,14 @@ export default function QuestionList() {
         }
     };
 
-    const handleToggleActive = async (q) => {
-        const isActive = q.is_active !== false;
-        // Restore: conferma semplice.
+    const handleToggleActive = async (question) => {
+        const isActive = question.is_active !== false;
         if (!isActive) {
-            if (!window.confirm(`Restore question ${q.id}? The action is logged in the parameter change history.`)) return;
-            await doToggle(q.id);
+            if (!window.confirm(`Restore question ${question.id}? The action is logged in the parameter change history.`)) return;
+            await doToggle(question.id);
             return;
         }
-        setDeactivateCandidate(q.id);
+        setDeactivateCandidate(question.id);
     };
 
     return (
@@ -125,14 +118,14 @@ export default function QuestionList() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredQuestions.map(q => {
-                            const isActive = q.is_active !== false;
+                        {filteredQuestions.map(question => {
+                            const isActive = question.is_active !== false;
                             return (
-                                <tr key={q.id} style={{ opacity: isActive ? 1 : 0.5 }}>
-                                    <td style={{ fontWeight: 'bold' }}>{q.id}</td>
-                                    <td>{truncate(q.text, 70)}</td>
+                                <tr key={question.id} style={{ opacity: isActive ? 1 : 0.5 }}>
+                                    <td style={{ fontWeight: 'bold' }}>{question.id}</td>
+                                    <td>{truncate(question.text, 70)}</td>
                                     <td className="hide-mobile">
-                                        {q.is_stop_question
+                                        {question.is_stop_question
                                             ? <span style={{ color: 'var(--bad, #d9534f)', fontWeight: 700 }}>Stop</span>
                                             : <span className="muted">Standard</span>}
                                     </td>
@@ -143,12 +136,12 @@ export default function QuestionList() {
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                         <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
-                                            <Link to={`/admin/questions/${q.id}/edit`} className="btn">Edit</Link>
+                                            <Link to={`/admin/questions/${question.id}/edit`} className="btn">Edit</Link>
                                             <button
                                                 type="button"
                                                 className={`btn ${isActive ? 'btn--danger' : ''}`}
                                                 style={{ color: isActive ? 'red' : 'green' }}
-                                                onClick={() => handleToggleActive(q)}
+                                                onClick={() => handleToggleActive(question)}
                                                 title={isActive ? 'Deactivate (soft-delete: keeps the data, hides the question)' : 'Restore (reactivate)'}
                                             >
                                                 {isActive ? 'Deactivate' : 'Restore'}
@@ -158,9 +151,9 @@ export default function QuestionList() {
                                                     type="button"
                                                     className="btn btn--danger"
                                                     style={{ color: 'red' }}
-                                                    onClick={() => setDeleteCandidate(q.id)}
+                                                    onClick={() => setDeleteCandidate(question.id)}
                                                     title="Delete permanently (linked data is archived first)"
-                                                    aria-label={`Delete question ${q.id} permanently`}
+                                                    aria-label={`Delete question ${question.id} permanently`}
                                                 >
                                                     🗑
                                                 </button>
@@ -179,7 +172,6 @@ export default function QuestionList() {
                 </table>
             </div>
 
-            {/* Dialogo di disattivazione condiviso (identico in ParameterForm). */}
             {deactivateCandidate && (
                 <DeactivateQuestionDialog
                     questionId={deactivateCandidate}
@@ -188,7 +180,6 @@ export default function QuestionList() {
                 />
             )}
 
-            {/* Dialogo di eliminazione definitiva condiviso (identico in ParameterForm). */}
             {deleteCandidate && (
                 <DeleteQuestionDialog
                     questionId={deleteCandidate}

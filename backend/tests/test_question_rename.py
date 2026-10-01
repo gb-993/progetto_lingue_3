@@ -1,14 +1,3 @@
-"""Test del flusso di rename di Question.id.
-
-Verifica:
-  - rename via PUT salva l'alias storico
-  - cascata DB sui figli (answers, question_allowed_motivations): grazie alle
-    FK `ON UPDATE CASCADE`. Su SQLite richiede `PRAGMA foreign_keys = ON`
-  - validazioni: id vuoto / troppo lungo / gia' in uso / gia' alias di altra domanda
-  - rename A->B->A rimuove l'alias auto-referenziale
-  - excel import (sheet Questions) riconosce un id obsoleto via alias e aggiorna
-    la domanda corrente senza duplicare
-"""
 import io
 
 import pytest
@@ -20,15 +9,9 @@ import models
 from routers.questions import update_admin_question, QuestionUpdate
 
 
-# ----------------------------------------------------------------------------
-# Helpers / fixture
-# ----------------------------------------------------------------------------
-
 @pytest.fixture
 def db_fk(db_session):
-    """Abilita FOREIGN_KEYS su SQLite in-memory (di default e' off).
-    Necessario per esercitare la cascade ON UPDATE/DELETE.
-    """
+    """Attiva le FK su SQLite (spente di default): servono per le cascade."""
     db_session.execute(text("PRAGMA foreign_keys = ON"))
     return db_session
 
@@ -56,7 +39,7 @@ def _seed_question(db, qid: str = "P1_Qa") -> models.Question:
 
 
 def _put_item_from(q: models.Question, new_id: str, allowed=None) -> QuestionUpdate:
-    """Payload PUT identico alla question, cambiando solo l'id."""
+    """Payload PUT uguale alla question, cambia solo l'id."""
     return QuestionUpdate(
         id=new_id,
         parameter_id=q.parameter_id,
@@ -79,10 +62,6 @@ def _put(db, old_id, item, user):
         old_id, item, background_tasks=BackgroundTasks(), db=db, current_user=user,
     )
 
-
-# ----------------------------------------------------------------------------
-# PUT — rename salvato come alias
-# ----------------------------------------------------------------------------
 
 def test_rename_creates_alias(db_fk):
     user = _admin(db_fk)
@@ -108,8 +87,7 @@ def test_rename_cascades_on_children(db_fk):
     db_fk.add(models.QuestionAllowedMotivation(question_id="P1_Qa", motivation_id=mot.id))
     db_fk.commit()
 
-    # Rename mantenendo la motivation tra le allowed: l'answer segue via cascade,
-    # la QAM viene ricreata sul nuovo id.
+    # l'answer segue via cascade, la QAM viene ricreata
     _put(db_fk, "P1_Qa", _put_item_from(q, "P1_Qb", allowed=[mot.id]), user)
 
     assert db_fk.query(models.Answer).filter_by(question_id="P1_Qb").count() == 1
@@ -117,10 +95,6 @@ def test_rename_cascades_on_children(db_fk):
     assert db_fk.query(models.QuestionAllowedMotivation).filter_by(question_id="P1_Qb").count() == 1
     assert db_fk.query(models.QuestionAllowedMotivation).filter_by(question_id="P1_Qa").count() == 0
 
-
-# ----------------------------------------------------------------------------
-# PUT — validazioni
-# ----------------------------------------------------------------------------
 
 def test_rename_empty_id_rejected(db_fk):
     user = _admin(db_fk)
@@ -150,22 +124,16 @@ def test_rename_to_existing_id_rejected(db_fk):
 
 def test_rename_to_alias_of_other_question_rejected(db_fk):
     user = _admin(db_fk)
-    # Domanda A con alias "P1_OLD"
     a = _seed_question(db_fk, "P1_Qa")
     db_fk.add(models.QuestionAlias(question_id="P1_Qa", old_id="P1_OLD"))
-    # Domanda B
     b = models.Question(id="P1_Qb", parameter_id="P1", text="B")
     db_fk.add(b)
     db_fk.commit()
-    # Rinomino B in "P1_OLD" -> conflitto con alias di A
+    # "P1_OLD" è già alias di A
     with pytest.raises(HTTPException) as exc:
         _put(db_fk, "P1_Qb", _put_item_from(b, "P1_OLD"), user)
     assert exc.value.status_code == 409
 
-
-# ----------------------------------------------------------------------------
-# PUT — rename ciclico A -> B -> A
-# ----------------------------------------------------------------------------
 
 def test_rename_cycle_removes_self_alias(db_fk):
     user = _admin(db_fk)
@@ -175,16 +143,11 @@ def test_rename_cycle_removes_self_alias(db_fk):
     q2 = db_fk.query(models.Question).filter_by(id="P1_Qb").one()
     _put(db_fk, "P1_Qb", _put_item_from(q2, "P1_Qa"), user)
 
-    # Stato finale: id corrente "P1_Qa", alias "P1_Qb" presente, nessun alias "P1_Qa"
     aliases = db_fk.query(models.QuestionAlias).filter_by(question_id="P1_Qa").all()
     old_ids = sorted(a.old_id for a in aliases)
     assert "P1_Qb" in old_ids
     assert "P1_Qa" not in old_ids
 
-
-# ----------------------------------------------------------------------------
-# Excel import — alias lookup, no duplicati
-# ----------------------------------------------------------------------------
 
 def _build_questions_xlsx(rows: list[dict]) -> bytes:
     wb = Workbook()
@@ -200,7 +163,7 @@ def _build_questions_xlsx(rows: list[dict]) -> bytes:
 
 
 def test_excel_import_questions_uses_alias(db_fk):
-    """Excel con id obsoleto deve aggiornare la domanda corrente, non duplicarla."""
+    """Id vecchio nel file: aggiorna la domanda, non la duplica."""
     from services.excel_import import import_excel
     user = _admin(db_fk)
     _seed_question(db_fk, "P1_Qa")
@@ -215,5 +178,5 @@ def test_excel_import_questions_uses_alias(db_fk):
 
     qs = db_fk.query(models.Question).all()
     assert len(qs) == 1
-    assert qs[0].id == "P1_Qa"  # id corrente, non duplicato dall'old id del file
-    assert qs[0].text == "Updated text"  # testo aggiornato
+    assert qs[0].id == "P1_Qa"  # resta l'id corrente
+    assert qs[0].text == "Updated text"

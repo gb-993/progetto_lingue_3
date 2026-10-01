@@ -1,11 +1,4 @@
-"""
-Migration Bundle Importer.
-
-Importa in blocco lo stato del vecchio sito Django partendo da un ZIP che
-contiene fogli Excel + xlsx Database_model per lingua. Pensato per un'unica
-operazione di seed alla messa online del nuovo sito.
-
-"""
+"""Import del bundle di migrazione dal vecchio sito Django (una tantum)."""
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Dict, Set, Any, Tuple, Iterable
@@ -29,7 +22,6 @@ from services.versioning import record_version
 from services.migration_progress import ProgressReporter, NULL_PROGRESS
 
 
-# Report
 @dataclass
 class MigrationError:
     section: str
@@ -86,8 +78,6 @@ class MigrationReport:
         return self.by_section[name]
 
 
-
-# Helpers
 def _str(v: Any) -> str:
     if v is None:
         return ""
@@ -137,7 +127,7 @@ def _get(row: Tuple, hmap: Dict[str, int], col: str) -> Any:
 
 
 def _open_xlsx_from_zip(zf: zipfile.ZipFile, name: str) -> Optional[Worksheet]:
-    """Ritorna il worksheet attivo del file `name` dentro lo zip, o None se assente."""
+    """Worksheet attivo del file name nello zip, None se manca."""
     if name not in zf.namelist():
         return None
     with zf.open(name) as fp:
@@ -145,9 +135,9 @@ def _open_xlsx_from_zip(zf: zipfile.ZipFile, name: str) -> Optional[Worksheet]:
     return wb.active
 
 
-# WIPE: TRUNCATE FK-safe
+# Wipe
 
-# Ordine di cancellazione: prima foglie, poi tabelle parent.
+# ordine: prima le tabelle figlie
 WIPE_ORDER = [
     "entity_versions",
     "submission_params",
@@ -179,18 +169,17 @@ WIPE_ORDER = [
 
 
 def _wipe_all(db: Session) -> None:
-    """TRUNCATE in ordine FK-safe. Postgres: TRUNCATE ... CASCADE per sicurezza."""
+    """Svuota le tabelle nell'ordine giusto per le FK."""
     from sqlalchemy import text
     for table in WIPE_ORDER:
         db.execute(text(f'TRUNCATE TABLE "{table}" RESTART IDENTITY CASCADE'))
     db.flush()
 
 
-# DEFAULT ADMIN
+# Admin di default
 
 def _ensure_default_admin(db: Session) -> str:
-    """Crea l'admin di default se manca. Idempotente: non tocca utenti esistenti.
-    """
+    """Crea l'admin di default se manca."""
     email = os.getenv("ADMIN_EMAIL", "admin@pcm.local").strip().lower()
 
     user = db.query(models.User).filter(models.User.email == email).first()
@@ -215,7 +204,7 @@ def _ensure_default_admin(db: Session) -> str:
     return email
 
 
-# 1. MOTIVATIONS — upsert per code
+# Motivations
 
 def _import_motivations(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("Motivations")
@@ -254,7 +243,7 @@ def _import_motivations(db: Session, ws: Worksheet, report: MigrationReport) -> 
             summary.inserted += 1
 
 
-# 2. PARAMETERS — upsert per id
+# Parameters
 
 PARAM_FIELDS = (
     ("Name", "name", _str),
@@ -369,7 +358,7 @@ def _import_parameters(db: Session, ws: Worksheet, report: MigrationReport) -> N
             ))
 
 
-# 3. QUESTIONS — upsert per id
+# Questions
 
 QUESTION_FIELDS = (
     ("Text", "text", _str),
@@ -447,9 +436,7 @@ def _import_questions(db: Session, ws: Worksheet, report: MigrationReport) -> No
             ))
 
 
-# ============================================================================
-# 4. QUESTION ALLOWED MOTIVATIONS — replace per question
-# ============================================================================
+# QuestionAllowedMotivations
 
 def _import_qam(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("QuestionAllowedMotivations")
@@ -508,9 +495,7 @@ def _import_qam(db: Session, ws: Worksheet, report: MigrationReport) -> None:
 
 
 def _record_initial_create_for_questions(db: Session) -> None:
-    """Registra la versione 'create' iniziale per le Question prive di
-    EntityVersion. Da chiamare DOPO _import_qam così che lo snapshot includa
-    correttamente allowed_motivation_codes."""
+    """Prima versione 'create' delle question senza history (dopo _import_qam)."""
     questions = db.query(models.Question).all()
     if not questions:
         return
@@ -526,9 +511,7 @@ def _record_initial_create_for_questions(db: Session) -> None:
                        user_id=None, note="Initial seed (migration import)")
 
 
-# ============================================================================
-# 5. TAXONOMY (top_families/families/groups) — derivata da 00_languages
-# ============================================================================
+# Tassonomia, ricavata da 00_languages
 
 def _ensure_top_family(db: Session, name: str, cache: Dict[str, models.TopFamily]) -> Optional[models.TopFamily]:
     name = name.strip()
@@ -589,9 +572,7 @@ def _ensure_group(db: Session, name: str, family: Optional[models.Family],
     return obj
 
 
-# ============================================================================
-# 6. LANGUAGES — upsert per id + popolamento taxonomy
-# ============================================================================
+# Languages
 
 LANGUAGE_FIELDS = (
     ("Name", "name_full", _str),
@@ -665,7 +646,7 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
                 existing.latitude = latitude
                 existing.longitude = longitude
                 existing.historical_language = historical
-                # workflow (asse B): tutte le lingue importate partono in draft
+                # le lingue importate partono in draft
                 existing.status = "draft"
                 summary.updated += 1
             else:
@@ -696,9 +677,7 @@ def _import_languages(db: Session, ws: Worksheet, report: MigrationReport) -> No
             ))
 
 
-# ============================================================================
-# 7. GLOSSARY — upsert per word
-# ============================================================================
+# Glossary
 
 def _import_glossary(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("Glossary")
@@ -732,9 +711,7 @@ def _import_glossary(db: Session, ws: Worksheet, report: MigrationReport) -> Non
             summary.inserted += 1
 
 
-# ============================================================================
-# 8. UNSURE FLAGS — replicano i ParameterReviewFlag del vecchio in is_unsure
-# ============================================================================
+# Flag unsure
 
 def _import_unsure_flags(db: Session, ws: Worksheet, report: MigrationReport) -> None:
     summary = report.section("UnsureFlags")
@@ -781,9 +758,7 @@ def _import_unsure_flags(db: Session, ws: Worksheet, report: MigrationReport) ->
             summary.inserted += 1
 
 
-# ============================================================================
-# 9. COMPILATION — un xlsx Database_model per lingua, status=approved
-# ============================================================================
+# Compilation: un Database_model per lingua
 
 DB_MODEL_REQUIRED = ["Language", "Parameter_Label", "Question_ID", "Language_Answer"]
 
@@ -797,7 +772,7 @@ def _split_lines(v: Any) -> List[str]:
 
 def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
                              report: MigrationReport) -> Optional[str]:
-    """Importa il foglio Database_model per una lingua. Ritorna l'id della lingua processata."""
+    """Importa il Database_model di una lingua e ritorna il suo id."""
     section = f"data/{source_name}"
     summary = report.section(section)
     hmap = _build_header_map(ws)
@@ -839,7 +814,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
         ))
         return None
 
-    # Replace totale: cancella risposte/esempi/motivazioni esistenti per la lingua
+    # rimpiazza tutte le risposte della lingua
     old_answer_ids = [
         a_id for (a_id,) in db.query(models.Answer.id)
         .filter(models.Answer.language_id == lang.id).all()
@@ -883,12 +858,9 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
         elif raw_ans in ("NO", "N"):
             response = "no"
         elif raw_ans in ("UNSURE", "U", "?"):
-            # `unsure` e' una risposta valida nell'enum response_types.
-            # Allineato a services/excel_import.py per evitare divergenze.
             response = "unsure"
         elif raw_ans in ("MISSING", "M"):
-            # `missing` = dato non disponibile (neutra come unsure, esempi non
-            # richiesti). Allineato a services/excel_import.py.
+            # missing = dato non disponibile, esempi non obbligatori
             response = "missing"
         elif raw_ans == "":
             summary.skipped += 1
@@ -908,9 +880,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
         transl_lines = _split_lines(_get(row, hmap, "Language_Example_Translation"))
         ref_lines = _split_lines(_get(row, hmap, "Language_References"))
 
-        # Codici motivazioni associate alla risposta: una sola cella, codici
-        # separati da "," o ";". Codici sconosciuti vengono segnalati ma non
-        # bloccano la creazione della risposta.
+        # codici motivation separati da "," o ";" (quelli sconosciuti vengono segnalati)
         mot_codes_raw = _str(_get(row, hmap, "Language_Motivations"))
         mot_codes: List[str] = []
         if mot_codes_raw:
@@ -963,8 +933,7 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
                     answer_id=answer.id, motivation_id=mid,
                 ))
 
-            # Snapshot iniziale dell'Answer comprensivo di examples e
-            # motivation_codes (richiede flush per popolare le relationship).
+            # prima versione dell'Answer, con esempi e motivation
             db.flush()
             record_version(db, answer, operation="create", source="migration_import",
                            user_id=None, note="Initial seed (migration import)")
@@ -981,14 +950,12 @@ def _import_compilation_xlsx(db: Session, ws: Worksheet, source_name: str,
     return lang.id
 
 
-# ============================================================================
-# 10. POST-IMPORT: consolidate + DAG per ogni lingua
-# ============================================================================
+# Dopo l'import: consolidate + DAG
 
 def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
                                 report: MigrationReport,
                                 progress: ProgressReporter = NULL_PROGRESS) -> None:
-    """Per ogni lingua: ricalcola LanguageParameter (consolidate) + esegue il DAG."""
+    """Per ogni lingua: consolidate + DAG."""
     summary = report.section("DAG")
     param_ids = [p for (p,) in db.query(models.ParameterDef.id).all()]
 
@@ -997,7 +964,7 @@ def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
     for i, lid in enumerate(language_ids, start=1):
         progress.tick(current=i, label=f"DAG & consolidate ({i}/{total}): {lid}")
         summary.rows_total += 1
-        # 1) consolidate per ogni parametro (popola value_orig)
+        # consolidate (value_orig)
         try:
             for pid in param_ids:
                 recompute_and_persist_language_parameter(lid, pid, db)
@@ -1007,7 +974,7 @@ def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
             report.languages_dag_failed.append((lid, f"consolidate: {e}"))
             continue
 
-        # 2) DAG (popola value_eval)
+        # DAG (value_eval)
         try:
             run_dag_for_language(lid, db)
             db.flush()
@@ -1017,21 +984,14 @@ def _run_post_import_evaluation(db: Session, language_ids: Iterable[str],
             report.languages_dag_failed.append((lid, f"dag: {e}"))
 
 
-# ============================================================================
-# Main entry point
-# ============================================================================
+# Punto di ingresso
 
 def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
                             progress: ProgressReporter = NULL_PROGRESS) -> MigrationReport:
-    """Punto di ingresso. Apre il ZIP e orchestra tutte le fasi.
-
-    `progress` è un ProgressReporter opzionale: se passato, le fasi e gli
-    avanzamenti per-lingua vengono pubblicati nello stato job (vedi
-    `services/migration_progress.py`).
-    """
+    """Apre lo zip ed esegue tutte le fasi; progress (opzionale) riceve l'avanzamento."""
     report = MigrationReport()
 
-    # 1. Apertura ZIP
+    # apertura zip
     progress.phase("opening_zip", label="Opening migration bundle...")
     try:
         zf = zipfile.ZipFile(io.BytesIO(file_bytes), "r")
@@ -1041,7 +1001,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
 
     names = set(zf.namelist())
 
-    # 2. Wipe (opzionale)
+    # wipe (opzionale)
     if wipe:
         progress.phase("wipe", label="Wiping existing data...")
         try:
@@ -1053,7 +1013,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
             report.errors.append(MigrationError(section="(wipe)", reason=str(e)))
             return report
 
-    # 3. Schema (motivations -> parameters -> questions -> qam -> glossary)
+    # schema
     section_files = [
         ("01_motivations.xlsx", _import_motivations, "motivations", "Importing motivations"),
         ("02_parameters.xlsx", _import_parameters, "parameters", "Importing parameters"),
@@ -1075,8 +1035,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
             db.rollback()
             report.errors.append(MigrationError(section=fname, reason=str(e)[:200]))
 
-    # Registra la create iniziale per le Question dopo che le qam sono state
-    # importate, così lo snapshot riflette le motivations associate.
+    # dopo le qam, così la history ha le motivation
     progress.phase("question_versions", label="Recording initial Question versions...")
     try:
         _record_initial_create_for_questions(db)
@@ -1088,7 +1047,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
             reason=f"Could not record initial Question versions: {str(e)[:200]}",
         ))
 
-    # 4. Languages (popola anche taxonomy)
+    # lingue (e tassonomia)
     if "00_languages.xlsx" in names:
         ws = _open_xlsx_from_zip(zf, "00_languages.xlsx")
         if ws is not None:
@@ -1100,7 +1059,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
                 db.rollback()
                 report.errors.append(MigrationError(section="00_languages.xlsx", reason=str(e)[:200]))
 
-    # 5. Compilation per ogni file in data/
+    # compilation
     data_files = sorted([n for n in names if n.startswith("data/") and n.endswith(".xlsx")])
     processed_lang_ids: List[str] = []
     total_files = len(data_files)
@@ -1121,7 +1080,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
             db.rollback()
             report.errors.append(MigrationError(section=fname, reason=str(e)[:200]))
 
-    # 6. Unsure flags (richiede lingue + parametri già importati)
+    # flag unsure
     if "08_unsure_flags.xlsx" in names:
         ws = _open_xlsx_from_zip(zf, "08_unsure_flags.xlsx")
         if ws is not None:
@@ -1133,7 +1092,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
                 db.rollback()
                 report.errors.append(MigrationError(section="08_unsure_flags.xlsx", reason=str(e)[:200]))
 
-    # 7. Consolidate + DAG
+    # consolidate + DAG
     if processed_lang_ids:
         progress.phase("dag", label=f"Computing parameters and DAG (0/{len(processed_lang_ids)})",
                        total=len(processed_lang_ids))
@@ -1144,7 +1103,7 @@ def import_migration_bundle(db: Session, file_bytes: bytes, wipe: bool = True,
             db.rollback()
             report.errors.append(MigrationError(section="DAG", reason=str(e)[:200]))
 
-    # 8. Default admin (sempre, anche senza wipe — è idempotente)
+    # admin di default (sempre)
     progress.phase("admin", label="Ensuring default admin user")
     try:
         report.admin_email = _ensure_default_admin(db)

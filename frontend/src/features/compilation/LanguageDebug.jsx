@@ -4,10 +4,7 @@ import api from '../../api';
 
 const SHOW_INACTIVE_KEY = 'language-debug.show-inactive-questions';
 
-// Dettaglio puramente visivo: un parametro con Initial value '+' che viene
-// azzerato dall'implicazione (Final value '0') si mostra come '0+', per
-// ricordare che il valore "grezzo" era +. Nessun impatto sui calcoli/export:
-// lì 0+ resta equiparato a 0 (vedi modifiche.md → DEBUG PARAMETRI).
+// '0+' solo a schermo: nei calcoli resta 0
 const displayFinalValue = (initial, final) => (initial === '+' && final === '0' ? '0+' : final);
 
 export default function LanguageDebug() {
@@ -60,7 +57,6 @@ export default function LanguageDebug() {
     return (
         <div className="container page-debug" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
 
-            {/* Header Sospeso (Glass Effect) */}
             <div className="sticky-debug-header" style={{
                 position: 'sticky', top: '1rem', zIndex: 1000, padding: '1.25rem 1.5rem', marginBottom: '2rem',
                 borderRadius: '12px', border: '1px solid var(--border)',
@@ -107,7 +103,6 @@ export default function LanguageDebug() {
                 </div>
             </div>
 
-            {/* Tabella Dati */}
             <div className="table-responsive">
                 <table className="table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                     <thead style={{ background: 'var(--surface-2)' }}>
@@ -125,53 +120,53 @@ export default function LanguageDebug() {
                     </tr>
                     </thead>
                     <tbody>
-                    {debugData.rows.map(r => {
-                        const visibleQs = showInactive ? r.questions : r.questions.filter(q => q.is_active);
+                    {debugData.rows.map(row => {
+                        const visibleQuestions = showInactive ? row.questions : row.questions.filter(question => question.is_active);
                         return (
-                        <tr key={r.param_id} id={`p-${r.param_id}`}>
-                            <td>{r.position}</td>
+                        <tr key={row.param_id} id={`p-${row.param_id}`}>
+                            <td>{row.position}</td>
                             <td>
-                                <Link to={`/languages/${id}/data#p-${r.param_id}`} style={{ textDecoration: 'underline', fontWeight: 'bold' }}>
-                                    {r.param_id}
+                                <Link to={`/languages/${id}/data#p-${row.param_id}`} style={{ textDecoration: 'underline', fontWeight: 'bold' }}>
+                                    {row.param_id}
                                 </Link>
                             </td>
-                            <td>{visibleQs.map(q => (
-                                <div key={q.id} style={{ opacity: q.is_active ? 1 : 0.5 }} title={q.is_active ? undefined : 'Inactive question'}>
-                                    <code>{q.id}</code>
+                            <td>{visibleQuestions.map(question => (
+                                <div key={question.id} style={{ opacity: question.is_active ? 1 : 0.5 }} title={question.is_active ? undefined : 'Inactive question'}>
+                                    <code>{question.id}</code>
                                 </div>
                             ))}</td>
-                            <td>{visibleQs.map(q => (
-                                <div key={q.id} style={{ opacity: q.is_active ? 1 : 0.5 }}>
-                                    {q.answer || <span className="muted">—</span>}
+                            <td>{visibleQuestions.map(question => (
+                                <div key={question.id} style={{ opacity: question.is_active ? 1 : 0.5 }}>
+                                    {question.answer || <span className="muted">—</span>}
                                 </div>
                             ))}</td>
                             <td
                                 style={{
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    background: r.warn_init ? 'color-mix(in oklab, var(--warn) 18%, transparent)' : undefined,
-                                    borderLeft: r.warn_init ? '3px solid var(--warn)' : undefined,
+                                    background: row.warn_init ? 'color-mix(in oklab, var(--warn) 18%, transparent)' : undefined,
+                                    borderLeft: row.warn_init ? '3px solid var(--warn)' : undefined,
                                 }}
-                                title={r.warn_init ? 'Conflict between question/stop-question answers' : undefined}
+                                title={row.warn_init ? 'Conflict between question/stop-question answers' : undefined}
                             >
-                                {r.initial || <span className="muted"> </span>}
+                                {row.initial || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }} title={r.warn_init ? 'Conflict on the input answers (informational)' : undefined}>
-                                {r.warn_init && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
+                            <td style={{ textAlign: 'center' }} title={row.warn_init ? 'Conflict on the input answers (informational)' : undefined}>
+                                {row.warn_init && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
                             </td>
-                            <td>{r.cond ? <code>{r.cond}</code> : <span className="muted">—</span>}</td>
+                            <td>{row.cond ? <code>{row.cond}</code> : <span className="muted">—</span>}</td>
                             <td style={{ textAlign: 'center' }}>
-                                {r.cond_true === true && <span style={{ background: '#d1e7dd', color: '#0f5132', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>TRUE</span>}
-                                {r.cond_true === false && <span style={{ background: '#f8d7da', color: '#842029', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>FALSE</span>}
-                                {r.cond_true === null && <span className="muted">—</span>}
+                                {row.cond_true === true && <span style={{ background: '#d1e7dd', color: '#0f5132', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>TRUE</span>}
+                                {row.cond_true === false && <span style={{ background: '#f8d7da', color: '#842029', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>FALSE</span>}
+                                {row.cond_true === null && <span className="muted">—</span>}
                             </td>
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                                {r.final === '?'
+                                {row.final === '?'
                                     ? <span style={{ color: '#d63384' }}>?</span>
-                                    : displayFinalValue(r.initial, r.final) || <span className="muted"> </span>}
+                                    : displayFinalValue(row.initial, row.final) || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }} title={r.warn_final ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
-                                {r.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
+                            <td style={{ textAlign: 'center' }} title={row.warn_final ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
+                                {row.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
                             </td>
                         </tr>
                         );

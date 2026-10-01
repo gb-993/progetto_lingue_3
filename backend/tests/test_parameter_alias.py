@@ -1,4 +1,3 @@
-"""Test unit del resolver `resolve_parameter`."""
 import models
 from services.parameter_alias import resolve_parameter
 
@@ -29,7 +28,7 @@ def test_resolve_by_alias(db_session):
 
 
 def test_resolve_orphan_alias_returns_none(db_session):
-    # db_session non ha FK enforcement: alias che punta a un parametro inesistente.
+    # senza FK attive: alias verso un parametro inesistente
     db_session.add(models.ParameterAlias(parameter_id="GONE", old_id="POLD"))
     db_session.commit()
     assert resolve_parameter(db_session, "POLD").parameter is None

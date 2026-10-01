@@ -12,7 +12,7 @@ from dependencies import get_db, require_admin, get_current_user
 from services.versioning import record_version
 from services.param_state import active_param_questions, compute_language_completion
 
-ID_MAX_LEN = 10  # Length(Language.id) — vincolo schema
+ID_MAX_LEN = 10  # lunghezza di Language.id
 
 router = APIRouter(prefix="/api", tags=["Languages"])
 
@@ -355,7 +355,7 @@ def _strip_trailing_digits(s: str) -> str:
 
 
 def _next_duplicate_suffix(db: Session, base_id: str) -> int:
-    """Trova il più piccolo N >= 2 tale che base_id+str(N) non sia già in uso."""
+    """Primo N >= 2 per cui base_id+N non è già usato."""
     n = 2
     while True:
         candidate = f"{base_id}{n}"

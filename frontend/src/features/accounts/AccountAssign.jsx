@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import api from '../../api'; // Sostituito axios
+import api from '../../api';
 
 export default function AccountAssign() {
     const { id } = useParams();

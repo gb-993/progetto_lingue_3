@@ -16,7 +16,6 @@ router = APIRouter(prefix="/api/admin/backups", tags=["Backups"])
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-# Schema per il payload della creazione
 class BackupCreatePayload(BaseModel):
     note: Optional[str] = ""
 
@@ -65,9 +64,7 @@ def get_backup_folder_details(timestamp: datetime, db: Session = Depends(get_db)
 
 @router.get("/submissions/{submission_id}")
 def get_submission_detail(submission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """
-    Recupera i dati granulari di un singolo salvataggio storico (Parametri, Risposte, Esempi).
-    """
+    """Dati di un salvataggio storico: parametri, risposte, esempi."""
     sub = db.query(models.Submission).options(
         joinedload(models.Submission.language),
         joinedload(models.Submission.submitted_by),

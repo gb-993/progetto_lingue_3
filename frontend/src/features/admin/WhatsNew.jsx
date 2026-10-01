@@ -2,17 +2,12 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import api from '../../api';
 import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
-// Stesso editor di Instructions (TinyMCE), caricato solo quando serve.
 const InstructionsEditor = lazy(() => import('../instructions/InstructionsEditor'));
 
-// Pagina super-admin per scrivere l'annuncio "What's New" mostrato agli utenti
-// nel modale (vedi components/WhatsNewModal). Riusa lo store site_content
-// (chiave whats_new) via gli endpoint /api/whats-new e /api/admin/whats-new.
 export default function WhatsNew() {
     const [content, setContent] = useState('');
     const [draft, setDraft] = useState('');
-    // Visibilità dell'annuncio: 'all' = tutti gli utenti, 'admins' = solo admin.
-    // `audience` è il valore persistito, `draftAudience` quello in modifica.
+    // 'all' = tutti, 'admins' = solo admin
     const [audience, setAudience] = useState('all');
     const [draftAudience, setDraftAudience] = useState('all');
     const [loading, setLoading] = useState(true);

@@ -1,11 +1,4 @@
-# CI: test backend + build/lint frontend.
-#
-# Gira a ogni push/PR su main. Non fa deploy: verifica solo che il codice
-# sia sano. Il deploy resta manuale (build di frontend/dist sul PC +
-# redeploy stack da Portainer, vedi docker-compose.prod.yml).
-#
-# I test backend usano SQLite in-memory (vedi backend/tests/conftest.py),
-# quindi NON serve un servizio Postgres qui.
+# niente Postgres: i test usano SQLite in memoria
 name: CI
 
 on:
@@ -26,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          # Allineata al backend/Dockerfile (python:3.12-slim).
+          # stessa versione di backend/Dockerfile
           python-version: '3.12'
           cache: pip
           cache-dependency-path: |
@@ -66,9 +59,7 @@ jobs:
   frontend-lint:
     name: Frontend lint (eslint)
     runs-on: ubuntu-latest
-    # NON bloccante: al momento ci sono ~46 errori eslint preesistenti
-    # (in gran parte regole react-hooks sui componenti grossi). Quando
-    # verranno ripuliti, togliere questo flag per rendere il job bloccante.
+    # non bloccante finché restano errori eslint vecchi
     continue-on-error: true
     steps:
       - name: Checkout

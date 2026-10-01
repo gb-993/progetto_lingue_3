@@ -20,7 +20,7 @@ from services.param_state import compute_colors
 
 import re as _re
 
-ID_MAX_LEN = 10  # Length(ParameterDef.id) — vincolo schema
+ID_MAX_LEN = 10  # lunghezza di ParameterDef.id
 _VALID_PARAM_ID_RE = _re.compile(r'^[A-Za-z0-9_]+$')
 
 router = APIRouter(prefix="/api/admin/parameters", tags=["Parameters"])
@@ -70,11 +70,9 @@ class ParameterListItem(ParameterBase):
     questions_count: int = 0
     stop_count: int = 0
 
-# Schema per l'aggiornamento che accetta la motivazione opzionale
 class ParameterUpdate(ParameterBase):
     change_note: Optional[str] = ""
 
-# Nuovo schema per il dettaglio che include le domande e i log
 class ParameterDetail(ParameterBase):
     questions: List[QuestionRead] = []
     change_logs: List[ParameterChangeLogRead] = []
@@ -82,7 +80,6 @@ class ParameterDetail(ParameterBase):
     class Config:
         from_attributes = True
 
-# Schema per la disattivazione sicura
 class DeactivatePayload(BaseModel):
     password: str
     reason: Optional[str] = ""
@@ -155,7 +152,6 @@ def create_admin_parameter(item: ParameterBase, db: Session = Depends(get_db), c
         db.rollback()
         raise HTTPException(status_code=400, detail="Duplicate ID or invalid data.")
 
-# Schema per il riordino drag&drop
 class ReorderPayload(BaseModel):
     moved_id: str
     order: List[str]
@@ -592,7 +588,6 @@ def quick_fill_parameter_answers(
     }
 
 
-# --- ENDPOINT PER LA VALIDAZIONE SINTASSI IN TEMPO REALE ---
 class ConditionCheck(BaseModel):
     condition: str
 

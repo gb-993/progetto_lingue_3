@@ -1,12 +1,3 @@
-"""Test unit del resolver `resolve_language`.
-
-Verifica:
-  - match per id corrente (no alias)
-  - match per alias storico
-  - mismatch di glottocode segnalato come tale (lingua restituita comunque)
-  - alias orfano (lingua puntata cancellata) -> miss
-  - id assente -> miss
-"""
 import models
 from services.language_alias import resolve_language
 
@@ -58,7 +49,7 @@ def test_resolve_alias_with_glottocode_mismatch_reports(db_session):
     db_session.commit()
 
     res = resolve_language(db_session, "Engl", file_glottocode="ital1282")
-    # Lingua trovata MA mismatch segnalato (il chiamante decide se applicare).
+    # lingua trovata, ma mismatch segnalato
     assert res.language is not None
     assert res.matched_via_alias is True
     assert res.glottocode_mismatch is not None
@@ -67,7 +58,7 @@ def test_resolve_alias_with_glottocode_mismatch_reports(db_session):
 
 
 def test_resolve_alias_with_empty_glottocode_skips_check(db_session):
-    """Se uno dei due glottocode e' vuoto, il check va saltato (best effort)."""
+    """Se un glottocode è vuoto, niente controllo."""
     lang = _make_lang(db_session, "ENG", glotto="")  # nessun glottocode su DB
     db_session.add(models.LanguageAlias(language_id=lang.id, old_id="Engl"))
     db_session.commit()

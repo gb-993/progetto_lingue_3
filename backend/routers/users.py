@@ -36,7 +36,6 @@ def _validate_email(email: str) -> None:
             detail="Invalid email format.",
         )
 
-# --- SCHEMI PYDANTIC ---
 class ProfileUpdate(BaseModel):
     name: str
     surname: str

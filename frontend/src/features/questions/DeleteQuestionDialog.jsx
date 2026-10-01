@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
 
-/**
- * Dialogo UNICO di ELIMINAZIONE DEFINITIVA di una question gia' disattivata,
- * condiviso da QuestionList e ParameterForm (gemello di DeactivateQuestionDialog:
- * stesso comportamento ovunque). Mostra i dati collegati che verranno archiviati
- * e poi rimossi, e chiede conferma esplicita. Qualunque modifica futura va fatta
- * SOLO qui.
- *
- * Props:
- *   questionId  : id della question da eliminare
- *   onClose()   : annulla, nessuna eliminazione
- *   onDeleted() : chiamata DOPO l'eliminazione riuscita
- *                 (il chiamante chiude e ricarica la sua lista)
- */
+/** Usato da QuestionList e ParameterForm: modificare solo qui. */
 export default function DeleteQuestionDialog({ questionId, onClose, onDeleted }) {
     const [stats, setStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(true);

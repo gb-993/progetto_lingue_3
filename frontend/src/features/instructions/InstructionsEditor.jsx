@@ -1,12 +1,6 @@
 import { Editor } from '@tinymce/tinymce-react';
 
-// TinyMCE self-hosted, no API key required. The "gpl" licenseKey opts into
-// the GPL license terms. Skin/icons/theme/model/plugins are imported as
-// ES modules so Vite bundles them into this chunk; CSS is injected via
-// content_style to avoid runtime asset path issues.
-//
-// This whole file is loaded lazily from Instructions.jsx, so TinyMCE only
-// ships to the browser when an admin opens the editor.
+// TinyMCE self-hosted (licenza GPL)
 import 'tinymce/tinymce';
 import 'tinymce/icons/default';
 import 'tinymce/themes/silver';

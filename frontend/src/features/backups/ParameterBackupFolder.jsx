@@ -4,7 +4,6 @@ import api from '../../api';
 import { formatBackendDate } from '../../utils/dateFormat';
 import usePersistentState from '../../utils/usePersistentState';
 
-// Lista parametri salvati in una cartella (timestamp) di backup parametri.
 export default function ParameterBackupFolder() {
     const { timestamp } = useParams();
     const [submissions, setSubmissions] = useState([]);

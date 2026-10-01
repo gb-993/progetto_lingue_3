@@ -1,7 +1,3 @@
-"""
-Eliminazione DEFINITIVA di una Question.
-
-"""
 from __future__ import annotations
 from typing import Optional
 
@@ -13,7 +9,7 @@ from services.versioning import record_version
 
 
 class QuestionStillActiveError(Exception):
-    """La Question e' ancora attiva: va disattivata prima dell'eliminazione."""
+    """Va disattivata prima di eliminarla."""
 
 
 def delete_question_permanently(
@@ -28,7 +24,6 @@ def delete_question_permanently(
 
     parameter_id = question.parameter_id
 
-    # Archivia i dati collegati, se ce ne sono. 
     stats = archive_service.count_linked_data(db, question.id)
     archived_id: Optional[int] = None
     if stats["answers"] > 0:
@@ -40,13 +35,13 @@ def delete_question_permanently(
         )
         archived_id = archived.id
 
-    #  Snapshot 'delete' in History PRIMA di rimuovere la riga
+    # History prima di cancellare la riga
     record_version(
         db, question, operation="delete", source="manual",
         user_id=user_id, note=(change_note or None),
     )
 
-    # 3. Log sul parametro genitore (il question_id resta solo nel testo).
+    # log sul parametro (id domanda solo nel testo)
     note = (change_note or "").strip()
     suffix = f" Note: {note}" if note else ""
     archived_part = (
@@ -60,7 +55,7 @@ def delete_question_permanently(
         change_note=f"[Question {question.id}] Permanently deleted{archived_part}.{suffix}",
     ))
 
-    # 4. Rimuove la Question. question_aliases e question_allowed_motivations spariscono per cascata 
+    # alias e motivazioni ammesse vanno via in cascata
     db.delete(question)
     db.flush()
 

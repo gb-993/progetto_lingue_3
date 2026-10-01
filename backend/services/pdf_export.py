@@ -1,4 +1,4 @@
-"""PDF export utilities for the admin parameter detail report."""
+"""Export PDF dei report (parametri e lingue)."""
 from __future__ import annotations
 
 import os
@@ -14,12 +14,7 @@ from services.citation import PDF_FOOTER_MARGIN_MM, render_pdf_citation_footer
 
 
 def _font_dir() -> str:
-    """Locate the DejaVu TTF directory bundled with matplotlib.
-
-    DejaVu Sans is shipped inside the matplotlib package (`mpl-data/fonts/ttf`)
-    and covers Latin extended, Greek, Cyrillic, Hebrew, and several other
-    scripts. We reuse it instead of bundling our own copy.
-    """
+    """Font DejaVu preso da matplotlib (copre molti alfabeti)."""
     import matplotlib
     return os.path.join(os.path.dirname(matplotlib.__file__), "mpl-data", "fonts", "ttf")
 
@@ -28,11 +23,7 @@ FONT_FAMILY = "DejaVu"
 
 
 class _CitationFooterReport(FPDF):
-    """Base class: footer con citazione PCM_Hub + numero pagina.
-
-    Le sottoclassi devono solo definire ``header()`` e impostare
-    ``HEADER_TITLE``. Il footer e' centralizzato in services/citation.
-    """
+    """Base dei report: footer con citazione e numero pagina."""
     HEADER_TITLE: str = ""
 
     def header(self) -> None:
@@ -52,17 +43,14 @@ class _ParamReport(_CitationFooterReport):
 
 
 class _ParamListReport(_CitationFooterReport):
-    """Report con info generali di una collezione di parametri."""
     HEADER_TITLE = "Parameters Info Report"
 
 
 class _ParamChangelogReport(_CitationFooterReport):
-    """Report cronologia modifiche di un singolo parametro."""
     HEADER_TITLE = "Parameter Change History"
 
 
 class _LanguageReport(_CitationFooterReport):
-    """Report parametric data di una singola lingua: cover + scheda per parametro."""
     HEADER_TITLE = "Language Parametric Data Report"
 
 
@@ -448,19 +436,18 @@ def build_parameter_changelog_pdf(parameter, change_logs) -> bytes:
     return bytes(pdf.output())
 
 
-
 _ANSWER_LABELS = {"yes": "YES", "no": "NO", "unsure": "UNSURE", "missing": "MISSING"}
 _ANSWER_COLORS = {
-    "yes": (21, 128, 61),     # green 
-    "no": (185, 28, 28),      # red
-    "unsure": (161, 98, 7),   # orange
-    "missing": (161, 98, 7),  # orange 
+    "yes": (21, 128, 61),
+    "no": (185, 28, 28),
+    "unsure": (161, 98, 7),
+    "missing": (161, 98, 7),
 }
-_NOT_ANSWERED_COLOR = (130, 134, 140)  # grigio chiaro
+_NOT_ANSWERED_COLOR = (130, 134, 140)
 
 
 def _example_sort_key_pdf(ex):
-    """Stesso ordering di excel_export._example_sort_key (numerico se possibile)."""
+    """Stesso ordine di excel_export._example_sort_key."""
     try:
         return (0, int(ex.number or "0"), ex.id or 0)
     except (ValueError, TypeError):
@@ -595,8 +582,7 @@ def _render_parameter_card(
     pdf, p, questions, answers_by_qid, examples_by_qid, mot_by_id,
     admin_note: str, final_value: str,
 ) -> None:
-    """Render della scheda di un singolo parametro: banner + value + admin
-    note + tutte le question. Il chiamante e' responsabile del page break."""
+    """Scheda di un parametro; il cambio pagina lo fa il chiamante."""
     pdf.set_font(FONT_FAMILY, style="B", size=14)
     pdf.set_fill_color(241, 242, 244)
     pdf.set_text_color(209, 65, 36)

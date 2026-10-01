@@ -23,14 +23,13 @@ router = APIRouter(
     tags=["LegalDocuments"],
 )
 
-# consent_enforcement.CONSENT_BYPASS_PREFIXES.
+# pubblico: prefisso esentato in consent_enforcement
 public_router = APIRouter(
     prefix="/api/legal-documents",
     tags=["LegalDocuments"],
 )
 
 
-# ---------------------------------------------------------------------------
 def _serialize(doc: models.LegalDocument) -> dict:
 
     return {
@@ -65,13 +64,13 @@ def list_all(
 
 
 @router.post("/preview")
-async def preview_upload(
+def preview_upload(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     _admin: models.User = Depends(require_admin),
 ):
 
-    pdf_bytes = await file.read()
+    pdf_bytes = file.file.read()
     metadata = extract_metadata(pdf_bytes)
 
     already = (
@@ -110,7 +109,7 @@ async def preview_upload(
 
 
 @router.post("", status_code=201)
-async def publish(
+def publish(
     request: Request,
     file: UploadFile = File(...),
     note: Optional[str] = Form(None),
@@ -124,7 +123,7 @@ async def publish(
             detail="Note too long (max 1000 characters).",
         )
 
-    pdf_bytes = await file.read()
+    pdf_bytes = file.file.read()
     metadata = extract_metadata(pdf_bytes)
 
     new_doc = publish_new_version(

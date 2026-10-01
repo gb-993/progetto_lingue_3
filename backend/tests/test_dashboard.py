@@ -1,12 +1,10 @@
-"""Test dei conteggi mostrati nelle due dashboard (routers/dashboard)."""
+"""Conteggi delle due dashboard (routers/dashboard)."""
 import models
 from routers.dashboard import get_admin_dashboard, get_user_dashboard
 
 
-# ---- dashboard utente: barra di completamento ----
-
 def _seed_user(db):
-    """Un utente con una lingua assegnata, due parametri attivi (P1 e P2) e uno spento (P3)."""
+    """Utente con una lingua, P1 e P2 attivi, P3 spento."""
     user = models.User(email="lin@example.com", hashed_password="x", role="user")
     db.add(user)
     db.flush()
@@ -32,8 +30,7 @@ def _lang(db, user):
 
 
 def test_parametri_spenti_fuori_dal_totale(db_session):
-    # P3 e' disattivato: il totale deve essere 2, non 3, altrimenti il 100%
-    # sarebbe irraggiungibile.
+    # se no il 100% sarebbe irraggiungibile
     user = _seed_user(db_session)
     assert _lang(db_session, user)["total_params"] == 2
 
@@ -53,8 +50,6 @@ def test_tutti_i_parametri_risolti_danno_cento(db_session):
 
 
 def test_risposta_su_parametro_spento_non_conta(db_session):
-    # Regressione: il vecchio conteggio sommava le risposte e questa avrebbe
-    # gonfiato la percentuale pur non appartenendo a un parametro attivo.
     user = _seed_user(db_session)
     _answer(db_session, "P3_01", "yes")
     lang = _lang(db_session, user)
@@ -62,7 +57,6 @@ def test_risposta_su_parametro_spento_non_conta(db_session):
 
 
 def test_unsure_non_e_un_parametro_completo(db_session):
-    # Regressione: il vecchio conteggio trattava 'unsure' come risposta data.
     user = _seed_user(db_session)
     _answer(db_session, "P1_01", "unsure")
     _answer(db_session, "P2_01", "no")
@@ -77,14 +71,12 @@ def test_override_del_super_admin_vince_sul_calcolo(db_session):
     lang = _lang(db_session, user)
     assert lang["completion"] == "complete"
     assert lang["completion_forced"] is True
-    # Il conteggio resta quello reale: l'override e' una dichiarazione, non un calcolo.
+    # l'override non cambia il conteggio reale
     assert lang["complete_params"] == 0
 
 
-# ---- dashboard admin: parametri rossi ----
-
 def _seed_admin(db):
-    """Un admin e una lingua con un solo parametro attivo da due domande."""
+    """Admin e una lingua con un parametro da due domande."""
     admin = models.User(email="admin@example.com", hashed_password="x", role="admin")
     db.add(admin)
     db.add(models.Language(id="ITA", name_full="Italiano", position=1))
@@ -101,7 +93,7 @@ def _red_params(db, admin):
 
 
 def test_parametro_mai_iniziato_non_e_rosso(db_session):
-    # Nessuna risposta = grigio, non rosso: non e' un problema, e' da fare.
+    # nessuna risposta = grigio (da fare), non rosso
     admin = _seed_admin(db_session)
     assert _red_params(db_session, admin) == []
 
@@ -122,8 +114,6 @@ def test_parametro_a_meta_e_rosso(db_session):
 
 
 def test_tutte_unsure_e_rosso(db_session):
-    # Regressione: il vecchio conteggio vedeva 2 risposte su 2 e non segnalava
-    # nulla, pur essendo un parametro senza alcuna risoluzione vera.
     admin = _seed_admin(db_session)
     _answer(db_session, "P1_01", "unsure")
     _answer(db_session, "P1_02", "unsure")
@@ -133,7 +123,6 @@ def test_tutte_unsure_e_rosso(db_session):
 
 
 def test_le_respinte_non_contano_nel_totale_risposto(db_session):
-    # Regressione: una risposta respinta gonfiava il conteggio "n/m".
     admin = _seed_admin(db_session)
     _answer(db_session, "P1_01", "yes", status="rejected")
     params = _red_params(db_session, admin)

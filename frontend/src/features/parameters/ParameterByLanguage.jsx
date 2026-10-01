@@ -7,13 +7,7 @@ import usePersistentState from '../../utils/usePersistentState';
 import { searchMatches } from '../../utils/search';
 import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
 
-// Vista "inversa" della pagina di compilazione: un parametro, e il wizard a
-// quadratini di Language Data — ma dentro ci sono gli id delle LINGUE invece dei
-// parametri. Clic su un quadratino → si aprono le question di QUESTO parametro
-// per QUELLA lingua, nello stesso ParameterBlock della compilazione (riuso
-// totale: stesso salvataggio, validazione, concorrenza, DAG). Scorciatoia admin
-// per ritoccare lo stesso parametro in molte/tutte le lingue senza entrare
-// lingua per lingua. L'admin edita a prescindere dallo status, che non cambia.
+// un parametro, un quadratino per lingua
 
 const STATUS_LABELS = {
     pending: 'Pending',
@@ -26,7 +20,7 @@ const INITIAL_FILTERS = {
     top_family: '',
     family: '',
     status: '',
-    completion: '',  // '' | 'empty' | 'partial' | 'complete' | 'unsure'
+    completion: '',
 };
 
 export default function ParameterByLanguage() {
@@ -40,13 +34,11 @@ export default function ParameterByLanguage() {
     const [search, setSearch] = usePersistentState('paramByLang:search', '');
     const [filters, setFilters] = usePersistentState('paramByLang:filters', INITIAL_FILTERS);
 
-    // Lingua (quadratino) selezionata + blocco caricato pigramente.
     const [selectedId, setSelectedId] = useState(null);
     const [block, setBlock] = useState(null);
     const [blockLoading, setBlockLoading] = useState(false);
     const [blockError, setBlockError] = useState('');
 
-    // Dirty sollevato dal ParameterBlock: nota admin + dati di compilazione.
     const [adminNoteDirty, setAdminNoteDirty] = useState(false);
     const [blockDirty, setBlockDirty] = useState(false);
     const anyDirty = adminNoteDirty || blockDirty;
@@ -83,39 +75,33 @@ export default function ParameterByLanguage() {
 
     const total = meta?.total_questions ?? 0;
 
-    // Colore del quadratino: calcolato dal backend (grey/red/yellow/green),
-    // stessa logica di Language Data.
     const COLOR_CLASS = { green: 'is-complete', red: 'is-incomplete', yellow: 'is-warning', grey: 'is-empty' };
-    const squareState = (l) => COLOR_CLASS[l.color] || 'is-empty';
+    const squareState = (lang) => COLOR_CLASS[lang.color] || 'is-empty';
 
-    // Tassonomia per il filtro "Data" (più fine del colore del quadratino).
-    const completionOf = (l) => {
-        if (l.with_response === 0) return 'empty';
-        if (total > 0 && l.answered >= total) return 'complete';
+    const completionOf = (lang) => {
+        if (lang.with_response === 0) return 'empty';
+        if (total > 0 && lang.answered >= total) return 'complete';
         return 'partial';
     };
 
-    // Opzioni famiglia derivate dalle lingue caricate; family ristretta dalla
-    // top-family scelta (cascata leggera, single-select).
     const topFamilyOptions = useMemo(
-        () => [...new Set(languages.map(l => l.top_level_family).filter(Boolean))].sort(),
+        () => [...new Set(languages.map(lang => lang.top_level_family).filter(Boolean))].sort(),
         [languages]
     );
     const familyOptions = useMemo(() => {
-        const src = filters.top_family
-            ? languages.filter(l => l.top_level_family === filters.top_family)
+        const candidates = filters.top_family
+            ? languages.filter(lang => lang.top_level_family === filters.top_family)
             : languages;
-        return [...new Set(src.map(l => l.family).filter(Boolean))].sort();
+        return [...new Set(candidates.map(lang => lang.family).filter(Boolean))].sort();
     }, [languages, filters.top_family]);
 
     const handleFilter = (e) => {
         const { name, value } = e.target;
         setFilters(prev => {
             const next = { ...prev, [name]: value };
-            // Cambiando top_family invalido la family non più pertinente.
             if (name === 'top_family' && value && prev.family) {
                 const stillValid = languages.some(
-                    l => l.top_level_family === value && l.family === prev.family
+                    lang => lang.top_level_family === value && lang.family === prev.family
                 );
                 if (!stillValid) next.family = '';
             }
@@ -129,40 +115,35 @@ export default function ParameterByLanguage() {
     };
 
     const filteredLanguages = useMemo(() => {
-        return languages.filter(l => {
-            if (filters.top_family && l.top_level_family !== filters.top_family) return false;
-            if (filters.family && l.family !== filters.family) return false;
-            if (filters.status && l.status !== filters.status) return false;
+        return languages.filter(lang => {
+            if (filters.top_family && lang.top_level_family !== filters.top_family) return false;
+            if (filters.family && lang.family !== filters.family) return false;
+            if (filters.status && lang.status !== filters.status) return false;
             if (filters.completion) {
                 if (filters.completion === 'unsure') {
-                    if (!l.is_unsure) return false;
-                } else if (completionOf(l) !== filters.completion) {
+                    if (!lang.is_unsure) return false;
+                } else if (completionOf(lang) !== filters.completion) {
                     return false;
                 }
             }
-            return searchMatches(l, search, ['id', 'name_full', 'top_level_family', 'family', 'grp']);
+            return searchMatches(lang, search, ['id', 'name_full', 'top_level_family', 'family', 'grp']);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [languages, filters, search, total]);
 
-    // Ref alla lista filtrata corrente: serve a handleSaved per avanzare alla
-    // lingua successiva senza leggere stato stale dopo il refetch.
-    const filteredRef = useRef(filteredLanguages);
-    useEffect(() => { filteredRef.current = filteredLanguages; }, [filteredLanguages]);
+    const latestFilteredRef = useRef(filteredLanguages);
+    useEffect(() => { latestFilteredRef.current = filteredLanguages; }, [filteredLanguages]);
 
-    // Come nella pagina di compilazione: svuota il clipboard degli esempi quando
-    // la lingua selezionata cambia, così non si incolla un esempio di un'altra lingua.
     useEffect(() => {
         if (!selectedId) return;
-        const c = readExampleClipboard();
-        if (c && c.langId !== selectedId) clearExampleClipboard();
+        const clipboard = readExampleClipboard();
+        if (clipboard && clipboard.langId !== selectedId) clearExampleClipboard();
     }, [selectedId]);
 
-    // Scroll automatico al blocco quando si seleziona una lingua (saltato al mount).
     const blockTopRef = useRef(null);
-    const skipScrollRef = useRef(true);
+    const skipInitialScrollRef = useRef(true);
     useEffect(() => {
-        if (skipScrollRef.current) { skipScrollRef.current = false; return; }
+        if (skipInitialScrollRef.current) { skipInitialScrollRef.current = false; return; }
         if (selectedId && blockTopRef.current) {
             blockTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -206,11 +187,10 @@ export default function ParameterByLanguage() {
         loadBlock(langId);
     };
 
-    // Dopo un save riuscito: aggiorna i contatori (colore dei quadratini) e
-    // avanza alla lingua successiva visibile, come "Confident -> Next" del wizard.
+    // dopo il save passa alla lingua successiva
     const handleSaved = async () => {
-        const list = filteredRef.current;
-        const idx = list.findIndex(l => l.id === selectedId);
+        const list = latestFilteredRef.current;
+        const idx = list.findIndex(lang => lang.id === selectedId);
         const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
         setAdminNoteDirty(false);
         setBlockDirty(false);
@@ -233,7 +213,7 @@ export default function ParameterByLanguage() {
     }
 
     const selectedLang = block?.language
-        || languages.find(l => l.id === selectedId)
+        || languages.find(lang => lang.id === selectedId)
         || null;
 
     return (
@@ -260,7 +240,6 @@ export default function ParameterByLanguage() {
                 </div>
             </header>
 
-            {/* ==== FILTRI ==== */}
             <div className="card" style={{
                 padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
@@ -286,13 +265,13 @@ export default function ParameterByLanguage() {
                     <FilterField label="Top family">
                         <select name="top_family" value={filters.top_family} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {topFamilyOptions.map(v => <option key={v} value={v}>{v}</option>)}
+                            {topFamilyOptions.map(topFamily => <option key={topFamily} value={topFamily}>{topFamily}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Subfamily">
                         <select name="family" value={filters.family} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {familyOptions.map(v => <option key={v} value={v}>{v}</option>)}
+                            {familyOptions.map(family => <option key={family} value={family}>{family}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Status">
@@ -324,28 +303,26 @@ export default function ParameterByLanguage() {
                 </div>
             </div>
 
-            {/* ==== WIZARD A QUADRATINI (un quadratino = una lingua) ==== */}
             {filteredLanguages.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '2rem' }}>
                     No language matches the current filters.
                 </div>
             ) : (
                 <div className="param-nav param-nav--wide">
-                    {filteredLanguages.map((l) => (
+                    {filteredLanguages.map((lang) => (
                         <button
-                            key={l.id}
+                            key={lang.id}
                             type="button"
-                            onClick={() => selectLanguage(l.id)}
-                            className={`param-btn ${squareState(l)}${l.id === selectedId ? ' is-active' : ''}`}
-                            title={`${l.name_full} · ${STATUS_LABELS[l.status] || l.status}${l.is_unsure ? ' · flagged unsure' : ` · ${l.answered}/${total} answered`}`}
+                            onClick={() => selectLanguage(lang.id)}
+                            className={`param-btn ${squareState(lang)}${lang.id === selectedId ? ' is-active' : ''}`}
+                            title={`${lang.name_full} · ${STATUS_LABELS[lang.status] || lang.status}${lang.is_unsure ? ' · flagged unsure' : ` · ${lang.answered}/${total} answered`}`}
                         >
-                            {l.id}
+                            {lang.id}
                         </button>
                     ))}
                 </div>
             )}
 
-            {/* ==== BLOCCO DELLA LINGUA SELEZIONATA ==== */}
             <div ref={blockTopRef} style={{ scrollMarginTop: '1rem' }}>
                 {!selectedId && filteredLanguages.length > 0 && (
                     <div className="card" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
@@ -386,7 +363,6 @@ export default function ParameterByLanguage() {
     );
 }
 
-// ===== Helper UI =====
 const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {

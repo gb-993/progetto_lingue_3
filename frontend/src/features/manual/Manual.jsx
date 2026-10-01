@@ -1,20 +1,8 @@
 import { Download, BookMarked, GraduationCap } from 'lucide-react';
 
-// =============================================================================
-// Pagina "Manual": raccoglie i manuali utente scaricabili in PDF.
-//
-// È volutamente separata da "Instructions" (che serve solo a spiegare come
-// compilare le question): i linguisti non volevano mescolare le due cose.
-//
-// I PDF sono file statici serviti da Vite da `frontend/public/docs/`.
-// Per pubblicare/aggiornare un manuale: (1) genera il PDF, (2) mettilo in
-// `frontend/public/docs/`, (3) imposta `available: true` e il `file` qui sotto.
-// Finché `available` è false la voce resta visibile ma disabilitata
-// ("in preparazione"), così la pagina mostra già la struttura definitiva.
-// =============================================================================
+// per pubblicare un manuale: PDF in public/docs e available: true
 
-// `audience` decide chi vede la voce: gli admin vedono il manuale completo
-// (che include anche la parte utente), i linguisti solo quello utente.
+// admin: manuale completo; linguisti: manuale utente
 const MANUALS = [
     {
         id: 'complete',
@@ -67,11 +55,9 @@ function DownloadButton({ label, entry }) {
 }
 
 export default function Manual() {
-    // Gli admin (incl. super-admin: hanno comunque role 'admin') vedono il
-    // manuale completo; i linguisti quello utente. I 'public' non hanno manuali.
     const role = localStorage.getItem('role');
     const audience = role === 'admin' ? 'admin' : role === 'user' ? 'user' : null;
-    const visible = audience ? MANUALS.filter((m) => m.audience === audience) : [];
+    const visible = audience ? MANUALS.filter((manual) => manual.audience === audience) : [];
 
     return (
         <div className="container" style={{ paddingBottom: '4rem' }}>
@@ -91,18 +77,18 @@ export default function Manual() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)', marginTop: 'var(--form-col-gap, 1.5rem)' }}>
-                {visible.map((m) => {
-                    const Icon = m.icon;
+                {visible.map((manual) => {
+                    const Icon = manual.icon;
                     return (
-                        <div key={m.id} className="card" style={{ padding: 'var(--form-box-pad, 1.25rem)' }}>
+                        <div key={manual.id} className="card" style={{ padding: 'var(--form-box-pad, 1.25rem)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
                                 <Icon size={20} />
-                                <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{m.title}</h2>
+                                <h2 style={{ margin: 0, fontSize: '1.1rem' }}>{manual.title}</h2>
                             </div>
-                            <p className="muted" style={{ marginTop: 0 }}>{m.description}</p>
+                            <p className="muted" style={{ marginTop: 0 }}>{manual.description}</p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginTop: '0.6rem' }}>
-                                <DownloadButton label="English (PDF)" entry={m.files.en} />
-                                <DownloadButton label="Italiano (PDF)" entry={m.files.it} />
+                                <DownloadButton label="English (PDF)" entry={manual.files.en} />
+                                <DownloadButton label="Italiano (PDF)" entry={manual.files.it} />
                             </div>
                         </div>
                     );

@@ -1,10 +1,4 @@
-"""Test del PDF parametric data della lingua.
-
-Smoke test (FPDF e' fonte di verita' per il rendering: non parsiamo il PDF
-visivamente, ma verifichiamo che i bytes siano un PDF valido, che la
-funzione regga su scenari diversi, e che il footer della citazione sia
-presente come negli altri report).
-"""
+"""PDF dati parametrici della lingua: smoke test (PDF valido, niente crash)."""
 import pytest
 from sqlalchemy import text
 
@@ -86,22 +80,19 @@ def test_pdf_is_valid_when_language_has_data(db_fk):
     assert isinstance(out, (bytes, bytearray))
     assert out[:5] == b"%PDF-", "Output must be a valid PDF (starts with %PDF-)"
     assert b"%%EOF" in out[-20:] or b"%%EOF" in out, "PDF must contain %%EOF marker"
-    # Lunghezza ragionevole (cover + 1 parametro). Il footer di citazione e i
-    # font DejaVu da soli portano il file ben oltre i 5 KB.
+    # citazione e font DejaVu superano da soli i 5 KB
     assert len(out) > 5_000
 
 
 def test_pdf_works_with_no_parameters(db_fk):
-    """Lingua esistente ma nessun parametro attivo: solo la cover deve uscire."""
+    """Nessun parametro attivo: solo la cover."""
     lang = _seed_minimal(db_fk)
     out = build_language_pdf(db_fk, lang)
     assert out[:5] == b"%PDF-"
 
 
 def test_pdf_works_with_parameter_but_no_answers(db_fk):
-    """Parametro attivo con question ma senza nessuna Answer: la pagina del
-    parametro deve uscire comunque con 'Not answered' su ogni question
-    (verificato indirettamente: il builder non solleva e produce PDF valido)."""
+    """Parametro senza risposte: il PDF esce comunque."""
     lang = _seed_minimal(db_fk)
     p = models.ParameterDef(id="P1", position=1, name="Empty Param", is_active=True)
     db_fk.add(p)
@@ -114,18 +105,14 @@ def test_pdf_works_with_parameter_but_no_answers(db_fk):
 
 
 def test_pdf_excludes_inactive_questions_and_inactive_parameters(db_fk):
-    """Il builder NON deve sollevare quando esistono q inattive o param
-    inattivi: vengono semplicemente skippati. Smoke test."""
+    """Question e parametri inattivi vengono saltati senza errori."""
     lang = _seed_with_parameters(db_fk)
     out = build_language_pdf(db_fk, lang)
-    # Generato senza eccezioni e di lunghezza > 0
     assert len(out) > 0
     assert out[:5] == b"%PDF-"
 
 
 def test_pdf_handles_unsure_answer(db_fk):
-    """Sanity check: l'answer 'unsure' viene gestita senza crash dal builder
-    (il branch unsure usa colore arancione + label UNSURE)."""
     lang = _seed_minimal(db_fk)
     p = models.ParameterDef(id="P1", position=1, name="P", is_active=True)
     db_fk.add(p)
@@ -142,8 +129,7 @@ def test_pdf_handles_unsure_answer(db_fk):
 
 
 def test_excel_database_model_now_shows_unsure(db_fk):
-    """Regression test del fix Excel (precedentemente unsure -> ''): nel foglio
-    Database_model la colonna Language_Answer deve contenere 'UNSURE'."""
+    """Nel foglio Database_model 'unsure' diventa 'UNSURE'."""
     from io import BytesIO
     from openpyxl import load_workbook
     from services.excel_export import build_language_workbook
@@ -161,9 +147,8 @@ def test_excel_database_model_now_shows_unsure(db_fk):
     buf.seek(0)
     wb2 = load_workbook(buf)
     ws = wb2["Database_model"]
-    # Header: cerca colonna "Language_Answer"
     headers = [c.value for c in ws[1]]
     col_idx = headers.index("Language_Answer") + 1  # 1-based per openpyxl
-    # Riga 2 = prima riga dati
+    # riga 2 = prima riga dati
     cell = ws.cell(row=2, column=col_idx).value
     assert cell == "UNSURE", f"Expected 'UNSURE', got {cell!r}"

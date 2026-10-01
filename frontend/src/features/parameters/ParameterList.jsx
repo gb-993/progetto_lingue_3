@@ -7,17 +7,16 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import NoticeToast from '../../components/NoticeToast';
 import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
 
-// Stesso helper di LanguageList — forza download della blob ricevuta
 async function downloadBlob(request, fallbackName) {
     const res = await request;
-    const cd = res.headers['content-disposition'] || '';
-    const m = cd.match(/filename="?([^";]+)"?/);
-    const filename = m ? m[1] : fallbackName;
+    const contentDisposition = res.headers['content-disposition'] || '';
+    const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+    const filename = filenameMatch ? filenameMatch[1] : fallbackName;
     const blob = new Blob([res.data]);
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
     URL.revokeObjectURL(url);
 }
 
@@ -25,7 +24,7 @@ const INITIAL_FILTERS = {
     schema: '',
     param_type: '',
     level_of_comparison: '',
-    active: 'all',  // 'all' | 'yes' | 'no'
+    active: 'all',
 };
 
 export default function ParameterList() {
@@ -35,24 +34,17 @@ export default function ParameterList() {
     const [options, setOptions] = useState({ opt_schemas: [], opt_types: [], opt_levels: [] });
     const [loading, setLoading] = useState(true);
 
-    // --- Drag & drop reorder state ---
     const [draggingId, setDraggingId] = useState(null);
-    const [dropTarget, setDropTarget] = useState(null); // { id, above: bool }
+    const [dropTarget, setDropTarget] = useState(null);
     const [savingOrder, setSavingOrder] = useState(false);
 
-    // --- Backup state ---
-    const [backingUpId, setBackingUpId] = useState(null);  // id del parametro per cui si sta facendo backup singolo
+    const [backingUpId, setBackingUpId] = useState(null);
     const [globalBackup, setGlobalBackup] = useState(false);
     const [exportingInfo, setExportingInfo] = useState(false);
 
-    // --- Selezione per l'export (modello a esclusione come LanguageList:
-    //     spuntato = incluso; default tutti inclusi). ---
     const [excludedIds, setExcludedIds] = useState(new Set());
 
-    // --- Tools ▾, dialogo di conferma e toast esiti (stessi pattern di LanguageList) ---
     const [toolsOpen, setToolsOpen] = useState(false);
-    // Solo mobile (<=960px): filter card chiusa di default, si apre col toggle.
-    // Su desktop lo stato e' ignorato (la barra-toggle e' display:none).
     const [filtersOpen, setFiltersOpen] = useState(false);
     const toolsRef = useRef(null);
     const [dialog, setDialog] = useState(null);
@@ -60,7 +52,6 @@ export default function ParameterList() {
     const dismissNotice = useCallback(() => setNotice(null), []);
     const notify = (type, text) => setNotice({ type, text });
 
-    // Chiusura dropdown Tools al click fuori
     useEffect(() => {
         if (!toolsOpen) return;
         const onDocClick = (e) => {
@@ -104,13 +95,13 @@ export default function ParameterList() {
     };
 
     const filteredParams = useMemo(() => {
-        return parameters.filter(p => {
-            if (filters.schema && p.schema !== filters.schema) return false;
-            if (filters.param_type && p.param_type !== filters.param_type) return false;
-            if (filters.level_of_comparison && p.level_of_comparison !== filters.level_of_comparison) return false;
-            if (filters.active === 'yes' && !p.is_active) return false;
-            if (filters.active === 'no' && p.is_active) return false;
-            return searchMatches(p, search, [
+        return parameters.filter(param => {
+            if (filters.schema && param.schema !== filters.schema) return false;
+            if (filters.param_type && param.param_type !== filters.param_type) return false;
+            if (filters.level_of_comparison && param.level_of_comparison !== filters.level_of_comparison) return false;
+            if (filters.active === 'yes' && !param.is_active) return false;
+            if (filters.active === 'no' && param.is_active) return false;
+            return searchMatches(param, search, [
                 'id', 'name', 'short_description', 'long_description',
                 'implicational_condition', 'description_of_the_implicational_condition',
                 'schema', 'param_type', 'level_of_comparison',
@@ -125,17 +116,15 @@ export default function ParameterList() {
         (filters.active !== 'all' ? 1 : 0) +
         (search ? 1 : 0);
 
-    // Reorder è abilitato solo se nessun filtro/search è attivo
     const canReorder = activeFilterCount === 0 && !savingOrder;
 
-    // ---- Selezione per l'export "selected" (stesso schema di LanguageList) ----
     const effectiveParams = useMemo(
-        () => filteredParams.filter(p => !excludedIds.has(p.id)),
+        () => filteredParams.filter(param => !excludedIds.has(param.id)),
         [filteredParams, excludedIds]
     );
-    const targetIds = effectiveParams.map(p => p.id);
+    const targetIds = effectiveParams.map(param => param.id);
     const visibleExcludedCount = filteredParams.reduce(
-        (acc, p) => acc + (excludedIds.has(p.id) ? 1 : 0), 0
+        (acc, param) => acc + (excludedIds.has(param.id) ? 1 : 0), 0
     );
     const allFilteredIncluded = filteredParams.length > 0 && visibleExcludedCount === 0;
 
@@ -149,17 +138,15 @@ export default function ParameterList() {
     const toggleAll = () => {
         setExcludedIds(prev => {
             const next = new Set(prev);
-            if (allFilteredIncluded) filteredParams.forEach(p => next.add(p.id));
-            else filteredParams.forEach(p => next.delete(p.id));
+            if (allFilteredIncluded) filteredParams.forEach(param => next.add(param.id));
+            else filteredParams.forEach(param => next.delete(param.id));
             return next;
         });
     };
 
-    // ---- Drag & drop handlers ----
     const handleDragStart = (e, id) => {
         e.dataTransfer.setData('application/x-parameter-row', id);
         e.dataTransfer.effectAllowed = 'move';
-        // Drag image = l'intera riga, non solo l'handle
         const row = e.currentTarget.closest('tr');
         if (row) {
             try { e.dataTransfer.setDragImage(row, 20, row.offsetHeight / 2); } catch { /* noop */ }
@@ -185,7 +172,6 @@ export default function ParameterList() {
         );
     };
 
-    // ---- Export overview PDF ----
     const onExportInfoPdf = async () => {
         setExportingInfo(true);
         try {
@@ -204,7 +190,6 @@ export default function ParameterList() {
         }
     };
 
-    // ---- Download PDF di un singolo parametro (voce del menu ⋯ di riga) ----
     const onDownloadPdf = async (param) => {
         try {
             await downloadBlob(
@@ -216,8 +201,6 @@ export default function ParameterList() {
         }
     };
 
-    // ---- Download Data .xlsx: matrice lingue × question del parametro,
-    //      celle = frasi d'esempio (voce del menu ⋯ di riga) ----
     const onDownloadDataXlsx = async (param) => {
         try {
             await downloadBlob(
@@ -229,7 +212,6 @@ export default function ParameterList() {
         }
     };
 
-    // ---- Backup handlers ----
     const onGlobalBackup = () => {
         setDialog({
             title: 'Full parameters backup',
@@ -238,7 +220,7 @@ export default function ParameterList() {
                 { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
             ],
             confirmLabel: 'Start backup',
-            onConfirm: (v) => { runGlobalBackup(v.note); },
+            onConfirm: (values) => { runGlobalBackup(values.note); },
         });
     };
 
@@ -263,7 +245,7 @@ export default function ParameterList() {
                 { name: 'note', label: 'Optional note', placeholder: 'Leave empty to skip', autoFocus: true },
             ],
             confirmLabel: 'Create backup',
-            onConfirm: (v) => { runBackupParameter(param, v.note); },
+            onConfirm: (values) => { runBackupParameter(param, values.note); },
         });
     };
 
@@ -287,36 +269,34 @@ export default function ParameterList() {
         e.preventDefault();
         const movedId = draggingId;
         const above = dropTarget?.above ?? false;
-        // Reset visual state subito
         setDraggingId(null);
         setDropTarget(null);
 
         if (!movedId || movedId === targetId) return;
 
-        const fromIdx = parameters.findIndex(p => p.id === movedId);
-        const targetIdx = parameters.findIndex(p => p.id === targetId);
+        const fromIdx = parameters.findIndex(param => param.id === movedId);
+        const targetIdx = parameters.findIndex(param => param.id === targetId);
         if (fromIdx < 0 || targetIdx < 0) return;
 
         let insertAt = above ? targetIdx : targetIdx + 1;
         if (fromIdx < insertAt) insertAt -= 1;
         if (insertAt === fromIdx) return;
 
-        const newArr = [...parameters];
-        const [moved] = newArr.splice(fromIdx, 1);
-        newArr.splice(insertAt, 0, moved);
+        const reordered = [...parameters];
+        const [moved] = reordered.splice(fromIdx, 1);
+        reordered.splice(insertAt, 0, moved);
 
-        // Update ottimistico (riassegno position 1..N localmente)
-        const previousArr = parameters;
-        setParameters(newArr.map((p, i) => ({ ...p, position: i + 1 })));
+        const previousOrder = parameters;
+        setParameters(reordered.map((param, index) => ({ ...param, position: index + 1 })));
         setSavingOrder(true);
         try {
             await api.patch('/api/admin/parameters/reorder', {
                 moved_id: movedId,
-                order: newArr.map(p => p.id),
+                order: reordered.map(param => param.id),
             });
         } catch (err) {
             notify('error', getApiErrorMessage(err, 'Reorder failed.'));
-            setParameters(previousArr); // rollback
+            setParameters(previousOrder);
         } finally {
             setSavingOrder(false);
         }
@@ -328,7 +308,6 @@ export default function ParameterList() {
                 <h1>Parameter Management</h1>
             </header>
 
-            {/* ==== FILTRI ==== */}
             <div className={`card filter-card${filtersOpen ? '' : ' is-collapsed'}`} style={{
                 padding: 'var(--filter-card-pad, 1rem 1.25rem)',
                 marginBottom: '1rem',
@@ -344,7 +323,7 @@ export default function ParameterList() {
                 <button
                     type="button"
                     className="filter-card-toggle"
-                    onClick={() => setFiltersOpen(o => !o)}
+                    onClick={() => setFiltersOpen(open => !open)}
                     aria-expanded={filtersOpen}
                 >
                     <span>{filtersOpen ? '▾' : '▸'} Filters</span>
@@ -364,19 +343,19 @@ export default function ParameterList() {
                     <FilterField label="Schema">
                         <select name="schema" value={filters.schema} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {options.opt_schemas.map(v => <option key={v} value={v}>{v}</option>)}
+                            {options.opt_schemas.map(schema => <option key={schema} value={schema}>{schema}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Type">
                         <select name="param_type" value={filters.param_type} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {options.opt_types.map(v => <option key={v} value={v}>{v}</option>)}
+                            {options.opt_types.map(type => <option key={type} value={type}>{type}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Level">
                         <select name="level_of_comparison" value={filters.level_of_comparison} onChange={handleFilter} style={inputStyle}>
                             <option value="">All</option>
-                            {options.opt_levels.map(v => <option key={v} value={v}>{v}</option>)}
+                            {options.opt_levels.map(level => <option key={level} value={level}>{level}</option>)}
                         </select>
                     </FilterField>
                     <FilterField label="Active">
@@ -397,13 +376,10 @@ export default function ParameterList() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        {/* Tools ▾: export e manutenzione fuori dalla vista,
-                            come in LanguageList. Add Parameter resta il
-                            bottone primario. */}
                         <div ref={toolsRef} style={{ position: 'relative' }}>
                             <button
                                 type="button"
-                                onClick={() => setToolsOpen(o => !o)}
+                                onClick={() => setToolsOpen(open => !open)}
                                 className="btn btn--small"
                                 aria-haspopup="menu"
                                 aria-expanded={toolsOpen}
@@ -544,8 +520,6 @@ export default function ParameterList() {
                                         </span>
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
-                                        {/* Azioni quotidiane visibili (Data, Edit);
-                                            PDF e Backup nel menu ⋯ come in LanguageList. */}
                                         <div className="row-actions" style={{ flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
                                             <Link
                                                 to={`/admin/parameters/${param.id}/by-language`}
@@ -578,16 +552,13 @@ export default function ParameterList() {
                 </table>
             </div>
 
-            {/* ==== DIALOGO DI CONFERMA (backup note) ==== */}
             {dialog && <ConfirmDialog config={dialog} onClose={() => setDialog(null)} />}
 
-            {/* ==== TOAST ESITO OPERAZIONI ==== */}
             <NoticeToast notice={notice} onClose={dismissNotice} />
         </div>
     );
 }
 
-// ===== Helper UI =====
 const inputStyle = { width: '100%', padding: 'var(--filter-card-input-pad, 0.45rem)', fontSize: '0.85rem' };
 
 function FilterField({ label, children }) {

@@ -1,10 +1,4 @@
-"""Test di `services.migration_import._import_compilation_xlsx`.
-
-Lo scope qui e' coprire il parser della colonna `Language_Answer` con i nuovi
-valori UNSURE/U/? (regression del fix di export). Non e' un test del flusso
-completo del migration import (che e' un one-shot all'avvio del progetto):
-testiamo il subset critico col minimo seed possibile.
-"""
+"""Parser di Language_Answer nel migration import (YES/NO/UNSURE/U/?)."""
 import io
 import pytest
 from openpyxl import Workbook
@@ -25,7 +19,7 @@ def _seed_minimal(db):
 
 
 def _ws_from_rows(rows):
-    """Costruisce un Worksheet 'Database_model' in memoria con DATABASE_MODEL_HEADERS."""
+    """Sheet 'Database_model' in memoria."""
     wb = Workbook()
     wb.remove(wb.active)
     ws = wb.create_sheet("Database_model")
@@ -36,7 +30,6 @@ def _ws_from_rows(rows):
 
 
 def test_migration_import_yes_no_still_work(db_session):
-    """Sanity: la logica esistente per YES/NO non e' stata rotta dal fix UNSURE."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
         ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", "", ""],
@@ -57,7 +50,7 @@ def test_migration_import_yes_no_still_work(db_session):
 
 
 def test_migration_import_unsure_uppercase(db_session):
-    """'UNSURE' (canonico, prodotto dall'export attuale) -> response_text='unsure'."""
+    """'UNSURE' (come nell'export) diventa 'unsure'."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
         ["Italiano", "FGM", "FGM_01", "UNSURE", "uncertain", "", "", "", "", "", "", ""],
@@ -76,7 +69,7 @@ def test_migration_import_unsure_uppercase(db_session):
 
 
 def test_migration_import_unsure_short_forms(db_session):
-    """Varianti corte 'U' e '?' (utile per compilazione manuale)."""
+    """Anche 'U' e '?' valgono unsure."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
         ["Italiano", "FGM", "FGM_01", "U", "", "", "", "", "", "", "", ""],
@@ -97,8 +90,7 @@ def test_migration_import_unsure_short_forms(db_session):
 
 
 def test_migration_import_mixed_responses_no_regression(db_session):
-    """YES + NO + UNSURE + vuoto in uno stesso foglio: tutto deve essere
-    importato correttamente, senza errori."""
+    """YES, NO, UNSURE e vuoto nello stesso foglio."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
         ["Italiano", "FGM", "FGM_01", "YES", "", "", "", "", "", "", "", ""],
@@ -119,14 +111,12 @@ def test_migration_import_mixed_responses_no_regression(db_session):
     assert by_qid["FGM_01"].response_text == "yes"
     assert by_qid["FGM_02"].response_text == "no"
     assert by_qid["FGM_03"].response_text == "unsure"
-    # FGM_04 vuoto -> nessuna answer inserita
+    # vuoto: nessuna answer
     assert "FGM_04" not in by_qid
 
 
 def test_migration_import_invalid_value_still_reports_error_with_unsure_in_message(db_session):
-    """Un valore non riconosciuto deve essere segnalato, e il messaggio deve
-    elencare anche UNSURE tra i valori validi (cosi' chi legge il report sa
-    che 'unsure' e' un'opzione legittima)."""
+    """Valore sconosciuto: errore che elenca anche UNSURE fra i validi."""
     _seed_minimal(db_session)
     ws = _ws_from_rows([
         ["Italiano", "FGM", "FGM_01", "MAYBE", "", "", "", "", "", "", "", ""],

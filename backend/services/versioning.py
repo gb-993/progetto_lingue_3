@@ -1,4 +1,4 @@
-"""Versionamento entità: snapshot JSON in `entity_versions`, usato da UI e import Excel."""
+"""Storico delle entità: snapshot JSON in `entity_versions`."""
 from __future__ import annotations
 from typing import Any, Optional
 from datetime import datetime, date
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import models
 
 
-# Nome classe modello -> valore di entity_versions.entity_type
+# classe modello -> entity_type
 ENTITY_TYPE_MAP = {
     "ParameterDef": "parameter",
     "Question": "question",
@@ -23,12 +23,11 @@ MODEL_BY_TYPE = {v: k for k, v in ENTITY_TYPE_MAP.items()}
 
 
 def _entity_type_for(entity: Any) -> str:
-    """Ritorna il valore canonico di `entity_type` per un'istanza modello."""
     return ENTITY_TYPE_MAP.get(type(entity).__name__, type(entity).__name__.lower())
 
 
 def _coerce(v: Any) -> Any:
-    """Converte un valore SQLAlchemy in qualcosa di JSON-serializzabile."""
+    """Rende il valore serializzabile in JSON."""
     if v is None:
         return None
     if isinstance(v, (str, bool, int, float)):
@@ -48,7 +47,7 @@ def serialize_entity(entity: Any) -> dict:
         name = col.key
         out[name] = _coerce(getattr(entity, name))
 
-    # Esempi e motivazioni fanno parte dello snapshot della Answer, non sono entità versionate a sé
+    # esempi e motivazioni vanno nello snapshot della Answer
     if type(entity).__name__ == "Answer":
         examples = []
         for ex in sorted(entity.examples, key=lambda e: (e.number or "", e.id or 0)):
@@ -74,7 +73,7 @@ def serialize_entity(entity: Any) -> dict:
 
 
 def _entity_id_for(entity: Any, snapshot: dict) -> str:
-    """Identificativo human-readable usato in entity_versions.entity_id."""
+    """Id leggibile per entity_id (Answer: lingua:domanda)."""
     if type(entity).__name__ == "Answer":
         return f"{snapshot.get('language_id', '')}:{snapshot.get('question_id', '')}"
     return str(snapshot.get("id", ""))
@@ -89,7 +88,7 @@ def record_version(
     note: Optional[str] = None,
     flush: bool = True,
 ) -> "models.EntityVersion":
-    """Aggiunge una EntityVersion per `entity`; non committa, lo fa il chiamante nella stessa transazione."""
+    """Aggiunge una versione; non committa."""
     snapshot = serialize_entity(entity)
     entity_type = _entity_type_for(entity)
     entity_id = _entity_id_for(entity, snapshot)
@@ -112,7 +111,6 @@ def record_version(
 def get_previous_version(
     db: Session, entity_type: str, entity_id: str, before_id: int
 ) -> Optional["models.EntityVersion"]:
-    """Ritorna la versione precedente a `before_id` per la stessa entità."""
     return (
         db.query(models.EntityVersion)
         .filter(

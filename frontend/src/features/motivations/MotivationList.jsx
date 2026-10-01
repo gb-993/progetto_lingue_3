@@ -17,7 +17,6 @@ export default function MotivationList() {
     const fetchMotivations = async () => {
         setLoading(true);
         try {
-            // /with-usage include il campo linked_questions per ogni motivation.
             const res = await api.get('/api/admin/motivations/with-usage');
             setMotivations(res.data);
         } catch {
@@ -31,9 +30,6 @@ export default function MotivationList() {
         fetchMotivations();
     }, []);
 
-    // Suggerisce il prossimo codice MOT### libero. Trova il massimo numero
-    // tra i code che matchano `MOT\d+`, +1, e zero-padda a 3 cifre (mantenendo
-    // più cifre se serve oltre il 999). Se non c'è alcun MOT###, parte da MOT001.
     const suggestNextMotivationCode = () => {
         const re = /^MOT(\d+)$/i;
         let max = 0;
@@ -84,7 +80,6 @@ export default function MotivationList() {
         }
     };
 
-    // Cerca su code, label, status (active/inactive testo se serve)
     const filteredMots = motivations.filter(m => searchMatches(m, search));
 
     return (
@@ -174,7 +169,6 @@ export default function MotivationList() {
                 </table>
             </div>
 
-            {/* MODALE CREAZIONE/MODIFICA */}
             {showModal && (
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '460px', maxWidth: '92vw' }}>

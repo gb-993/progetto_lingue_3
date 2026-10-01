@@ -1,8 +1,4 @@
-"""Export Excel: workbook per-lingua, lista lingue, schema, glossario e bundle di backup.
-
-Gli sheet Database_model / Examples / Answers hanno header e ordine colonne
-identici al vecchio progetto Django, cosi' il round-trip download+upload funziona.
-"""
+"""Export Excel: workbook per lingua, lista lingue, schema, glossario e backup."""
 from __future__ import annotations
 from typing import Iterable, List, Optional
 from datetime import datetime
@@ -23,10 +19,9 @@ from config import LEGAL_DOCUMENTS_DIR
 from services.citation import apply_excel_citation
 
 
-# Header dei 3 sheet di compatibilita' con il vecchio progetto
+# header compatibili con il vecchio progetto
 
 DATABASE_MODEL_HEADERS = [
-    # Identificazione lingua/domanda
     "Language",
     "Parameter_Label",
     "Question_ID",
@@ -37,9 +32,9 @@ DATABASE_MODEL_HEADERS = [
     "Language_Example_Gloss",
     "Language_Example_Translation",
     "Language_References",
-    # "TEST" se l'esempio e' un segnaposto, allineato per indice alle colonne Language_Examples
+    # "TEST" = esempio segnaposto
     "Language_Example_Is_Test",
-    # Admin_Note vive a livello di (lingua, parametro): e' ripetuta su ogni riga del parametro
+    # admin note del parametro, ripetuta su ogni riga
     "Motivations",
     "Admin_Note",
 ]
@@ -68,7 +63,7 @@ ANSWERS_HEADERS = [
     "Comments",
 ]
 
-# Schema sheets (nuovi, non presenti nel vecchio progetto)
+# sheet schema
 MOTIVATIONS_HEADERS = ["ID", "Code", "Label"]
 
 PARAMETERS_HEADERS = [
@@ -87,10 +82,9 @@ QUESTIONS_HEADERS = [
 
 QUESTION_ALLOWED_MOTIVATIONS_HEADERS = ["Question ID", "Motivation Code"]
 
-# Admin-only sheet: nota libera per (lingua, parametro)
+# sheet solo admin
 ADMIN_NOTES_HEADERS = ["Parameter ID", "Parameter Name", "Admin Note"]
 
-# Header per la lista lingue
 LANGUAGE_LIST_HEADERS = [
     "Name",
     "ID",
@@ -126,7 +120,6 @@ def _split_lines_to_str(value: Optional[str]) -> str:
 def _style_table(ws, name: str, n_cols: int, widths: List[int]):
     """Applica TableStyle e larghezze colonne."""
     if ws.max_row < 2:
-        # comunque applico le larghezze
         for idx, w in enumerate(widths, start=1):
             if idx > n_cols:
                 break
@@ -153,7 +146,7 @@ def _bold_header_row(ws, n_cols: int):
 
 
 def _pretty_qc_from_status(status: Optional[str]) -> str:
-    """Mappa lo status di un Answer alla label leggibile (replicato dal vecchio progetto)."""
+    """Status di un Answer come etichetta leggibile."""
     s = (status or "").lower()
     if s == "approved":
         return "Done"
@@ -162,15 +155,14 @@ def _pretty_qc_from_status(status: Optional[str]) -> str:
     return "Not compiled"
 
 
-# Language workbook: 7 sheet per admin, 1 per user
+# workbook di una lingua
 
 def build_language_workbook(
     db: Session,
     lang: models.Language,
     is_admin: bool = True,
 ) -> Workbook:
-    """Genera il workbook di una lingua: 7 sheet per admin, il solo sheet Examples per gli altri."""
-    # Pre-load: parametri attivi ordinati
+    """Workbook di una lingua: 7 sheet per admin, solo Examples per gli altri."""
     params = (
         db.query(models.ParameterDef)
         .filter(models.ParameterDef.is_active == True)
@@ -178,7 +170,7 @@ def build_language_workbook(
         .all()
     )
 
-    # Solo question attive; lo sheet Questions piu' sotto include anche le inattive perche' documenta lo schema
+    # solo question attive (lo sheet Questions le include tutte)
     questions_by_param: dict[str, list[models.Question]] = {}
     all_questions = (
         db.query(models.Question)
@@ -189,7 +181,6 @@ def build_language_workbook(
     for q in all_questions:
         questions_by_param.setdefault(q.parameter_id, []).append(q)
 
-    # Risposte per la lingua, indicizzate per question_id
     answers = (
         db.query(models.Answer)
         .filter(models.Answer.language_id == lang.id)
@@ -197,7 +188,6 @@ def build_language_workbook(
     )
     answers_by_qid = {a.question_id: a for a in answers}
 
-    # Esempi raggruppati per question_id (passando per la answer)
     examples_by_qid: dict[str, list[models.Example]] = {}
     for a in answers:
         if a.examples:
@@ -206,10 +196,8 @@ def build_language_workbook(
                 key=lambda e: _example_sort_key(e),
             )
 
-    # AnswerMotivation -> mappa motivation_id per veloce lookup
     mot_by_id = {m.id: m for m in db.query(models.Motivation).all()}
 
-    # Admin note della lingua corrente, per lo sheet Admin Notes e la colonna Admin_Note
     notes_by_pid = {
         s.parameter_id: (s.admin_note or "")
         for s in db.query(models.LanguageParameterStatus)
@@ -220,7 +208,7 @@ def build_language_workbook(
 
     wb = Workbook()
 
-    # Sheet Examples (sempre presente)
+    # sheet Examples (sempre)
     ws_examples = wb.active
     ws_examples.title = "Examples"
     ws_examples.append(EXAMPLES_HEADERS)
@@ -247,7 +235,7 @@ def build_language_workbook(
         apply_excel_citation(wb)
         return wb
 
-    # Sheet Database_model (admin, primo sheet visivo)
+    # sheet Database_model (admin)
     ws_db = wb.create_sheet("Database_model", 0)
     ws_db.append(DATABASE_MODEL_HEADERS)
     _bold_header_row(ws_db, len(DATABASE_MODEL_HEADERS))
@@ -269,7 +257,7 @@ def build_language_workbook(
                 elif a.response_text == "missing":
                     lang_answer = "MISSING"
                 lang_comments = a.comments or ""
-                # Codici motivazione, non label: identificatore stabile per il round-trip
+                # codici, non label: restano stabili
                 codes = []
                 for am in a.answer_motivations:
                     m = mot_by_id.get(am.motivation_id)
@@ -306,7 +294,7 @@ def build_language_workbook(
         [18, 14, 18, 12, 26, 30, 22, 22, 22, 22, 10, 22, 30],
     )
 
-    # Wrap + allineamento in alto: senza, Excel nasconde gli a-capo che separano gli esempi (vedi DEV-NOTES.md)
+    # wrap + allineamento in alto (vedi DEV-NOTES.md)
     _MULTILINE_COLS = (
         "Language_Comments", "Language_Examples", "Language_Example_Transliteration",
         "Language_Example_Gloss", "Language_Example_Translation",
@@ -318,12 +306,11 @@ def build_language_workbook(
         for col_name in _MULTILINE_COLS:
             ws_db.cell(row=r, column=_col_idx[col_name]).alignment = _wrap_top
 
-    # Sheet Answers (admin)
+    # sheet Answers (admin)
     ws_ans = wb.create_sheet("Answers", 1)
     ws_ans.append(ANSWERS_HEADERS)
     _bold_header_row(ws_ans, len(ANSWERS_HEADERS))
 
-    # Carico anche eval per il "Parameter value"
     lp_qs = (
         db.query(models.LanguageParameter)
         .filter(models.LanguageParameter.language_id == lang.id)
@@ -373,7 +360,7 @@ def build_language_workbook(
 
     _style_table(ws_ans, "Answers", len(ANSWERS_HEADERS), [14, 18, 14, 36, 18, 10, 16, 28, 26])
 
-    # Sheet Admin Notes (admin): solo i parametri con nota non vuota
+    # sheet Admin Notes (solo parametri con nota)
     ws_notes = wb.create_sheet("Admin Notes")
     ws_notes.append(ADMIN_NOTES_HEADERS)
     _bold_header_row(ws_notes, len(ADMIN_NOTES_HEADERS))
@@ -391,14 +378,12 @@ def build_language_workbook(
 
 
 def _example_sort_key(ex: models.Example):
-    """Ordina gli esempi per number numerico (se possibile), poi per id."""
+    """Ordina gli esempi per number, poi per id."""
     try:
         return (0, int(ex.number or "0"), ex.id or 0)
     except (ValueError, TypeError):
         return (1, str(ex.number or ""), ex.id or 0)
 
-
-# Matrice degli esempi: lingue x question di un parametro
 
 def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
     """Matrice esempi di un parametro: righe = lingue, colonne = question attive."""
@@ -415,7 +400,6 @@ def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
 
     languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
 
-    # Esempi per (question_id, language_id): solo i textarea non vuoti, ordinati.
     examples_by_cell: dict[tuple[str, str], list[str]] = {}
     if q_ids:
         answers = (
@@ -441,7 +425,6 @@ def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
     header_align = Alignment(vertical="center", horizontal="center", wrap_text=True)
     top_wrap = Alignment(vertical="top", wrap_text=True)
 
-    # Angolo "Language" su due righe unite.
     ws.merge_cells("A1:A2")
     corner = ws.cell(row=1, column=1, value="Language")
     corner.font = _BOLD_WHITE
@@ -449,7 +432,7 @@ def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
     corner.alignment = header_align
     ws.cell(row=2, column=1).fill = header_fill
 
-    # Intestazioni: riga 1 = id question, riga 2 = testo question.
+    # riga 1 = id question, riga 2 = testo
     for j, q in enumerate(questions, start=2):
         c1 = ws.cell(row=1, column=j, value=q.id)
         c1.font = _BOLD_WHITE
@@ -460,7 +443,6 @@ def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
         c2.fill = header_fill
         c2.alignment = header_align
 
-    # Righe lingue.
     for i, lang in enumerate(languages, start=3):
         name = lang.name_full or ""
         label = f"{lang.id} — {name}" if name else str(lang.id)
@@ -488,10 +470,10 @@ def build_parameter_data_matrix_workbook(db: Session, parameter) -> Workbook:
     return wb
 
 
-# Workbook con i metadati delle lingue selezionate
+# lista lingue
 
 def _xlsx_sanitize(v):
-    """Converte valori non-Excel-friendly in stringhe."""
+    """Valori non adatti a Excel -> stringa."""
     if v is None:
         return ""
     if isinstance(v, bool):
@@ -505,9 +487,7 @@ def build_language_list_workbook(
     db: Session,
     languages: Iterable[models.Language],
 ) -> Workbook:
-    """
-    Workbook con un solo sheet 'Languages' contenente i metadati delle lingue.
-    """
+    """Workbook con lo sheet Languages."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Languages"
@@ -545,12 +525,12 @@ def build_language_list_workbook(
             L.updated_at if L.updated_at is not None else None,
         ])
 
-    # Il fill del table style serve: senza, l'header in font bianco sarebbe invisibile
+    # serve il fill: senza, l'header bianco non si vede
     n_cols = len(LANGUAGE_LIST_HEADERS)
     widths = [22, 10, 16, 16, 14, 10, 12, 18, 10, 10, 16, 16, 10, 28, 12, 22, 26, 18]
     _style_table(ws, "Languages", n_cols, widths)
 
-    # Formatta la colonna Date last change (ultima) come datetime locale
+    # ultima colonna come data
     last_col = get_column_letter(n_cols)
     for cell in ws[last_col][1:]:
         cell.number_format = "yyyy-mm-dd hh:mm"
@@ -559,10 +539,10 @@ def build_language_list_workbook(
     return wb
 
 
-# Workbook schema: motivations, parameters, questions, qam
+# workbook schema
 
 def _append_schema_sheets(db: Session, wb: Workbook) -> None:
-    """Aggiunge i 4 sheet schema al workbook esistente (in coda)."""
+    """Aggiunge in coda i 4 sheet schema."""
     # Motivations
     ws_mot = wb.create_sheet("Motivations")
     ws_mot.append(MOTIVATIONS_HEADERS)
@@ -633,9 +613,8 @@ def _append_schema_sheets(db: Session, wb: Workbook) -> None:
 
 
 def build_schema_workbook(db: Session) -> Workbook:
-    """Workbook con i soli 4 sheet schema, per l'editing offline dalla pagina Parameters."""
+    """Workbook con i 4 sheet schema, per l'editing offline."""
     wb = Workbook()
-    # Rimuovo lo sheet di default
     default = wb.active
     wb.remove(default)
     _append_schema_sheets(db, wb)
@@ -643,7 +622,7 @@ def build_schema_workbook(db: Session) -> Workbook:
     return wb
 
 
-# Workbook glossario
+# glossario
 
 GLOSSARY_HEADERS = ["Word", "Description"]
 
@@ -664,7 +643,7 @@ def build_glossary_workbook(db: Session) -> Workbook:
     return wb
 
 
-# Workbook 'satellite' inclusi solo nel bundle full (vedi DEV-NOTES.md per il contenuto)
+# workbook extra, solo nel bundle full (vedi DEV-NOTES.md)
 
 SITE_CONTENT_HEADERS = ["Key", "Content", "Page", "Updated At", "Updated By Email"]
 
@@ -751,7 +730,7 @@ CONSENTS_HEADERS = [
 
 
 def _user_email_map(db: Session) -> dict:
-    """{user.id: user.email} per denormalizzare gli FK utente nei file extras (vedi DEV-NOTES.md)."""
+    """{user.id: email}: nei file extras gli utenti sono per email (vedi DEV-NOTES.md)."""
     return {u.id: u.email for u in db.query(models.User.id, models.User.email).all()}
 
 
@@ -1032,7 +1011,7 @@ def build_parameter_change_logs_workbook(db: Session) -> Workbook:
 
 
 def build_parameter_flags_workbook(db: Session) -> Workbook:
-    """Flag is_unsure / needs_review per (lingua, parametro); esporta tutte le righe, anche coi flag spenti."""
+    """Flag is_unsure / needs_review, anche quelli spenti."""
     wb = Workbook()
     ws = wb.active
     ws.title = "ParameterFlags"
@@ -1057,7 +1036,7 @@ def build_parameter_flags_workbook(db: Session) -> Workbook:
 
 
 def build_aliases_workbook(db: Session) -> Workbook:
-    """Alias storici di lingue, parametri e question, necessari a risolvere gli id rinominati dopo un restore."""
+    """Alias storici di lingue, parametri e question."""
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -1087,7 +1066,7 @@ def build_aliases_workbook(db: Session) -> Workbook:
 
 
 def build_users_workbook(db: Session) -> Workbook:
-    """Utenti senza hash password; `Assigned Languages` ripristina Language.assigned_user_id."""
+    """Utenti senza password; Assigned Languages ripristina le assegnazioni."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Users"
@@ -1117,7 +1096,7 @@ def build_users_workbook(db: Session) -> Workbook:
 
 
 def build_legal_documents_workbook(db: Session) -> Workbook:
-    """Metadati LegalDocuments + Consents; i PDF veri stanno in extras/legal_pdfs/."""
+    """Metadati di documenti legali e consensi (i PDF sono in extras/legal_pdfs/)."""
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -1170,7 +1149,7 @@ def build_legal_documents_workbook(db: Session) -> Workbook:
 
 
 def build_entity_versions_jsonl_bytes(db: Session) -> bytes:
-    """History (entity_versions) in JSON Lines: gli snapshot superano il limite di 32k caratteri di Excel."""
+    """History in JSON Lines: gli snapshot superano il limite di Excel."""
     user_email = _user_email_map(db)
     lines = []
     for v in db.query(models.EntityVersion).order_by(models.EntityVersion.id).all():
@@ -1188,7 +1167,7 @@ def build_entity_versions_jsonl_bytes(db: Session) -> bytes:
     return ("\n".join(lines) + ("\n" if lines else "")).encode("utf-8")
 
 
-# Costruzione degli zip di backup; la struttura dei bundle base e full e' in DEV-NOTES.md
+# zip di backup (struttura in DEV-NOTES.md)
 
 BACKUP_BUNDLE_VERSION = 1
 
@@ -1205,8 +1184,7 @@ def _write_base_bundle(
     languages: list,
     on_language=None,
 ) -> None:
-    """Scrive nel zip i file del bundle base (schema + metadata + glossary +
-    languages/). Riusato sia da build_backup_zip_bytes sia dal builder full."""
+    """Scrive nello zip i file del bundle base."""
     zf.writestr("schema.xlsx", _wb_to_bytes(build_schema_workbook(db)))
     zf.writestr(
         "languages_metadata.xlsx",
@@ -1220,7 +1198,7 @@ def _write_base_bundle(
             try:
                 on_language(idx, total, lang)
             except Exception:
-                # Mai bloccare la generazione del backup per un errore di reporting
+                # un errore di reporting non blocca il backup
                 pass
         wb = build_language_workbook(db, lang, is_admin=True)
         zf.writestr(f"languages/{lang.id}.xlsx", _wb_to_bytes(wb))
@@ -1232,7 +1210,7 @@ def build_backup_zip_bytes(
     *,
     on_language=None,
 ) -> bytes:
-    """Bytes dello zip di backup base per le `languages` date; `on_language` e' un callback di progress."""
+    """Zip di backup base; on_language riceve il progresso."""
     languages = list(languages)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
@@ -1246,14 +1224,14 @@ def build_full_backup_zip_bytes(
     *,
     on_language=None,
 ) -> bytes:
-    """Bundle full: bundle base piu' la cartella `extras/` (vedi DEV-NOTES.md)."""
+    """Bundle full: base + extras/ (vedi DEV-NOTES.md)."""
     languages = list(languages)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         _write_base_bundle(zf, db, languages, on_language=on_language)
-        # aliases per primo: gli handler successivi risolvono gli id anche via alias
+        # prima gli alias: servono a risolvere gli id
         zf.writestr("extras/aliases.xlsx", _wb_to_bytes(build_aliases_workbook(db)))
-        # users prima di submissions/legal_documents, che risolvono gli utenti per email
+        # prima gli utenti: gli altri li cercano per email
         zf.writestr("extras/users.xlsx", _wb_to_bytes(build_users_workbook(db)))
         zf.writestr("extras/site_content.xlsx", _wb_to_bytes(build_site_content_workbook(db)))
         zf.writestr("extras/submissions.xlsx", _wb_to_bytes(build_submissions_workbook(db)))
@@ -1262,7 +1240,7 @@ def build_full_backup_zip_bytes(
         zf.writestr("extras/parameter_change_logs.xlsx", _wb_to_bytes(build_parameter_change_logs_workbook(db)))
         zf.writestr("extras/parameter_flags.xlsx", _wb_to_bytes(build_parameter_flags_workbook(db)))
         zf.writestr("extras/legal_documents.xlsx", _wb_to_bytes(build_legal_documents_workbook(db)))
-        # file_path e' un filename semplice dentro LEGAL_DOCUMENTS_DIR: basename per sicurezza
+        # solo il nome del file, per sicurezza
         for doc in db.query(models.LegalDocument).all():
             fname = os.path.basename(doc.file_path or "")
             if not fname:

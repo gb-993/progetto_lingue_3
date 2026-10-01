@@ -2,24 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
 import api, { getApiErrorMessage } from '../../api';
 
-// Modale "Copy examples only" (richiesta linguisti 2026-06): DUPLICA gli
-// esempi della question sorgente sulle risposte gia' presenti nella
-// destinazione, lingua per lingua. Risposte, motivazioni e testi non vengono
-// toccati; la sorgente resta intatta. Le lingue per cui la destinazione non
-// ha una risposta vengono saltate e segnalate (un esempio deve essere
-// agganciato a una risposta). Endpoint: /copy-examples-preview + /copy-examples.
-//
-// A copia eseguita il riepilogo (copiati/duplicati/saltati) resta nel modale:
-// l'utente lo legge e chiude. A differenza del Move, la change note e'
-// OPZIONALE: la copia non e' distruttiva e il log in History viene scritto
-// comunque.
-//
-// Props:
-//   sourceQuestionId : id della question da cui copiare gli esempi
-//   onClose()        : chiusura senza copia (Cancel)
-//   onCopied(r)      : chiamata quando l'utente chiude DOPO una copia
-//                      riuscita (r = {examples_copied, languages_skipped, ...}).
-//                      Usata dai flussi delete/deactivate per proseguire.
+// copia solo gli esempi su un'altra question
 
 const modalOverlayStyle = {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -58,7 +41,6 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
     const [loading, setLoading] = useState(false);
     const [note, setNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    // Esito della copia: quando valorizzato, il modale mostra il riepilogo.
     const [result, setResult] = useState(null);
 
     useEffect(() => {
@@ -77,28 +59,27 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
         return () => { cancelled = true; };
     }, []);
 
-    // Opzioni destinazione raggruppate per parametro, senza la question sorgente.
     const destOptions = useMemo(() => parameters
-        .map(p => ({
-            label: `${p.id} - ${p.name}`,
+        .map(parameter => ({
+            label: `${parameter.id} - ${parameter.name}`,
             options: allQuestions
-                .filter(x => x.parameter_id === p.id && x.id !== sourceQuestionId)
+                .filter(question => question.parameter_id === parameter.id && question.id !== sourceQuestionId)
                 .sort((a, b) => String(a.id).localeCompare(String(b.id)))
-                .map(x => {
-                    const t = (x.text || '').trim();
-                    return { value: x.id, label: `${x.id} — ${t.length > 70 ? t.slice(0, 70) + '…' : t}` };
+                .map(question => {
+                    const text = (question.text || '').trim();
+                    return { value: question.id, label: `${question.id} — ${text.length > 70 ? text.slice(0, 70) + '…' : text}` };
                 }),
         }))
-        .filter(g => g.options.length > 0), [parameters, allQuestions, sourceQuestionId]);
+        .filter(group => group.options.length > 0), [parameters, allQuestions, sourceQuestionId]);
 
-    const handleDestChange = async (d) => {
-        setDest(d);
+    const handleDestChange = async (option) => {
+        setDest(option);
         setPreview(null);
-        if (!d) return;
+        if (!option) return;
         setLoading(true);
         try {
             const res = await api.get(`/api/admin/questions/${sourceQuestionId}/copy-examples-preview`, {
-                params: { dest_id: d.value },
+                params: { dest_id: option.value },
             });
             setPreview(res.data);
         } catch (err) {
@@ -124,7 +105,6 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
         }
     };
 
-    // ==== RIEPILOGO POST-COPIA ====
     if (result) {
         return (
             <div style={modalOverlayStyle}>
@@ -165,7 +145,6 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
         );
     }
 
-    // ==== FORM ====
     return (
         <div style={modalOverlayStyle}>
             <div className="card" style={{ width: '640px', maxWidth: '94vw', maxHeight: '88vh', overflowY: 'auto' }}>
@@ -218,16 +197,16 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
 
                         {(preview.copyable || []).length > 0 && (
                             <div style={{ border: '1px solid var(--border)', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', marginBottom: 'var(--form-field-mb, 1rem)' }}>
-                                {preview.copyable.map((c, i) => (
-                                    <div key={c.language_id} style={{
+                                {preview.copyable.map((entry, index) => (
+                                    <div key={entry.language_id} style={{
                                         padding: '0.45rem 0.7rem', fontSize: '0.82rem',
-                                        borderTop: i === 0 ? 'none' : '1px solid var(--border)',
+                                        borderTop: index === 0 ? 'none' : '1px solid var(--border)',
                                         display: 'flex', justifyContent: 'space-between', gap: '0.5rem',
                                     }}>
-                                        <span>{c.language_name || c.language_id} <span className="muted">({c.language_id})</span></span>
+                                        <span>{entry.language_name || entry.language_id} <span className="muted">({entry.language_id})</span></span>
                                         <span className="muted">
-                                            {c.examples_count - c.duplicates_count} to copy
-                                            {c.duplicates_count > 0 && <> · {c.duplicates_count} duplicate(s) skipped</>}
+                                            {entry.examples_count - entry.duplicates_count} to copy
+                                            {entry.duplicates_count > 0 && <> · {entry.duplicates_count} duplicate(s) skipped</>}
                                         </span>
                                     </div>
                                 ))}
@@ -237,7 +216,7 @@ export default function CopyExamplesModal({ sourceQuestionId, onClose, onCopied 
                         {(preview.skipped || []).length > 0 && (
                             <div className="alert alert-warning" style={{ fontSize: '0.82rem', marginBottom: 'var(--form-field-mb, 1rem)' }}>
                                 <strong>Skipped languages</strong> (the destination has no answer to attach the examples to):{' '}
-                                {preview.skipped.map(s => `${s.language_name || s.language_id} (${s.examples_count} ex)`).join(', ')}.
+                                {preview.skipped.map(entry => `${entry.language_name || entry.language_id} (${entry.examples_count} ex)`).join(', ')}.
                             </div>
                         )}
                     </>

@@ -3,32 +3,27 @@ import api from '../../api';
 import QuestionRow from './QuestionRow';
 import usePresence from '../../utils/usePresence';
 
-// Costruisce lo stato iniziale di `localAnswers` partendo dalle questions del
-// parametro. Estratto come funzione standalone così è riutilizzabile sia per
-// l'inizializzazione di `localAnswers` sia per lo snapshot di confronto dirty.
 const buildInitialAnswers = (parameter) => {
     const initial = {};
-    parameter.questions.forEach(q => {
-        const ans = q.answer || {};
-        initial[q.id] = {
-            question_id: q.id,
-            response_text: ans.response_text || '',
-            comments: ans.comments || '',
-            motivation_ids: ans.motivation_ids || [],
-            examples: ans.examples ? ans.examples.map(ex => ({ ...ex, tempId: ex.id || Math.random() })) : []
+    parameter.questions.forEach(question => {
+        const answer = question.answer || {};
+        initial[question.id] = {
+            question_id: question.id,
+            response_text: answer.response_text || '',
+            comments: answer.comments || '',
+            motivation_ids: answer.motivation_ids || [],
+            examples: answer.examples ? answer.examples.map(example => ({ ...example, tempId: example.id || Math.random() })) : []
         };
     });
     return initial;
 };
 
-// Serializza in modo deterministico per il confronto dirty:
-//  - esclude `tempId` dagli examples (è random non semantico, usato solo come React key)
-//  - ordina le chiavi degli oggetti così l'ordine di inserimento non cambia il risultato
+// JSON stabile per capire se ci sono modifiche
 const stableStringify = (value) => JSON.stringify(value, (key, val) => {
     if (key === 'tempId') return undefined;
     if (val && typeof val === 'object' && !Array.isArray(val)) {
         const sorted = {};
-        Object.keys(val).sort().forEach(k => { sorted[k] = val[k]; });
+        Object.keys(val).sort().forEach(nestedKey => { sorted[nestedKey] = val[nestedKey]; });
         return sorted;
     }
     return val;
@@ -40,20 +35,11 @@ export default function ParameterBlock({
 }) {
     const [isSaving, setIsSaving] = useState(false);
 
-    // Presence anonima per la sezione Data, scopo per (lingua, parametro).
-    // ParameterBlock si rimonta a ogni cambio parametro nel wizard (key=param.id
-    // in LanguageData), quindi l'heartbeat segue automaticamente il parametro
-    // attivo: cambiando parametro lo slot vecchio viene liberato e si apre quello
-    // nuovo. Attivo solo se la pagina e' editabile (un lettore in sola lettura non
-    // puo' generare conflitti al salvataggio).
     const othersEditing = usePresence(
         'language_parameter', `${langId}:${parameter.id}`, !isReadOnly
     );
 
-    // Admin-only: nota libera per (lingua, parametro). Il valore originale viene
-    // dal payload /compilation (solo se admin). Viene persistita insieme al
-    // save_block: il backend riceve `admin_note` nel payload e aggiorna la riga
-    // LanguageParameterStatus. Niente endpoint dedicato.
+    // si salva insieme al blocco
     const initialAdminNote = parameter.admin_note || '';
     const [adminNote, setAdminNote] = useState(initialAdminNote);
     const [savedAdminNote, setSavedAdminNote] = useState(initialAdminNote);
@@ -64,13 +50,8 @@ export default function ParameterBlock({
         onAdminNoteDirtyChange && onAdminNoteDirtyChange(adminNoteDirty);
     }, [adminNoteDirty, onAdminNoteDirtyChange]);
 
-    // Stato locale: mappa { [questionId]: { response_text, comments, motivation_ids, examples } }
     const [localAnswers, setLocalAnswers] = useState(() => buildInitialAnswers(parameter));
 
-    // Snapshot serializzato dei dati al caricamento del blocco. Usato per
-    // derivare `blockDirty` confrontandolo con lo stato corrente. Viene
-    // aggiornato dopo ogni save riuscito così la seconda modifica nello stesso
-    // blocco riparte da una baseline coerente con quanto è in DB.
     const [initialAnswersStr, setInitialAnswersStr] = useState(() =>
         stableStringify(buildInitialAnswers(parameter))
     );
@@ -79,29 +60,22 @@ export default function ParameterBlock({
         [localAnswers, initialAnswersStr]
     );
 
-    // Solleva il dirty al parent così LanguageData può attivare il guard di
-    // navigazione (beforeunload + useBlocker) quando il blocco è dirty.
     useEffect(() => {
         onBlockDirtyChange && onBlockDirtyChange(blockDirty);
     }, [blockDirty, onBlockDirtyChange]);
 
-    // Fingerprint del blocco al caricamento — usato per optimistic concurrency.
-    // Aggiornato dopo ogni save riuscito così salvataggi consecutivi non triggerano falsi conflitti.
+    // rileva salvataggi concorrenti
     const [blockLastModified, setBlockLastModified] = useState(parameter.last_modified || null);
 
-    // Quando il backend rifiuta il save perché una question YES/UNSURE non ha
-    // ≥2 esempi, evidenziamo la card incriminata: il QuestionRow corrispondente
-    // riceve `highlightedQuestionId` come prop, scrolla in vista la propria
-    // card e le applica un bordo rosso che svanisce dopo ~3s.
     const [highlightedQuestionId, setHighlightedQuestionId] = useState(null);
     useEffect(() => {
         if (!highlightedQuestionId) return;
-        const t = setTimeout(() => setHighlightedQuestionId(null), 3000);
-        return () => clearTimeout(t);
+        const timer = setTimeout(() => setHighlightedQuestionId(null), 3000);
+        return () => clearTimeout(timer);
     }, [highlightedQuestionId]);
 
-    const updateAnswer = (qId, newData) => {
-        setLocalAnswers(prev => ({ ...prev, [qId]: { ...prev[qId], ...newData } }));
+    const updateAnswer = (questionId, newData) => {
+        setLocalAnswers(prev => ({ ...prev, [questionId]: { ...prev[questionId], ...newData } }));
     };
 
     const handleFinalSave = async (isUnsure) => {
@@ -112,30 +86,21 @@ export default function ParameterBlock({
                 answers: Object.values(localAnswers),
                 expected_last_modified: blockLastModified,
             };
-            // Includi la admin_note solo se admin: il backend la ignora per gli
-            // utenti normali, ma evitiamo di mandarla del tutto per sicurezza.
             if (isAdmin) {
                 payload.admin_note = adminNote;
             }
             const res = await api.post(`/api/languages/${langId}/parameters/${parameter.id}/save_block`, payload);
-            // Aggiorna il fingerprint locale (utile se l'utente continua senza onSaved che rimonta il componente)
             if (res.data && res.data.last_modified) {
                 setBlockLastModified(res.data.last_modified);
             }
-            // Allinea lo stato saved della admin-note: dopo un save_block andato a
-            // buon fine la nota è persistita in DB ed equivale a quella locale.
             if (isAdmin) {
                 setSavedAdminNote(adminNote);
             }
-            // Aggiorna lo snapshot di confronto dirty: il save è andato a buon
-            // fine, lo stato corrente è ora la nuova baseline. Senza questo,
-            // se il componente non viene rimontato (es. siamo all'ultimo
-            // parametro o l'utente ri-modifica subito), `blockDirty` resterebbe
-            // erroneamente true.
+            // ora il blocco non ha più modifiche
             setInitialAnswersStr(stableStringify(localAnswers));
             onSaved();
         } catch (err) {
-            // 409 = blocco modificato da un'altra sessione (es. admin in parallelo)
+            // 409 = modificato da un'altra sessione
             if (err.response?.status === 409) {
                 const detail = err.response?.data?.detail;
                 const msg = (detail && typeof detail === 'object' && detail.message)
@@ -150,9 +115,6 @@ export default function ParameterBlock({
                 return;
             }
             const detail = err.response?.data?.detail;
-            // Errore strutturato di esempi mancanti: oltre all'alert classico
-            // (coerente col resto del progetto) evidenziamo visivamente la
-            // question incriminata con scroll + bordo rosso temporaneo.
             if (err.response?.status === 400 && detail && typeof detail === 'object' && detail.code === 'missing_examples') {
                 alert(detail.message);
                 setHighlightedQuestionId(detail.question_id);
@@ -170,10 +132,6 @@ export default function ParameterBlock({
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 gap: '1rem', flexWrap: 'wrap',
                 borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem',
-                // Quando c'e' un altro utente, l'header (titolo + badge) si aggancia
-                // sotto la topbar scrollando, cosi' l'avviso resta sempre visibile
-                // mentre si scorre la lista di question. Sfondo opaco + ombra: le
-                // question non traspaiono dietro. Senza altri utenti: scroll normale.
                 ...(othersEditing > 0 ? {
                     position: 'sticky',
                     top: 'var(--topbar-height)',
@@ -212,7 +170,7 @@ export default function ParameterBlock({
                 }}>
                     <button
                         type="button"
-                        onClick={() => setAdminNoteOpen(o => !o)}
+                        onClick={() => setAdminNoteOpen(open => !open)}
                         style={{
                             width: '100%',
                             background: 'transparent',
@@ -275,15 +233,15 @@ export default function ParameterBlock({
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)', marginTop: 'var(--form-col-gap, 1.5rem)' }}>
-                {parameter.questions.map(q => (
+                {parameter.questions.map(question => (
                     <QuestionRow
-                        key={q.id}
-                        question={q}
-                        value={localAnswers[q.id]}
-                        onChange={(newData) => updateAnswer(q.id, newData)}
+                        key={question.id}
+                        question={question}
+                        value={localAnswers[question.id]}
+                        onChange={(newData) => updateAnswer(question.id, newData)}
                         isReadOnly={isReadOnly}
                         currentLangId={langId}
-                        isHighlighted={highlightedQuestionId === q.id}
+                        isHighlighted={highlightedQuestionId === question.id}
                         isAdmin={isAdmin}
                     />
                 ))}

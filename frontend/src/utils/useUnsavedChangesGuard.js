@@ -1,46 +1,22 @@
 import { useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
 
-/**
- * Doppia rete di sicurezza contro la perdita di modifiche non salvate:
- *
- *  1. `beforeunload` — intercetta chiusura tab, refresh, navigazione verso
- *     un dominio esterno o digitazione di un nuovo URL nella barra. Il browser
- *     mostra il proprio dialog nativo (testo non personalizzabile dai vendor
- *     moderni: ignora il valore di `returnValue`, mostra solo "Vuoi uscire?").
- *
- *  2. `useBlocker` (react-router v6.4+) — intercetta navigazioni *interne*
- *     all'app: click su `<Link>`, `navigate()` programmatico, tasto Back del
- *     browser. Mostra una `window.confirm()` personalizzabile.
- *
- * Insieme coprono tutti i modi in cui un linguista può perdere il lavoro
- * incollando un URL, cliccando un crumb, premendo back, o chiudendo per
- * errore la scheda.
- *
- * Esempio:
- *   const isDirty = changeNote.trim() || formChanged;
- *   useUnsavedChangesGuard(isDirty);
- */
+/** Avvisa prima di uscire con modifiche non salvate. */
 export default function useUnsavedChangesGuard(
     isDirty,
     message = 'You have unsaved changes. If you leave now the draft stays in your browser but is not sent to the server. Continue?'
 ) {
-    // 1. beforeunload (uscita "fuori app")
     useEffect(() => {
         if (!isDirty) return;
-        const handler = (e) => {
-            e.preventDefault();
-            // Per i browser pre-2022. I browser moderni ignorano il testo e
-            // mostrano sempre il loro messaggio standard.
-            e.returnValue = '';
+        const warnBeforeUnload = (event) => {
+            event.preventDefault();
+            // richiesto dai browser meno recenti
+            event.returnValue = '';
         };
-        window.addEventListener('beforeunload', handler);
-        return () => window.removeEventListener('beforeunload', handler);
+        window.addEventListener('beforeunload', warnBeforeUnload);
+        return () => window.removeEventListener('beforeunload', warnBeforeUnload);
     }, [isDirty]);
 
-    // 2. useBlocker (navigazione "dentro l'app")
-    // Blocca solo se cambia il pathname: gli aggiornamenti di query/hash
-    // sulla stessa pagina (es. ?param_id=X) non vanno bloccati.
     const blocker = useBlocker(({ currentLocation, nextLocation }) =>
         isDirty && currentLocation.pathname !== nextLocation.pathname
     );

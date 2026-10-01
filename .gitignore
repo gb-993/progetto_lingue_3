@@ -1,10 +1,8 @@
-# ---- Segreti / configurazione locale (NON committare) ----
 .env
 .env.*
 .env1
 !.env.example
 
-# ---- Python / FastAPI ----
 __pycache__/
 *.py[cod]
 *.pyo
@@ -14,19 +12,15 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
-# Virtualenv
 venv/
 .venv/
 env/
 .env_venv/
 
-# ---- Node ----
 node_modules/
 
-# ---- MkDocs ----
 site/
 
-# ---- IDE / OS ----
 .idea/
 .vscode/
 .claude/
@@ -34,42 +28,24 @@ CLAUDE.md
 .DS_Store
 Thumbs.db
 
-# ---- Logs ----
 *.log
 logs/
 
-# ---- Report/artefatti generati (NON committare) ----
 eslint-report.txt
 
-# ---- Tooling locale del manuale (NON committare) ----
-# tools/manual/ contiene gli script di generazione manuali (build.mjs,
-# screenshots.mjs) e screenshots.mjs ha credenziali admin in chiaro nel
-# blocco CONFIG. Nel repo finiscono SOLO i 4 PDF finali (frontend/public/docs/),
-# mai il tooling che li produce.
+# script dei manuali: contengono credenziali admin in chiaro (nel repo vanno solo i PDF)
 tools/
 
-# ---- Documentazione ----
-# I markdown sono ora committati per essere serviti da GitHub Pages (MkDocs).
-# Gli screenshot del manuale restano locali per non appesantirli: se in futuro
-# servono nel sito, togli anche la riga docs/img/.
+# screenshot del manuale: restano in locale
 docs/img/
 
 BUILD_NOTES.txt
 
-# ---- Note operative locali (non documentazione pubblica) ----
-# Modifiche suggerite all'informativa privacy / ToU, da girare al team
-# legale Unimore. Restano fuori dal repo perche' sono note di lavoro.
-# Wildcard sull'estensione cosi' copre .txt, .html, eventuali .pdf/.docx
-# generati a partire dallo stesso documento.
+# note di lavoro per l'ufficio legale
 modifiche_suggerite.*
 
-# ---- Storage locale documenti legali (solo dev) ----
-# In dev il backend scrive qui i PDF caricati dalla UI admin (Legal
-# Documents). Sono file di test, non devono finire in git: in prod
-# vivono in un volume Docker dedicato (legal_archive in compose).
+# PDF legali di prova caricati in dev
 backend/legal_documents_local/
 
-# ---- Note di implementazione locali ----
-# Il "perche'" dietro scelte di codice, estratto dai commenti. Note di lavoro
-# personali, non documentazione pubblica.
+# note di lavoro personali
 DEV-NOTES.md

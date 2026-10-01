@@ -7,8 +7,7 @@
   <link rel="icon" href="/favicon.svg">
   <meta name="robots" content="noindex">
   <style>
-    /* Tokens (light + dark via prefers-color-scheme) - tenuti inline cosi'
-       la pagina renderizza anche se l'app/CSS bundle non sono raggiungibili. */
+    /* CSS inline: la pagina deve funzionare anche senza il bundle */
     :root {
       --brand:#d14124; --brand-700:#a8341a;
       --text:#15181c; --text-muted:#565b61;
@@ -84,7 +83,7 @@
 
   <section class="hero">
     <div class="icon" aria-hidden="true">
-      <!-- search-x icon (lucide) -->
+      <!-- icona lucide: search-x -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="8"/>
         <path d="m21 21-4.3-4.3"/>

@@ -1,11 +1,3 @@
-/*
-  Tab "Full backups" della pagina History — due sotto-tab:
-    - Languages   → snapshot di tutte le lingue (con risposte/esempi)
-    - Parameters  → snapshot della *definizione* di ogni parametro (questions
-                    + motivations ammesse). Niente sovrapposizione coi backup
-                    delle lingue.
-  La logica è identica per i due flussi, gli endpoint cambiano.
-*/
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
@@ -21,7 +13,6 @@ export default function BackupsTab() {
 
     return (
         <div>
-            {/* Sotto-tab switcher (stile coerente coi tab principali di History) */}
             <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1.25rem' }}>
                 <SubTabButton active={subtab === SUBTABS.LANGUAGES} onClick={() => setSubtab(SUBTABS.LANGUAGES)}>
                     Languages
@@ -66,9 +57,6 @@ function SubTabButton({ active, onClick, children }) {
     );
 }
 
-// ------------------------------------------------------------------
-// Pannello Languages — comportamento originale di BackupsTab
-// ------------------------------------------------------------------
 function LanguagesBackupsPanel() {
     const [folders, setFolders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -181,9 +169,6 @@ function LanguagesBackupsPanel() {
     );
 }
 
-// ------------------------------------------------------------------
-// Pannello Parameters — backup della *definizione* dei parametri
-// ------------------------------------------------------------------
 function ParametersBackupsPanel() {
     const [folders, setFolders] = useState([]);
     const [loading, setLoading] = useState(true);

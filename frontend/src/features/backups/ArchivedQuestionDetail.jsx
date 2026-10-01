@@ -2,13 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
 
-// ==========================================
-// Pagina di dettaglio per una versione archiviata di una question.
-// Mostra: snapshot della question (testo/istruzioni/motivations al momento
-// dell'archiviazione) + tabella con tutte le risposte per lingua, esempi e
-// motivazioni selezionate. Bottone per scaricare lo stesso contenuto in xlsx.
-// ==========================================
-
 function downloadBlob(data, filename) {
     const url = window.URL.createObjectURL(new Blob([data]));
     const a = document.createElement('a');
@@ -85,7 +78,6 @@ export default function ArchivedQuestionDetail() {
                 </div>
             </header>
 
-            {/* SNAPSHOT DELLA QUESTION (vecchia versione) */}
             <section className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ marginTop: 0 }}>Question snapshot (old version)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
@@ -113,7 +105,6 @@ export default function ArchivedQuestionDetail() {
                 )}
             </section>
 
-            {/* TABELLA RISPOSTE */}
             <section className="card" style={{ padding: 0, overflowX: 'auto' }}>
                 <header style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--border)' }}>
                     <h3 style={{ margin: 0 }}>

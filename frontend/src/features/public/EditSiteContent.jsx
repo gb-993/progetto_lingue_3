@@ -10,7 +10,6 @@ export default function EditSiteContent() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Carichiamo tutti i contenuti e filtriamo per la chiave corretta
         api.get('/api/public/site-content')
             .then(res => {
                 if (res.data[key]) {

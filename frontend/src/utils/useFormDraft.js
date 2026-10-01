@@ -1,31 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-/**
- * Persistenza locale di una bozza di form. Carica i campi da localStorage al
- * mount, salva ad ogni modifica (debounce 400ms), e fornisce `clearDraft()` da
- * chiamare al submit riuscito così la bozza non riappare alla prossima visita.
- *
- * Esempio:
- *   const { clearDraft } = useFormDraft({
- *       storageKey: `draft_parameter_${id || 'new'}`,
- *       formData,
- *       setFormData,
- *       fields: ['name', 'short_description', 'long_description'],
- *       enabled: !loading,
- *   });
- *
- *   // dopo un POST/PUT andato a buon fine:
- *   clearDraft();
- *
- * Note:
- * - `fields`: solo i campi elencati vengono salvati e ripristinati. Tieni
- *   fuori id immutabili, FK derivate o roba sensibile.
- * - `enabled`: passa false durante il loading iniziale per non sovrascrivere
- *   i dati appena fetchati con una bozza vecchia. Fai true quando i dati
- *   server sono caricati.
- * - Se cambi `storageKey` (es. perché passi da /add a /edit/123), l'hook
- *   ricarica dalla nuova chiave.
- */
+/** Bozza del form salvata nel browser. */
 export default function useFormDraft({
     storageKey,
     formData,
@@ -36,29 +11,18 @@ export default function useFormDraft({
 }) {
     const loadedKeyRef = useRef(null);
     const saveTimerRef = useRef(null);
-    // Salta il primo save dopo (re)load: è solo l'eco del caricamento iniziale
-    // dei dati server, non una vera modifica utente. Senza questo skip,
-    // l'indicatore "Bozza salvata" lampeggia subito al mount confondendo l'utente.
-    const firstSaveSkippedRef = useRef(false);
-    const fieldsKey = fields.join('|'); // dipendenza stabile per useEffect
+    const loadEchoSkippedRef = useRef(false);
+    const fieldsKey = fields.join('|');
 
-    // Stato dell'ultimo save: legato alla chiave di storage. Serve a esporre
-    // un timestamp solo se è coerente con lo storageKey corrente — altrimenti,
-    // cambiando form (es. /add → /edit/123), il timestamp del form precedente
-    // mostrerebbe una falsa "bozza salvata" nel form nuovo.
     const [savedState, setSavedState] = useState({ key: null, ts: null });
 
-    // Reset del flag "primo save da saltare" al cambio key. Niente setState
-    // qui dentro: lo storageKey nuovo invalida automaticamente `savedState`
-    // tramite la derivazione di `lastSavedAt` qui sotto.
     useEffect(() => {
-        firstSaveSkippedRef.current = false;
+        loadEchoSkippedRef.current = false;
     }, [storageKey]);
 
-    // CARICAMENTO al mount o quando cambia storageKey/enabled
     useEffect(() => {
         if (!enabled || !storageKey) return;
-        if (loadedKeyRef.current === storageKey) return; // già caricato per questa key
+        if (loadedKeyRef.current === storageKey) return;
         loadedKeyRef.current = storageKey;
         try {
             const raw = window.localStorage.getItem(storageKey);
@@ -80,16 +44,12 @@ export default function useFormDraft({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [storageKey, enabled]);
 
-    // SALVATAGGIO debounced ad ogni cambio dei campi tracciati
     useEffect(() => {
         if (!enabled || !storageKey) return;
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => {
-            // Il primo "save" dopo un (re)load coincide con i dati appena
-            // caricati: lo saltiamo per non far apparire l'indicatore senza
-            // che l'utente abbia toccato nulla.
-            if (!firstSaveSkippedRef.current) {
-                firstSaveSkippedRef.current = true;
+            if (!loadEchoSkippedRef.current) {
+                loadEchoSkippedRef.current = true;
                 return;
             }
             try {
@@ -100,7 +60,7 @@ export default function useFormDraft({
                 window.localStorage.setItem(storageKey, JSON.stringify(draft));
                 setSavedState({ key: storageKey, ts: Date.now() });
             } catch {
-                // quota piena o storage disabilitato: ignora
+                // storage pieno o disabilitato: ignora
             }
         }, debounceMs);
         return () => {
@@ -117,7 +77,6 @@ export default function useFormDraft({
         } catch { /* ignora */ }
     };
 
-    // Esposto alla UI solo se coerente con lo storageKey corrente.
     const lastSavedAt = savedState.key === storageKey ? savedState.ts : null;
 
     return { clearDraft, lastSavedAt };

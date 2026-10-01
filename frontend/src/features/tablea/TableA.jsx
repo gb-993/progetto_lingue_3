@@ -7,7 +7,6 @@ import reactSelectStyles from '../../utils/reactSelectStyles';
 import usePersistentState from '../../utils/usePersistentState';
 import SegmentedToggle from '../../components/SegmentedToggle';
 
-// Stili condivisi per i multi-select react-select (chip coerenti col tema).
 const multiSelectStyles = {
     ...reactSelectStyles,
     multiValue: (base) => ({ ...base, background: 'var(--surface-2)', border: '1px solid var(--border)' }),
@@ -15,63 +14,60 @@ const multiSelectStyles = {
     multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' } }),
 };
 const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' };
-const sectionTitleStyle = { fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' };
-const toOpts = (arr) => (arr || []).map(v => ({ value: v, label: v }));
 
-// Risposte su parametri azzerati dall'implicazione: il backend le conta solo
-// in vista questions (vedi _orphan_answers_report), qui il default neutro.
+// export che il backend esegue uno alla volta (routers/tablea.py)
+const HEAVY_EXPORT_NAMES = { dendrograms: 'dendrograms', pca: 'PCA scatterplot' };
+const HEAVY_EXPORT_HINT = 'This may take several seconds, or up to a minute longer if another heavy export is already running.';
+
+// con responseType 'blob' anche l'errore arriva come Blob: ne legge il detail
+async function readBlobError(err, fallback) {
+    const blob = err?.response?.data;
+    if (blob instanceof Blob) {
+        try {
+            const json = JSON.parse(await blob.text());
+            if (json?.detail) return json.detail;
+        } catch { /* non-JSON */ }
+    }
+    return fallback;
+}
+const sectionTitleStyle = { fontSize: '0.8rem', fontWeight: 900, color: 'var(--text)', textTransform: 'uppercase', marginBottom: 'var(--form-field-mb, 1rem)', borderBottom: '1px solid var(--border)', display: 'block', paddingBottom: '0.25rem' };
+const toSelectOptions = (values) => (values || []).map(value => ({ value, label: value }));
+
+// risposte su parametri azzerati
 const EMPTY_ORPHANS = { count: 0, languages: [], parameters: [] };
 
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 export default function TableA() {
-    const [view, setView] = usePersistentState('tablea:view', 'params'); // 'params' o 'questions'
+    const [view, setView] = usePersistentState('tablea:view', 'params');
 
-    // Ricerca testuale client-side (free-text). Affina i risultati gia'
-    // restituiti dal backend filtrando matrixData.rows in memoria — stesso
-    // pattern delle liste Parameters/Questions/Languages.
     const [search, setSearch] = usePersistentState('tablea:search', '');
 
-    // Stato per le opzioni delle tendine
     const [options, setOptions] = useState({
         opt_top_families: [], opt_families: [], opt_groups: [],
         opt_schemas: [], opt_types: [], opt_levels: [], opt_templates: [],
         opt_all_languages: []
     });
 
-    // Filtri per gli ITEM (parametri/domande). I filtri lingua NON stanno più
-    // qui: la selezione delle lingue (colonne) è costruita come nella pagina
-    // Languages (famiglie multi a cascata → set di base → escludi/aggiungi
-    // singole lingue) e risolta lato client in una lista esplicita di id.
-    // Chiave nuova ('tablea:itemFilters') così eventuali f_lang_* persistiti
-    // dalla vecchia versione non vengono più spruzzati nei payload.
     const [filters, setFilters] = usePersistentState('tablea:itemFilters', {
         f_p_schema: '', f_p_type: '', f_p_level: '',
         f_q_template: '', f_q_stop: 'all'
     });
 
-    // Selezione lingue stile Languages:
-    //  - langFilters: famiglie (multi, a cascata) + historical → set di base
-    //  - excludedLangs: id tolti dal set di base
-    //  - addedLangs: id aggiunti singolarmente (anche fuori dalle famiglie)
-    // Insieme finale di colonne = (base − escluse) ∪ aggiunte, risolto lato client.
+    // lingue scelte = filtri − escluse + aggiunte
     const [langFilters, setLangFilters] = usePersistentState('tablea:langFilters', {
         top_family: [], family: [], grp: [], historical: 'all',
     });
     const [excludedLangs, setExcludedLangs] = usePersistentState('tablea:excludedLangs', []);
     const [addedLangs, setAddedLangs] = usePersistentState('tablea:addedLangs', []);
-    // Filtro testuale della lista "lingue in selezione" (solo UI, non persistito).
     const [langPickFilter, setLangPickFilter] = useState('');
 
-    // Stato per le righe selezionate manualmente (checkbox tabella)
     const [selectedRows, setSelectedRows] = useState([]);
 
-    // Dati della matrice
     const [matrixData, setMatrixData] = useState({ languages: [], rows: [], orphan_answers: EMPTY_ORPHANS });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Dropdown download + modale Mantel
     const [downloadOpen, setDownloadOpen] = useState(false);
     const downloadRef = useRef(null);
     const [mantelOpen, setMantelOpen] = useState(false);
@@ -80,61 +76,52 @@ export default function TableA() {
     const [clusterMapOpen, setClusterMapOpen] = useState(false);
     const [clusterMapOpts, setClusterMapOpts] = useState({ distance: 'hamming', threshold_coeff: 0.56 });
     const [clusterMapRunning, setClusterMapRunning] = useState(false);
+    const [heavyExportName, setHeavyExportName] = useState(null);
 
-    // ====== SELEZIONE LINGUE: catena dati (risolta lato client) ======
-    // Definita qui in alto perché fetchMatrix e i bottoni di export la usano.
     const allLangs = useMemo(() => options.opt_all_languages || [], [options.opt_all_languages]);
 
-    // Set di base = lingue che passano i filtri famiglia (multi) + historical.
-    const baseLangs = useMemo(() => allLangs.filter(l => {
-        if (langFilters.top_family.length && !langFilters.top_family.includes(l.top_family)) return false;
-        if (langFilters.family.length && !langFilters.family.includes(l.family)) return false;
-        if (langFilters.grp.length && !langFilters.grp.includes(l.grp)) return false;
-        if (langFilters.historical === 'yes' && !l.historical) return false;
-        if (langFilters.historical === 'no' && l.historical) return false;
+    const baseLangs = useMemo(() => allLangs.filter(lang => {
+        if (langFilters.top_family.length && !langFilters.top_family.includes(lang.top_family)) return false;
+        if (langFilters.family.length && !langFilters.family.includes(lang.family)) return false;
+        if (langFilters.grp.length && !langFilters.grp.includes(lang.grp)) return false;
+        if (langFilters.historical === 'yes' && !lang.historical) return false;
+        if (langFilters.historical === 'no' && lang.historical) return false;
         return true;
     }), [allLangs, langFilters]);
 
-    const baseIdSet = useMemo(() => new Set(baseLangs.map(l => l.id)), [baseLangs]);
+    const baseIdSet = useMemo(() => new Set(baseLangs.map(lang => lang.id)), [baseLangs]);
     const excludedSet = useMemo(() => new Set(excludedLangs), [excludedLangs]);
 
-    // Candidati mostrati con checkbox = base ∪ aggiunte (ordinati per nome).
     const candidateLangs = useMemo(() => {
-        const map = new Map();
-        baseLangs.forEach(l => map.set(l.id, l));
+        const langsById = new Map();
+        baseLangs.forEach(lang => langsById.set(lang.id, lang));
         addedLangs.forEach(id => {
-            if (!map.has(id)) {
-                const l = allLangs.find(x => x.id === id);
-                if (l) map.set(id, l);
+            if (!langsById.has(id)) {
+                const lang = allLangs.find(candidate => candidate.id === id);
+                if (lang) langsById.set(id, lang);
             }
         });
-        return [...map.values()].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+        return [...langsById.values()].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
     }, [baseLangs, addedLangs, allLangs]);
 
-    // Insieme finale di colonne = candidati non esclusi.
     const resolvedLangIds = useMemo(
-        () => candidateLangs.filter(l => !excludedSet.has(l.id)).map(l => l.id),
+        () => candidateLangs.filter(lang => !excludedSet.has(lang.id)).map(lang => lang.id),
         [candidateLangs, excludedSet]
     );
 
-    // C'è un intento esplicito di selezione lingue? (distingue "tutte" da "nessuna").
     const hasLangIntent =
         langFilters.top_family.length > 0 || langFilters.family.length > 0 ||
         langFilters.grp.length > 0 || langFilters.historical !== 'all' ||
         excludedLangs.length > 0 || addedLangs.length > 0;
 
-    // L'utente ha un intento ma risolve a 0 colonne: f_lang_specific=[] verrebbe
-    // letto dal backend come "tutte", quindi va bloccato.
+    // [] per il backend = tutte le lingue
     const langSelectionEmpty = hasLangIntent && resolvedLangIds.length === 0;
 
-    // f_lang_specific per il backend: lista esplicita di id, tranne quando la
-    // selezione coincide con "tutte" → [] (comportamento storico, payload lieve).
     const langPayloadIds = useMemo(
         () => (resolvedLangIds.length === allLangs.length ? [] : resolvedLangIds),
         [resolvedLangIds, allLangs]
     );
 
-    // Caricamento opzioni iniziali
     useEffect(() => {
         const fetchOptions = async () => {
             try {
@@ -147,13 +134,10 @@ export default function TableA() {
         fetchOptions();
     }, []);
 
-    // Caricamento matrice dati
     const fetchMatrix = async () => {
         setLoading(true);
         setError('');
         try {
-            // Intento di selezione lingue che risolve a 0 colonne: non chiamiamo il
-            // backend (f_lang_specific=[] significherebbe "tutte"). Mostriamo vuoto.
             if (langSelectionEmpty) {
                 setMatrixData({ languages: [], rows: [], orphan_answers: EMPTY_ORPHANS });
                 return;
@@ -174,148 +158,114 @@ export default function TableA() {
         }
     };
 
-    // Ricarica la matrice quando cambia la view (Params <-> Questions)
     useEffect(() => {
-        // Reset delle righe selezionate e della search testuale al cambio
-        // view: i campi cercabili (ID/name/extra) cambiano semantica e una
-        // search "FGM" attiva nella nuova view risulterebbe spesso vuota.
         setSelectedRows([]);
         setSearch('');
         fetchMatrix();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
 
-    // Gestione input filtri testuali/select
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
 
-    // Righe filtrate dalla search testuale: si applica DOPO i filtri server.
-    // Cerca su id / name / extra di row.item (parameter_id, name, condition
-    // per view='params'; question_id, text, parameter_name per 'questions').
     const filteredRows = useMemo(
-        () => matrixData.rows.filter(r => searchMatches(r.item, search)),
+        () => matrixData.rows.filter(row => searchMatches(row.item, search)),
         [matrixData.rows, search]
     );
 
-    // IDs che il backend deve usare per gli export.
-    // Logica (allineata al pattern di LanguageList — "scarico cio' che vedo"):
-    //   - se l'utente ha checkboxato manualmente: intersezione tra le sue
-    //     selezioni e le righe visibili dopo la search (la search "stringe"
-    //     l'intent)
-    //   - se NON ha checkboxato e la search e' attiva: tutte le righe visibili
-    //   - se NON ha checkboxato e la search e' vuota: array vuoto, che il
-    //     backend interpreta come "nessun filtro per id" -> esporta tutto
-    //     secondo i soli filtri server (comportamento storico preservato)
-    const effective_ids = useMemo(() => {
-        const visibleSet = new Set(filteredRows.map(r => r.item.id));
+    // [] = esporta tutto
+    const exportIds = useMemo(() => {
+        const visibleSet = new Set(filteredRows.map(row => row.item.id));
         if (selectedRows.length > 0) {
             return selectedRows.filter(id => visibleSet.has(id));
         }
         return search.trim() ? Array.from(visibleSet) : [];
     }, [selectedRows, filteredRows, search]);
 
-    // True quando l'utente ha un intent di filtro (selezione manuale o search)
-    // ma il risultato e' zero righe: in quel caso disabilitiamo i bottoni di
-    // download per evitare che il backend caschi nel ramo "selected_ids vuoto
-    // = nessun filtro" ed esporti tutta la matrice non desiderata.
     const hasFilterIntent = selectedRows.length > 0 || search.trim() !== '';
-    const wouldExportNothing = (hasFilterIntent && effective_ids.length === 0) || langSelectionEmpty;
+    const wouldExportNothing = (hasFilterIntent && exportIds.length === 0) || langSelectionEmpty;
 
-    // ====== SELEZIONE LINGUE: opzioni dei widget + handler (solo render) ======
-    // (la catena dati allLangs→langPayloadIds è dichiarata più in alto)
-
-    // Opzioni famiglia a cascata (come LanguageList): la subfamily si restringe
-    // alle top family scelte, il group a top family + subfamily.
     const familyOpts = useMemo(() => {
         if (!langFilters.top_family.length) return options.opt_families || [];
-        const set = new Set(allLangs
-            .filter(l => langFilters.top_family.includes(l.top_family))
-            .map(l => l.family).filter(Boolean));
-        return [...set].sort();
+        const families = new Set(allLangs
+            .filter(lang => langFilters.top_family.includes(lang.top_family))
+            .map(lang => lang.family).filter(Boolean));
+        return [...families].sort();
     }, [allLangs, options.opt_families, langFilters.top_family]);
 
     const groupOpts = useMemo(() => {
         if (!langFilters.top_family.length && !langFilters.family.length) return options.opt_groups || [];
-        const set = new Set(allLangs
-            .filter(l =>
-                (!langFilters.top_family.length || langFilters.top_family.includes(l.top_family)) &&
-                (!langFilters.family.length || langFilters.family.includes(l.family)))
-            .map(l => l.grp).filter(Boolean));
-        return [...set].sort();
+        const groups = new Set(allLangs
+            .filter(lang =>
+                (!langFilters.top_family.length || langFilters.top_family.includes(lang.top_family)) &&
+                (!langFilters.family.length || langFilters.family.includes(lang.family)))
+            .map(lang => lang.grp).filter(Boolean));
+        return [...groups].sort();
     }, [allLangs, options.opt_groups, langFilters.top_family, langFilters.family]);
 
-    // Opzioni per "aggiungi lingua singola": lingue fuori dal set di base.
     const addLangOptions = useMemo(
-        () => allLangs.filter(l => !baseIdSet.has(l.id))
-            .map(l => ({ value: l.id, label: `${l.name} (${l.id})` })),
+        () => allLangs.filter(lang => !baseIdSet.has(lang.id))
+            .map(lang => ({ value: lang.id, label: `${lang.name} (${lang.id})` })),
         [allLangs, baseIdSet]
     );
     const addLangValue = useMemo(
-        () => addLangOptions.filter(o => addedLangs.includes(o.value)),
+        () => addLangOptions.filter(option => addedLangs.includes(option.value)),
         [addLangOptions, addedLangs]
     );
 
-    // Cambio multi-select famiglie con pulizia transitiva (come LanguageList):
-    // cambiando top_family invalido subfamily/group non più pertinenti.
     const handleLangFamilyChange = (name, values) => {
         setLangFilters(prev => {
             const next = { ...prev, [name]: values };
             if (name === 'top_family') {
-                const allowedFam = new Set(allLangs
-                    .filter(l => values.length === 0 || values.includes(l.top_family))
-                    .map(l => l.family).filter(Boolean));
-                next.family = prev.family.filter(f => allowedFam.has(f));
+                const allowedFamilies = new Set(allLangs
+                    .filter(lang => values.length === 0 || values.includes(lang.top_family))
+                    .map(lang => lang.family).filter(Boolean));
+                next.family = prev.family.filter(family => allowedFamilies.has(family));
             }
             if (name === 'top_family' || name === 'family') {
-                const tops = next.top_family, fams = next.family;
-                const allowedGrp = new Set(allLangs
-                    .filter(l =>
-                        (tops.length === 0 || tops.includes(l.top_family)) &&
-                        (fams.length === 0 || fams.includes(l.family)))
-                    .map(l => l.grp).filter(Boolean));
-                next.grp = prev.grp.filter(g => allowedGrp.has(g));
+                const topFamilies = next.top_family, families = next.family;
+                const allowedGroups = new Set(allLangs
+                    .filter(lang =>
+                        (topFamilies.length === 0 || topFamilies.includes(lang.top_family)) &&
+                        (families.length === 0 || families.includes(lang.family)))
+                    .map(lang => lang.grp).filter(Boolean));
+                next.grp = prev.grp.filter(group => allowedGroups.has(group));
             }
             return next;
         });
     };
 
-    // Toggle inclusione di una singola lingua nella lista dei candidati.
     const toggleLangIncluded = (id) => {
         if (excludedSet.has(id)) {
-            setExcludedLangs(prev => prev.filter(x => x !== id));
+            setExcludedLangs(prev => prev.filter(langId => langId !== id));
             return;
         }
         if (baseIdSet.has(id)) {
             setExcludedLangs(prev => [...prev, id]);
         } else {
-            // candidato solo perché "aggiunto": toglierlo = rimuoverlo dalle aggiunte
-            setAddedLangs(prev => prev.filter(x => x !== id));
+            setAddedLangs(prev => prev.filter(langId => langId !== id));
         }
     };
 
     const visibleCandidateLangs = useMemo(() => {
-        const q = langPickFilter.trim().toLowerCase();
-        if (!q) return candidateLangs;
-        return candidateLangs.filter(l =>
-            (l.id || '').toLowerCase().includes(q) || (l.name || '').toLowerCase().includes(q));
+        const query = langPickFilter.trim().toLowerCase();
+        if (!query) return candidateLangs;
+        return candidateLangs.filter(lang =>
+            (lang.id || '').toLowerCase().includes(query) || (lang.name || '').toLowerCase().includes(query));
     }, [candidateLangs, langPickFilter]);
 
-    // Gestione selezione righe (tabella)
     const handleRowCheckbox = (id) => {
         setSelectedRows(prev =>
-            prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+            prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
         );
     };
 
-    // Master checkbox + Select All: agiscono sulle righe ATTUALMENTE visibili
-    // (post-search). Sennò "Select All" con search attiva selezionerebbe anche
-    // righe non visibili — confusionario.
     const handleMasterCheckbox = (e) => {
         const isChecked = e.target.checked;
         if (isChecked) {
-            setSelectedRows(filteredRows.map(r => r.item.id));
+            setSelectedRows(filteredRows.map(row => row.item.id));
         } else {
             setSelectedRows([]);
         }
@@ -332,16 +282,13 @@ export default function TableA() {
         setLangPickFilter('');
         setSelectedRows([]);
         setSearch('');
-        // fetchMatrix verrà chiamato manualmente se l'utente clicca "Apply"
     };
 
-    // ==========================================
-    // GESTIONE DOWNLOAD FILE (BLOB)
-    // ==========================================
     const handleDownload = async (endpoint, filename, mimeType) => {
         if (langSelectionEmpty) { alert('No language selected. Adjust the language selection first.'); return; }
+        if (HEAVY_EXPORT_NAMES[endpoint]) setHeavyExportName(HEAVY_EXPORT_NAMES[endpoint]);
         try {
-            const payload = { view, ...filters, f_lang_specific: langPayloadIds, selected_ids: effective_ids };
+            const payload = { view, ...filters, f_lang_specific: langPayloadIds, selected_ids: exportIds };
             const response = await api.post(`/api/tablea/export/${endpoint}`, payload, { responseType: 'blob' });
 
             const skippedHeader = response.headers['x-skipped-languages'];
@@ -353,7 +300,6 @@ export default function TableA() {
                 );
             }
 
-            // Crea un link temporaneo per forzare il download del file nel browser
             const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
             const link = document.createElement('a');
             link.href = url;
@@ -363,7 +309,9 @@ export default function TableA() {
             link.parentNode.removeChild(link);
         } catch (err) {
             console.error(`Errore export ${endpoint}`, err);
-            alert("Error while generating the file. Check the applied filters.");
+            alert(await readBlobError(err, "Error while generating the file. Check the applied filters."));
+        } finally {
+            setHeavyExportName(null);
         }
     };
 
@@ -379,7 +327,7 @@ export default function TableA() {
             const payload = {
                 view, ...filters,
                 f_lang_specific: langPayloadIds,
-                selected_ids: effective_ids,
+                selected_ids: exportIds,
                 include_gcd: mantelOpts.gcd,
                 include_hamming: mantelOpts.hamming,
                 include_jaccard: mantelOpts.jaccard,
@@ -395,27 +343,18 @@ export default function TableA() {
                 );
             }
 
-            const cd = res.headers['content-disposition'] || '';
-            const m = cd.match(/filename="?([^";]+)"?/);
-            const filename = m ? m[1] : `mantel_test_${view}.zip`;
+            const contentDisposition = res.headers['content-disposition'] || '';
+            const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+            const filename = filenameMatch ? filenameMatch[1] : `mantel_test_${view}.zip`;
             const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }));
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = filename;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
 
             setMantelOpen(false);
         } catch (err) {
-            let msg = "Error while running the Mantel test.";
-            const blob = err?.response?.data;
-            if (blob instanceof Blob) {
-                try {
-                    const text = await blob.text();
-                    const json = JSON.parse(text);
-                    if (json?.detail) msg = json.detail;
-                } catch { /* non-JSON */ }
-            }
-            alert(msg);
+            alert(await readBlobError(err, "Error while running the Mantel test."));
         } finally {
             setMantelRunning(false);
         }
@@ -437,7 +376,7 @@ export default function TableA() {
             const payload = {
                 view, ...filters,
                 f_lang_specific: langPayloadIds,
-                selected_ids: effective_ids,
+                selected_ids: exportIds,
                 distance: clusterMapOpts.distance,
                 threshold_coeff: coeff,
             };
@@ -453,29 +392,19 @@ export default function TableA() {
             }
 
             const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }));
-            const a = document.createElement('a');
-            a.href = url; a.download = `cluster_map_${view}.html`;
-            document.body.appendChild(a); a.click(); a.remove();
+            const link = document.createElement('a');
+            link.href = url; link.download = `cluster_map_${view}.html`;
+            document.body.appendChild(link); link.click(); link.remove();
             URL.revokeObjectURL(url);
 
             setClusterMapOpen(false);
         } catch (err) {
-            let msg = "Error while building the cluster map.";
-            const blob = err?.response?.data;
-            if (blob instanceof Blob) {
-                try {
-                    const text = await blob.text();
-                    const json = JSON.parse(text);
-                    if (json?.detail) msg = json.detail;
-                } catch { /* non-JSON */ }
-            }
-            alert(msg);
+            alert(await readBlobError(err, "Error while building the cluster map."));
         } finally {
             setClusterMapRunning(false);
         }
     };
 
-    // Chiusura dropdown al click fuori
     useEffect(() => {
         if (!downloadOpen) return;
         const onDocClick = (e) => {
@@ -502,13 +431,9 @@ export default function TableA() {
                 </div>
             </header>
 
-            {/* ================= PANNELLO FILTRI ================= */}
             <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 2rem)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', gap: 'var(--form-col-gap, 2rem)', marginBottom: 'var(--form-field-mb, 1rem)', flexWrap: 'wrap' }}>
 
-                    {/* Selezione Lingue (colonne) — modello pagina Languages:
-                        famiglie multi a cascata → set di base → escludi/aggiungi
-                        singole lingue. */}
                     <div style={{ flex: '1 1 340px' }}>
                         <span style={sectionTitleStyle}>Language Selection</span>
 
@@ -517,9 +442,9 @@ export default function TableA() {
                                 <label style={labelStyle}>Top Family</label>
                                 <Select
                                     isMulti isSearchable closeMenuOnSelect={false}
-                                    options={toOpts(options.opt_top_families)}
-                                    value={toOpts(langFilters.top_family)}
-                                    onChange={(sel) => handleLangFamilyChange('top_family', sel ? sel.map(o => o.value) : [])}
+                                    options={toSelectOptions(options.opt_top_families)}
+                                    value={toSelectOptions(langFilters.top_family)}
+                                    onChange={(selected) => handleLangFamilyChange('top_family', selected ? selected.map(option => option.value) : [])}
                                     placeholder="All"
                                     styles={multiSelectStyles}
                                 />
@@ -528,9 +453,9 @@ export default function TableA() {
                                 <label style={labelStyle}>Subfamily</label>
                                 <Select
                                     isMulti isSearchable closeMenuOnSelect={false}
-                                    options={toOpts(familyOpts)}
-                                    value={toOpts(langFilters.family)}
-                                    onChange={(sel) => handleLangFamilyChange('family', sel ? sel.map(o => o.value) : [])}
+                                    options={toSelectOptions(familyOpts)}
+                                    value={toSelectOptions(langFilters.family)}
+                                    onChange={(selected) => handleLangFamilyChange('family', selected ? selected.map(option => option.value) : [])}
                                     placeholder="All"
                                     styles={multiSelectStyles}
                                 />
@@ -539,9 +464,9 @@ export default function TableA() {
                                 <label style={labelStyle}>Group</label>
                                 <Select
                                     isMulti isSearchable closeMenuOnSelect={false}
-                                    options={toOpts(groupOpts)}
-                                    value={toOpts(langFilters.grp)}
-                                    onChange={(sel) => handleLangFamilyChange('grp', sel ? sel.map(o => o.value) : [])}
+                                    options={toSelectOptions(groupOpts)}
+                                    value={toSelectOptions(langFilters.grp)}
+                                    onChange={(selected) => handleLangFamilyChange('grp', selected ? selected.map(option => option.value) : [])}
                                     placeholder="All"
                                     styles={multiSelectStyles}
                                 />
@@ -561,21 +486,19 @@ export default function TableA() {
                             </div>
                         </div>
 
-                        {/* Aggiungi singole lingue fuori dalle famiglie selezionate */}
                         <div style={{ marginBottom: '0.75rem' }}>
                             <label style={labelStyle}>Add specific languages</label>
                             <Select
                                 isMulti isSearchable closeMenuOnSelect={false}
                                 options={addLangOptions}
                                 value={addLangValue}
-                                onChange={(sel) => setAddedLangs(sel ? sel.map(o => o.value) : [])}
+                                onChange={(selected) => setAddedLangs(selected ? selected.map(option => option.value) : [])}
                                 placeholder="Add languages outside the selected families…"
                                 noOptionsMessage={() => 'No language to add'}
                                 styles={multiSelectStyles}
                             />
                         </div>
 
-                        {/* Lista "lingue in selezione": checkbox per escludere/includere */}
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
                                 <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>
@@ -596,14 +519,14 @@ export default function TableA() {
                                     </div>
                                 ) : visibleCandidateLangs.length === 0 ? (
                                     <div className="small muted" style={{ padding: '0.5rem' }}>No language matches “{langPickFilter}”.</div>
-                                ) : visibleCandidateLangs.map(l => {
-                                    const included = !excludedSet.has(l.id);
+                                ) : visibleCandidateLangs.map(lang => {
+                                    const included = !excludedSet.has(lang.id);
                                     return (
-                                        <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.15rem 0', cursor: 'pointer', fontSize: '0.85rem', opacity: included ? 1 : 0.5 }}>
-                                            <input type="checkbox" checked={included} onChange={() => toggleLangIncluded(l.id)} />
-                                            <span style={{ fontWeight: 700, minWidth: '3rem' }}>{l.id}</span>
-                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</span>
-                                            {!baseIdSet.has(l.id) && (
+                                        <label key={lang.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.15rem 0', cursor: 'pointer', fontSize: '0.85rem', opacity: included ? 1 : 0.5 }}>
+                                            <input type="checkbox" checked={included} onChange={() => toggleLangIncluded(lang.id)} />
+                                            <span style={{ fontWeight: 700, minWidth: '3rem' }}>{lang.id}</span>
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lang.name}</span>
+                                            {!baseIdSet.has(lang.id) && (
                                                 <span className="status" style={{ fontSize: '0.65rem', padding: '0 0.35rem', marginLeft: 'auto', background: 'var(--surface-2)', color: 'var(--text-muted)' }}>added</span>
                                             )}
                                         </label>
@@ -613,15 +536,11 @@ export default function TableA() {
                         </div>
                     </div>
 
-                    {/* Filtri Specifici (Params/Questions) */}
                     <div style={{ flex: '1 1 300px' }}>
                         <span style={sectionTitleStyle}>
                             {view === 'params' ? 'Parameter Filters' : 'Question Filters'}
                         </span>
 
-                        {/* Sezione che cambia col toggle Param/Question: contorno
-                            tratteggiato per distinguerla dal resto (il titolo è
-                            quello della colonna, qui sopra). */}
                         <div style={{ border: '1px dashed var(--border)', borderRadius: '6px', padding: '0.6rem 0.7rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: view === 'params' ? 'repeat(3, 1fr)' : '1fr 1fr', gap: '0.75rem' }}>
                             {view === 'params' ? (
@@ -630,21 +549,21 @@ export default function TableA() {
                                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Schema</label>
                                         <select className="form-control" name="f_p_schema" value={filters.f_p_schema} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                             <option value="">All</option>
-                                            {options.opt_schemas.map(s => <option key={s} value={s}>{s}</option>)}
+                                            {options.opt_schemas.map(schema => <option key={schema} value={schema}>{schema}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Type</label>
                                         <select className="form-control" name="f_p_type" value={filters.f_p_type} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                             <option value="">All</option>
-                                            {options.opt_types.map(t => <option key={t} value={t}>{t}</option>)}
+                                            {options.opt_types.map(type => <option key={type} value={type}>{type}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Level</label>
                                         <select className="form-control" name="f_p_level" value={filters.f_p_level} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                             <option value="">All</option>
-                                            {options.opt_levels.map(l => <option key={l} value={l}>{l}</option>)}
+                                            {options.opt_levels.map(level => <option key={level} value={level}>{level}</option>)}
                                         </select>
                                     </div>
                                 </>
@@ -654,7 +573,7 @@ export default function TableA() {
                                         <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Template</label>
                                         <select className="form-control" name="f_q_template" value={filters.f_q_template} onChange={handleFilterChange} style={{ width: '100%', padding: '0.4rem', fontSize: '0.85rem' }}>
                                             <option value="">All</option>
-                                            {options.opt_templates.map(t => <option key={t} value={t}>{t}</option>)}
+                                            {options.opt_templates.map(template => <option key={template} value={template}>{template}</option>)}
                                         </select>
                                     </div>
                                     <div>
@@ -672,20 +591,18 @@ export default function TableA() {
                     </div>
                 </div>
 
-                {/* Barra Azioni */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 'var(--form-box-pad, 1.25rem)' }}>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={fetchMatrix} className="btn btn--primary">Apply Filters</button>
                         <button onClick={resetFilters} className="btn">Reset</button>
                     </div>
 
-                    {/* Download Dropdown click-toggle */}
                     <div ref={downloadRef} style={{ position: 'relative', display: 'inline-block' }}>
                         <button
                             type="button"
                             className="btn"
                             style={{ background: '#333', color: 'white', opacity: wouldExportNothing ? 0.55 : 1, cursor: wouldExportNothing ? 'not-allowed' : 'pointer' }}
-                            onClick={() => setDownloadOpen(o => !o)}
+                            onClick={() => setDownloadOpen(open => !open)}
                             disabled={wouldExportNothing}
                             title={wouldExportNothing
                                 ? "Nothing to export: your selection / search returns 0 rows. Clear the search or change selection."
@@ -703,9 +620,6 @@ export default function TableA() {
                                 <DropItem onClick={() => { setDownloadOpen(false); handleDownload('csv', `tableA_${view}_transposed.csv`, 'text/csv'); }}>
                                     Export .csv (Transposed)
                                 </DropItem>
-                                {/* Script computazionali: disponibili in ENTRAMBE le viste.
-                                    In Questions View il backend mappa yes→+, no→- e salta
-                                    unsure/missing/vuoto (come gli 0/? dei parametri). */}
                                 <div style={{ borderTop: '1px solid var(--border)' }} />
                                 <DropItem onClick={() => { setDownloadOpen(false); handleDownload('distances', `distances_txt_${view}.zip`, 'application/zip'); }}>
                                     Distances (.txt zip)
@@ -731,17 +645,17 @@ export default function TableA() {
                 </div>
             </div>
 
-            {/* ================= TABELLA RISULTATI ================= */}
+            {heavyExportName && (
+                <div className="alert alert-info" role="status" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
+                    Generating {heavyExportName}… {HEAVY_EXPORT_HINT}
+                </div>
+            )}
+
             {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
-            {/* Risposte compilate su parametri che l'implicazione azzera: in questa
-                vista continuano a pesare, in vista Parameters no. Non e' un errore,
-                ma spiega perche' le due viste possono dare distanze diverse. */}
             {view === 'questions' && matrixData.orphan_answers?.count > 0 && (
                 <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
-                    {/* Figlio UNICO: .alert e' display:flex (serve alle flash col pulsante
-                        di chiusura), quindi senza wrapper ogni nodo di testo diventerebbe
-                        una colonna flex a se'. */}
+                    {/* un solo figlio: .alert è flex */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <strong>
                             {matrixData.orphan_answers.count.toLocaleString('en-US')} answer
@@ -778,7 +692,7 @@ export default function TableA() {
                     gap: '0.75rem',
                     flexWrap: 'wrap',
                 }}>
-                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(filteredRows.map(r => r.item.id))}>Select All</button>
+                    <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows(filteredRows.map(row => row.item.id))}>Select All</button>
                     <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedRows([])}>Deselect All</button>
                     <input
                         type="search"
@@ -808,7 +722,7 @@ export default function TableA() {
                             <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--surface-2)' }}>
                             <tr>
                                 <th style={{ width: '45px', textAlign: 'center', position: 'sticky', left: 0, background: 'var(--surface-2)', zIndex: 11, borderRight: '1px solid var(--border)' }}>
-                                    <input type="checkbox" onChange={handleMasterCheckbox} checked={filteredRows.length > 0 && filteredRows.every(r => selectedRows.includes(r.item.id))} />
+                                    <input type="checkbox" onChange={handleMasterCheckbox} checked={filteredRows.length > 0 && filteredRows.every(row => selectedRows.includes(row.item.id))} />
                                 </th>
                                 <th style={{ position: 'sticky', left: '45px', background: 'var(--surface-2)', zIndex: 11, minWidth: '80px', borderRight: '1px solid var(--border)' }}>
                                     {view === 'params' ? 'ID' : 'Q.ID'}
@@ -851,10 +765,6 @@ export default function TableA() {
                                             style={{
                                                 textAlign: 'center',
                                                 fontWeight: cell.val ? 'bold' : 'normal',
-                                                // Sfondo rosso pallido se il parametro è "incompleto"
-                                                // per quella lingua (stessa regola della pagina
-                                                // LanguageData). Distingue visivamente da "valore -"
-                                                // (testo rosso) e da "valore +" (testo verde).
                                                 background: cell.is_incomplete ? 'rgba(220, 53, 69, 0.15)' : undefined,
                                             }}
                                             title={
@@ -865,7 +775,6 @@ export default function TableA() {
                                         >
                                             {cell.val ? (
                                                 <Link to={`/languages/${cell.lang_id}/data#${view === 'questions' ? 'q_' : ''}${row.item.id}`} style={{ textDecoration: 'none', color: cell.val === '-' ? '#dc3545' : cell.val === '+' ? '#28a745' : 'inherit' }}>
-                                                    {/* Dettaglio visivo: 0 con initial '+' → "0+" (solo a schermo; export e script restano 0) */}
                                                     {(cell.val === '0' && cell.init === '+') ? '0+' : cell.val}
                                                 </Link>
                                             ) : (
@@ -881,7 +790,6 @@ export default function TableA() {
                 </div>
             </div>
 
-            {/* ===== MODALE MANTEL TEST ===== */}
             {mantelOpen && (
                 <div
                     role="dialog"
@@ -901,13 +809,13 @@ export default function TableA() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '1rem 0' }}>
                             <CheckRow label="Geographic distance (GCD)"
                                 checked={mantelOpts.gcd}
-                                onChange={(v) => setMantelOpts(o => ({ ...o, gcd: v }))} />
+                                onChange={(checked) => setMantelOpts(prev => ({ ...prev, gcd: checked }))} />
                             <CheckRow label="Hamming"
                                 checked={mantelOpts.hamming}
-                                onChange={(v) => setMantelOpts(o => ({ ...o, hamming: v }))} />
+                                onChange={(checked) => setMantelOpts(prev => ({ ...prev, hamming: checked }))} />
                             <CheckRow label="Jaccard[+]"
                                 checked={mantelOpts.jaccard}
-                                onChange={(v) => setMantelOpts(o => ({ ...o, jaccard: v }))} />
+                                onChange={(checked) => setMantelOpts(prev => ({ ...prev, jaccard: checked }))} />
                         </div>
 
                         {mantelOpts.gcd && (
@@ -924,11 +832,13 @@ export default function TableA() {
                                 {mantelRunning ? 'Running…' : 'Perform Mantel test and download (.zip)'}
                             </button>
                         </div>
+                        {mantelRunning && (
+                            <div className="small muted" role="status" style={{ marginTop: '0.5rem', textAlign: 'right' }}>{HEAVY_EXPORT_HINT}</div>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* ===== MODALE CLUSTER MAP ===== */}
             {clusterMapOpen && (
                 <div
                     role="dialog"
@@ -950,13 +860,13 @@ export default function TableA() {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.92rem' }}>
                                 <input type="radio" name="cmap_dist" value="hamming"
                                     checked={clusterMapOpts.distance === 'hamming'}
-                                    onChange={() => setClusterMapOpts(o => ({ ...o, distance: 'hamming' }))} />
+                                    onChange={() => setClusterMapOpts(prev => ({ ...prev, distance: 'hamming' }))} />
                                 <span>Hamming (default)</span>
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', cursor: 'pointer', fontSize: '0.92rem' }}>
                                 <input type="radio" name="cmap_dist" value="jaccard"
                                     checked={clusterMapOpts.distance === 'jaccard'}
-                                    onChange={() => setClusterMapOpts(o => ({ ...o, distance: 'jaccard' }))} />
+                                    onChange={() => setClusterMapOpts(prev => ({ ...prev, distance: 'jaccard' }))} />
                                 <span>Jaccard[+]</span>
                             </label>
                         </div>
@@ -969,7 +879,7 @@ export default function TableA() {
                                 type="number"
                                 min="0.05" max="1" step="0.01"
                                 value={clusterMapOpts.threshold_coeff}
-                                onChange={(e) => setClusterMapOpts(o => ({ ...o, threshold_coeff: e.target.value }))}
+                                onChange={(e) => setClusterMapOpts(prev => ({ ...prev, threshold_coeff: e.target.value }))}
                                 className="form-control"
                                 style={{ width: '8rem', padding: '0.35rem 0.5rem' }}
                             />
@@ -990,6 +900,9 @@ export default function TableA() {
                                 {clusterMapRunning ? 'Building…' : 'Build cluster map and download (.html)'}
                             </button>
                         </div>
+                        {clusterMapRunning && (
+                            <div className="small muted" role="status" style={{ marginTop: '0.5rem', textAlign: 'right' }}>{HEAVY_EXPORT_HINT}</div>
+                        )}
                     </div>
                 </div>
             )}

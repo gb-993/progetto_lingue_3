@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-# il danno se la mail viene intercettata.
 RESET_TOKEN_TTL = timedelta(minutes=30)
 
 
@@ -41,7 +40,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 def _hash_token(token: str) -> str:
-    """Hash sha256 del token. Salviamo questo nel DB, mai il clear."""
+    """Nel DB va l'hash del token, mai il token in chiaro."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 

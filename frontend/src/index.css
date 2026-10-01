@@ -1,9 +1,5 @@
 
-/* =========================================================
-   1) Design tokens — tema chiaro (default)
-   Palette pensata per WCAG AA su tutti gli accoppiamenti
-   testo/sfondo principali.
-   ========================================================= */
+/* Tema chiaro (default) */
 :root{
   /* Brand */
   --brand:#d14124;
@@ -11,26 +7,26 @@
   --brand-50: rgba(209,65,36,.08);
 
   /* Testo */
-  --text:#15181c;            /* ~16:1 su --bg */
-  --text-muted:#565b61;      /* ~6.4:1 su --bg, AA per testo normale */
+  --text:#15181c;
+  --text-muted:#565b61;
 
   /* Superfici */
-  --bg:#f1f3f5;              /* off-white tendente al grigio caldo */
-  --surface:#ffffff;         /* card */
-  --surface-2:#e6eaee;       /* superfici secondarie / hover */
+  --bg:#f1f3f5;
+  --surface:#ffffff;
+  --surface-2:#e6eaee;
   --surface-alt:#eef1f4;
-  --top-bar-bg:#fbfcfd;      /* lievemente più chiara di --surface */
+  --top-bar-bg:#fbfcfd;
 
   /* Bordi e focus */
   --border:#d0d4d9;
   --focus:#2266ff;
 
-  /* Link inline (separato dal brand per non mischiarsi al testo) */
+  /* Link */
   --link:#a8341a;
   --link-hover:#7e2812;
 
   /* Stato */
-  --ok:#117a3c;              /* verde più scuro per AA su superfici chiare */
+  --ok:#117a3c;
   --bad:#b00020;
   --warn:#7a5500;
   --pill-ok-bg:#e3f5e8;
@@ -50,27 +46,22 @@
   --w-col-label: 9.5rem;
   --w-col-name:  22rem;
 
-  /* Altezza della top-bar: usata come offset per le filter card sticky.
-     Se cambi il padding di .top-bar, aggiorna qui per mantenere allineato. */
+  /* da aggiornare se cambia il padding di .top-bar */
   --topbar-height: 3.5rem;
 }
 
-/* =========================================================
-   2) Tema scuro — attivo con [data-theme="dark"] su <html>
-   Stessa identità visiva, ma colori ricalibrati per AA
-   su superfici scure (no nero puro, no rossi troppo cupi).
-   ========================================================= */
+/* Tema scuro */
 :root[data-theme="dark"] {
   /* Brand */
-  --brand:#e9573b;           /* rosso un filo più chiaro per superfici scure */
+  --brand:#e9573b;
   --brand-700:#c0411f;
   --brand-50: rgba(233,87,59,.16);
 
   /* Testo */
-  --text:#eceef2;            /* ~15:1 su --bg */
-  --text-muted:#a3aab5;      /* ~7.5:1 su --bg */
+  --text:#eceef2;
+  --text-muted:#a3aab5;
 
-  /* Superfici (mai nero puro: riducono affaticamento visivo) */
+  /* Superfici */
   --bg:#14171c;
   --surface:#1d2027;
   --surface-2:#262a32;
@@ -81,11 +72,11 @@
   --border:#3a3f4b;
   --focus:#6da3ff;
 
-  /* Link più chiari per restare leggibili sul dark */
+  /* Link */
   --link:#ffa07f;
   --link-hover:#ffc1ab;
 
-  /* Stato — colori scelti per contrasto AA su --bg/--surface */
+  /* Stato */
   --ok:#4ade80;
   --bad:#ff7a85;
   --warn:#fbbf24;
@@ -93,14 +84,13 @@
   --pill-bad-bg: rgba(255,122,133,.15);
   --pill-warn-bg: rgba(251,191,36,.16);
 
-  /* Ombre più marcate per leggere l'elevazione su dark */
+  /* Ombre */
   --shadow: 0 1px 2px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.45);
 
   color-scheme: dark;
 }
 
-/* Transizione morbida quando si cambia tema, ma rispettiamo
-   prefers-reduced-motion. */
+/* transizione al cambio tema */
 html, body, .sidebar, .top-bar, .card, .btn, .table, input, select, textarea, .news-box, .alert, .role-badge, .pill, .status {
   transition: background-color .2s ease, color .2s ease, border-color .2s ease;
 }
@@ -110,14 +100,13 @@ html, body, .sidebar, .top-bar, .card, .btn, .table, input, select, textarea, .n
   }
 }
 
-/* Link inline (paragrafi, breadcrumb...) su entrambi i temi.
-   Conservano il colore del brand ma con tono accessibile. */
+/* Link nel testo */
 a { color: var(--link); }
 a:hover { color: var(--link-hover); }
 :root[data-theme="dark"] a { color: var(--link); }
 :root[data-theme="dark"] a:hover { color: var(--link-hover); }
 
-/* Bottoni con etichetta sopra brand: testo sempre bianco. */
+/* Bottoni brand: testo bianco */
 .btn--primary,
 .btn--bad,
 .nav-list .btn.is-current,
@@ -128,7 +117,7 @@ a:hover { color: var(--link-hover); }
   color:#fff;
 }
 
-/* Stato "attivo" nella navbar (rosso brand) — regola unica per i due temi. */
+/* Voce attiva della navbar */
 .nav-list [aria-current="page"],
 .nav-list .btn.is-current[aria-disabled="true"] {
   background: var(--brand);
@@ -137,9 +126,7 @@ a:hover { color: var(--link-hover); }
   opacity: 1;
 }
 
-/* ============================
-   Dark — fix di contrasto puntuali
-   ============================ */
+/* Dark: correzioni di contrasto */
 :root[data-theme="dark"] .btn { color: var(--text); }
 :root[data-theme="dark"] .nav-list .btn {
   background: var(--surface-2);
@@ -148,20 +135,13 @@ a:hover { color: var(--link-hover); }
 }
 :root[data-theme="dark"] .muted,
 :root[data-theme="dark"] .site-title .site-subtitle,
-/* Breadcrumb in dark: scavalca la regola globale `:root[data-theme="dark"] a`
-   sopra (specificita' 0,1,2) cosi' i link del breadcrumb tornano a ereditare
-   il colore del parent .breadcrumb (--brand su entrambi i temi) e non
-   diventano peach (--link). Anche l'hover non cambia colore: solo la
-   decoration. */
+/* Breadcrumb in dark: eredita il colore del parent */
 :root[data-theme="dark"] .breadcrumb a,
 :root[data-theme="dark"] .breadcrumb a:hover { color: inherit; }
-/* Logo top-bar: stesso motivo del breadcrumb. Senza questo override il link
-   .brand erediterebbe --link (peach) invece del rosso brand in dark mode. */
+/* Logo in dark: resta rosso */
 :root[data-theme="dark"] .top-bar .brand,
 :root[data-theme="dark"] .top-bar .brand:hover { color: var(--brand); }
-/* Link "My Account" nella top bar: sempre rosso brand (non il peach di --link),
-   anche in hover. Serve scavalcare la regola globale dei link, soprattutto in
-   dark (`:root[data-theme="dark"] a:hover`). */
+/* My Account: sempre rosso brand */
 .top-bar-right .account-link,
 .top-bar-right .account-link:hover { color: var(--brand); }
 :root[data-theme="dark"] .top-bar-right .account-link,
@@ -200,13 +180,11 @@ a:hover { color: var(--link-hover); }
 }
 :root[data-theme="dark"] label { color: var(--text); }
 
-/* Toolbar buttons in dark restano bianchi sopra il brand. */
+/* Toolbar in dark: testo bianco */
 :root[data-theme="dark"] .toolbar .btn--search,
 :root[data-theme="dark"] .toolbar .btn--primary { color:#fff; }
 
-/* =========================================================
-   Toggle tema (in top-bar, accanto al Logout)
-   ========================================================= */
+/* Toggle tema */
 .theme-toggle {
   display: inline-flex;
   align-items: center;
@@ -241,7 +219,7 @@ a:hover { color: var(--link-hover); }
   flex: 0 0 auto;
 }
 
-/* 2) Reset minimale */
+/* Reset */
 *{box-sizing:border-box}
 html,body{height:100%}
 html{scroll-behavior:smooth}
@@ -255,19 +233,16 @@ a{color:inherit; text-decoration:none}
 a:hover{text-decoration:underline}
 :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
 
-/* App shell / layout principale */
+/* Layout principale */
 .app-wrapper{
   --sidebar-width: 280px;
   min-height: 100vh;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  /* Riga 1 = fascia top-bar (a tutta larghezza, contiene il logo);
-     Riga 2 = corpo (sidebar + contenuto). */
+  /* riga 1 = top-bar, riga 2 = sidebar + contenuto */
   grid-template-rows: var(--topbar-height) 1fr;
   background: var(--bg);
-  /* Slide veloce della sidebar: anima la larghezza della colonna 1 quando
-     passa da 280px a 64px (collasso) e viceversa. Stessa durata della pagina
-     Filters per coerenza. */
+  /* animazione apertura/chiusura sidebar */
   transition: grid-template-columns 0.13s ease;
 }
 @media (prefers-reduced-motion: reduce){
@@ -280,13 +255,9 @@ a:hover{text-decoration:underline}
   grid-column: 1;
   grid-row: 2;
   position: sticky;
-  /* Parte sotto la top-bar (riga 1) e resta agganciata appena sotto di lei. */
   top: var(--topbar-height);
   align-self: start;
-  /* height (non min-height) + overflow-y abilita lo scroll INTERNO della
-     sidebar quando le voci eccedono il viewport. Senza overflow-y la
-     sidebar cresceva oltre lo schermo e le ultime voci finivano sotto la
-     fold senza essere raggiungibili. */
+  /* scroll interno se le voci non ci stanno */
   height: calc(100vh - var(--topbar-height));
   overflow-y: auto;
   padding: var(--sp-5) var(--sp-5);
@@ -300,8 +271,7 @@ a:hover{text-decoration:underline}
 .sidebar-header{
   display: flex;
   align-items: center;
-  /* Solo il toggle: lo teniamo allineato a destra (come prima quando era
-     accanto al logo). A sidebar ristretta passa al centro. */
+  /* toggle a destra, al centro a sidebar chiusa */
   justify-content: flex-end;
   gap: var(--sp-2);
   margin-bottom: var(--sp-4);
@@ -338,7 +308,6 @@ a:hover{text-decoration:underline}
   width: 100%;
   display: block;
 }
-/* Tutti i tasti della sidebar: stessa larghezza, stessa altezza, allineati a sinistra */
 .sidebar-nav .nav-list .btn{
   display: flex;
   align-items: center;
@@ -356,9 +325,7 @@ a:hover{text-decoration:underline}
 .sidebar-nav .nav-list .btn .nav-icon{
   flex-shrink: 0;
 }
-/* Etichette su una sola riga: niente a-capo, così l'altezza delle voci resta
-   identica tra sidebar espansa e collassata (nessun salto verticale). Se un
-   testo eccede, viene troncato con "…" (il testo completo è nel title). */
+/* etichette su una riga, troncate con … */
 .sidebar-nav .nav-list .nav-label{
   min-width: 0;
   white-space: nowrap;
@@ -396,8 +363,7 @@ a:hover{text-decoration:underline}
   flex-direction: column;
 }
 .top-bar{
-  /* Occupa tutte e due le colonne della griglia: il logo (a sinistra) resta
-     cosi' sempre visibile, indipendentemente dallo stato della sidebar. */
+  /* tutta la larghezza: il logo resta sempre visibile */
   grid-column: 1 / -1;
   grid-row: 1;
   display: flex;
@@ -415,15 +381,10 @@ a:hover{text-decoration:underline}
 .top-bar-left{
   display: flex;
   align-items: center;
-  /* niente gap: l'inizio del breadcrumb e' determinato dalla larghezza del
-     logo (vedi .brand), cosi' parte esattamente dal bordo della sidebar. */
   gap: 0;
   min-width: 0;
 }
-/* Logo "The PCM Hub" nella top-bar. Occupa la stessa larghezza della colonna
-   sidebar (meno il padding sinistro della top-bar): cosi' il breadcrumb che lo
-   segue parte allineato col bordo destro della sidebar. min-width: max-content
-   evita che il testo si tagli quando la sidebar e' ristretta. Cliccabile -> dashboard. */
+/* Logo: largo quanto la sidebar, così il breadcrumb parte allineato */
 .top-bar .brand{
   flex-shrink: 0;
   width: calc(var(--sidebar-width) - var(--sp-6));
@@ -460,28 +421,20 @@ a:hover{text-decoration:underline}
   padding: var(--sp-3) var(--sp-6) var(--sp-6);
 }
 
-/* Pagine "da leggere/compilare" usano <div className="container" style maxWidth>.
-   Centrandole, lo spazio extra resta SIMMETRICO ai lati invece di accumularsi
-   tutto a destra. Sulle pagine full-width (container senza maxWidth, es. liste e
-   tabelle dense) margin:auto e' un no-op, quindi restano a tutta larghezza. */
+/* pagine strette centrate */
 .container{ margin-left:auto; margin-right:auto; }
 
-/* Hamburger e backdrop del menu mobile: esistono solo sotto i 960px. */
+/* Menu mobile (sotto i 960px) */
 .nav-burger,
 .sidebar-backdrop{ display: none; }
 
-/* Layout responsive */
+/* Responsive */
 @media (max-width: 960px){
   .app-wrapper{
     grid-template-columns: 1fr;
-    /* top-bar | contenuto (la sidebar qui e' un pannello fisso off-canvas,
-       fuori dal flusso). Il residuo di viewport va alla riga del contenuto. */
     grid-template-rows: auto 1fr;
   }
-  /* Sidebar off-canvas: pannello fisso che scorre da sinistra quando si
-     tocca l'hamburger (☰) nella top-bar. Chiusa non occupa alcuno spazio;
-     aperta mostra la stessa lista verticale del desktop (etichette
-     complete, niente troncamenti). */
+  /* sidebar mobile: pannello che scorre da sinistra */
   .sidebar{
     grid-column: auto;
     grid-row: auto;
@@ -525,9 +478,7 @@ a:hover{text-decoration:underline}
     color: var(--text);
     cursor: pointer;
   }
-  /* Stato "collassato" (persistito da desktop) neutralizzato: qui non c'e'
-     piu' una colonna da stringere, quindi niente icone-senza-etichetta e
-     niente toggle. */
+  /* su mobile niente sidebar ristretta */
   .sidebar-header{
     display: none;
   }
@@ -552,8 +503,6 @@ a:hover{text-decoration:underline}
     position: relative;
     top: auto;
   }
-  /* Il logo perde la larghezza agganciata alla colonna sidebar (che qui non
-     esiste piu'): breadcrumb subito dopo il logo, a capo se non ci sta. */
   .top-bar .brand{
     width: auto;
   }
@@ -694,8 +643,7 @@ a:hover{text-decoration:underline}
   }
 }
 
-/* 3) Header / Navbar / Breadcrumb */
-/* .site-header{ border-bottom:1px solid var(--border); } */
+/* Header / navbar / breadcrumb */
 .site-header .container{
   max-width: 80%;
   margin:0 auto;
@@ -711,17 +659,11 @@ a:hover{text-decoration:underline}
   margin-bottom: 1rem;
 }
 
-
-
-
-
-
 .nav {
   margin-top: .5rem;
   margin-bottom: 1.5rem;
 }
 
-/* barra di navigazione */
 .nav-list {
   list-style: none;
   display: flex;
@@ -733,7 +675,6 @@ a:hover{text-decoration:underline}
   justify-content: flex-start;
 }
 
-/* crea vuoto espandibile tra i tab "normali" e il gruppo sessione */
 .nav-list .nav-spacer {
   flex: 1 1 auto;
   min-width: 2rem;
@@ -743,20 +684,17 @@ a:hover{text-decoration:underline}
   border-left: 1px solid var(--border);
 }
 
-/* gruppo Logout + Theme  */
 .nav-list .nav-session {
   display: flex;
   align-items: center;
   gap: .75rem;
 }
 
-/* larghezza minima coerente dei due bottoni finali */
 .nav-list .nav-session .btn {
   min-width: 5rem;
   text-align: center;
 }
 
-/* stile generale bottoni nella nav */
 .nav-list > li { margin: 0; padding: 0; }
 .nav-list form { display: inline; margin: 0; }
 .nav-list .btn {
@@ -771,7 +709,6 @@ a:hover{text-decoration:underline}
   text-decoration: none;
   transform: translateY(-1px);
 }
-/* --- NUOVO BLOCCO UNIVERSALE: TASTO ATTIVO ROSSO SEMPRE --- */
 .nav-list .btn.is-current,
 .nav-list .btn[aria-current="page"] {
   background-color: var(--brand) !important;
@@ -788,13 +725,9 @@ a:hover{text-decoration:underline}
   color: #ffffff !important;
 }
 
-
-/* Sostituisci le righe 223-224 con questo blocco */
-
 .breadcrumb {
   margin-top: .5rem;
-  /* Light: nero (--text). Dark: rosso brand (override sotto). Tutti i figli
-     (link, separatori "/", current page) ereditano questo colore. */
+  /* breadcrumb: nero in light, rosso in dark */
   color: var(--text);
 }
 :root[data-theme="dark"] .breadcrumb {
@@ -823,28 +756,25 @@ a:hover{text-decoration:underline}
 
 .breadcrumb a {
   color: inherit;
-  text-decoration: none; /* Meglio togliere la sottolineatura di default */
+  text-decoration: none;
 }
 
 .breadcrumb a:hover {
   text-decoration: underline;
 }
 
-/* L'ultimo elemento (pagina corrente) */
 .breadcrumb li:last-child {
-  font-weight: 600; /* Opzionale: lo rende un po' più evidente */
+  font-weight: 600;
   pointer-events: none;
 }
 
-/* 4) Layout & utility */
-
+/* Layout e utility */
 
 body.page-graph .card {
   max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
 }
-
 
 .main-title{ font-size:var(--fs-5); margin:0 0 var(--sp-4); }
 .muted{ color:var(--text-muted) }
@@ -866,8 +796,7 @@ body.page-graph .card {
   .grid-2, .grid-3{ grid-template-columns: 1fr; }
 }
 
-/* Layout form + aside 300px (Add/Edit Parameter): sotto i 900px l'aside
-   scende sotto il form invece di schiacciarlo. */
+/* form + aside: sotto i 900px l'aside va sotto */
 .form-layout{
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
@@ -877,13 +806,7 @@ body.page-graph .card {
   .form-layout{ grid-template-columns: 1fr; }
 }
 
-/* =========================================================
-   Filter card collassabile (Languages / Parameters).
-   Sopra i 960px la barra-toggle non esiste e la card resta
-   identica al desktop. Sotto, la card parte chiusa: una riga
-   "Filters (n)" sticky che si espande al tocco, cosi' i filtri
-   non mangiano un terzo dello schermo.
-   ========================================================= */
+/* Filter card richiudibile (solo sotto i 960px) */
 .filter-card-toggle{ display: none; }
 @media (max-width: 960px){
   .filter-card-toggle{
@@ -927,20 +850,18 @@ aside.card.sidebar li{ display:flex; align-items:center; gap:.5rem; padding:.25r
 aside.card.sidebar a{ color:var(--text); text-decoration:none }
 aside.card.sidebar a:hover{ text-decoration:underline }
 
-/* 5) Card */
+/* Card */
 .card{
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
   padding:var(--sp-5); box-shadow:var(--shadow);
 }
 .card + .card{ margin-top:var(--sp-4) }
-/* Container che dispongono .card affiancate in orizzontale: la spaziatura
-   è data dal `gap` del grid, quindi annulliamo il margin-top fra siblings
-   per evitare che la 2ª (e successive) card scendano disallineate. */
+/* card affiancate: lo spazio lo dà il gap */
 :is(.page-grid, .taxonomy-columns, .examples-grid) > .card + .card{ margin-top:0 }
 .card h2{ font-size:var(--fs-4); margin:.25rem 0 var(--sp-3) }
 .card h3{ font-size:var(--fs-3); margin:.25rem 0 var(--sp-3) }
 
-/* 6) Buttons */
+/* Bottoni */
 .btn{
   --btn-bg:var(--surface-2); --btn-fg:var(--text); --btn-bd:var(--border);
   appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
@@ -950,7 +871,6 @@ aside.card.sidebar a:hover{ text-decoration:underline }
   line-height:1.1; text-decoration:none;
 }
 
-/* Uniforma <button> e <a class="btn"> */
 button.btn {
   font-family: inherit;
   font-size: inherit;
@@ -964,14 +884,9 @@ button.btn {
   appearance: none;
 }
 
-
 .btn:hover{ transform:translateY(-1px) }
 .btn:active{ transform:translateY(0) }
-/* Stato disabilitato leggibile: palette grigia muta uniforme + cursore
-   not-allowed, invece di sbiadire col solo opacity (che, sommato al filtro
-   globale `saturate(.2)` su [disabled], rendeva il testo illeggibile —
-   soprattutto sui bottoni con colore di testo inline). `filter:none` annulla
-   quel filtro globale per i soli bottoni. */
+/* disabilitato: grigio leggibile */
 .btn[disabled], .btn[aria-disabled="true"]{
   pointer-events:none;
   cursor:not-allowed;
@@ -989,8 +904,7 @@ button.btn {
 }
 .btn.btn-link{ background:transparent; border-color:transparent; padding:0 }
 
-/* Pallino giallo lampeggiante per l'avviso "un altro utente sta modificando".
-   Effimero e anonimo: segnala solo la presenza, senza nomi. */
+/* pallino giallo: un altro utente sta modificando */
 .presence-dot{
   width:.7rem; height:.7rem; border-radius:50%;
   background:#f5c518; flex:0 0 auto;
@@ -1002,7 +916,7 @@ button.btn {
 }
 @media (prefers-reduced-motion: reduce){ .presence-dot{ animation:none } }
 
-/* 7) Dashboard tiles */
+/* Dashboard tiles */
 .dashboard-hero{ margin:0 0 1rem; text-align:center }
 .dashboard-hero h1{ font-size:var(--fs-5); margin:0 0 .25rem }
 .dashboard-hero .muted{ font-size:1rem }
@@ -1020,7 +934,7 @@ button.btn {
 
 .mt-2{ margin-top:var(--sp-6) }
 
-/* 8) Form */
+/* Form */
 form{margin:0}
 .form-row{display:flex; flex-direction:column; gap:.35rem; margin-bottom:var(--sp-4)}
 label{font-weight:600}
@@ -1037,7 +951,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   color:var(--bad); padding:.5rem .75rem; border-radius:10px;
 }
 
-/* 9) Tabelle */
+/* Tabelle */
 .table{
   width:100%;
   border:1px solid var(--border);
@@ -1045,21 +959,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   background:var(--surface);
 }
 
-/* Solo per le tabelle normali (non sticky): bordo unico continuo */
 .table:not(.table--freeze){
   border-collapse: collapse;
   border-spacing: 0;
 }
-
 
 .table thead th{ text-align:left; font-weight:700; padding:.7rem .8rem; border-bottom:1px solid var(--border); background:var(--surface-2) }
 .table tbody td{ padding:.65rem .8rem; border-bottom:1px solid var(--border); vertical-align:top }
 .table tbody tr:nth-child(odd){ background:color-mix(in oklab, var(--surface) 80%, var(--surface-2)) }
 .table tbody tr:last-child td{ border-bottom:0 }
 
-/* ===== Table A: wrapper scrollabile e intestazioni fisse ===== */
+/* Table A: scroll e intestazioni fisse */
 
-/* Wrapper centrato che fa scroll orizzontale interno */
 .table-container { padding: 0; }
 .table-scroll{
   overflow: auto;
@@ -1068,17 +979,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   border-radius: var(--radius);
 }
 
-
-/* Congela l'header (thead)  */
+/* header fisso */
 .table.table--freeze thead th{
   position: sticky;
   top: 0;
-  z-index: 5; /* sopra le celle */
+  z-index: 5;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
-/* Congela la prima colonna (intestazioni riga) */
+/* prima colonna fissa */
 .table.table--freeze th[scope="row"]{
   position: sticky;
   left: 0;
@@ -1087,7 +997,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   box-shadow: 1px 0 0 var(--border);
 }
 
-/* Prima colonna sticky (Label) */
 .table.table--freeze .col-sticky-left{
   position: sticky;
   left: 0;
@@ -1098,7 +1007,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   width: var(--w-col-label);
 }
 
-/* Seconda colonna sticky */
+/* seconda colonna fissa */
 .table.table--freeze .col-sticky-left-2{
   position: sticky;
   left: var(--w-col-label);
@@ -1108,7 +1017,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   min-width: var(--w-col-name);
   width: var(--w-col-name);
 }
-
 
 .table.table--freeze thead .col-sticky-left,
 .table.table--freeze thead .col-sticky-left-2{
@@ -1121,13 +1029,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   width: var(--w-col-name);
 }
 
-
-/* Allinea la prima colonna sticky nei th dell'header */
 .table.table--freeze thead .col-sticky-left{
   left: 0;
   z-index: 6;
 }
-
 
 .table-scroll .table{
   width: max(100%, 900px);
@@ -1136,21 +1041,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   border-radius: 0;
 }
 
-/* Migliora la leggibilità quando c'è molto scroll */
 .table-scroll{ background: linear-gradient(to right, transparent 30%, rgba(0,0,0,0.03) 100%) }
 
-/* Wrapper leggero per lo scroll orizzontale delle tabelle larghe: quando la
-   tabella non ci sta, scrolla lei invece di allargare (o tagliare) la pagina.
-   Molte pagine (backup, debug, old questions) usavano gia' questa classe
-   bootstrap-style che pero' non era mai stata definita. */
+/* tabelle larghe: scroll orizzontale invece di allargare la pagina */
 .table-responsive{
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Tabelle dentro Instructions: arrivano dall'HTML salvato dall'admin, quindi
-   non possono essere avvolte in un wrapper. Su schermi stretti la tabella
-   scrolla da sola invece di allargare la pagina. */
+/* tabelle delle Instructions: scroll su schermi stretti */
 @media (max-width: 960px){
   .instructions-view table{
     display: block;
@@ -1158,9 +1057,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   }
 }
 
-
-
-/* 10) Alert */
+/* Alert */
 .alert{ padding:.6rem .8rem; border-radius:10px; background:var(--surface-2); border:1px solid var(--border) }
 .alert-error{
   background:var(--pill-bad-bg);
@@ -1168,7 +1065,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   color:var(--bad);
 }
 
-/* 11) Stati/indicatori */
+/* Stati */
 .status{
   display:inline-flex; align-items:center; gap:.4rem;
   padding:.15rem .5rem; border-radius:999px; font-weight:600; font-size:.875rem;
@@ -1179,7 +1076,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
 .status.bad{ color:var(--bad); background:var(--pill-bad-bg); border-color:color-mix(in oklab, var(--bad) 25%, var(--border)) }
 .status.warn{ color:var(--warn); background:var(--pill-warn-bg); border-color:color-mix(in oklab, var(--warn) 25%, var(--border)) }
 
-/* 12) Paginazione */
+/* Paginazione */
 .pagination{
   display:flex; gap:.25rem; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-top:var(--sp-4)
 }
@@ -1191,7 +1088,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
 .pagination .current{ background:var(--brand); color:#fff; border-color:color-mix(in oklab, var(--brand) 75%, black) }
 .pagination a:hover{ text-decoration:none; transform:translateY(-1px) }
 
-/* 13) Azioni riga */
+/* Azioni riga */
 .row-actions{
   display:flex;
   gap:.4rem;
@@ -1229,7 +1126,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   margin-bottom: 1.75rem;
   flex-wrap: wrap;
 }
-/* === Toolbar buttons – dark mode fix === */
+/* Toolbar in dark */
 :root[data-theme="dark"] .toolbar .btn--search,
 :root[data-theme="dark"] .toolbar .btn--primary {
   color: #fff !important;
@@ -1250,12 +1147,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   justify-content: center;
 }
 
-/* opzionale: input un filo più alto per coerenza visiva */
 .toolbar input[type="search"]{
   padding: 0.65rem 0.9rem;
 }
 
-/* Mobile: già colonna;*/
 @media (max-width: 600px){
   .toolbar{ flex-direction: column; align-items: stretch; gap: 0.75rem; }
   .toolbar__form{ width: 100%; max-width: none; }
@@ -1274,12 +1169,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   font-size: 1.4rem;
   box-shadow: 0 2px 8px rgba(0,0,0,.3);
   transition: opacity .2s ease, transform .1s ease;
-  z-index: 2147483647; /* sopra tutto */
+  z-index: 2147483647;
 }
 .back-to-top:hover { opacity: .85; }
 .back-to-top.is-hidden { display: none; }
 
-/* === Flash messages === */
+/* Messaggi flash */
 .flash-messages {
   margin: 1rem 0;
 }
@@ -1296,7 +1191,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   line-height: 1.4;
 }
 
-/* Tipi standard */
 .alert-info    { background: #e7f3ff; border-color: #b3d6ff; color: #084298; }
 .alert-success { background: #e6f7e9; border-color: #b9e6c0; color: #0f5132; }
 .alert-warning { background: #fff6d9; border-color: #ffe39c; color: #664d03; }
@@ -1311,13 +1205,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   cursor: pointer;
 }
 
-/* Dark theme override */
+/* Dark */
 :root[data-theme='dark'] .alert-info    { background:#12283b; color:#9ec5fe; }
 :root[data-theme='dark'] .alert-success { background:#10291a; color:#b1dfbb; }
 :root[data-theme='dark'] .alert-warning { background:#392f0a; color:#ffda6a; }
 :root[data-theme='dark'] .alert-error   { background:#3b1818; color:#f5b3b3; }
 
-/* ===== Dashboard layout ===== */
+/* Dashboard */
 .dashboard-flex {
   display: flex;
   flex-wrap: wrap;
@@ -1326,7 +1220,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   gap: 1.5rem;
 }
 
-/* colonna sinistra = griglia pulsanti admin/user */
 .dashboard-links-grid {
   flex: 0 1 480px;
   display: grid;
@@ -1335,7 +1228,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   align-content: flex-start;
 }
 
-/* singolo riquadro cliccabile */
 .dash-tile {
   display: flex;
   align-items: center;
@@ -1363,7 +1255,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   transform: translateY(-1px);
 }
 
-/* label interna  */
 .dash-tile-label {
   display: block;
   color: #fff;
@@ -1371,7 +1262,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   font-size: 1rem;
   letter-spacing: .02em;
 }
-/* ===== Latest changes (dashboard right column) ===== */
+/* Latest changes */
 
 .news-box {
   flex: 1 1 260px;
@@ -1387,8 +1278,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   max-width: 100%;
 }
 
-
-
 .news-box h3 {
   font-size: 1rem;
   margin-top: 0;
@@ -1397,7 +1286,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   flex: 0 0 auto;
 }
 
-/* la lista delle modifiche */
 .news-list {
   list-style: none;
   margin: 0;
@@ -1423,26 +1311,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   color: var(--text-muted);
 }
 
-/* Stato COMPATTO:
-   - limitiamo l'altezza visibile SOLO della lista
-   - niente scrollbar
-   - il bottone rimane comunque sotto, visibile
-*/
+/* compatto: altezza limitata, niente scrollbar */
 .news-box.collapsed .news-list {
   max-height: 180px;
   overflow-y: hidden;
 }
 
-/* Stato ESPANSO:
-   - la lista si può espandere
-   - scrollbar interna SOLO nella lista
-*/
+/* espanso: scroll solo nella lista */
 .news-box.expanded .news-list {
   max-height: 50vh;
   overflow-y: auto;
 }
 
-/* riga del bottone Show more / Show less */
 .news-toggle-row {
   flex: 0 0 auto;
   padding-top: .75rem;
@@ -1476,7 +1356,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   outline-offset: 2px;
 }
 
-/* ===== Dashboard responsive ===== */
+/* Dashboard responsive */
 
 @media (max-width: 768px) {
   .dashboard-flex {
@@ -1494,17 +1374,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
     max-width: 100%;
   }
 
-  /* Su mobile, quando è espanso è meglio NON avere scrollbar interna nella lista,
-     ma lasciare scrollare tutta la pagina normalmente.
-     Quindi si toglie il max-height/overflow nella versione expanded mobile.
-  */
+  /* su mobile scrolla la pagina, non la lista */
   .news-box.expanded .news-list {
     max-height: none;
     overflow-y: visible;
   }
 }
 
-/* Checkbox list (lingue) */
+/* Checkbox lingue */
 .checkbox-list .checkbox-item input[type="checkbox"] {
   width: 1.1rem;
   height: 1.1rem;
@@ -1513,20 +1390,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{ outline:2px sol
   line-height: 1.2;
 }
 
-/* Stato disabilitato del pulsante Save (visivo + accessibile) */
 .btn--disabled {
   opacity: .5;
   pointer-events: none;
   cursor: not-allowed;
 }
 
-/* Solo nella pagina Glossary edit */
+/* Glossary edit */
 .glossary-edit textarea#id_description {
   font-size: 1rem;
   line-height: 1.6;
 }
 
-/* parameter visualize question */
 .pill {
   display: inline-block;
   padding: .15rem .4rem;
@@ -1546,7 +1421,7 @@ details > summary {
 }
 details > summary::-webkit-details-marker { display:none; }
 
-/* === Review flag UI === */
+/* Review flag */
 .param-title {
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
 }
@@ -1572,12 +1447,12 @@ details > summary::-webkit-details-marker { display:none; }
   border-color: var(--surface);
 }
 
-/* Tooltip "More info" (usa <details>) */
+/* Tooltip More info */
 details.help-info { margin: .35rem 0 .5rem; }
 details.help-info > summary { cursor: pointer; gap: .35rem; }
 details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--border); }
 
-/* === QUERIES NAVIGATION (vertical menu version) === */
+/* Menu delle Queries */
 .queries-page .queries-nav {
   width: 100%;
   margin-bottom: 1.5rem;
@@ -1629,12 +1504,11 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   margin-top: 0.6rem;
 }
 
-
 .queries-page .card-header {
   margin-bottom: 1rem;
 }
 
-/* === Table A filters layout === */
+/* Table A: filtri */
 .filters-form {
   display: flex;
   flex-direction: column;
@@ -1648,25 +1522,25 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   width: 100%;
 }
 
-/* === Table A: override larghezze colonne === */
+/* Table A: larghezza colonne */
 .table.table--freeze.tableA .col-sticky-left {
   width: 5rem;
   min-width: 5rem;
 }
 .table.table--freeze.tableA col.w-name {
-  width: 22rem; /* rispetto a default 22rem */
+  width: 22rem;
 }
 .table.table--freeze.tableA col.w-implication {
-  width: 22rem; /* nuova larghezza per Implicational condition */
+  width: 22rem;
 }
 
 .table.table--freeze.tableA thead th:nth-child(2),
 .table.table--freeze.tableA tbody td:nth-child(2) {
-  min-width: 10rem; /* Name */
+  min-width: 10rem;
 }
 .table.table--freeze.tableA thead th:nth-child(3),
 .table.table--freeze.tableA tbody td:nth-child(3) {
-  min-width: 20rem; /* Implicational condition(s) */
+  min-width: 20rem;
 }
 
 .table details > summary {
@@ -1675,8 +1549,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-weight: 500;
 }
 
-
-/* AREA RISPOSTE: domanda + more info: testo a capo, trigger fisso a destra */
+/* Risposte: domanda + more info */
 .q-head {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1689,7 +1562,6 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   word-wrap: break-word;
 }
 
-/* details inline */
 .help-info--inline {
   display: contents;
 }
@@ -1705,23 +1577,20 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   outline-offset: 2px;
 }
 
-/* pannello: va sotto a tutta larghezza (riga nuova) */
 .help-info__panel {
   grid-column: 1 / -1;
   margin-top: .35rem;
 }
 
-/* --- GRIGLIA ESEMPI A 2 COLONNE --- */
+/* Griglia esempi a 2 colonne */
 .examples-list {
   display: grid;
-  /* Forza esattamente 2 colonne di uguale larghezza */
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
   margin-bottom: 1.5rem;
   align-items: stretch;
 }
 
-/* Rimuove i margini che interferiscono con la griglia */
 .examples-list .example-row {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
@@ -1730,13 +1599,12 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   flex-direction: column;
 }
 
-/* Ottimizza la disposizione interna dei campi nella card esempio */
 .examples-list .example-row .grid {
-  grid-template-columns: 1fr; /* Incolonna i campi (es. Text, Gloss) per leggibilità */
+  grid-template-columns: 1fr;
   gap: 0.6rem;
 }
 
-/* Responsive: se lo schermo è molto stretto (mobile), torna a 1 colonna */
+/* mobile: una colonna */
 @media (max-width: 768px) {
   .examples-list {
     grid-template-columns: 1fr;
@@ -1758,8 +1626,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 .b-focus { background:#fff6da; border-color:#eed68a; color:#1f2937; }
 .b-up { background:#e5efff; color:#1f2937; } .b-down { background:#fff0e5; color:#1f2937; }
 
-/* Graph cards in dark mode: usiamo le stesse hue ma con luminosità invertita.
-   Il testo passa a chiaro così resta leggibile. */
+/* grafici in dark: testo chiaro */
 :root[data-theme="dark"] .card-plus,
 :root[data-theme="dark"] .b-plus { background: rgba(74,222,128,.18); color: var(--text); }
 :root[data-theme="dark"] .card-minus,
@@ -1773,41 +1640,35 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
 :root[data-theme="dark"] .b-up { background: rgba(109,163,255,.18); color: var(--text); }
 :root[data-theme="dark"] .b-down { background: rgba(233,87,59,.18); color: var(--text); }
 
-/* Allineamento del nuovo logo */
+/* Logo */
 .pcm-logo-img {
-  height: 1.4em;           /* Si adatta automaticamente all'altezza del testo */
-  vertical-align: middle;  /* Centra l'immagine rispetto al testo "PCM" */
-  margin-left: -8px;       /* Avvicina l'immagine al testo per l'effetto "abbraccio" */
-  margin-top: -4px;        /* Piccolo aggiustamento verticale */
+  height: 1.4em;
+  vertical-align: middle;
+  margin-left: -8px;
+  margin-top: -4px;
   display: inline-block;
 }
 
-/* Ottimizzazione per mobile */
+/* Mobile */
 @media (max-width: 768px) {
   .pcm-logo-img {
     height: 1.2em;
   }
 }
 
-/* Nasconde elementi pensati solo per il mobile quando siamo su schermi grandi */
 .hide-on-desktop {
   display: none !important;
 }
 
-/* Colonne secondarie delle tabelle-lista (Languages, Parameters): nascoste
-   su schermi stretti, cosi' ID, nome e bottoni Actions restano visibili
-   senza scroll orizzontale. Su desktop non cambia nulla. */
+/* colonne secondarie nascoste su schermi stretti */
 @media (max-width: 960px){
   .hide-mobile {
     display: none !important;
   }
 }
 
-/* =========================================================
-   Instructions page – rendered HTML + Quill editor
-   ========================================================= */
+/* Instructions: vista ed editor */
 
-/* Tipografia della vista (rendering HTML salvato dall'admin). */
 .instructions-view {
   color: var(--text);
   line-height: 1.6;
@@ -1859,7 +1720,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
-/* Tabelle dentro alla vista (gloss table del template legacy). */
+/* tabelle nella vista */
 .instructions-view table {
   width: 100%;
   border-collapse: collapse;
@@ -1884,7 +1745,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   background: color-mix(in oklab, var(--surface) 80%, var(--surface-2));
 }
 
-/* Editor Quill: contenitore arrotondato e coerente. */
+/* Editor */
 .instructions-editor .ql-toolbar.ql-snow,
 .instructions-editor .ql-container.ql-snow {
   border-color: var(--border);
@@ -1910,8 +1771,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-style: normal;
 }
 
-/* Quill in DARK mode: icone, dropdown e separatori vanno ricolorati,
-   altrimenti rimangono nere su sfondo scuro. */
+/* editor in dark: icone ricolorate */
 :root[data-theme="dark"] .instructions-editor .ql-snow .ql-stroke {
   stroke: var(--text);
 }
@@ -1953,7 +1813,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   color: var(--text);
 }
 
-/* Source HTML mode (textarea raw). */
+/* modalità sorgente HTML */
 .instructions-editor .instructions-source {
   width: 100%;
   min-height: 420px;
@@ -1975,9 +1835,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   outline-offset: 2px;
 }
 
-/* =========================================================
-   Admin Dashboard — layout 50/50 + counter cards
-   ========================================================= */
+/* Dashboard admin: layout 50/50 */
 .dashboard-grid-admin {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1989,9 +1847,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   flex-direction: column;
   gap: 0.6rem;
   min-width: 0;
-  /* Stesso tetto della Latest Changes: senza, la riga della griglia cresce
-     con la lista flaggata (flex:1 1 auto non si attiva senza un'altezza che
-     limiti il contenitore) e la card si espande all'infinito senza scroll. */
+  /* stessa altezza massima di Latest Changes */
   min-height: 0;
   max-height: calc(100vh - 8rem);
 }
@@ -2005,11 +1861,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   display: flex;
   flex-direction: column;
 }
-/* L'ultima counter-card assorbe lo spazio residuo della colonna sinistra:
-   senza, restava un buco invisibile sotto di lei e il suo bordo inferiore
-   chiudeva piu' in alto di Latest Changes (bordi "a scaletta" sopra il
-   footer). La lista interna (flex:1 in Dashboard.jsx) usa lo spazio
-   guadagnato e scrolla solo se le lingue flaggate non ci stanno. */
+/* l'ultima card riempie lo spazio che resta */
 .admin-counters .counter-card:last-child {
   flex: 1 1 auto;
   min-height: 0;
@@ -2104,7 +1956,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   background: var(--surface-2);
   z-index: 1;
 }
-/* Nota troncata cliccabile: nessun segno a riposo, sottolineatura + colore brand all'hover */
+/* nota troncata cliccabile */
 .latest-change-note {
   transition: color 0.12s ease;
 }
@@ -2120,7 +1972,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   opacity: 0.6;
 }
 
-/* Responsive: stack su <900px (Latest Changes sopra) */
+/* Responsive: una colonna sotto i 900px */
 @media (max-width: 900px) {
   .dashboard-grid-admin {
     grid-template-columns: 1fr;
@@ -2132,21 +1984,14 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
     position: static;
     max-height: 420px;
   }
-  /* Colonna singola: niente tetto, la pagina scrolla normalmente. */
   .admin-counters {
     max-height: none;
   }
 }
 
-/* =========================================================
-   Language data: status banner, param-nav, admin override
-   Colori legati alle CSS variables così il dark mode si
-   aggiorna automaticamente.
-   ========================================================= */
+/* Language data */
 
-/* Banner di status — ASSE B (Draft / Under review / Validated).
-   Volutamente NEUTRO: i colori "traffico" restano all'asse A (completamento),
-   così le due dimensioni non si confondono. */
+/* Banner di status (asse B): senza colori */
 .status-banner {
   background: var(--surface-2);
   color: var(--text);
@@ -2160,7 +2005,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   border-color: var(--border);
 }
 
-/* Note dell'admin nel banner Rejected */
+/* nota dell'admin nel banner */
 .status-banner__note,
 .lang-rejection-note {
   background: var(--surface);
@@ -2173,7 +2018,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-size: 0.85rem;
 }
 
-/* Wizard parameters nav (quadratini numerati) */
+/* Quadratini dei parametri */
 .param-nav {
   display: flex;
   flex-wrap: wrap;
@@ -2216,8 +2061,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   color: #fff;
   border-color: #0f5132;
 }
-/* Giallo/ambra: "da rivedere" (esempi mancanti, esempio di test, o question
-   modificata). Distinto da verde/rosso/grigio e leggibile in light e dark. */
+/* giallo: da ricontrollare */
 .param-nav .param-btn.is-warning {
   background: #e8a317;
   color: #3a2c00;
@@ -2240,9 +2084,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   color: #221900;
 }
 
-/* Evidenziazione temporanea del quadratino trovato via ricerca: anello blu
-   lampeggiante (--focus) visibile su qualsiasi stato/tema. L'outline sta fuori
-   dal bordo, quindi non sposta il layout né litiga col bordo .is-active. */
+/* quadratino trovato con la ricerca: anello blu */
 .param-nav .param-btn.is-found {
   outline: 3px solid transparent;
   outline-offset: 2px;
@@ -2266,16 +2108,14 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   }
 }
 
-/* Variante "wide" del wizard: stessi colori/stati di .param-btn ma larghezza
-   adattiva, così i quadratini possono ospitare un id più lungo del quadrato
-   fisso 2.5rem (es. l'id della lingua nella vista parametro → lingue). */
+/* variante larga, per id più lunghi */
 .param-nav--wide .param-btn {
   width: auto;
   min-width: 2.5rem;
   padding: 0 0.6rem;
 }
 
-/* ParameterBlock: card di sfondo + righe di "finalizzazione" */
+/* ParameterBlock */
 .parameter-block {
   background: var(--surface-alt);
   color: var(--text);
@@ -2299,9 +2139,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-size: 0.9rem;
 }
 
-/* Highlight temporaneo della card di una question quando il backend rifiuta
-   il save per "missing_examples": la transizione di 3s riporta border e shadow
-   ai valori normali, dando l'impressione di un bordo rosso che svanisce. */
+/* bordo rosso temporaneo per esempi mancanti */
 .question-row {
   transition: border-color 3s ease-out, box-shadow 3s ease-out;
 }
@@ -2311,7 +2149,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   transition: border-color 0.15s ease-in, box-shadow 0.15s ease-in;
 }
 
-/* QuestionRow: istruzioni condizionali YES/NO */
+/* Istruzioni YES/NO */
 .instructions-yn {
   border-radius: 6px;
   padding: 0.5rem 1rem;
@@ -2336,7 +2174,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   font-weight: 700;
 }
 
-/* Backup detail: accordion header */
+/* Backup detail: accordion */
 .backup-accordion-head {
   background: var(--surface-2);
 }
@@ -2344,9 +2182,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   background: color-mix(in oklab, var(--surface-2) 80%, var(--text));
 }
 
-/* =========================================================
-   SITE FOOTER
-   ========================================================= */
+/* Footer */
 .site-footer {
   width: 100%;
   background-color: var(--bg);
@@ -2427,9 +2263,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   color: #fff;
   text-decoration: none;
 }
-/* In dark mode la regola globale `:root[data-theme="dark"] a` (peach) avrebbe
-   priorita' sul colore del bottone: la scavalchiamo per tenere il testo bianco
-   e leggibile dentro al bottone rosso. */
+/* in dark resta bianco sul bottone rosso */
 :root[data-theme="dark"] .footer-btn,
 :root[data-theme="dark"] .footer-btn:hover {
   color: #fff;
@@ -2460,11 +2294,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   }
 }
 
-/* =============================================================================
- * Drawer (pannello laterale a scorrimento)
- * Usato per aprire la edit di una question dentro la edit del suo parametro,
- * senza staccare l'utente dal contesto. Vedi components/Drawer.jsx.
- * ============================================================================= */
+/* Drawer (pannello laterale) */
 .drawer-root {
   position: fixed;
   inset: 0;
@@ -2528,7 +2358,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   }
 }
 
-/* Spinner: usato per loader in attesa (es. import Excel). */
+/* Spinner */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
@@ -2542,20 +2372,15 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   }
 }
 
-/* =========================================================
-   Touch (tablet/telefono): bersagli comodi e niente auto-zoom.
-   Attivo SOLO su puntatori "coarse" (dito): con mouse/trackpad
-   non cambia assolutamente nulla.
-   ========================================================= */
+/* Touch: bersagli più grandi, niente zoom */
 @media (pointer: coarse){
-  /* Safari iOS zooma l'intera pagina al focus di campi con font < 16px.
-     !important: deve scavalcare anche i font-size inline dei filtri. */
+  /* Safari iOS zooma i campi sotto i 16px */
   input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea{
     font-size: max(16px, 1em) !important;
   }
-  /* Chiusura del Drawer: hit-area da 44px (il glifo resta uguale). */
+  /* chiusura Drawer: area da 44px */
   .drawer-close{
     min-width: 44px;
     min-height: 44px;
@@ -2565,8 +2390,7 @@ details.help-info > div { padding: .35rem .5rem; border-left: 3px solid var(--bo
   }
 }
 
-/* Telefoni: il Drawer lascia una striscia di overlay tappabile di almeno
-   48px per chiudere toccando fuori (92vw ne lasciava ~30px). */
+/* telefoni: striscia di 48px per chiudere il Drawer */
 @media (max-width: 600px){
   .drawer-panel{
     width: calc(100vw - 48px);

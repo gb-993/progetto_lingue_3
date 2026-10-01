@@ -45,7 +45,6 @@ export default function GlossaryForm() {
             } else {
                 await api.post('/api/admin/glossary', formData);
             }
-            // CORREZIONE: Ora reindirizza alla pagina unificata corretta
             navigate('/glossary');
         } catch (err) {
             console.error(err);
@@ -75,7 +74,6 @@ export default function GlossaryForm() {
 
                     <div style={{display: 'flex', gap: '1rem', marginTop: 'var(--form-field-mb, 1rem)'}}>
                         <button type="submit" className="btn btn--primary">Save Term</button>
-                        {/* CORREZIONE: Anche il tasto annulla punta alla pagina corretta */}
                         <Link to="/glossary" className="btn">Cancel</Link>
                     </div>
                 </form>

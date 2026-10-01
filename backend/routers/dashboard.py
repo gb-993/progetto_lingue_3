@@ -62,9 +62,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         models.ParameterDef.is_active == True
     ).order_by(models.ParameterDef.position).all()
 
-    # Un parametro e' rosso quando lo dice param_state, cioe' la stessa regola
-    # che colora i quadratini nella pagina della lingua: almeno una domanda
-    # senza risposta o marcata 'unsure', su un parametro gia' iniziato.
+    # rosso = stessa regola dei quadratini nella pagina lingua
     answerable_questions = {
         param_id: question_ids
         for param_id, question_ids in active_param_questions(db).items()
@@ -80,8 +78,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
     ).all()
     unsure_set = {(l, p) for l, p in unsure_rows}
 
-    # Conteggio per il testo "incomplete (n/m)": contano solo le risposte vere e
-    # non respinte, come nel consolidamento. 'unsure' e 'missing' non risolvono.
+    # solo risposte yes/no non respinte, come nel consolidamento
     answered_rows = db.query(
         models.Answer.language_id,
         models.Question.parameter_id,
@@ -103,7 +100,7 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
         for p in active_params:
             question_ids = answerable_questions.get(p.id)
             if not question_ids:
-                continue  # parametro senza domande attive: skip
+                continue
             total_q = len(question_ids)
             ans_q = answered_count.get((lang.id, p.id), 0)
             is_unsure = (lang.id, p.id) in unsure_set
@@ -195,16 +192,12 @@ def get_admin_dashboard(db: Session = Depends(get_db), current_user: models.User
 
 @router.get("/user/dashboard")
 def get_user_dashboard(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Mostra all'utente le sue lingue assegnate con status, completamento (parametri verdi sul totale) e nota di rifiuto se applicabile.
-    """
+    """Lingue assegnate all'utente, con status e completamento."""
     langs = db.query(models.Language).filter(
         models.Language.assigned_user_id == current_user.id
     ).order_by(func.lower(models.Language.id)).all()
 
-    # Stessa base di calcolo del badge di completamento nella lista lingue: solo
-    # i parametri attivi che hanno almeno una question attiva. Contare invece le
-    # singole risposte darebbe una percentuale che non raggiunge mai il 100%.
+    # come il badge della lista lingue: solo parametri con domande attive
     answerable_questions = {
         param_id: question_ids
         for param_id, question_ids in active_param_questions(db).items()

@@ -1,12 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../api';
 
-// ============================================================================
-// Pagina /admin/taxonomy
-// 3 colonne: Top-Family | Family | Group
-// + sezione "Unnormalized" (stringhe usate sulle Language ma non in tabella)
-// ============================================================================
-
 const COL_HEADER = 'Indo-European, Niger-Congo, ...';
 
 export default function Taxonomy() {
@@ -18,7 +12,7 @@ export default function Taxonomy() {
     const [selectedFamilyId, setSelectedFamilyId] = useState(null);
     const [expandedGroupId, setExpandedGroupId] = useState(null);
 
-    const [modal, setModal] = useState(null); // { kind: 'top'|'family'|'group', mode: 'new'|'edit', entity? }
+    const [modal, setModal] = useState(null);
 
     const fetchTree = async () => {
         setLoading(true);
@@ -35,7 +29,6 @@ export default function Taxonomy() {
 
     useEffect(() => { fetchTree(); }, []);
 
-    // --- ricava le liste filtrate (sempre ordinate alfabeticamente) ---
     const sortByName = (arr) =>
         [...(arr || [])].sort((a, b) =>
             (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
@@ -60,14 +53,12 @@ export default function Taxonomy() {
         return fam ? sortByName(fam.groups) : [];
     }, [selectedFamilyId, familiesOfSelectedTop, allTops, orphanGroups]);
 
-    // se la family selezionata sparisce dopo refresh / cambio top, deselezionala
     useEffect(() => {
         if (selectedFamilyId !== null && !familiesOfSelectedTop.find(f => f.id === selectedFamilyId)) {
             setSelectedFamilyId(null);
         }
     }, [selectedFamilyId, familiesOfSelectedTop]);
 
-    // --- handlers ---
     const handleDelete = async (kind, id, label) => {
         const what = kind === 'top' ? 'top-family' : kind === 'family' ? 'subfamily' : 'group';
         if (!window.confirm(`Delete ${what} "${label}"? Operation will be blocked if it still has children or is referenced by languages.`)) return;
@@ -116,11 +107,7 @@ export default function Taxonomy() {
         }
     };
 
-    // ---------- DRAG & DROP ----------
-    // I drag trasportano { kind: 'family'|'group', id }.
-    // Solo cross-livello: drop di una Family su una Top-Family per riassegnarne il parent,
-    // drop di un Group su una Family per riassegnarne il parent. Niente riordino:
-    // le liste sono ordinate alfabeticamente in automatico.
+    // drag & drop: cambia il parent, non l'ordine
 
     const handleDropMoveFamilyUnderTop = (familyId, topId) => {
         if (!familyId) return;
@@ -151,7 +138,6 @@ export default function Taxonomy() {
                 alignItems: 'start',
                 marginBottom: 'var(--form-col-gap, 1.5rem)',
             }}>
-                {/* COLONNA 1 — TOP FAMILIES */}
                 <Column
                     title="Top-Families"
                     hint={COL_HEADER}
@@ -166,7 +152,6 @@ export default function Taxonomy() {
                             badge={`${tf.families.length} sub · ${tf.language_count} lang`}
                             onEdit={() => setModal({ kind: 'top', mode: 'edit', entity: tf })}
                             onDelete={() => handleDelete('top', tf.id, tf.name)}
-                            // Drop target: accetta solo Family (per riassegnare il parent)
                             onDropPayload={(payload) => {
                                 if (payload.kind === 'family') {
                                     handleDropMoveFamilyUnderTop(payload.id, tf.id);
@@ -182,7 +167,7 @@ export default function Taxonomy() {
                             label={<em>Unassigned subfamilies</em>}
                             badge={`${orphanFamilies.length}`}
                             muted
-                            // Drop su questa riga = scollega family/group dal parent
+                            // drop qui = toglie il parent
                             onDropPayload={(payload) => {
                                 if (payload.kind === 'family') handleDropMoveFamilyUnderTop(payload.id, null);
                             }}
@@ -191,7 +176,6 @@ export default function Taxonomy() {
                     }
                 />
 
-                {/* COLONNA 2 — FAMILIES */}
                 <Column
                     title={selectedTopId === null
                         ? 'Unassigned Subfamilies'
@@ -236,7 +220,6 @@ export default function Taxonomy() {
                     )}
                 />
 
-                {/* COLONNA 3 — GROUPS */}
                 <Column
                     title={selectedFamilyId === null
                         ? 'Unassigned Groups'
@@ -316,7 +299,6 @@ export default function Taxonomy() {
                 />
             </div>
 
-            {/* SEZIONE STRINGHE NON NORMALIZZATE */}
             <UnnormalizedSection
                 data={unnormalized}
                 allTops={allTops}
@@ -327,7 +309,6 @@ export default function Taxonomy() {
                 onPromote={handlePromote}
             />
 
-            {/* MODALE EDIT/NEW */}
             {modal && (
                 <EntityModal
                     modal={modal}
@@ -341,9 +322,6 @@ export default function Taxonomy() {
     );
 }
 
-// ============================================================================
-// Subcomponents
-// ============================================================================
 function Column({ title, hint, onAdd, items, renderItem, footer, emptyText }) {
     return (
         <div className="card" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -382,7 +360,6 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
         if (!draggable) return;
         e.dataTransfer.setData('application/x-taxonomy', JSON.stringify({ kind: dragKind, id: dragId }));
         e.dataTransfer.effectAllowed = 'move';
-        // distintivo visivo durante il drag
         try { e.currentTarget.style.opacity = '0.4'; } catch { /* noop */ }
     };
     const handleDragEnd = (e) => {
@@ -391,7 +368,6 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
     };
     const handleDragOver = (e) => {
         if (!dropTarget) return;
-        // accetta solo se compatibile
         const types = e.dataTransfer.types;
         if (types && Array.from(types).includes('application/x-taxonomy')) {
             e.preventDefault();
@@ -407,7 +383,7 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
         try {
             const payload = JSON.parse(e.dataTransfer.getData('application/x-taxonomy'));
             if (acceptKinds && !acceptKinds.includes(payload.kind)) return;
-            if (payload.id === dragId && payload.kind === dragKind) return; // drop su se stessa
+            if (payload.id === dragId && payload.kind === dragKind) return;
             onDropPayload(payload);
         } catch { /* noop */ }
     };
@@ -477,7 +453,6 @@ function MoveSelect({ value, options, onChange }) {
     );
 }
 
-// ----------------------------------------------------------------------------
 function UnnormalizedSection({ data, allTops, allFamilies, onPromote }) {
     const totalUnnorm =
         data.top_families.length + data.families.length + data.groups.length;
@@ -593,7 +568,6 @@ function PromoteWithParent({ label, options, onPromote }) {
     );
 }
 
-// ----------------------------------------------------------------------------
 function EntityModal({ modal, allTops, allFamilies, onClose, onSaved }) {
     const isEdit = modal.mode === 'edit';
     const e = modal.entity;

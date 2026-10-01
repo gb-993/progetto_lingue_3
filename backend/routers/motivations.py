@@ -22,17 +22,12 @@ class MotivationRead(MotivationBase):
 
 @router.get("", response_model=List[MotivationRead])
 def get_motivations(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Recupera la lista delle motivazioni."""
     return db.query(models.Motivation).order_by(models.Motivation.code).all()
 
 
 @router.get("/with-usage")
 def get_motivations_with_usage(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Lista motivazioni + per ognuna le question_id in cui è abilitata.
-
-    Una sola query per QuestionAllowedMotivation, raggruppata in memoria così
-    evitiamo N+1. Usato dalla pagina admin per mostrare i link "where used".
-    """
+    """Motivazioni con le question in cui sono abilitate."""
     mots = db.query(models.Motivation).order_by(models.Motivation.code).all()
     links = (
         db.query(models.QuestionAllowedMotivation.motivation_id, models.QuestionAllowedMotivation.question_id)
@@ -55,7 +50,7 @@ def get_motivations_with_usage(db: Session = Depends(get_db), current_user: mode
 
 @router.post("", response_model=MotivationRead, status_code=status.HTTP_201_CREATED)
 def create_motivation(item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Crea una nuova motivazione (usata sia in pagina che 'on the fly' nel creatable select)"""
+    """Crea una motivazione (anche dal select 'on the fly')."""
     db_item = models.Motivation(
         code=item.code,
         label=item.label,
@@ -73,7 +68,7 @@ def create_motivation(item: MotivationBase, db: Session = Depends(get_db), curre
 
 @router.put("/{id}", response_model=MotivationRead)
 def update_motivation(id: int, item: MotivationBase, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
-    """Aggiorna testo di una motivazione e propaga il log ai parametri e domande interessate"""
+    """Aggiorna una motivazione e scrive il log sui parametri collegati."""
     db_item = db.query(models.Motivation).filter(models.Motivation.id == id).first()
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
@@ -124,9 +119,7 @@ def delete_motivation(id: int, db: Session = Depends(get_db), current_user: mode
     if not db_item:
         raise HTTPException(status_code=404, detail="Motivation not found")
 
-    # Le FK verso motivations sono ON DELETE CASCADE (question_allowed_motivations,
-    # answer_motivations): senza questo controllo la DELETE riesce sempre e il DB
-    # cancella in silenzio i collegamenti risposta-motivazione di tutte le lingue.
+    # le FK sono in cascade: senza questo controllo si perdono i collegamenti
     answers_used = db.query(models.AnswerMotivation).filter(
         models.AnswerMotivation.motivation_id == id
     ).count()

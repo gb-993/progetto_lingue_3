@@ -17,10 +17,7 @@ import { Style, Circle, Fill, Stroke } from 'ol/style';
 const NULL_COLOR = '#9ca3af';
 const NULL_LABEL = '— Unassigned';
 
-// Citazione di attribuzione per la mappa esportata in PNG. DEVE restare allineata
-// a backend/services/citation.py (build_citation_text): è la stessa dicitura che
-// compare nel footer di PDF/Excel/CSV/HTML. La mappa è l'unico export generato
-// lato browser (canvas), quindi non passa da citation.py e va replicata qui.
+// deve restare uguale alla citazione del backend (citation.py)
 const CITATION_EDITORS =
     'Guardiano, Cristina, Paola Crisma, Giuseppe Longobardi, ' +
     'Marco Longhin, Giovanni Battista Matteazzi, Emanuela Li Destri, Gaia Sorge';
@@ -28,8 +25,7 @@ const CITATION_YEAR = '2026';
 const CITATION_WORK_TITLE = 'The PCM_Hub';
 const CITATION_VERSION = 'version 1';
 
-// Due righe della citazione, con "Accessed on" = data del download (UTC, gg/mm/aaaa),
-// come utc_now()/_format_date nel backend.
+// data in UTC, come nel backend
 function buildCitationLines() {
     const now = new Date();
     const dd = String(now.getUTCDate()).padStart(2, '0');
@@ -43,15 +39,14 @@ function buildCitationLines() {
     ];
 }
 
-// Riduce l'opacità di un colore CSS (hsl o hex) sostituendolo con hsla / rgba
 function dimCssColor(cssColor, alpha) {
     if (typeof cssColor !== 'string') return cssColor;
     if (cssColor.startsWith('hsl(') && cssColor.endsWith(')')) {
         return cssColor.replace('hsl(', 'hsla(').replace(/\)$/, `, ${alpha})`);
     }
     if (cssColor.startsWith('#')) {
-        const h = cssColor.replace('#', '');
-        const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+        const hex = cssColor.replace('#', '');
+        const full = hex.length === 3 ? hex.split('').map(digit => digit + digit).join('') : hex;
         const r = parseInt(full.slice(0, 2), 16);
         const g = parseInt(full.slice(2, 4), 16);
         const b = parseInt(full.slice(4, 6), 16);
@@ -60,71 +55,51 @@ function dimCssColor(cssColor, alpha) {
     return cssColor;
 }
 
-// Palette categorica curata a mano: ogni colore appartiene a una "famiglia
-// percettiva" diversa (un solo rosso, un solo verde, un solo blu, …), così due
-// voci qualunque sono facilmente distinguibili a occhio anche da chi confonde
-// tinte vicine. Sono tutti colori saturi e medio-scuri, scelti per risaltare
-// sia sulla terraferma beige sia sul mare azzurro della mappa (niente gialli o
-// pastelli che si confonderebbero col fondo). L'ordine massimizza il contrasto
-// tra voci consecutive, utile quando molte famiglie finiscono adiacenti in
-// ordine alfabetico.
+// colori ben distinguibili tra loro
 const CATEGORICAL_PALETTE = [
-    '#e6194b', // rosso
-    '#3cb44b', // verde
-    '#4363d8', // blu
-    '#f58231', // arancione
-    '#911eb4', // viola
-    '#469990', // verde acqua (teal)
-    '#f032e6', // magenta
-    '#9a6324', // marrone
-    '#42d4f4', // ciano
-    '#808000', // oliva
-    '#000075', // blu notte
-    '#800000', // bordeaux
-    '#bfef45', // lime
-    '#6a5acd', // indaco
-    '#2e8b57', // verde mare
-    '#ff8c00', // ambra scura
-    '#c71585', // rosa-violetto
-    '#1f78b4', // azzurro acciaio
+    '#e6194b',
+    '#3cb44b',
+    '#4363d8',
+    '#f58231',
+    '#911eb4',
+    '#469990',
+    '#f032e6',
+    '#9a6324',
+    '#42d4f4',
+    '#808000',
+    '#000075',
+    '#800000',
+    '#bfef45',
+    '#6a5acd',
+    '#2e8b57',
+    '#ff8c00',
+    '#c71585',
+    '#1f78b4',
 ];
 
-// Assegna a ogni NOME un colore distinto e stabile. Una sola logica usata a
-// tutti i livelli (top-family / subfamily / group): l'unica differenza tra i
-// livelli è QUALE elenco di nomi passiamo. Due proprietà chiave:
-//   • Stabile: il colore dipende dalla posizione del nome nell'elenco GLOBALE
-//     ordinato alfabeticamente, non dal sottoinsieme attualmente a video. Così
-//     lo stesso gruppo ha lo stesso colore per tutti, qualunque filtro abbia.
-//   • Distinto: finché le voci entrano nella palette curata usiamo quella; se
-//     sono di più (tipico dei "group"), per le eccedenti torniamo a una hue
-//     distribuita con sequenza low-discrepancy (golden ratio) sfasata, così non
-//     resta scoperta e nessun punto perde colore.
+// stesso nome = stesso colore, sempre
 function buildNameColorMap(allNames) {
-    const PHI = (1 + Math.sqrt(5)) / 2; // ~1.618
+    const PHI = (1 + Math.sqrt(5)) / 2;
     const sorted = [...new Set((allNames || []).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, undefined, { sensitivity: 'base' })
     );
-    const map = {};
+    const colorByName = {};
     sorted.forEach((name, i) => {
         if (i < CATEGORICAL_PALETTE.length) {
-            map[name] = CATEGORICAL_PALETTE[i];
+            colorByName[name] = CATEGORICAL_PALETTE[i];
             return;
         }
-        // Riserva algoritmica per quando le categorie superano la palette.
-        const j = i - CATEGORICAL_PALETTE.length;
-        const hue = ((j * PHI) % 1) * 360;        // [0,360) ben distribuita
-        const lightPos = (j * PHI * PHI) % 1;     // fase decorrelata
-        const lightness = 42 + lightPos * 16;     // 42% - 58%
-        map[name] = `hsl(${hue.toFixed(1)}, 68%, ${lightness.toFixed(1)}%)`;
+        const extraIndex = i - CATEGORICAL_PALETTE.length;
+        const hue = ((extraIndex * PHI) % 1) * 360;
+        const lightPos = (extraIndex * PHI * PHI) % 1;
+        const lightness = 42 + lightPos * 16;
+        colorByName[name] = `hsl(${hue.toFixed(1)}, 68%, ${lightness.toFixed(1)}%)`;
     });
-    return map;
+    return colorByName;
 }
 
 function computeColorPlan({ languages, filters, allTopFamilies, allFamilies, allGroups }) {
-    // La modalità scende di un livello rispetto al filtro più "fine" SOLO se
-    // l'utente ha selezionato una sola voce a quel livello (altrimenti la mappa
-    // sarebbe monocromatica). Se invece ci sono 2+ voci, la legenda resta a
-    // quel livello: ogni punto eredita il colore del proprio genitore.
+    // scende di livello solo con una voce sola
     const numTop = filters.top_family?.length || 0;
     const numFamily = filters.family?.length || 0;
     const numGroup = filters.grp?.length || 0;
@@ -134,11 +109,7 @@ function computeColorPlan({ languages, filters, allTopFamilies, allFamilies, all
     else if (numTop >= 1) mode = numTop === 1 ? 'family' : 'top_family';
     else mode = 'top_family';
 
-    // Costruzione del piano per un livello: stessa logica per tutti e tre.
-    // `globalNames` è l'elenco globale (dai filtri options) che garantisce
-    // colori stabili; vi uniamo i nomi presenti nelle lingue a video come rete
-    // di sicurezza, così nessun punto resta senza colore se options non è
-    // ancora arrivato o ha una voce in meno per disallineamenti dati.
+    // così nessun punto resta senza colore
     const buildPlan = (modeLabel, fieldOf, globalNames) => {
         const present = languages.map(fieldOf).filter(Boolean);
         const colorMap = buildNameColorMap([...(globalNames || []), ...present]);
@@ -148,15 +119,15 @@ function computeColorPlan({ languages, filters, allTopFamilies, allFamilies, all
         return {
             mode,
             modeLabel,
-            colorOf: (l) => { const v = fieldOf(l); return (v && colorMap[v]) || NULL_COLOR; },
-            labelOf: (l) => fieldOf(l) || NULL_LABEL,
-            entries: keys.map(k => ({ key: k, color: colorMap[k] || NULL_COLOR })),
+            colorOf: (lang) => { const name = fieldOf(lang); return (name && colorMap[name]) || NULL_COLOR; },
+            labelOf: (lang) => fieldOf(lang) || NULL_LABEL,
+            entries: keys.map(key => ({ key, color: colorMap[key] || NULL_COLOR })),
         };
     };
 
-    if (mode === 'top_family') return buildPlan('by Top-Family', l => l.top_level_family, allTopFamilies);
-    if (mode === 'family') return buildPlan('by Subfamily', l => l.family, allFamilies);
-    return buildPlan('by Group', l => l.grp, allGroups);
+    if (mode === 'top_family') return buildPlan('by Top-Family', lang => lang.top_level_family, allTopFamilies);
+    if (mode === 'family') return buildPlan('by Subfamily', lang => lang.family, allFamilies);
+    return buildPlan('by Group', lang => lang.grp, allGroups);
 }
 
 function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroups }, ref) {
@@ -172,10 +143,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
 
     useEffect(() => { navigateRef.current = navigate; }, [navigate]);
 
-    // Esporto exportPng al parent: cattura i canvas OL renderizzati, li fonde
-    // su un canvas finale e disegna sotto la legenda (titolo + cerchi colorati
-    // + label + count) con wrapping orizzontale. Ricalca l'esempio ufficiale di
-    // OpenLayers (https://openlayers.org/en/latest/examples/export-map.html).
+    // export PNG: mappa + legenda + citazione
     useImperativeHandle(ref, () => ({
         exportPng: () => new Promise((resolve, reject) => {
             const map = mapInstance.current;
@@ -191,7 +159,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                     const plan = planRef.current;
                     const counts = countsRef.current || {};
 
-                    // ===== Layout legenda =====
+                    // layout legenda
                     const PAD = 16;
                     const TITLE_FONT = 'bold 12px system-ui, -apple-system, "Segoe UI", sans-serif';
                     const ENTRY_FONT = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
@@ -206,7 +174,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                     measureCtx.font = ENTRY_FONT;
 
                     const entries = plan && plan.entries.length > 0 ? plan.entries : [];
-                    const entryW = entries.map(({ key }) => {
+                    const entryWidths = entries.map(({ key }) => {
                         const text = `${key} (${counts[key] || 0})`;
                         return CIRCLE_R * 2 + CIRCLE_TEXT_GAP + measureCtx.measureText(text).width;
                     });
@@ -214,11 +182,11 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                     const maxRow = mapW - 2 * PAD;
                     let rows = entries.length === 0 ? 1 : 1;
                     let rowW = 0;
-                    entryW.forEach(w => {
-                        const candidate = rowW === 0 ? w : rowW + ENTRY_GAP_X + w;
+                    entryWidths.forEach(width => {
+                        const candidate = rowW === 0 ? width : rowW + ENTRY_GAP_X + width;
                         if (rowW > 0 && candidate > maxRow) {
                             rows++;
-                            rowW = w;
+                            rowW = width;
                         } else {
                             rowW = candidate;
                         }
@@ -226,7 +194,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
 
                     const legendH = PAD + TITLE_H + TITLE_GAP + rows * ROW_H + PAD;
 
-                    // ===== Layout citazione (footer, come negli altri export) =====
+                    // layout citazione
                     const CITE_FONT = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
                     const CITE_LINE_H = 15;
                     const CITE_PAD = 14;
@@ -250,16 +218,15 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
 
                     const totalH = mapH + legendH + citeH;
 
-                    const out = document.createElement('canvas');
-                    out.width = mapW;
-                    out.height = totalH;
-                    const ctx = out.getContext('2d');
+                    const outputCanvas = document.createElement('canvas');
+                    outputCanvas.width = mapW;
+                    outputCanvas.height = totalH;
+                    const ctx = outputCanvas.getContext('2d');
 
-                    // sfondo bianco totale
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, mapW, totalH);
 
-                    // ===== Mappa =====
+                    // mappa
                     const viewport = map.getViewport();
                     const canvases = viewport.querySelectorAll('.ol-layer canvas, canvas.ol-layer');
                     canvases.forEach(canvas => {
@@ -281,9 +248,9 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                         }
                         ctx.setTransform(...matrix);
 
-                        const bg = canvas.parentNode?.style.backgroundColor;
-                        if (bg) {
-                            ctx.fillStyle = bg;
+                        const background = canvas.parentNode?.style.backgroundColor;
+                        if (background) {
+                            ctx.fillStyle = background;
                             ctx.fillRect(0, 0, canvas.width, canvas.height);
                         }
                         ctx.drawImage(canvas, 0, 0);
@@ -291,13 +258,11 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                     ctx.globalAlpha = 1;
                     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-                    // ===== Legenda =====
+                    // legenda
                     const legendY = mapH;
-                    // separatore
                     ctx.fillStyle = '#e5e7eb';
                     ctx.fillRect(0, legendY, mapW, 1);
 
-                    // titolo
                     ctx.fillStyle = '#6b7280';
                     ctx.font = TITLE_FONT;
                     ctx.textBaseline = 'top';
@@ -306,41 +271,38 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                         : 'COLORING';
                     ctx.fillText(titleText, PAD, legendY + PAD);
 
-                    // voci
                     ctx.font = ENTRY_FONT;
                     ctx.textBaseline = 'middle';
-                    let cx = PAD;
-                    let cy = legendY + PAD + TITLE_H + TITLE_GAP;
+                    let cursorX = PAD;
+                    let cursorY = legendY + PAD + TITLE_H + TITLE_GAP;
 
                     if (entries.length === 0) {
                         ctx.fillStyle = '#9ca3af';
-                        ctx.fillText('No data to display.', PAD, cy + ROW_H / 2);
+                        ctx.fillText('No data to display.', PAD, cursorY + ROW_H / 2);
                     } else {
                         entries.forEach(({ key, color }, i) => {
-                            const w = entryW[i];
-                            if (cx > PAD && cx + w > mapW - PAD) {
-                                cx = PAD;
-                                cy += ROW_H;
+                            const width = entryWidths[i];
+                            if (cursorX > PAD && cursorX + width > mapW - PAD) {
+                                cursorX = PAD;
+                                cursorY += ROW_H;
                             }
-                            const centerY = cy + ROW_H / 2;
-                            // cerchio
+                            const centerY = cursorY + ROW_H / 2;
                             ctx.fillStyle = color;
                             ctx.beginPath();
-                            ctx.arc(cx + CIRCLE_R, centerY, CIRCLE_R, 0, Math.PI * 2);
+                            ctx.arc(cursorX + CIRCLE_R, centerY, CIRCLE_R, 0, Math.PI * 2);
                             ctx.fill();
                             ctx.strokeStyle = 'rgba(0,0,0,0.2)';
                             ctx.lineWidth = 1;
                             ctx.stroke();
-                            // testo
                             ctx.fillStyle = '#111827';
                             const text = `${key} (${counts[key] || 0})`;
-                            ctx.fillText(text, cx + CIRCLE_R * 2 + CIRCLE_TEXT_GAP, centerY);
-                            cx += w + ENTRY_GAP_X;
+                            ctx.fillText(text, cursorX + CIRCLE_R * 2 + CIRCLE_TEXT_GAP, centerY);
+                            cursorX += width + ENTRY_GAP_X;
                         });
                     }
                     ctx.textBaseline = 'alphabetic';
 
-                    // ===== Citazione "Downloaded from…" (stessa dicitura di PDF/Excel) =====
+                    // citazione
                     const citeY = mapH + legendH;
                     ctx.fillStyle = '#e5e7eb';
                     ctx.fillRect(0, citeY, mapW, 1);
@@ -354,7 +316,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'alphabetic';
 
-                    out.toBlob(blob => {
+                    outputCanvas.toBlob(blob => {
                         if (blob) resolve(blob);
                         else reject(new Error('Canvas toBlob failed (tainted canvas?)'));
                     }, 'image/png');
@@ -372,20 +334,18 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
     );
 
     const counts = useMemo(() => {
-        const c = {};
-        languages.forEach(l => {
-            const k = plan.labelOf(l);
-            c[k] = (c[k] || 0) + 1;
+        const labelCounts = {};
+        languages.forEach(lang => {
+            const label = plan.labelOf(lang);
+            labelCounts[label] = (labelCounts[label] || 0) + 1;
         });
-        return c;
+        return labelCounts;
     }, [languages, plan]);
 
-    // Tieni i ref allineati: exportPng vive in un useImperativeHandle con deps
-    // vuote e legge plan/counts via ref per non dover ricreare il handle.
+    // ref per leggere plan e counts aggiornati
     useEffect(() => { planRef.current = plan; }, [plan]);
     useEffect(() => { countsRef.current = counts; }, [counts]);
 
-    // init map once
     useEffect(() => {
         if (!mapRef.current || mapInstance.current) return;
         vectorSource.current = new VectorSource();
@@ -416,7 +376,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
                 tooltipRef.current.style.display = 'none';
                 return;
             }
-            const feature = map.forEachFeatureAtPixel(evt.pixel, f => f);
+            const feature = map.forEachFeatureAtPixel(evt.pixel, hit => hit);
             const target = map.getTargetElement();
             if (feature) {
                 tooltipRef.current.innerText = feature.get('name') || '';
@@ -430,7 +390,7 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
         };
 
         const onClick = (evt) => {
-            const feature = map.forEachFeatureAtPixel(evt.pixel, f => f);
+            const feature = map.forEachFeatureAtPixel(evt.pixel, hit => hit);
             if (feature) {
                 const id = feature.get('languageId');
                 if (id) navigateRef.current(`/languages/${id}/data`);
@@ -448,32 +408,31 @@ function LanguageMap({ languages, filters, allTopFamilies, allFamilies, allGroup
         };
     }, []);
 
-    // refresh features when data, coloring or legend hover change
     useEffect(() => {
         if (!vectorSource.current) return;
         vectorSource.current.clear();
-        languages.forEach(l => {
-            const lat = Number(l.latitude);
-            const lng = Number(l.longitude);
+        languages.forEach(lang => {
+            const lat = Number(lang.latitude);
+            const lng = Number(lang.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            const key = plan.labelOf(l);
+            const key = plan.labelOf(lang);
             const isHighlighted = hoveredKey === null || hoveredKey === key;
-            const baseColor = plan.colorOf(l);
+            const baseColor = plan.colorOf(lang);
             const fillColor = isHighlighted ? baseColor : dimCssColor(baseColor, 0.15);
             const strokeColor = isHighlighted ? '#fff' : 'rgba(255,255,255,0.3)';
-            const f = new Feature({
+            const feature = new Feature({
                 geometry: new Point(fromLonLat([lng, lat])),
-                name: l.name_full,
-                languageId: l.id,
+                name: lang.name_full,
+                languageId: lang.id,
             });
-            f.setStyle(new Style({
+            feature.setStyle(new Style({
                 image: new Circle({
                     radius: isHighlighted ? (hoveredKey ? 7 : 5) : 4,
                     fill: new Fill({ color: fillColor }),
                     stroke: new Stroke({ color: strokeColor, width: 1.5 }),
                 }),
             }));
-            vectorSource.current.addFeature(f);
+            vectorSource.current.addFeature(feature);
         });
     }, [languages, plan, hoveredKey]);
 

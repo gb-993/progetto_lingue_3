@@ -11,87 +11,70 @@ import usePresence from '../../utils/usePresence';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
-    const cd = res.headers['content-disposition'] || '';
-    const m = cd.match(/filename="?([^";]+)"?/);
-    const filename = m ? m[1] : fallbackName;
+    const contentDisposition = res.headers['content-disposition'] || '';
+    const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/);
+    const filename = filenameMatch ? filenameMatch[1] : fallbackName;
     const blob = new Blob([res.data]);
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
+    const link = document.createElement('a');
+    link.href = url; link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
     URL.revokeObjectURL(url);
 }
 
-// La bozza locale salva solo i TESTI della domanda (così non si perde quanto
-// scritto se si esce). NON salviamo `is_stop_question`: è una scelta strutturale,
-// non testo da recuperare, e persisterla faceva ricomparire la casella spuntata
-// da una sessione precedente. Default sempre "domanda normale" (casella vuota).
-const Q_DRAFT_FIELDS = [
+// is_stop_question escluso di proposito
+const QUESTION_DRAFT_FIELDS = [
     'text', 'instruction', 'instruction_yes', 'instruction_no',
     'example_yes', 'help_info',
 ];
 
-const ID_MAX_LEN = 40; // Length(Question.id) — vincolo schema backend
+const QUESTION_ID_MAX_LENGTH = 40; // lunghezza di Question.id nel backend
 const escapeRegexId = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Calcola l'ID suggerito per una question NUOVA.
-//
-// Due schemi, scelti da `copySource`:
-//  - copySource == null  → schema "a lettera" (question nuova da zero):
-//      `{param}_Q{prossima lettera libera}` (o `_QS` se Stop Question). Le due
-//      sequenze sono indipendenti perché `_Q([a-z])` non matcha `_QS...`.
-//  - copySource == id    → schema "numerato" (Duplicate WITH data):
-//      base della sorgente senza cifre finali (`FMM_Qa2` → `FMM_Qa`), infisso
-//      `_Q`/`_QS` adattato alla spunta Stop corrente, poi il primo numero
-//      libero ≥ 2 (`FMM_Qa` → `FMM_Qa2`). Se la sorgente non segue lo schema
-//      `_Q`/`_QS` (ID legacy custom) non c'è infisso da scambiare: si appende
-//      solo il numero e la spunta Stop non altera l'ID.
+// ID suggerito: FMM_Qa, oppure FMM_Qa2 se duplicata
 function computeSuggestedQuestionId({ parameterId, isStop, copySource, questions }) {
     if (!parameterId) return '';
-    const sameParam = (questions || []).filter(q => q.parameter_id === parameterId);
+    const siblingQuestions = (questions || []).filter(question => question.parameter_id === parameterId);
 
     if (!copySource) {
         const infix = isStop ? '_QS' : '_Q';
-        const re = new RegExp(`^${escapeRegexId(parameterId)}${infix}([a-z])`);
-        const used = new Set();
-        for (const q of sameParam) {
-            const m = String(q.id).match(re);
-            if (m) used.add(m[1]);
+        const letterIdRe = new RegExp(`^${escapeRegexId(parameterId)}${infix}([a-z])`);
+        const usedLetters = new Set();
+        for (const question of siblingQuestions) {
+            const match = String(question.id).match(letterIdRe);
+            if (match) usedLetters.add(match[1]);
         }
         for (let i = 0; i < 26; i++) {
             const letter = String.fromCharCode(97 + i);
-            if (!used.has(letter)) return `${parameterId}${infix}${letter}`;
+            if (!usedLetters.has(letter)) return `${parameterId}${infix}${letter}`;
         }
-        return ''; // tutte le lettere a-z occupate (>26 domande)
+        return ''; // tutte le lettere a-z occupate
     }
 
-    // Schema numerato. Base = sorgente senza cifre finali.
-    const base = String(copySource).replace(/\d+$/, '');
+    const sourceWithoutNumber = String(copySource).replace(/\d+$/, '');
     let stem;
-    const stopM = base.match(/^(.*)_QS([a-zA-Z]*)$/);
-    if (stopM) {
-        stem = isStop ? `${stopM[1]}_QS${stopM[2]}` : `${stopM[1]}_Q${stopM[2]}`;
+    const stopMatch = sourceWithoutNumber.match(/^(.*)_QS([a-zA-Z]*)$/);
+    if (stopMatch) {
+        stem = isStop ? `${stopMatch[1]}_QS${stopMatch[2]}` : `${stopMatch[1]}_Q${stopMatch[2]}`;
     } else {
-        const normM = base.match(/^(.*)_Q([a-zA-Z]*)$/);
-        stem = normM
-            ? (isStop ? `${normM[1]}_QS${normM[2]}` : `${normM[1]}_Q${normM[2]}`)
-            : base; // nessun infisso riconoscibile
+        const normalMatch = sourceWithoutNumber.match(/^(.*)_Q([a-zA-Z]*)$/);
+        stem = normalMatch
+            ? (isStop ? `${normalMatch[1]}_QS${normalMatch[2]}` : `${normalMatch[1]}_Q${normalMatch[2]}`)
+            : sourceWithoutNumber;
     }
-    const numRe = new RegExp(`^${escapeRegexId(stem)}(\\d+)$`);
-    const usedNums = new Set();
-    for (const q of sameParam) {
-        const m = String(q.id).match(numRe);
-        if (m) usedNums.add(parseInt(m[1], 10));
+    const numberedIdRe = new RegExp(`^${escapeRegexId(stem)}(\\d+)$`);
+    const usedNumbers = new Set();
+    for (const question of siblingQuestions) {
+        const match = String(question.id).match(numberedIdRe);
+        if (match) usedNumbers.add(parseInt(match[1], 10));
     }
-    let n = 2; // l'originale (senza numero) vale "1": si parte sempre da 2
-    while (usedNums.has(n)) n++;
-    const candidate = `${stem}${n}`;
-    return candidate.length > ID_MAX_LEN ? candidate.slice(0, ID_MAX_LEN) : candidate;
+    let nextNumber = 2; // l'originale (senza numero) conta come 1
+    while (usedNumbers.has(nextNumber)) nextNumber++;
+    const candidate = `${stem}${nextNumber}`;
+    return candidate.length > QUESTION_ID_MAX_LENGTH ? candidate.slice(0, QUESTION_ID_MAX_LENGTH) : candidate;
 }
 
-// react-select non legge i CSS variable del tema: in dark mode il menu resta
-// bianco con testo chiaro (illeggibile). Qui mappiamo le sue parti sui token
-// del tema così segue automaticamente light/dark.
+// come utils/reactSelectStyles.js
 const reactSelectStyles = {
     control: (base, state) => ({
         ...base,
@@ -135,17 +118,9 @@ const reactSelectStyles = {
 };
 
 export default function QuestionForm({ mode = 'page' }) {
-    // Il QuestionForm vive in due modalità:
-    //  - "page"   → rotta autonoma /admin/questions/:id/edit (param: id)
-    //  - "drawer" → rotta nested /admin/parameters/:id/edit/questions/:qid/edit
-    //               (param: id=parameterId, qid=questionId). In add: solo :id.
-    // Usiamo nomi di param distinti (id vs qid) per non shadoware l'id del
-    // parametro genitore quando siamo dentro la nested route.
     const params = useParams();
     const isDrawerMode = mode === 'drawer';
     const id = isDrawerMode ? params.qid : params.id;
-    // In drawer mode il parameterId arriva dal route parent (params.id).
-    // In page mode, lo si passa via querystring ?param_id=...
     const drawerParentParamId = isDrawerMode ? params.id : null;
     const navigate = useNavigate();
     const isEditMode = Boolean(id);
@@ -170,16 +145,8 @@ export default function QuestionForm({ mode = 'page' }) {
     const [parameters, setParameters] = useState([]);
     const [allMotivations, setAllMotivations] = useState([]);
     const [allQuestions, setAllQuestions] = useState([]);
-    // `templateSource` = sorgente selezionata per l'import WITHOUT data (solo
-    // testo). La copia nel form avviene al click del bottone "Import", non alla
-    // selezione: stesso schema dell'import WITH data (select + bottone).
-    // `importedFrom` resta come indicatore "Imported from X" dopo l'import.
     const [templateSource, setTemplateSource] = useState(null);
     const [importedFrom, setImportedFrom] = useState(null);
-    // Stessi tre stati per il box "Duplicate WITH data": oltre a riempire il
-    // form coi testi (come WITHOUT), arma la copia dei dati linguistici della
-    // sorgente, eseguita lato backend al salvataggio. `copyDataFrom` è l'id
-    // della sorgente da clonare (null = nessuna copia).
     const [dataTemplateSource, setDataTemplateSource] = useState(null);
     const [dataImportedFrom, setDataImportedFrom] = useState(null);
     const [copyDataFrom, setCopyDataFrom] = useState(null);
@@ -189,31 +156,17 @@ export default function QuestionForm({ mode = 'page' }) {
     const [showCreator, setShowCreator] = useState(false);
     const [newMotData, setNewMotData] = useState({ code: '', label: '' });
 
-    // Editor inline di una motivation esistente (clic sul chip selezionato).
-    // Distinto dal "creator": qui modifichiamo o eliminiamo, non creiamo.
-    // Le modifiche al code/label si propagano ovunque la motivation sia
-    // referenziata: l'utente vede un warning prima di salvare.
     const [editingMotivationId, setEditingMotivationId] = useState(null);
     const [editMotData, setEditMotData] = useState({ code: '', label: '' });
-    // Snapshot dei valori all'apertura della modal: serve a derivare `motDirty`
-    // e attivare guard/confirm solo quando l'utente ha davvero modificato qualcosa.
     const [initialMotData, setInitialMotData] = useState({ code: '', label: '' });
     const [motSaving, setMotSaving] = useState(false);
     const [motDeleting, setMotDeleting] = useState(false);
 
-    // Stati per Audit Log (mutuati da ParameterForm)
     const [changeNote, setChangeNote] = useState('');
     const [changeLogs, setChangeLogs] = useState([]);
     const [draftReady, setDraftReady] = useState(false);
-    // Flag interno: se attivo, al submit la nota viene prefissata con
-    // "Test edit. " (in edit) o "Test new question. " (in create) così che i
-    // filtri (`startsWith` su UI, dashboard, PDF) la escludano. Il prefisso
-    // non è visibile in textarea per evitare modifiche accidentali.
     const [isTestEdit, setIsTestEdit] = useState(false);
 
-    // Persistenza locale della bozza dei testi della domanda. La key dipende
-    // dall'id (in edit) o dal parametro di destinazione (in creazione), così
-    // bozze di pagine diverse non si sovrappongono.
     const draftKey = isEditMode
         ? `draft_question_${id}`
         : `draft_question_new_${formData.parameter_id || paramFromUrl || 'noparam'}`;
@@ -221,47 +174,35 @@ export default function QuestionForm({ mode = 'page' }) {
         storageKey: draftKey,
         formData,
         setFormData,
-        fields: Q_DRAFT_FIELDS,
+        fields: QUESTION_DRAFT_FIELDS,
         enabled: draftReady,
     });
 
-
-    // Stato per il flusso "Save and delete linked data": apre un modal di
-    // conferma che mostra quanti dati linguistici verranno spostati nell'archivio.
     const [wipeConfirmOpen, setWipeConfirmOpen] = useState(false);
     const [wipeStats, setWipeStats] = useState(null);
     const [wipeStatsLoading, setWipeStatsLoading] = useState(false);
 
-    // Modale "Copy examples to another question": duplica SOLO gli esempi
-    // sulla destinazione (risposte/motivazioni intatte, sorgente non toccata).
-    // `copyFromWipe`: se aperto dal banner di wipe, alla chiusura si riapre
-    // il wipe confirm cosi' l'utente riprende da dove era.
     const [copyExamplesOpen, setCopyExamplesOpen] = useState(false);
     const [copyFromWipe, setCopyFromWipe] = useState(false);
 
-    // Presence anonima: numero di ALTRI utenti che stanno modificando questa
-    // stessa question adesso (solo in edit). Mostra una pill discreta in header.
     const othersEditing = usePresence('question', id, isEditMode && !!id);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Usiamo /with-usage anziché l'endpoint base così abbiamo
-                // `linked_questions` per ogni motivation: serve nel modal di
-                // edit per mostrare quante altre domande sono toccate dalla
-                // modifica e per il blocco preventivo della delete.
-                const [paramsRes, motsRes, qsRes] = await Promise.all([
+                // with-usage: include le question collegate
+                const [parametersRes, motivationsRes, questionsRes] = await Promise.all([
                     api.get('/api/admin/parameters'),
                     api.get('/api/admin/motivations/with-usage'),
                     api.get('/api/admin/questions')
                 ]);
-                setParameters(paramsRes.data || []);
-                setAllMotivations(motsRes.data || []);
-                setAllQuestions(qsRes.data || []);
+                setParameters(parametersRes.data || []);
+                setAllMotivations(motivationsRes.data || []);
+                setAllQuestions(questionsRes.data || []);
 
                 if (isEditMode) {
                     const questionRes = await api.get(`/api/admin/questions/${id}`);
-                    const qData = {
+                    const loadedQuestion = {
                         id: questionRes.data.id || '',
                         parameter_id: questionRes.data.parameter_id || '',
                         text: questionRes.data.text || '',
@@ -275,12 +216,11 @@ export default function QuestionForm({ mode = 'page' }) {
                         allowed_motivations: questionRes.data.allowed_motivations || []
                     };
 
-                    setFormData(qData);
-                    setInitialData(qData);
+                    setFormData(loadedQuestion);
+                    setInitialData(loadedQuestion);
 
-                    // Carica anche i log del parametro per visualizzarli nella UI
                     try {
-                        const paramRes = await api.get(`/api/admin/parameters/${qData.parameter_id}`);
+                        const paramRes = await api.get(`/api/admin/parameters/${loadedQuestion.parameter_id}`);
                         setChangeLogs(paramRes.data.change_logs || []);
                     } catch(err) {
                         console.warn("Impossibile caricare i log del parametro", err);
@@ -288,7 +228,6 @@ export default function QuestionForm({ mode = 'page' }) {
 
                 } else if (paramFromUrl) {
                     setFormData((prev) => ({ ...prev, parameter_id: paramFromUrl }));
-                    // Anche in creazione carichiamo i log del parametro genitore per il recap
                     try {
                         const paramRes = await api.get(`/api/admin/parameters/${paramFromUrl}`);
                         setChangeLogs(paramRes.data.change_logs || []);
@@ -307,12 +246,9 @@ export default function QuestionForm({ mode = 'page' }) {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        // Traccia se l'utente ha digitato un ID custom: in quel caso l'auto-fill
-        // smette di sovrascriverlo. Se svuota il campo, l'auto-fill riprende.
         if (name === 'id') idEditedByUserRef.current = value.trim() !== '';
         setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
 
-        // In creazione, se cambia il parametro genitore aggiorniamo i log mostrati nel recap
         if (!isEditMode && name === 'parameter_id') {
             if (value) {
                 api.get(`/api/admin/parameters/${value}`)
@@ -324,10 +260,6 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    // ID suggerito. Normalmente è lo schema "a lettera" del parametro corrente;
-    // dopo un "Duplicate WITH data" (`copyDataFrom` valorizzato) diventa lo
-    // schema "numerato" derivato dalla sorgente. In entrambi i casi resta
-    // reattivo alla spunta Stop Question (vedi computeSuggestedQuestionId).
     const suggestedQuestionId = useMemo(
         () => computeSuggestedQuestionId({
             parameterId: formData.parameter_id,
@@ -338,15 +270,6 @@ export default function QuestionForm({ mode = 'page' }) {
         [formData.parameter_id, formData.is_stop_question, copyDataFrom, allQuestions]
     );
 
-    // Pre-compila il campo ID col suggerimento quando si sceglie un parametro o
-    // si spunta/toglie "Stop Question" (cambia `suggestedQuestionId` e l'ID
-    // passa da `_Q` a `_QS` e viceversa). Sovrascriviamo solo se l'utente non
-    // ha digitato un ID custom: tracciamo l'ultimo valore auto-generato e lo
-    // aggiorniamo solo se l'attuale combacia.
-    // True quando l'utente ha digitato un ID a mano: da quel momento l'auto-fill
-    // non tocca più il campo (finché non lo svuota). Finché è false, l'ID segue
-    // sempre `suggestedQuestionId`, così togliere/rimettere la spunta Stop
-    // Question aggiorna il nome in tempo reale (`_Q` ⇄ `_QS`).
     const idEditedByUserRef = useRef(false);
     useEffect(() => {
         if (isEditMode) return;
@@ -355,28 +278,22 @@ export default function QuestionForm({ mode = 'page' }) {
         setFormData(prev => (prev.id === suggestedQuestionId ? prev : { ...prev, id: suggestedQuestionId }));
     }, [suggestedQuestionId, isEditMode]);
 
-    // Opzioni raggruppate per parametro per il select di import
     const groupedQuestionOptions = useMemo(() => {
         return parameters
-            .map(p => {
-                const opts = allQuestions
-                    .filter(q => q.parameter_id === p.id)
+            .map(parameter => {
+                const options = allQuestions
+                    .filter(question => question.parameter_id === parameter.id)
                     .sort((a, b) => String(a.id).localeCompare(String(b.id)))
-                    .map(q => {
-                        const txt = (q.text || '').trim();
-                        const snippet = txt.length > 70 ? `${txt.slice(0, 70)}…` : txt;
-                        return { value: q.id, label: `${q.id} — ${snippet}` };
+                    .map(question => {
+                        const text = (question.text || '').trim();
+                        const snippet = text.length > 70 ? `${text.slice(0, 70)}…` : text;
+                        return { value: question.id, label: `${question.id} — ${snippet}` };
                     });
-                return { label: `${p.id} - ${p.name}`, options: opts };
+                return { label: `${parameter.id} - ${parameter.name}`, options };
             })
-            .filter(g => g.options.length > 0);
+            .filter(group => group.options.length > 0);
     }, [parameters, allQuestions]);
 
-
-    // Riempie il form coi soli testi della sorgente. Con `withData` arma anche
-    // la copia dei dati linguistici (eseguita al salvataggio dal backend).
-    // I due box sono mutuamente esclusivi: l'ultimo usato "vince" e l'altro
-    // viene azzerato, così è sempre chiaro quale duplicazione è attiva.
     const handleImportQuestion = async (selected, { withData = false } = {}) => {
         if (!selected) {
             if (withData) { setDataImportedFrom(null); setCopyDataFrom(null); }
@@ -385,35 +302,27 @@ export default function QuestionForm({ mode = 'page' }) {
         }
         try {
             const res = await api.get(`/api/admin/questions/${selected.value}`);
-            const q = res.data;
-            const sourceParam = q.parameter_id || '';
-            const sourceStop = q.is_stop_question ?? false;
-            // ID auto-dedotto: schema numerato (WITH data) o a lettera (WITHOUT
-            // data), calcolato sul PARAMETRO DELLA SORGENTE — è lì che finirà la
-            // duplicata.
+            const source = res.data;
+            const sourceParam = source.parameter_id || '';
+            const sourceStop = source.is_stop_question ?? false;
             const newId = computeSuggestedQuestionId({
                 parameterId: sourceParam,
                 isStop: sourceStop,
                 copySource: withData ? selected.value : null,
                 questions: allQuestions,
             });
-            // Il click di Duplicate sovrascrive sempre il campo Question ID,
-            // anche se l'utente ne aveva digitato uno a mano: riazzeriamo il flag
-            // così l'auto-suggerimento riprende a guidarlo (e a ri-adattarsi a
-            // Stop Question). Destination Parameter e Stop Question seguono la
-            // sorgente.
             idEditedByUserRef.current = false;
             setFormData(prev => ({
                 ...prev,
                 parameter_id: sourceParam,
-                text: q.text || '',
-                instruction: q.instruction || '',
-                instruction_yes: q.instruction_yes || '',
-                instruction_no: q.instruction_no || '',
-                example_yes: q.example_yes || '',
-                help_info: q.help_info || '',
+                text: source.text || '',
+                instruction: source.instruction || '',
+                instruction_yes: source.instruction_yes || '',
+                instruction_no: source.instruction_no || '',
+                example_yes: source.example_yes || '',
+                help_info: source.help_info || '',
                 is_stop_question: sourceStop,
-                allowed_motivations: q.allowed_motivations || [],
+                allowed_motivations: source.allowed_motivations || [],
                 id: newId,
             }));
             if (withData) {
@@ -433,8 +342,8 @@ export default function QuestionForm({ mode = 'page' }) {
     };
 
     const selectedOptions = allMotivations
-        .filter(m => formData.allowed_motivations.includes(m.id))
-        .map(m => ({ value: m.id, label: `${m.code} - ${m.label}` }));
+        .filter(motivation => formData.allowed_motivations.includes(motivation.id))
+        .map(motivation => ({ value: motivation.id, label: `${motivation.code} - ${motivation.label}` }));
 
     const handleSelectChange = (newValue) => {
         setFormData(prev => ({
@@ -448,21 +357,17 @@ export default function QuestionForm({ mode = 'page' }) {
         setShowCreator(true);
     };
 
-    // Suggerisce il prossimo codice MOT### libero. Trova il massimo numero
-    // tra i code che matchano `MOT\d+`, +1, e zero-padda a 3 cifre. Usato
-    // dal footer "+ Create new motivation…" del dropdown e come default
-    // quando l'utente apre il creator senza aver digitato un code custom.
     const suggestNextMotivationCode = useCallback(() => {
-        const re = /^MOT(\d+)$/i;
-        let max = 0;
-        for (const m of allMotivations) {
-            const match = String(m.code || '').match(re);
+        const motivationCodeRe = /^MOT(\d+)$/i;
+        let maxNumber = 0;
+        for (const motivation of allMotivations) {
+            const match = String(motivation.code || '').match(motivationCodeRe);
             if (match) {
-                const n = parseInt(match[1], 10);
-                if (Number.isFinite(n) && n > max) max = n;
+                const number = parseInt(match[1], 10);
+                if (Number.isFinite(number) && number > maxNumber) maxNumber = number;
             }
         }
-        return `MOT${String(max + 1).padStart(3, '0')}`;
+        return `MOT${String(maxNumber + 1).padStart(3, '0')}`;
     }, [allMotivations]);
 
     const openCreatorFromFooter = useCallback(() => {
@@ -470,9 +375,7 @@ export default function QuestionForm({ mode = 'page' }) {
         setShowCreator(true);
     }, [suggestNextMotivationCode]);
 
-    // Scarica la cronologia modifiche del parametro genitore: le question
-    // condividono i change_logs del proprio parameter, quindi qui usiamo
-    // l'endpoint del parametro corrente.
+    // la history è quella del parametro
     const handleDownloadChangelogPdf = async () => {
         const paramId = formData.parameter_id;
         if (!paramId) return;
@@ -486,28 +389,23 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    // --- EDIT/DELETE INLINE DI UNA MOTIVATION ESISTENTE ---
-    // Apre il modal di edit per la motivation cliccata sul chip selezionato.
-    // useCallback così l'identità non cambia a ogni render: il custom
-    // MultiValueLabel di react-select dipende da questo handler.
+    // useCallback: serve al chip di react-select
     const openMotivationEditor = useCallback((motivationId) => {
-        const m = allMotivations.find(x => x.id === motivationId);
-        if (!m) return;
-        const snapshot = { code: m.code || '', label: m.label || '' };
+        const motivation = allMotivations.find(candidate => candidate.id === motivationId);
+        if (!motivation) return;
+        const snapshot = { code: motivation.code || '', label: motivation.label || '' };
         setEditingMotivationId(motivationId);
         setEditMotData(snapshot);
         setInitialMotData(snapshot);
     }, [allMotivations]);
 
-    // Dirty solo se la modal è aperta e i valori divergono dallo snapshot iniziale.
-    // Il check su `editingMotivationId` evita falsi positivi a modal chiusa.
     const motDirty = !!editingMotivationId && (
         editMotData.code !== initialMotData.code ||
         editMotData.label !== initialMotData.label
     );
 
     const closeMotivationEditor = () => {
-        if (motSaving || motDeleting) return; // non chiudere durante un'azione
+        if (motSaving || motDeleting) return;
         if (motDirty && !window.confirm('You have unsaved changes on this motivation. Discard them?')) return;
         setEditingMotivationId(null);
         setEditMotData({ code: '', label: '' });
@@ -522,14 +420,10 @@ export default function QuestionForm({ mode = 'page' }) {
         setMotSaving(true);
         try {
             const res = await api.put(`/api/admin/motivations/${editingMotivationId}`, { code, label });
-            // Aggiorniamo la lista locale così il chip mostra subito il nuovo
-            // testo. `linked_questions` viene preservato dalla risposta server
-            // (con-usage) o lasciato com'è (PUT base): la fonte di verità è il
-            // server, qui ci basta che la UI rifletta i nuovi code/label.
-            setAllMotivations(prev => prev.map(m =>
-                m.id === editingMotivationId
-                    ? { ...m, ...res.data, linked_questions: m.linked_questions }
-                    : m
+            setAllMotivations(prev => prev.map(motivation =>
+                motivation.id === editingMotivationId
+                    ? { ...motivation, ...res.data, linked_questions: motivation.linked_questions }
+                    : motivation
             ));
             setEditingMotivationId(null);
             setEditMotData({ code: '', label: '' });
@@ -543,20 +437,19 @@ export default function QuestionForm({ mode = 'page' }) {
 
     const deleteCurrentMotivation = async () => {
         if (!editingMotivationId) return;
-        const m = allMotivations.find(x => x.id === editingMotivationId);
-        const linked = m?.linked_questions?.length || 0;
-        const confirmMsg = linked > 1
-            ? `This motivation is used by ${linked} questions. Deleting it would remove it from all of them. Continue?`
+        const motivation = allMotivations.find(candidate => candidate.id === editingMotivationId);
+        const linkedCount = motivation?.linked_questions?.length || 0;
+        const confirmMsg = linkedCount > 1
+            ? `This motivation is used by ${linkedCount} questions. Deleting it would remove it from all of them. Continue?`
             : 'Delete this motivation? The operation is blocked if it is used by other questions.';
         if (!window.confirm(confirmMsg)) return;
         setMotDeleting(true);
         try {
             await api.delete(`/api/admin/motivations/${editingMotivationId}`);
-            // Rimuovi dalla lista globale e dalla selezione corrente
-            setAllMotivations(prev => prev.filter(x => x.id !== editingMotivationId));
+            setAllMotivations(prev => prev.filter(candidate => candidate.id !== editingMotivationId));
             setFormData(prev => ({
                 ...prev,
-                allowed_motivations: prev.allowed_motivations.filter(id => id !== editingMotivationId),
+                allowed_motivations: prev.allowed_motivations.filter(motivationId => motivationId !== editingMotivationId),
             }));
             setEditingMotivationId(null);
             setEditMotData({ code: '', label: '' });
@@ -568,10 +461,6 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    // Custom chip di react-select: l'intera label è cliccabile e apre l'editor
-    // della motivation. La "x" di rimozione locale (MultiValueRemove) resta
-    // intatta — la distinzione è chiara: x = rimuovi da QUESTA domanda;
-    // click sul testo = modifica/elimina globalmente.
     const motivationSelectComponents = useMemo(() => ({
         MultiValueLabel: (props) => (
             <div
@@ -591,11 +480,7 @@ export default function QuestionForm({ mode = 'page' }) {
                 <RSComponents.MultiValueLabel {...props} />
             </div>
         ),
-        // Footer sticky in fondo al dropdown: punto di scoperta esplicito
-        // per la creazione, complementare al "Create new: ..." inline che
-        // appare solo quando l'utente sta digitando un code nuovo. Usiamo
-        // onMouseDown+preventDefault per non perdere il focus del select
-        // prima di aprire il modal.
+        // preventDefault: il select non perde il focus
         MenuList: (props) => (
             <RSComponents.MenuList {...props}>
                 {props.children}
@@ -639,9 +524,6 @@ export default function QuestionForm({ mode = 'page' }) {
         }
     };
 
-    // Salvataggio. Se `wipeData` è true (solo in edit mode) le risposte/esempi
-    // collegati vengono archiviati lato backend prima di applicare la modifica
-    // al testo della question.
     const performSave = async ({ wipeData = false } = {}) => {
         setError('');
         setIsLoading(true);
@@ -658,7 +540,6 @@ export default function QuestionForm({ mode = 'page' }) {
                     ? `${isEditMode ? 'Test edit' : 'Test new question'}. ${changeNote}`
                     : changeNote,
                 wipe_data: wipeData,
-                // Solo in creazione: id della sorgente da clonare "con dati".
                 copy_data_from: !isEditMode ? copyDataFrom : null,
             };
 
@@ -681,8 +562,6 @@ export default function QuestionForm({ mode = 'page' }) {
         await performSave({ wipeData: false });
     };
 
-    // Apre il modal "Save and delete linked data": fetcha le stats
-    // (n. lingue, risposte, esempi) cosi' l'utente vede l'impatto.
     const handleOpenWipeConfirm = async () => {
         if (!isEditMode) return;
         setWipeStats(null);
@@ -703,7 +582,6 @@ export default function QuestionForm({ mode = 'page' }) {
         await performSave({ wipeData: true });
     };
 
-    // Logica per isDirty
     const safeString = (val) => val === null || val === undefined ? '' : String(val);
     const isArraysEqual = (a, b) => {
         if (!a || !b) return false;
@@ -713,8 +591,6 @@ export default function QuestionForm({ mode = 'page' }) {
         return sortedA.every((val, index) => val === sortedB[index]);
     };
 
-    // In creazione la nota è sempre richiesta (l'intera domanda è "nuova"),
-    // in modifica solo se almeno un campo è cambiato.
     const isDirty = !isEditMode || (initialData && (
         safeString(formData.id) !== safeString(initialData.id) ||
         safeString(formData.text) !== safeString(initialData.text) ||
@@ -728,25 +604,17 @@ export default function QuestionForm({ mode = 'page' }) {
         !isArraysEqual(formData.allowed_motivations, initialData.allowed_motivations)
     ));
 
-    // Variante per il guard: in creazione "dirty" se almeno un campo
-    // tracciato è stato compilato. Senza questo, il guard scatterebbe anche
-    // quando l'utente è appena arrivato sulla pagina e non ha toccato nulla.
     const isCreatingDirty = !isEditMode && (
-        Q_DRAFT_FIELDS.some(f => {
-            const v = formData[f];
-            if (v === null || v === undefined || v === '' || v === false) return false;
-            if (typeof v === 'string') return v.trim().length > 0;
+        QUESTION_DRAFT_FIELDS.some(field => {
+            const value = formData[field];
+            if (value === null || value === undefined || value === '' || value === false) return false;
+            if (typeof value === 'string') return value.trim().length > 0;
             return true;
         }) || (formData.allowed_motivations || []).length > 0
     );
     const isDirtyForGuard = isEditMode ? !!isDirty : isCreatingDirty;
 
-    // Guard unificato per question + modal motivation. Una sola chiamata perché
-    // `useBlocker` di react-router è un singleton: due chiamate nello stesso
-    // componente fanno sì che la seconda sovrascriva la prima, disattivando
-    // la guardia sulla navigazione interna (la X del drawer, click outside,
-    // ESC, breadcrumb, ecc.). Il `beforeunload` invece sopravvive perché sono
-    // `useEffect` indipendenti su `window`.
+    // una sola chiamata: useBlocker non ne regge due
     const questionDirtyForGuard = isDirtyForGuard && !isLoading;
     const guardActive = questionDirtyForGuard || motDirty;
     const guardMessage = motDirty
@@ -765,10 +633,6 @@ export default function QuestionForm({ mode = 'page' }) {
                     marginBottom: 'var(--form-card-header-mb, 1.5rem)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     gap: '1rem', flexWrap: 'wrap',
-                    // Come Edit Parameter: header sticky col badge quando c'è un altro
-                    // utente. SOLO in modalità pagina: nel drawer no, perché lo scroll è
-                    // quello interno del pannello e l'header si scontrerebbe con la × di
-                    // chiusura in alto a destra.
                     ...(othersEditing > 0 && !isDrawerMode ? {
                         position: 'sticky',
                         top: 'var(--topbar-height)',
@@ -804,12 +668,8 @@ export default function QuestionForm({ mode = 'page' }) {
                 {error && <div className="alert alert-error" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--form-col-gap, 1.2rem)' }}>
-                    {/* --- IMPORT (solo in creazione) --- */}
                     {!isEditMode && (
                         <>
-                            {/* DUPLICATE WITH DATA: riempie il form coi testi della
-                                sorgente E clona, al salvataggio, tutte le risposte/
-                                esempi/motivazioni di quella question (tutte le lingue). */}
                             <div style={importBoxStyle}>
                                 <span style={importTitleStyle}>Duplicate WITH data</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -843,9 +703,6 @@ export default function QuestionForm({ mode = 'page' }) {
                                 </div>
                             </div>
 
-                            {/* DUPLICATE WITHOUT DATA: riempie il form con i soli testi
-                                della sorgente. La copia avviene al click di "Duplicate",
-                                non alla selezione. */}
                             <div style={importBoxStyle}>
                                 <span style={importTitleStyle}>Duplicate WITHOUT data</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
@@ -881,15 +738,12 @@ export default function QuestionForm({ mode = 'page' }) {
                         </>
                     )}
 
-                    {/* Riga unica: prima si sceglie il parametro, poi si decide se è
-                        una Stop Question (la spunta cambia il formato dell'ID
-                        suggerito in `_QS`), infine il Question ID auto-compilato. */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', gap: 'var(--form-grid-gap, 1rem)', alignItems: 'end' }}>
                         <div>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem' }}>Destination Parameter</label>
                             <select name="parameter_id" value={formData.parameter_id} onChange={handleChange} required disabled={isEditMode} style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', backgroundColor: isEditMode ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text)' }}>
                                 <option value="">Select parameter...</option>
-                                {parameters.map((p) => <option key={p.id} value={p.id}>{p.id} - {p.name}</option>)}
+                                {parameters.map((parameter) => <option key={parameter.id} value={parameter.id}>{parameter.id} - {parameter.name}</option>)}
                             </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingBottom: '0.6rem', whiteSpace: 'nowrap' }}>
@@ -911,7 +765,6 @@ export default function QuestionForm({ mode = 'page' }) {
                         <textarea name="text" value={formData.text} onChange={handleChange} required rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)' }} />
                     </div>
 
-                    {/* SEZIONE ISTRUZIONI */}
                     <div style={{ background: 'var(--surface, #fafafa)', padding: 'var(--form-box-pad, 1rem)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                         <h4 style={{marginTop: 0, marginBottom: 'var(--form-field-mb, 1rem)'}}>Instructions</h4>
 
@@ -951,7 +804,7 @@ export default function QuestionForm({ mode = 'page' }) {
                         </p>
                         <CreatableSelect
                             isMulti
-                            options={allMotivations.map(m => ({ value: m.id, label: `${m.code} - ${m.label}` }))}
+                            options={allMotivations.map(motivation => ({ value: motivation.id, label: `${motivation.code} - ${motivation.label}` }))}
                             value={selectedOptions}
                             onChange={handleSelectChange}
                             onCreateOption={handleCreateOption}
@@ -972,7 +825,6 @@ export default function QuestionForm({ mode = 'page' }) {
                         </div>
                     </div>
 
-                    {/* --- SEZIONE MOTIVAZIONE (Visibile sia in creazione che in modifica) --- */}
                     <div style={{
                         background: isDirty ? '#fff3cd' : 'var(--surface-2, #f8fafc)',
                         padding: 'var(--form-box-pad-lg, 1.5rem)',
@@ -1020,9 +872,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         padding: 'var(--form-input-pad, 0.5rem)',
                                         borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
                                         borderRadius: '4px',
-                                        // Quando dirty il container esterno è giallo chiaro hard-coded:
-                                        // forziamo testo scuro così resta leggibile anche in dark mode
-                                        // (altrimenti --text del tema scuro è bianco su bianco).
+                                        // testo scuro anche in dark mode
                                         backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
                                         color: !isDirty ? 'var(--text)' : '#15181c',
                                         cursor: !isDirty ? 'not-allowed' : 'text',
@@ -1035,9 +885,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                         marginTop: '0.5rem', fontSize: '0.82rem',
                                         opacity: !isDirty ? 0.5 : 1,
                                         cursor: !isDirty ? 'not-allowed' : 'pointer',
-                                        // Container è giallo hard-coded quando dirty: forziamo testo
-                                        // scuro per leggibilità anche in dark mode (altrimenti
-                                        // var(--text) sarebbe bianco su giallo).
+                                        // testo scuro anche in dark mode
                                         color: !isDirty ? 'var(--text)' : (isTestEdit ? '#664d03' : '#15181c'),
                                     }}
                                     title="If checked, this entry will be excluded from change history (dashboard, panel, PDF)"
@@ -1094,9 +942,6 @@ export default function QuestionForm({ mode = 'page' }) {
                         >
                             {isLoading ? 'Saving...' : (isEditMode ? 'Save the changes and maintain data' : 'Save Question')}
                         </button>
-                        {/* Stesso stile del bottone "maintain data" (uniformati su
-                            richiesta): il segnale di pericolo vive nel modale di
-                            conferma successivo (bottone rosso "Archive and save"). */}
                         {isEditMode && (
                             <button
                                 type="button"
@@ -1119,7 +964,6 @@ export default function QuestionForm({ mode = 'page' }) {
                 </form>
             </div>
 
-            {/* MODAL CREAZIONE AL VOLO (Invariato) */}
             {showCreator && (
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '400px', maxWidth: '92vw' }}>
@@ -1140,9 +984,6 @@ export default function QuestionForm({ mode = 'page' }) {
                 </div>
             )}
 
-            {/* MODAL CONFERMA WIPE: chiede conferma prima di archiviare i dati
-                linguistici collegati alla question. Mostra il conteggio di
-                risposte/esempi/lingue che verranno spostati nell'archivio. */}
             {wipeConfirmOpen && (
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '500px', maxWidth: '92vw' }}>
@@ -1174,9 +1015,6 @@ export default function QuestionForm({ mode = 'page' }) {
                             )}
                         </div>
 
-                        {/* Alternativa prima di archiviare: copiare gli esempi su
-                            un'altra question (richiesta linguisti). Al termine si
-                            torna a questo banner per proseguire col wipe. */}
                         <div style={{
                             background: 'var(--surface-2, #f8fafc)',
                             border: '1px solid var(--border)',
@@ -1226,8 +1064,6 @@ export default function QuestionForm({ mode = 'page' }) {
                 </div>
             )}
 
-            {/* Modale copia esempi. Se aperto dal banner di wipe, alla chiusura
-                (sia dopo la copia che su Cancel) riapre il wipe confirm. */}
             {copyExamplesOpen && (
                 <CopyExamplesModal
                     sourceQuestionId={id}
@@ -1242,15 +1078,10 @@ export default function QuestionForm({ mode = 'page' }) {
                 />
             )}
 
-            {/* MODAL EDIT/DELETE MOTIVATION ESISTENTE
-                Aperto dal click sul testo di un chip selezionato.
-                Le modifiche al code/label si propagano ovunque la motivation
-                sia referenziata: viene mostrato il warning prima di salvare.
-                La delete è bloccata server-side se la motivation è in uso. */}
             {editingMotivationId && (() => {
-                const m = allMotivations.find(x => x.id === editingMotivationId);
-                const linkedCount = m?.linked_questions?.length || 0;
-                const linkedOthers = (m?.linked_questions || []).filter(qid => qid !== id);
+                const motivation = allMotivations.find(candidate => candidate.id === editingMotivationId);
+                const linkedCount = motivation?.linked_questions?.length || 0;
+                const linkedOthers = (motivation?.linked_questions || []).filter(questionId => questionId !== id);
                 return (
                     <div style={modalOverlayStyle}>
                         <div className="card" style={{ width: '460px', maxWidth: '92vw' }}>
@@ -1329,8 +1160,6 @@ export default function QuestionForm({ mode = 'page' }) {
     );
 }
 
-// Stile del box "Duplicate WITHOUT data": bordo solido, titolo in stile
-// "Language Filters/Parameters Filters" di TableA.
 const importBoxStyle = {
     background: 'var(--surface-2, #f8fafc)',
     padding: '0.85rem 1rem',

@@ -1,7 +1,4 @@
-"""
-Tracking in-memory dello stato di avanzamento dei job di migration import.
-
-"""
+"""Avanzamento dei job di import, in memoria."""
 from __future__ import annotations
 import threading
 import time
@@ -11,11 +8,10 @@ from typing import Optional, Dict, Any
 
 _LOCK = threading.Lock()
 _JOBS: Dict[str, Dict[str, Any]] = {}
-_TTL_SECONDS = 3600  # 1h
+_TTL_SECONDS = 3600
 
 
 def new_job() -> str:
-    """Crea un nuovo job_id e ne registra lo stato iniziale."""
     job_id = str(uuid.uuid4())
     with _LOCK:
         _JOBS[job_id] = {
@@ -35,7 +31,7 @@ def new_job() -> str:
 
 
 def set_phase(job_id: str, phase: str, label: str = "", total: int = 0) -> None:
-    """Inizia una nuova fase. Resetta `current` a 0."""
+    """Nuova fase: `current` riparte da 0."""
     with _LOCK:
         j = _JOBS.get(job_id)
         if not j or j.get("finished"):
@@ -47,8 +43,7 @@ def set_phase(job_id: str, phase: str, label: str = "", total: int = 0) -> None:
 
 
 def tick(job_id: str, current: Optional[int] = None, label: Optional[str] = None) -> None:
-    """Avanza il contatore della fase corrente. Senza `current` incrementa di 1.
-    `label` aggiorna l'etichetta dettaglio (es. lingua corrente)."""
+    """Avanza di 1, o fino a `current` se dato."""
     with _LOCK:
         j = _JOBS.get(job_id)
         if not j or j.get("finished"):
@@ -62,7 +57,6 @@ def tick(job_id: str, current: Optional[int] = None, label: Optional[str] = None
 
 
 def finish_ok(job_id: str, report: Any) -> None:
-    """Segna il job come completato con successo. `report` è il dict serializzato."""
     with _LOCK:
         j = _JOBS.get(job_id)
         if not j:
@@ -75,7 +69,6 @@ def finish_ok(job_id: str, report: Any) -> None:
 
 
 def finish_error(job_id: str, error: str) -> None:
-    """Segna il job come terminato con errore."""
     with _LOCK:
         j = _JOBS.get(job_id)
         if not j:
@@ -88,7 +81,7 @@ def finish_error(job_id: str, error: str) -> None:
 
 
 def get_state(job_id: str) -> Optional[Dict[str, Any]]:
-    """Ritorna una copia dello stato del job, o None se non esiste."""
+    """Copia dello stato del job, o None."""
     with _LOCK:
         j = _JOBS.get(job_id)
         if j is None:
@@ -97,7 +90,7 @@ def get_state(job_id: str) -> Optional[Dict[str, Any]]:
 
 
 def _purge_expired_locked_free() -> None:
-    """Rimuove job terminati da più di TTL_SECONDS. Non chiamare con _LOCK già preso."""
+    """Toglie i job finiti da oltre 1h; non chiamarla col _LOCK preso."""
     now = time.time()
     with _LOCK:
         to_del = [
@@ -109,17 +102,8 @@ def _purge_expired_locked_free() -> None:
             del _JOBS[k]
 
 
-# ============================================================================
-# Reporter helper: oggetto passato a import_migration_bundle che incapsula
-# il job_id. Comodo perché il chiamante non deve ripassarlo a ogni call.
-# ============================================================================
-
 class ProgressReporter:
-    """Wrapper object che lega un job_id alle funzioni di progresso.
-
-    Si comporta come no-op se `job_id` è None — utile per i test e per
-    invocazioni dirette (es. da CLI) che non hanno un job tracking attivo.
-    """
+    """Lega un job_id al progresso; con job_id None non fa nulla."""
     def __init__(self, job_id: Optional[str]):
         self.job_id = job_id
 

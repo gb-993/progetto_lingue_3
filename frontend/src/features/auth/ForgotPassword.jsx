@@ -12,9 +12,7 @@ export default function ForgotPassword() {
         setError('');
         try {
             await api.post('/auth/forgot-password', { email });
-            // Il backend risponde sempre 200 (anche se l'email non esiste)
-            // per non leakare quali account sono registrati: il frontend
-            // si limita a mostrare la conferma generica.
+            // risposta sempre uguale, per non rivelare le email
             setSubmitted(true);
         } catch (err) {
             if (err?.response?.status === 429) {

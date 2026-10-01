@@ -1,11 +1,3 @@
-"""Test unit del resolver `resolve_question`.
-
-Verifica:
-  - match per id corrente (no alias)
-  - match per alias storico
-  - alias orfano (domanda puntata cancellata) -> miss
-  - id assente -> miss
-"""
 import models
 from services.question_alias import resolve_question
 
@@ -42,8 +34,7 @@ def test_resolve_by_alias(db_session):
 
 
 def test_resolve_orphan_alias_returns_none(db_session):
-    # db_session non ha FK enforcement attivo: creo un alias che punta a una
-    # domanda inesistente per simulare l'orfano (domanda cancellata) -> miss.
+    # senza FK attive: alias verso una domanda cancellata
     db_session.add(models.QuestionAlias(question_id="P1_GONE", old_id="P1_OLD"))
     db_session.commit()
     res = resolve_question(db_session, "P1_OLD")

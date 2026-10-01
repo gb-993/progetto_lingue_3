@@ -16,11 +16,10 @@ from services.question_copy import copy_question_data
 from services.question_delete import delete_question_permanently
 from services.recompute import recompute_parameter_for_all_languages
 
-ID_MAX_LEN = 40  # Length(Question.id) — vincolo schema
+ID_MAX_LEN = 40  # lunghezza di Question.id
 
 router = APIRouter(prefix="/api/admin/questions", tags=["Questions"])
 
-# --- SCHEMA PYDANTIC ---
 class QuestionBase(BaseModel):
     id: str
     parameter_id: str
@@ -269,15 +268,13 @@ def get_question_data_stats(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Quante Answer/Example/lingue sono collegate alla question.
-    Usato dal frontend per mostrare il preview prima del wipe.
-    """
+    """Dati collegati alla question, per l'anteprima prima del wipe."""
     if not db.query(models.Question.id).filter(models.Question.id == id).first():
         raise HTTPException(status_code=404, detail="Question not found")
     return archive_service.count_linked_data(db, id)
 
 
-# (gli esempi non influenzano i valori dei parametri).
+# solo esempi: i valori dei parametri non cambiano, niente recompute
 class CopyExamplesPayload(BaseModel):
     dest_id: str
     change_note: Optional[str] = ""
@@ -309,7 +306,7 @@ def copy_examples_endpoint(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_admin),
 ):
-    """Copia gli esempi della question `id` sulla `dest_id` (solo esempi)."""
+    """Copia solo gli esempi della question `id` su `dest_id`."""
     source = db.query(models.Question).filter(models.Question.id == id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Question not found")

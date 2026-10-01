@@ -40,22 +40,17 @@ export default function QueriesDashboard() {
         localStorage.setItem(QUERIES_MENU_COLLAPSED_KEY, menuCollapsed ? '1' : '0');
     }, [menuCollapsed]);
 
-    // Stati per i form
     const [paramId, setParamId] = usePersistentState('queries:paramId', '');
     const [langId, setLangId] = usePersistentState('queries:langId', '');
     const [langIdB, setLangIdB] = usePersistentState('queries:langIdB', '');
     const [questionId, setQuestionId] = usePersistentState('queries:questionId', '');
 
-    // Filtri Q10: restringono SOLO il dropdown delle question, non il risultato.
-    // Lasciandoli vuoti, il dropdown mostra tutte le ~N centinaia di question.
+    // filtrano solo la lista delle question
     const [q10FilterLang, setQ10FilterLang] = usePersistentState('queries:q10FilterLang', '');
     const [q10FilterParam, setQ10FilterParam] = usePersistentState('queries:q10FilterParam', '');
-    // Set di question_id risposte dalla lingua filtrata. null = filtro non
-    // applicato, Set vuoto = filtro applicato ma la lingua non ha risposte.
+    // null = nessun filtro lingua
     const [q10AnsweredQids, setQ10AnsweredQids] = useState(null);
 
-    // Caricamento opzioni iniziali per le tendine
-    // Caricamento opzioni iniziali per le tendine
     useEffect(() => {
         const fetchOptions = async () => {
             try {
@@ -65,7 +60,6 @@ export default function QueriesDashboard() {
                     api.get('/api/admin/questions'),
                 ]);
 
-                // Difesa assoluta contro formati dati inattesi (previene lo schermo bianco)
                 const safeLangs = langsRes.data?.opt_all_languages || [];
                 let safeParams = [];
                 if (Array.isArray(paramsRes.data)) {
@@ -88,8 +82,6 @@ export default function QueriesDashboard() {
         fetchOptions();
     }, []);
 
-    // Quando l'utente seleziona una lingua nel filtro Q10, scarichiamo gli
-    // id delle question risposte da quella lingua. Se la deseleziona, reset.
     useEffect(() => {
         if (!q10FilterLang) {
             setQ10AnsweredQids(null);
@@ -102,37 +94,27 @@ export default function QueriesDashboard() {
         return () => { active = false; };
     }, [q10FilterLang]);
 
-    // Lista question filtrata in base ai due filtri Q10. Se la question
-    // attualmente selezionata sparisce dalla lista filtrata, la deselezioniamo.
     const q10FilteredQuestions = useMemo(() => {
-        let qs = options.questions;
-        if (q10FilterParam) qs = qs.filter(q => q.parameter_id === q10FilterParam);
-        if (q10FilterLang && q10AnsweredQids) qs = qs.filter(q => q10AnsweredQids.has(q.id));
-        return qs;
+        let questions = options.questions;
+        if (q10FilterParam) questions = questions.filter(question => question.parameter_id === q10FilterParam);
+        if (q10FilterLang && q10AnsweredQids) questions = questions.filter(question => q10AnsweredQids.has(question.id));
+        return questions;
     }, [options.questions, q10FilterParam, q10FilterLang, q10AnsweredQids]);
 
     useEffect(() => {
-        // Attendi che le question siano caricate: altrimenti al rientro nella pagina
-        // azzereremmo il questionId ripristinato da sessionStorage prima che la lista
-        // sia disponibile (lista ancora vuota = ogni id risulterebbe "sparito").
+        // aspetta che le question siano caricate
         if (options.questions.length === 0) return;
-        if (questionId && !q10FilteredQuestions.some(q => q.id === questionId)) {
+        if (questionId && !q10FilteredQuestions.some(question => question.id === questionId)) {
             setQuestionId('');
         }
     }, [q10FilteredQuestions, questionId, setQuestionId, options.questions.length]);
 
-    // Cambio tab: langId e paramId persistono (il linguista tipicamente lavora su un
-    // singolo (lingua, parametro) per sessione). langIdB e' specifico di Q7, lo resettiamo.
-    // La ricerca riparte da sola tramite l'effetto di auto-run qui sotto, non appena i
-    // campi richiesti dal nuovo tab risultano compilati: nessun click necessario.
     const handleTabChange = (tabId) => {
         setActiveTab(tabId);
         setResults(null);
         setLangIdB('');
     };
 
-    // Switch to Q3 with prefilled language + parameter. La query parte da sola grazie
-    // all'effetto di auto-run (param + lang risultano entrambi compilati).
     const goToQ3 = (langIdToUse, paramIdToUse) => {
         setActiveTab('q3');
         setLangId(langIdToUse);
@@ -143,8 +125,7 @@ export default function QueriesDashboard() {
     const executeQuery = async (e, tabOverride) => {
         if (e) e.preventDefault();
         const tab = tabOverride ?? activeTab;
-        // Guardia per Q10: react-select non supporta `required` come il native
-        // select, validiamo qui per non sparare 404 al backend.
+        // react-select non ha required
         if (tab === 'q10' && !questionId) return;
         setLoading(true);
         setResults(null);
@@ -171,12 +152,7 @@ export default function QueriesDashboard() {
         }
     };
 
-    // Auto-run: appena i campi richiesti dal tab attivo sono tutti compilati eseguiamo
-    // la query, senza bisogno del pulsante "Search". Vale anche al rientro nella pagina,
-    // quando i filtri vengono ripristinati da sessionStorage. Se manca un campo richiesto
-    // svuotiamo i risultati, così non resta visibile un risultato vecchio o "a metà".
-    // set-state-in-effect è qui voluto: vogliamo proprio lanciare la query (e quindi
-    // aggiornare lo stato) in reazione al completamento degli input.
+    // auto-run appena i campi sono compilati
     /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         const needsParam = ['q1', 'q2', 'q3'].includes(activeTab);
@@ -192,7 +168,7 @@ export default function QueriesDashboard() {
 
         if (ready) executeQuery(null, activeTab);
         else setResults(null);
-        // executeQuery legge solo questi stessi input, già elencati nelle dipendenze
+        // executeQuery usa solo questi input
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, paramId, langId, langIdB, questionId]);
     /* eslint-enable react-hooks/set-state-in-effect */
@@ -213,7 +189,7 @@ export default function QueriesDashboard() {
                             </label>
                             <select className="form-control" value={langId} onChange={e => setLangId(e.target.value)} required>
                                 <option value="">Select Language...</option>
-                                {options.langs.map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
+                                {options.langs.map(lang => <option key={lang.id} value={lang.id}>{lang.name} ({lang.id})</option>)}
                             </select>
                         </div>
                     )}
@@ -224,7 +200,7 @@ export default function QueriesDashboard() {
                             </label>
                             <select className="form-control" value={langIdB} onChange={e => setLangIdB(e.target.value)} required>
                                 <option value="">Select Language...</option>
-                                {options.langs.map(l => <option key={l.id} value={l.id}>{l.name} ({l.id})</option>)}
+                                {options.langs.map(lang => <option key={lang.id} value={lang.id}>{lang.name} ({lang.id})</option>)}
                             </select>
                         </div>
                     )}
@@ -235,7 +211,7 @@ export default function QueriesDashboard() {
                             </label>
                             <select className="form-control" value={paramId} onChange={e => setParamId(e.target.value)} required>
                                 <option value="">Select Parameter...</option>
-                                {options.params.map(p => <option key={p.id} value={p.id}>{p.id} — {p.name}</option>)}
+                                {options.params.map(param => <option key={param.id} value={param.id}>{param.id} — {param.name}</option>)}
                             </select>
                         </div>
                     )}
@@ -259,11 +235,7 @@ export default function QueriesDashboard() {
         );
     };
 
-    // Larghezza colonne: menu collassato = solo icone (56px) in ogni densità.
-    // Menu espanso: in densità compact ~1/3 menu · 2/3 risultati; comfortable = 350px.
-    // IMPORTANTE per l'animazione: tutte le larghezze del menu sono px o %
-    // (mai 'fr'), così la transizione interpola e scorre fluida come la sidebar.
-    // 'fr' ↔ 'px' non è interpolabile dal browser → salterebbe di colpo.
+    // px o %, mai fr: altrimenti l'animazione salta
     const isCompact = typeof document !== 'undefined'
         && document.documentElement.getAttribute('data-density') === 'compact';
     const gridCols = menuCollapsed
@@ -284,7 +256,6 @@ export default function QueriesDashboard() {
                 transition: 'grid-template-columns 0.13s ease',
             }}>
 
-                {/* SIDEBAR NAVIGATION */}
                 <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
                     <div style={{
                         display: 'flex', alignItems: 'center',
@@ -300,11 +271,10 @@ export default function QueriesDashboard() {
                                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                             }}>Queries Configuration</span>
                         )}
-                        {/* Toggle a destra quando aperto, centrato quando chiuso (come la sidebar). */}
                         <button
                             type="button"
                             className="sidebar-toggle"
-                            onClick={() => setMenuCollapsed(c => !c)}
+                            onClick={() => setMenuCollapsed(collapsed => !collapsed)}
                             aria-label={menuCollapsed ? 'Expand queries menu' : 'Collapse queries menu'}
                             title={menuCollapsed ? 'Expand queries menu' : 'Collapse queries menu'}
                             aria-pressed={menuCollapsed}
@@ -320,14 +290,14 @@ export default function QueriesDashboard() {
                         </button>
                     </div>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
-                        {QUERY_TABS.map(t => {
-                            const active = activeTab === t.id;
-                            const Icon = t.Icon;
+                        {QUERY_TABS.map(tab => {
+                            const active = activeTab === tab.id;
+                            const Icon = tab.Icon;
                             return (
                                 <button
-                                    key={t.id}
-                                    title={t.label}
-                                    aria-label={menuCollapsed ? t.label : undefined}
+                                    key={tab.id}
+                                    title={tab.label}
+                                    aria-label={menuCollapsed ? tab.label : undefined}
                                     style={{
                                         display: 'flex', alignItems: 'center',
                                         justifyContent: 'flex-start',
@@ -345,11 +315,8 @@ export default function QueriesDashboard() {
                                         cursor: 'pointer', transition: 'background 0.2s',
                                         fontSize: '0.9rem',
                                     }}
-                                    onClick={() => handleTabChange(t.id)}
+                                    onClick={() => handleTabChange(tab.id)}
                                 >
-                                    {/* Slot icona a larghezza fissa (56px = larghezza del menu
-                                        collassato): l'icona resta sempre nella stessa posizione,
-                                        non si sposta durante l'apri/chiudi → animazione fluida. */}
                                     <span style={{
                                         flex: '0 0 56px', width: 56, alignSelf: 'stretch',
                                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -358,12 +325,10 @@ export default function QueriesDashboard() {
                                             <Icon size={18} />
                                         ) : (
                                             <span style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1 }}>
-                                                {t.symbol}
+                                                {tab.symbol}
                                             </span>
                                         )}
                                     </span>
-                                    {/* Etichetta: occupa lo spazio rimanente e sfuma in/out.
-                                        È sempre nel DOM così l'opacità può animarsi. */}
                                     <span style={{
                                         flex: '1 1 auto', minWidth: 0, paddingRight: '1rem',
                                         display: '-webkit-box',
@@ -373,14 +338,13 @@ export default function QueriesDashboard() {
                                         lineHeight: 1.2,
                                         opacity: menuCollapsed ? 0 : 1,
                                         transition: 'opacity 0.13s ease',
-                                    }}>{t.label}</span>
+                                    }}>{tab.label}</span>
                                 </button>
                             );
                         })}
                     </nav>
                 </div>
 
-                {/* MAIN CONTENT AREA */}
                 <main>
                     {renderForm()}
 
@@ -394,46 +358,40 @@ export default function QueriesDashboard() {
                         <div className="alert alert-error">{results.error}</div>
                     )}
 
-                    {/* RENDERIZZAZIONE RISULTATI */}
                     {results && !results.error && (
                         <div className="query-results" style={{ animation: 'fadeIn 0.3s ease' }}>
 
-                            {/* Q1: Implicational conditions — vista minimale */}
+                            {/* Q1: Implicational conditions */}
                             {activeTab === 'q1' && (
                                 <div>
-                                    {/* Condizione: etichetta + valore a sinistra. L'.alert è flex
-                                        space-between di default → qui lo forziamo a sinistra. */}
                                     <div className="alert alert-info" style={{ marginBottom: '1.5rem', justifyContent: 'flex-start', gap: '0.5rem' }}>
                                         <strong>Implicational condition:</strong>
                                         <code>{results.raw_condition || 'None (always active)'}</code>
                                     </div>
 
-                                    {/* Implicant → Implicated: due colonne affiancate, ogni header
-                                        sopra il proprio elenco, freccia tra le due colonne. */}
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
                                         <div>
                                             <h3 style={{ fontSize: '1rem', margin: '0 0 0.6rem' }}>Implicant</h3>
                                             {results.implicating.length > 0 ? (
                                                 <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                                                    {results.implicating.map(p => (
-                                                        <li key={p.id} style={{ marginBottom: '0.25rem' }}>
-                                                            <Link to={`/admin/parameters/${p.id}/edit`}>{p.id}</Link>
+                                                    {results.implicating.map(param => (
+                                                        <li key={param.id} style={{ marginBottom: '0.25rem' }}>
+                                                            <Link to={`/admin/parameters/${param.id}/edit`}>{param.id}</Link>
                                                         </li>
                                                     ))}
                                                 </ul>
                                             ) : <p className="muted" style={{ margin: 0 }}>None</p>}
                                         </div>
 
-                                        {/* freccia, allineata verticalmente con gli header */}
                                         <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', height: '1.2rem', fontSize: '1.5rem', fontWeight: 700, lineHeight: 1 }}>→</div>
 
                                         <div>
                                             <h3 style={{ fontSize: '1rem', margin: '0 0 0.6rem' }}>Implicated</h3>
                                             {results.implicated.length > 0 ? (
                                                 <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                                                    {results.implicated.map(p => (
-                                                        <li key={p.id} style={{ marginBottom: '0.25rem' }}>
-                                                            <Link to={`/admin/parameters/${p.id}/edit`}>{p.id}</Link>
+                                                    {results.implicated.map(param => (
+                                                        <li key={param.id} style={{ marginBottom: '0.25rem' }}>
+                                                            <Link to={`/admin/parameters/${param.id}/edit`}>{param.id}</Link>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -455,10 +413,10 @@ export default function QueriesDashboard() {
                                             <table className="table" style={{ margin: 0 }}>
                                                 <thead className="table-light"><tr><th>ID</th><th>Language</th></tr></thead>
                                                 <tbody>
-                                                {results.plus.map(l => (
-                                                    <tr key={l.id}>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}><strong>{l.id}</strong></Link></td>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}>{l.name}</Link></td>
+                                                {results.plus.map(lang => (
+                                                    <tr key={lang.id}>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}><strong>{lang.id}</strong></Link></td>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}>{lang.name}</Link></td>
                                                     </tr>
                                                 ))}
                                                 {results.plus.length === 0 && <tr><td colSpan="2" className="muted text-center">None</td></tr>}
@@ -473,10 +431,10 @@ export default function QueriesDashboard() {
                                             <table className="table" style={{ margin: 0 }}>
                                                 <thead className="table-light"><tr><th>ID</th><th>Language</th></tr></thead>
                                                 <tbody>
-                                                {results.minus.map(l => (
-                                                    <tr key={l.id}>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}><strong>{l.id}</strong></Link></td>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}>{l.name}</Link></td>
+                                                {results.minus.map(lang => (
+                                                    <tr key={lang.id}>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}><strong>{lang.id}</strong></Link></td>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}>{lang.name}</Link></td>
                                                     </tr>
                                                 ))}
                                                 {results.minus.length === 0 && <tr><td colSpan="2" className="muted text-center">None</td></tr>}
@@ -491,10 +449,10 @@ export default function QueriesDashboard() {
                                             <table className="table" style={{ margin: 0 }}>
                                                 <thead className="table-light"><tr><th>ID</th><th>Language</th></tr></thead>
                                                 <tbody>
-                                                {results.zero.map(l => (
-                                                    <tr key={l.id}>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}><strong>{l.id}</strong></Link></td>
-                                                        <td><Link to={`/languages/${l.id}/data#p-${results.parameter.id}`}>{l.name}</Link></td>
+                                                {results.zero.map(lang => (
+                                                    <tr key={lang.id}>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}><strong>{lang.id}</strong></Link></td>
+                                                        <td><Link to={`/languages/${lang.id}/data#p-${results.parameter.id}`}>{lang.name}</Link></td>
                                                     </tr>
                                                 ))}
                                                 {results.zero.length === 0 && <tr><td colSpan="2" className="muted text-center">None</td></tr>}
@@ -540,11 +498,11 @@ export default function QueriesDashboard() {
                                             </tr>
                                             </thead>
                                             <tbody>
-                                            {results.rows.map(r => (
-                                                <tr key={r.id}>
-                                                    <td><Link to={`/languages/${langId}/data#p-${r.id}`}>{r.id} — {r.name}</Link></td>
-                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{r.val_a}</td>
-                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{r.val_b}</td>
+                                            {results.rows.map(row => (
+                                                <tr key={row.id}>
+                                                    <td><Link to={`/languages/${langId}/data#p-${row.id}`}>{row.id} — {row.name}</Link></td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{row.val_a}</td>
+                                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{row.val_b}</td>
                                                 </tr>
                                             ))}
                                             {results.rows.length === 0 && <tr><td colSpan="3" className="muted text-center">No comparable parameters found</td></tr>}
@@ -572,8 +530,8 @@ export default function QueriesDashboard() {
                                             </tr>
                                             </thead>
                                             <tbody>
-                                            {results.answers.map(ans => (
-                                                <tr key={ans.q_id}>
+                                            {results.answers.map(answer => (
+                                                <tr key={answer.q_id}>
                                                     <td style={{
                                                         textAlign: 'center', fontWeight: 'bold',
                                                         color: activeTab === 'q8' ? '#28a745'
@@ -583,9 +541,9 @@ export default function QueriesDashboard() {
                                                         {activeTab === 'q8' ? 'YES' : activeTab === 'q9' ? 'NO' : '—'}
                                                     </td>
                                                     <td>
-                                                        <Link to={`/languages/${results.language.id}/data#p-${ans.p_id}`}>
-                                                            <span className="muted small" style={{ marginRight: '0.5rem' }}>[{ans.q_id}]</span>
-                                                            {ans.text}
+                                                        <Link to={`/languages/${results.language.id}/data#p-${answer.p_id}`}>
+                                                            <span className="muted small" style={{ marginRight: '0.5rem' }}>[{answer.q_id}]</span>
+                                                            {answer.text}
                                                         </Link>
                                                     </td>
                                                 </tr>
@@ -627,8 +585,7 @@ export default function QueriesDashboard() {
     );
 }
 
-// Tabella per Q4/Q5/Q6: ogni riga e' espandibile per mostrare le risposte
-// che hanno determinato il valore corrente del parametro per la lingua selezionata.
+// Q4/Q5/Q6: righe espandibili con le risposte
 function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
     const [expanded, setExpanded] = useState({});
     const [answers, setAnswers] = useState({});
@@ -637,7 +594,7 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
 
     const toggleRow = async (paramId) => {
         if (expanded[paramId]) {
-            setExpanded(prev => { const c = { ...prev }; delete c[paramId]; return c; });
+            setExpanded(prev => { const next = { ...prev }; delete next[paramId]; return next; });
             return;
         }
         if (answers[paramId] !== undefined) {
@@ -675,19 +632,19 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {params.map(p => {
-                        const isOpen = !!expanded[p.id];
-                        const isLoading = !!rowLoading[p.id];
-                        const err = rowError[p.id];
-                        const rowAnswers = answers[p.id];
+                    {params.map(param => {
+                        const isOpen = !!expanded[param.id];
+                        const isLoading = !!rowLoading[param.id];
+                        const errorMessage = rowError[param.id];
+                        const rowAnswers = answers[param.id];
                         return (
-                            <Fragment key={p.id}>
+                            <Fragment key={param.id}>
                                 <tr className={activeTab === 'q6' ? 'q6-row' : undefined}>
                                     <td style={{ textAlign: 'center' }}>
                                         <button
                                             type="button"
                                             className="pv-toggle"
-                                            onClick={() => toggleRow(p.id)}
+                                            onClick={() => toggleRow(param.id)}
                                             disabled={isLoading}
                                             title={isOpen ? 'Collapse' : 'Show answers'}
                                             aria-expanded={isOpen}
@@ -695,8 +652,8 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
                                             {isLoading ? '…' : (isOpen ? '▾' : '▸')}
                                         </button>
                                     </td>
-                                    <td><Link to={`/languages/${language.id}/debug#p-${p.id}`}><strong>{p.id}</strong> — {p.name}</Link></td>
-                                    {activeTab === 'q6' && <td><code>{p.condition}</code></td>}
+                                    <td><Link to={`/languages/${language.id}/debug#param-${param.id}`}><strong>{param.id}</strong> — {param.name}</Link></td>
+                                    {activeTab === 'q6' && <td><code>{param.condition}</code></td>}
                                     <td style={{ textAlign: 'center', fontWeight: 'bold', color: valueColor }}>{valueLabel}</td>
                                     {activeTab === 'q6' && (
                                         <td style={{ textAlign: 'center' }}>
@@ -704,7 +661,7 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
                                                 type="button"
                                                 className="btn btn--primary q6-action-btn"
                                                 style={{ padding: '0.25rem 0.6rem', fontSize: '0.8rem' }}
-                                                onClick={() => onJumpToQ3(language.id, p.id)}
+                                                onClick={() => onJumpToQ3(language.id, param.id)}
                                             >
                                                 Why is 0?
                                             </button>
@@ -714,8 +671,8 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
                                 {isOpen && (
                                     <tr>
                                         <td colSpan={colCount} style={{ padding: '0.5rem 1rem 1rem 2.25rem', background: 'var(--surface-2)' }}>
-                                            {err ? (
-                                                <div className="alert alert-error" style={{ margin: 0 }}>{err}</div>
+                                            {errorMessage ? (
+                                                <div className="alert alert-error" style={{ margin: 0 }}>{errorMessage}</div>
                                             ) : rowAnswers && rowAnswers.length > 0 ? (
                                                 <AnswersList answers={rowAnswers} languageId={language.id} />
                                             ) : (
@@ -736,9 +693,6 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
     );
 }
 
-
-// Q10: picker della question con due filtri opzionali (language + parameter)
-// e dropdown searchable (react-select). Spans full row del form.
 function Q10QuestionPicker({
     allLangs, allParams, filteredQuestions, totalQuestions,
     filterLang, setFilterLang, filterParam, setFilterParam,
@@ -750,14 +704,14 @@ function Q10QuestionPicker({
         textTransform: 'uppercase',
     };
     const questionOptions = useMemo(
-        () => filteredQuestions.map(q => {
-            const text = q.text || '';
+        () => filteredQuestions.map(question => {
+            const text = question.text || '';
             const truncated = text.length > 110 ? text.slice(0, 110) + '…' : text;
-            return { value: q.id, label: `${q.id} — ${truncated}` };
+            return { value: question.id, label: `${question.id} — ${truncated}` };
         }),
         [filteredQuestions],
     );
-    const selectedOption = questionOptions.find(o => o.value === questionId) || null;
+    const selectedOption = questionOptions.find(option => option.value === questionId) || null;
     const filtered = !!(filterLang || filterParam);
 
     return (
@@ -775,8 +729,8 @@ function Q10QuestionPicker({
                         onChange={e => setFilterLang(e.target.value)}
                     >
                         <option value="">All languages</option>
-                        {allLangs.map(l => (
-                            <option key={l.id} value={l.id}>{l.name} ({l.id})</option>
+                        {allLangs.map(lang => (
+                            <option key={lang.id} value={lang.id}>{lang.name} ({lang.id})</option>
                         ))}
                     </select>
                 </div>
@@ -788,8 +742,8 @@ function Q10QuestionPicker({
                         onChange={e => setFilterParam(e.target.value)}
                     >
                         <option value="">All parameters</option>
-                        {allParams.map(p => (
-                            <option key={p.id} value={p.id}>{p.id} — {p.name}</option>
+                        {allParams.map(param => (
+                            <option key={param.id} value={param.id}>{param.id} — {param.name}</option>
                         ))}
                     </select>
                 </div>
@@ -802,7 +756,7 @@ function Q10QuestionPicker({
                     </label>
                     <Select
                         value={selectedOption}
-                        onChange={opt => setQuestionId(opt?.value || '')}
+                        onChange={option => setQuestionId(option?.value || '')}
                         options={questionOptions}
                         isClearable
                         isSearchable
@@ -826,15 +780,12 @@ function Q10QuestionPicker({
     );
 }
 
-
-// Q10: tabella cross-language di una singola question.
-// Per default nasconde le lingue senza risposta (toggle in alto a destra).
 function ByQuestionTable({ result }) {
     const [onlyAnswered, setOnlyAnswered] = useState(true);
     const rows = result.rows || [];
-    const visibleRows = onlyAnswered ? rows.filter(r => r.response) : rows;
-    const answeredCount = rows.filter(r => r.response).length;
-    const responseColor = (r) => r === 'yes' ? '#15803d' : r === 'no' ? '#b91c1c' : (r === 'unsure' || r === 'missing') ? '#a16207' : 'var(--text-muted, #888)';
+    const visibleRows = onlyAnswered ? rows.filter(row => row.response) : rows;
+    const answeredCount = rows.filter(row => row.response).length;
+    const responseColor = (response) => response === 'yes' ? '#15803d' : response === 'no' ? '#b91c1c' : (response === 'unsure' || response === 'missing') ? '#a16207' : 'var(--text-muted, #888)';
 
     return (
         <div>
@@ -875,34 +826,34 @@ function ByQuestionTable({ result }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {visibleRows.map(r => (
-                            <tr key={r.language.id}>
+                        {visibleRows.map(row => (
+                            <tr key={row.language.id}>
                                 <td style={{ verticalAlign: 'top' }}>
-                                    <Link to={`/languages/${r.language.id}/data#p-${result.question.parameter_id}`}>
-                                        <strong>{r.language.id}</strong> — {r.language.name}
+                                    <Link to={`/languages/${row.language.id}/data#p-${result.question.parameter_id}`}>
+                                        <strong>{row.language.id}</strong> — {row.language.name}
                                     </Link>
                                 </td>
                                 <td style={{
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    color: responseColor(r.response),
+                                    color: responseColor(row.response),
                                     verticalAlign: 'top',
                                     textTransform: 'uppercase',
                                 }}>
-                                    {r.response || '—'}
+                                    {row.response || '—'}
                                 </td>
                                 <td>
-                                    {r.examples.length === 0 ? (
+                                    {row.examples.length === 0 ? (
                                         <span className="muted small">—</span>
                                     ) : (
                                         <ol style={{ margin: 0, paddingLeft: '1.4rem' }}>
-                                            {r.examples.map(ex => (
-                                                <li key={ex.id} style={{ marginBottom: '0.5rem' }}>
-                                                    {ex.textarea && <div>{ex.textarea}</div>}
-                                                    {ex.transliteration && <div className="small muted" style={{ fontStyle: 'italic' }}>{ex.transliteration}</div>}
-                                                    {ex.gloss && <div className="small muted">{ex.gloss}</div>}
-                                                    {ex.translation && <div className="small">‘{ex.translation}’</div>}
-                                                    {ex.reference && <div className="small muted">[{ex.reference}]</div>}
+                                            {row.examples.map(example => (
+                                                <li key={example.id} style={{ marginBottom: '0.5rem' }}>
+                                                    {example.textarea && <div>{example.textarea}</div>}
+                                                    {example.transliteration && <div className="small muted" style={{ fontStyle: 'italic' }}>{example.transliteration}</div>}
+                                                    {example.gloss && <div className="small muted">{example.gloss}</div>}
+                                                    {example.translation && <div className="small">‘{example.translation}’</div>}
+                                                    {example.reference && <div className="small muted">[{example.reference}]</div>}
                                                 </li>
                                             ))}
                                         </ol>

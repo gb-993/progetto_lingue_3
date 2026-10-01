@@ -1,4 +1,4 @@
-"""Restore di un bundle ZIP prodotto da `build_backup_zip_bytes`/`build_full_backup_zip_bytes` (struttura del bundle in DEV-NOTES.md, sez. "Struttura dei bundle di backup"): sempre upsert, mai delete, salvo `wipe=True` che tronca le tabelle dati (non gli utenti) prima di importare — strategia completa in DEV-NOTES.md."""
+"""Restore di un bundle di backup: sempre upsert, mai delete (strategia in DEV-NOTES)."""
 from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import List, Optional, Dict, Any
@@ -42,7 +42,7 @@ class BackupRestoreReport:
 
 
 def _absorb_sub_report(report: BackupRestoreReport, file_name: str, import_report: ImportReport) -> None:
-    """Copia errori e summary di una `import_excel` interna nel report globale."""
+    """Copia errori e riepilogo del sotto-import nel report."""
     report.files_processed.append(file_name)
     report.by_file[file_name] = {
         "sheets_processed": import_report.sheets_processed,
@@ -55,8 +55,7 @@ def _absorb_sub_report(report: BackupRestoreReport, file_name: str, import_repor
         report.errors.append(error_dict)
 
 
-# Stesse tabelle di migration_import.import_migration_bundle, duplicate apposta
-# per non far dipendere backup_restore dall'altro servizio (dettagli in DEV-NOTES.md).
+# copia voluta della lista in migration_import (DEV-NOTES)
 _WIPE_TABLES_FK_SAFE = [
     "answer_motivations",
     "examples",
@@ -97,7 +96,7 @@ def _wipe_data(db: Session) -> None:
         try:
             db.execute(text(f"DELETE FROM {table_name}"))
         except Exception:
-            # Tabella inesistente nel DB corrente: skip senza errore.
+            # tabella che non esiste: salta
             db.rollback()
     db.commit()
 
@@ -185,7 +184,6 @@ def restore_backup_bundle(
         else:
             report.languages_restored.append(lang_id)
 
-    # site_content sempre upsertato; le tabelle snapshot solo con wipe=True (dettagli in DEV-NOTES.md).
     extras_files = [
         entry_name for entry_name in namelist
         if entry_name.startswith(EXTRAS_DIR) and (entry_name.endswith(".xlsx") or entry_name.endswith(".jsonl"))
@@ -207,7 +205,7 @@ def restore_backup_bundle(
                 report.errors.append({"_file": name, "reason": f"Cannot restore extras: {exception}"})
                 db.rollback()
 
-    # PDF dell'archivio legale: mai sovrascritti se già presenti (immutabili, dettagli in DEV-NOTES.md).
+    # PDF legali: mai sovrascritti se già presenti
     pdf_entries = [
         entry_name for entry_name in namelist
         if entry_name.startswith("extras/legal_pdfs/") and not entry_name.endswith("/")
@@ -240,7 +238,7 @@ def restore_backup_bundle(
                 "restored": restored_count, "already_present": already_present_count,
             }
 
-    # Ricalcola value_orig/value_eval per ogni lingua ripristinata: il bundle non li contiene (dettagli in DEV-NOTES.md).
+    # il bundle non ha i valori calcolati: ricalcola
     if report.languages_restored:
         restored_language_count = len(report.languages_restored)
         progress.phase("recompute", f"Recomputing final values for {restored_language_count} language(s)…", total=restored_language_count)
@@ -256,14 +254,8 @@ def restore_backup_bundle(
     return report
 
 
-# Ogni handler legge un xlsx noto (vedi services/excel_export.py per gli sheet) e
-# ripristina le righe in DB. Pattern per le tabelle gerarchiche: inserisci il
-# parent senza id esplicito (evita collisioni sulla PK auto-increment), tieni
-# una mappa old_id -> new_id, poi inserisci i child rimappando la FK.
-
-
 def _read_sheet_rows(data: bytes, sheet_name: str):
-    """Restituisce (headers, rows) — generatore di dict header→value, righe vuote filtrate — o (None, None) se lo sheet non esiste."""
+    """(headers, righe come dict), o (None, None) se manca lo sheet."""
     workbook = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     if sheet_name not in workbook.sheetnames:
         return None, None
@@ -296,7 +288,7 @@ def _restore_site_content(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Upsert per chiave naturale (`key`). Funziona sia con wipe sia senza."""
+    """Upsert per `key`, con o senza wipe."""
     headers, rows = _read_sheet_rows(data, "SiteContents")
     if rows is None:
         report.files_skipped.append(name)
@@ -332,7 +324,7 @@ def _restore_submissions(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Snapshot di lingue inviate per approvazione. Restorato SOLO con wipe=True."""
+    """Snapshot delle lingue; solo con wipe=True."""
     if not wipe:
         report.files_skipped.append(name)
         report.by_file[name] = {"reason": "skipped (wipe=False)"}
@@ -445,7 +437,7 @@ def _restore_parameter_submissions(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Snapshot delle definizioni di parametri. Restorato SOLO con wipe=True."""
+    """Snapshot dei parametri; solo con wipe=True."""
     if not wipe:
         report.files_skipped.append(name)
         report.by_file[name] = {"reason": "skipped (wipe=False)"}
@@ -536,7 +528,7 @@ def _restore_archived_questions(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Archivio di domande dismesse + answer/example/motivation collegate; SOLO con wipe=True (PK auto-increment, niente chiave naturale)."""
+    """Domande archiviate; solo con wipe=True."""
     if not wipe:
         report.files_skipped.append(name)
         report.by_file[name] = {"reason": "skipped (wipe=False)"}
@@ -657,7 +649,7 @@ def _restore_parameter_change_logs(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Log 'ultima modifica' dei parametri; SOLO con wipe=True. `user_id` è NOT NULL: se l'email non risolve, il log viene attribuito all'admin che esegue il restore (conteggiato nel report)."""
+    """Solo con wipe=True. Utente non trovato: il log va a chi fa il restore."""
     if not wipe:
         report.files_skipped.append(name)
         report.by_file[name] = {"reason": "skipped (wipe=False)"}
@@ -702,7 +694,7 @@ def _restore_parameter_flags(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Flag (is_unsure, needs_review) per (lingua, parametro): upsert per chiave naturale, funziona con e senza wipe; gira dopo la fase languages/ e tocca solo i due flag, non le admin note."""
+    """Flag is_unsure/needs_review, con o senza wipe. Non tocca le admin note."""
     _, rows = _read_sheet_rows(data, "ParameterFlags")
     if rows is None:
         report.files_skipped.append(name)
@@ -744,7 +736,7 @@ def _restore_aliases(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Alias storici di lingue/parametri/question: upsert per `old_id` (UNIQUE), funziona con e senza wipe; scarta le righe il cui old_id coincide con un id corrente (alias morto)."""
+    """Alias: upsert per old_id, con o senza wipe."""
     specs = [
         ("LanguageAliases", "Language ID", models.LanguageAlias, "language_id",
          models.Language, lambda value: resolve_language(db, value).language),
@@ -775,7 +767,7 @@ def _restore_aliases(
                 })
                 skipped += 1
                 continue
-            # old_id che coincide con un id corrente: alias morto, skip.
+            # alias morto: old_id è un id corrente
             if db.get(entity_model, old_id) is not None:
                 skipped += 1
                 continue
@@ -805,7 +797,7 @@ def _restore_users(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Utenti: upsert per email; niente hash password nel bundle (dettagli in DEV-NOTES.md); l'utente che esegue il restore non può essere disattivato/degradato dal bundle; ripristina anche l'assegnazione lingua→utente."""
+    """Utenti: upsert per email, senza password. Chi fa il restore non perde ruolo né accesso."""
     _, rows = _read_sheet_rows(data, "Users")
     if rows is None:
         report.files_skipped.append(name)
@@ -879,7 +871,7 @@ def _restore_legal_documents(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """Documenti legali + consensi: upsert per chiavi naturali, mai wipate; is_current rinormalizzato dopo l'upsert (dettagli in DEV-NOTES.md)."""
+    """Documenti legali e consensi: upsert, mai wipati."""
     _, rows = _read_sheet_rows(data, "LegalDocuments")
     if rows is None:
         report.files_skipped.append(name)
@@ -902,7 +894,7 @@ def _restore_legal_documents(
             models.LegalDocument.version == version,
         ).first()
         if existing:
-            # file_path/sha256 non cambiano mai per (type, version): il bundle aggiorna solo nota e clausole.
+            # file e sha256 fissi per (tipo, versione): aggiorna solo nota e clausole
             existing.vexatious_clauses = vexatious_clauses
             existing.note = row.get("Note") or None
             documents_updated += 1
@@ -920,7 +912,7 @@ def _restore_legal_documents(
             documents_inserted += 1
     db.flush()
 
-    # Rinormalizza is_current: per type, current = ultima published_at.
+    # is_current = il più recente per tipo
     doc_types = [type_row[0] for type_row in db.query(models.LegalDocument.type).distinct().all()]
     for doc_type in doc_types:
         documents_for_type = (
@@ -1005,7 +997,7 @@ def _restore_entity_versions(
     db: Session, data: bytes, name: str, report: "BackupRestoreReport",
     *, wipe: bool, current_user_id: int,
 ) -> None:
-    """History (JSON Lines, non xlsx: gli snapshot possono superare 32.767 char); insert-if-missing con dedupe su (entity_type, entity_id, operation, created_at), mai wipata."""
+    """History da JSON Lines: aggiunge solo le righe nuove, mai wipata."""
     from datetime import datetime
 
     try:
