@@ -204,6 +204,14 @@ export function SiteFooter() {
                                     pcm_lab@unimore.it
                                 </a>
                             </li>
+                            <li style={{ marginTop: '0.5rem' }}>
+                                <span className="muted" style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.2rem' }}>
+                                    Help &amp; support:
+                                </span>
+                                <a href="mailto:support_pcm@unimore.it" style={{ color: 'var(--text)', fontWeight: 500 }}>
+                                    support_pcm@unimore.it
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
