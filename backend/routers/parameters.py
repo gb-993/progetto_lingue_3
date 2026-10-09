@@ -280,31 +280,15 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
             )
         if db.query(models.ParameterDef.id).filter(models.ParameterDef.id == new_id).first():
             raise HTTPException(status_code=409, detail=f"Parameter ID '{new_id}' is already in use.")
-        conflicting_alias = (
-            db.query(models.ParameterAlias)
-            .filter(
-                models.ParameterAlias.old_id == new_id,
-                models.ParameterAlias.parameter_id != old_id,
-            )
-            .first()
-        )
-        if conflicting_alias:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Parameter ID '{new_id}' is already used as a historical alias "
-                    f"of parameter '{conflicting_alias.parameter_id}'."
-                ),
-            )
 
     update_data = item.dict(exclude={'is_active', 'change_note', 'id'})
     for key, value in update_data.items():
         setattr(db_item, key, value)
 
     if renaming:
+        # il nome passa a questo parametro, anche se era il vecchio nome di un altro
         db.query(models.ParameterAlias).filter(
             models.ParameterAlias.old_id == new_id,
-            models.ParameterAlias.parameter_id == old_id,
         ).delete(synchronize_session=False)
         db_item.id = new_id
         db.flush()
@@ -315,6 +299,8 @@ def update_admin_parameter(id: str, item: ParameterUpdate, background_tasks: Bac
         )
         if existing_alias is None:
             db.add(models.ParameterAlias(parameter_id=new_id, old_id=old_id))
+        else:
+            existing_alias.parameter_id = new_id
 
         candidates = (
             db.query(models.ParameterDef)

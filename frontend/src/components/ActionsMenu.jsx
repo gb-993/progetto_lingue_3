@@ -27,19 +27,54 @@ export function DropdownItem({ onClick, disabled, danger, children }) {
     );
 }
 
-export function MenuSection({ label, divider = false }) {
+export function MenuButton({ label, children }) {
+    const [open, setOpen] = useState(false);
+    const wrapRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const onDocClick = (e) => {
+            if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [open]);
+
+    const closeOnItemClick = (e) => {
+        if (e.target.closest('[role="menuitem"]')) setOpen(false);
+    };
+
     return (
-        <div style={{
-            padding: '0.5rem 0.9rem 0.2rem',
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            color: 'var(--text-muted)',
-            borderTop: divider ? '1px solid var(--border)' : 'none',
-            marginTop: divider ? '0.25rem' : 0,
-        }}>
-            {label}
+        <div ref={wrapRef} style={{ position: 'relative' }}>
+            <button
+                type="button"
+                onClick={() => setOpen(o => !o)}
+                className="btn btn--small"
+                aria-haspopup="menu"
+                aria-expanded={open}
+            >
+                {label} ▾
+            </button>
+            {open && (
+                <div
+                    role="menu"
+                    onClick={closeOnItemClick}
+                    style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        right: 0,
+                        minWidth: 280,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
+                        zIndex: 50,
+                        overflow: 'hidden',
+                    }}
+                >
+                    {children}
+                </div>
+            )}
         </div>
     );
 }

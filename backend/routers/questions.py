@@ -160,22 +160,6 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
     if renaming:
         if db.query(models.Question.id).filter(models.Question.id == new_id).first():
             raise HTTPException(status_code=409, detail=f"Question ID '{new_id}' is already in use.")
-        conflicting_alias = (
-            db.query(models.QuestionAlias)
-            .filter(
-                models.QuestionAlias.old_id == new_id,
-                models.QuestionAlias.question_id != old_id,
-            )
-            .first()
-        )
-        if conflicting_alias:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Question ID '{new_id}' is already used as a historical alias "
-                    f"of question '{conflicting_alias.question_id}'."
-                ),
-            )
 
     archived_id = None
     if item.wipe_data:
@@ -188,9 +172,9 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
         archived_id = archived.id
 
     if renaming:
+        # il nome passa a questa question, anche se era il vecchio nome di un'altra
         db.query(models.QuestionAlias).filter(
             models.QuestionAlias.old_id == new_id,
-            models.QuestionAlias.question_id == old_id,
         ).delete(synchronize_session=False)
         db_item.id = new_id
         db.flush()
@@ -201,6 +185,8 @@ def update_admin_question(id: str, item: QuestionUpdate, background_tasks: Backg
         )
         if existing_alias is None:
             db.add(models.QuestionAlias(question_id=new_id, old_id=old_id))
+        else:
+            existing_alias.question_id = new_id
         rename_note = f"Renamed from {old_id} to {new_id}"
     else:
         db_item.id = new_id

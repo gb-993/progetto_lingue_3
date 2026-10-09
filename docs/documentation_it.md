@@ -732,7 +732,7 @@ Restore di un backup pregresso da bundle ZIP.
 
 ### `/api/admin/import-excel` ([routers/import_excel.py](backend/routers/import_excel.py))
 
-Round-trip Excel admin: import strutturato cap 50 MB, [services/excel_import.py](backend/services/excel_import.py).
+Import Excel solo super-admin, tenuto come strumento di emergenza (la compilazione da Excel è chiusa): import strutturato cap 50 MB, [services/excel_import.py](backend/services/excel_import.py).
 
 ### `/api/export` ([routers/export.py](backend/routers/export.py))
 

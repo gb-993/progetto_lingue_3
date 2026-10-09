@@ -139,15 +139,32 @@ def test_rename_to_existing_rejected(db_fk):
     assert e.value.status_code == 409
 
 
-def test_rename_to_alias_of_other_rejected(db_fk):
+def test_rename_to_alias_of_other_takes_the_name(db_fk):
     user = _admin(db_fk)
     _seed_param(db_fk, "PA")
     db_fk.add(models.ParameterAlias(parameter_id="PA", old_id="POLD"))
     b = _seed_param(db_fk, "PB", position=2)
     db_fk.commit()
-    with pytest.raises(HTTPException) as e:
-        _put(db_fk, "PB", _put_item(b, "POLD"), user)
-    assert e.value.status_code == 409
+    # "POLD" era un vecchio nome di PA: ora passa a PB
+    _put(db_fk, "PB", _put_item(b, "POLD"), user)
+
+    assert db_fk.query(models.ParameterDef).filter_by(id="POLD").one().name == "P PB"
+    aliases = {a.old_id: a.parameter_id for a in db_fk.query(models.ParameterAlias).all()}
+    assert aliases == {"PB": "POLD"}
+
+
+def test_rename_moves_stale_alias_to_last_owner(db_fk):
+    user = _admin(db_fk)
+    _seed_param(db_fk, "PA")
+    # PA si chiamava PX; poi è nato un nuovo parametro con quel nome
+    db_fk.add(models.ParameterAlias(parameter_id="PA", old_id="PX"))
+    c = _seed_param(db_fk, "PX", position=2)
+    db_fk.commit()
+
+    _put(db_fk, "PX", _put_item(c, "PY"), user)
+
+    alias = db_fk.query(models.ParameterAlias).filter_by(old_id="PX").one()
+    assert alias.parameter_id == "PY"
 
 
 def test_rename_cycle_removes_self_alias(db_fk):

@@ -410,6 +410,9 @@ export default function BackupRestore() {
                         <Link to="/admin/migration-import" className="btn btn--ghost btn--small" style={{ alignSelf: 'center' }}>
                             ← Need Migration Import instead?
                         </Link>
+                        <Link to="/admin/import-excel" className="btn btn--ghost btn--small" style={{ alignSelf: 'center' }}>
+                            Emergency: import from Excel
+                        </Link>
                     </div>
                 </form>
             </div>

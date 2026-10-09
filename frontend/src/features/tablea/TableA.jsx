@@ -594,7 +594,7 @@ export default function TableA() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 'var(--form-box-pad, 1.25rem)' }}>
                     <div style={{ display: 'flex', gap: '1rem' }}>
                         <button onClick={fetchMatrix} className="btn btn--primary">Apply Filters</button>
-                        <button onClick={resetFilters} className="btn">Reset</button>
+                        <button onClick={resetFilters} className="btn">Reset filters</button>
                     </div>
 
                     <div ref={downloadRef} style={{ position: 'relative', display: 'inline-block' }}>

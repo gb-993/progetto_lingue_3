@@ -5,7 +5,7 @@ import { searchMatches } from '../../utils/search';
 import usePersistentState from '../../utils/usePersistentState';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import NoticeToast from '../../components/NoticeToast';
-import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
+import { RowActionsMenu, DropdownItem, MenuButton } from '../../components/ActionsMenu';
 import LanguageMap from './LanguageMap';
 
 // Asse B (review): senza colori
@@ -76,7 +76,6 @@ export default function LanguageList() {
     // lingue escluse a mano
     const [excludedIds, setExcludedIds] = useState(() => new Set());
     const [exporting, setExporting] = useState(false);
-    const [toolsOpen, setToolsOpen] = useState(false);
     const [globalBackup, setGlobalBackup] = useState(false);
     const [mapOpen, setMapOpen] = usePersistentState('languages:mapOpen', true);
     const [filtersOpen, setFiltersOpen] = useState(false);
@@ -86,7 +85,6 @@ export default function LanguageList() {
     const exportStartedAtRef = useRef(null);
     const [recomputeJob, setRecomputeJob] = useState(null);
     const [recomputing, setRecomputing] = useState(false);
-    const toolsRef = useRef(null);
     const mapExportRef = useRef(null);
     const navigate = useNavigate();
 
@@ -529,7 +527,6 @@ export default function LanguageList() {
             notify('error', 'Could not export the map (rendering not complete or canvas blocked).');
         } finally {
             setExporting(false);
-            setToolsOpen(false);
         }
     };
 
@@ -572,7 +569,6 @@ export default function LanguageList() {
             notify('error', msg);
         } finally {
             setExporting(false);
-            setToolsOpen(false);
         }
     };
 
@@ -600,17 +596,6 @@ export default function LanguageList() {
             setGlobalBackup(false);
         }
     };
-
-    useEffect(() => {
-        if (!toolsOpen) return;
-        const onDocClick = (e) => {
-            if (toolsRef.current && !toolsRef.current.contains(e.target)) {
-                setToolsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', onDocClick);
-        return () => document.removeEventListener('mousedown', onDocClick);
-    }, [toolsOpen]);
 
     return (
         <div className="container">
@@ -720,61 +705,32 @@ export default function LanguageList() {
                                 Clear exclusions
                             </button>
                         )}
-                        <button onClick={resetAll} className="btn btn--small">Reset</button>
+                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
                         {isAdmin && (
-                            <div ref={toolsRef} style={{ position: 'relative' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setToolsOpen(open => !open)}
-                                    className="btn btn--small"
-                                    aria-haspopup="menu"
-                                    aria-expanded={toolsOpen}
-                                >
-                                    Tools ▾
-                                </button>
-                                {toolsOpen && (
-                                    <div
-                                        role="menu"
-                                        style={{
-                                            position: 'absolute',
-                                            top: 'calc(100% + 4px)',
-                                            right: 0,
-                                            minWidth: 280,
-                                            background: 'var(--surface)',
-                                            border: '1px solid var(--border)',
-                                            borderRadius: 'var(--radius-sm, 6px)',
-                                            boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
-                                            zIndex: 50,
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <MenuSection label="Download" />
-                                        <DropdownItem onClick={() => { setToolsOpen(false); onExportMetadata(); }} disabled={exporting || targetIds.length === 0}>
-                                            Export language metadata (.xlsx)
-                                        </DropdownItem>
-                                        <DropdownItem onClick={() => { setToolsOpen(false); onStartExportZip(); }} disabled={exporting || targetIds.length === 0}>
-                                            Export backup (.zip)
-                                        </DropdownItem>
-                                        <DropdownItem onClick={onExportMap} disabled={exporting || !mapOpen}>
-                                            {mapOpen ? 'Map (.png)' : 'Map (.png) — open the map first'}
-                                        </DropdownItem>
-                                        <DropdownItem onClick={onExportGcd} disabled={exporting || targetIds.length === 0}>
-                                            Geographic distances (.txt)
-                                        </DropdownItem>
-                                        <MenuSection label="Maintenance" divider />
-                                        <DropdownItem onClick={() => { setToolsOpen(false); onStartRecompute(); }} disabled={recomputing}>
-                                            {recomputing ? 'Recomputing…' : 'Recompute final values'}
-                                        </DropdownItem>
-                                        <DropdownItem onClick={() => { setToolsOpen(false); onGlobalBackup(); }} disabled={globalBackup}>
-                                            {globalBackup ? 'Backing up…' : 'Full Languages Backup'}
-                                        </DropdownItem>
-                                        <MenuSection label="Import" divider />
-                                        <DropdownItem onClick={() => { setToolsOpen(false); navigate('/admin/import-excel'); }}>
-                                            Import from Excel
-                                        </DropdownItem>
-                                    </div>
-                                )}
-                            </div>
+                            <>
+                                <MenuButton label="Download">
+                                    <DropdownItem onClick={onExportMetadata} disabled={exporting || targetIds.length === 0}>
+                                        Export language metadata (.xlsx)
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onStartExportZip} disabled={exporting || targetIds.length === 0}>
+                                        Export backup (.zip)
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onExportMap} disabled={exporting || !mapOpen}>
+                                        {mapOpen ? 'Map (.png)' : 'Map (.png) — open the map first'}
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onExportGcd} disabled={exporting || targetIds.length === 0}>
+                                        Geographic distances (.txt)
+                                    </DropdownItem>
+                                </MenuButton>
+                                <MenuButton label="Maintenance">
+                                    <DropdownItem onClick={onStartRecompute} disabled={recomputing}>
+                                        {recomputing ? 'Recomputing…' : 'Recompute final values'}
+                                    </DropdownItem>
+                                    <DropdownItem onClick={onGlobalBackup} disabled={globalBackup}>
+                                        {globalBackup ? 'Backing up…' : 'Full Languages Backup'}
+                                    </DropdownItem>
+                                </MenuButton>
+                            </>
                         )}
                         {isAdmin && (
                             <Link to="/languages/add" className="btn btn--primary btn--small">Add Language</Link>

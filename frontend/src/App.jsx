@@ -157,7 +157,7 @@ const router = createBrowserRouter([
             { path: 'admin/archived-questions/:id', element: <AdminRoute><Layout><ArchivedQuestionDetail /></Layout></AdminRoute> },
 
             { path: 'admin/edit-content/:key', element: <AdminRoute><Layout><EditSiteContent /></Layout></AdminRoute> },
-            { path: 'admin/import-excel', element: <AdminRoute><Layout><ImportExcel /></Layout></AdminRoute> },
+            { path: 'admin/import-excel', element: <AdminRoute requireSuperAdmin><Layout><ImportExcel /></Layout></AdminRoute> },
             { path: 'admin/migration-import', element: <AdminRoute requireSuperAdmin><Layout><MigrationImport /></Layout></AdminRoute> },
             { path: 'admin/backup-restore', element: <AdminRoute requireSuperAdmin><Layout><BackupRestore /></Layout></AdminRoute> },
             { path: 'admin/whats-new', element: <AdminRoute requireSuperAdmin><Layout><WhatsNew /></Layout></AdminRoute> },

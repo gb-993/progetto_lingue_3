@@ -251,26 +251,10 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
                 status_code=409,
                 detail=f"Language ID '{new_id}' is already in use.",
             )
-        conflicting_alias = (
-            db.query(models.LanguageAlias)
-            .filter(
-                models.LanguageAlias.old_id == new_id,
-                models.LanguageAlias.language_id != old_id,
-            )
-            .first()
-        )
-        if conflicting_alias:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Language ID '{new_id}' is already used as a historical alias "
-                    f"of language '{conflicting_alias.language_id}'."
-                ),
-            )
 
+        # il nome passa a questa lingua, anche se era il vecchio nome di un'altra
         db.query(models.LanguageAlias).filter(
             models.LanguageAlias.old_id == new_id,
-            models.LanguageAlias.language_id == old_id,
         ).delete(synchronize_session=False)
         db_item.id = new_id
         db.flush()
@@ -281,6 +265,8 @@ def update_admin_language(id: str, item: LanguageBase, db: Session = Depends(get
         )
         if existing_alias is None:
             db.add(models.LanguageAlias(language_id=new_id, old_id=old_id))
+        else:
+            existing_alias.language_id = new_id
 
         rename_note = f"Renamed from {old_id} to {new_id}"
     else:
@@ -396,19 +382,6 @@ def duplicate_admin_language(
                 status_code=409,
                 detail=f"Language ID '{new_id}' is already in use.",
             )
-        conflicting_alias = (
-            db.query(models.LanguageAlias)
-            .filter(models.LanguageAlias.old_id == new_id)
-            .first()
-        )
-        if conflicting_alias:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Language ID '{new_id}' is already used as a historical alias "
-                    f"of language '{conflicting_alias.language_id}'."
-                ),
-            )
         new_name = requested_name or base_name
     else:
         n = _next_duplicate_suffix(db, base_id)
@@ -420,6 +393,11 @@ def duplicate_admin_language(
                 status_code=400,
                 detail=f"Generated id '{new_id}' exceeds {ID_MAX_LEN} characters; rename the source language first.",
             )
+
+    # il nome passa alla copia, anche se era il vecchio nome di un'altra lingua
+    db.query(models.LanguageAlias).filter(
+        models.LanguageAlias.old_id == new_id,
+    ).delete(synchronize_session=False)
 
     max_pos = db.query(models.Language.position).order_by(models.Language.position.desc()).first()
     new_position = (max_pos[0] if max_pos else 0) + 1

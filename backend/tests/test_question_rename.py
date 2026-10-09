@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 import models
 from routers.questions import update_admin_question, QuestionUpdate
+from services.question_alias import resolve_question
 
 
 @pytest.fixture
@@ -122,17 +123,51 @@ def test_rename_to_existing_id_rejected(db_fk):
     assert exc.value.status_code == 409
 
 
-def test_rename_to_alias_of_other_question_rejected(db_fk):
+def test_rename_to_alias_of_other_question_takes_the_name(db_fk):
     user = _admin(db_fk)
-    a = _seed_question(db_fk, "P1_Qa")
+    _seed_question(db_fk, "P1_Qa")
     db_fk.add(models.QuestionAlias(question_id="P1_Qa", old_id="P1_OLD"))
     b = models.Question(id="P1_Qb", parameter_id="P1", text="B")
     db_fk.add(b)
     db_fk.commit()
-    # "P1_OLD" è già alias di A
-    with pytest.raises(HTTPException) as exc:
-        _put(db_fk, "P1_Qb", _put_item_from(b, "P1_OLD"), user)
-    assert exc.value.status_code == 409
+    # "P1_OLD" era un vecchio nome di A: ora passa a B
+    _put(db_fk, "P1_Qb", _put_item_from(b, "P1_OLD"), user)
+
+    assert db_fk.query(models.Question).filter_by(id="P1_OLD").one().text == "B"
+    aliases = {a.old_id: a.question_id for a in db_fk.query(models.QuestionAlias).all()}
+    assert aliases == {"P1_Qb": "P1_OLD"}
+    assert resolve_question(db_fk, "P1_OLD").question.text == "B"
+
+
+def test_swap_two_question_ids(db_fk):
+    user = _admin(db_fk)
+    a = _seed_question(db_fk, "P1_Qa")
+    b = models.Question(id="P1_Qb", parameter_id="P1", text="B")
+    db_fk.add(b)
+    db_fk.commit()
+
+    _put(db_fk, "P1_Qa", _put_item_from(a, "P1_TMP"), user)
+    _put(db_fk, "P1_Qb", _put_item_from(b, "P1_Qa"), user)
+    tmp = db_fk.query(models.Question).filter_by(id="P1_TMP").one()
+    _put(db_fk, "P1_TMP", _put_item_from(tmp, "P1_Qb"), user)
+
+    assert db_fk.query(models.Question).filter_by(id="P1_Qa").one().text == "B"
+    assert db_fk.query(models.Question).filter_by(id="P1_Qb").one().text == "Original?"
+
+
+def test_rename_moves_stale_alias_to_last_owner(db_fk):
+    user = _admin(db_fk)
+    _seed_question(db_fk, "P1_Qa")
+    # A si chiamava P1_Qx; poi è nata una nuova question con quel nome
+    db_fk.add(models.QuestionAlias(question_id="P1_Qa", old_id="P1_Qx"))
+    c = models.Question(id="P1_Qx", parameter_id="P1", text="C")
+    db_fk.add(c)
+    db_fk.commit()
+
+    _put(db_fk, "P1_Qx", _put_item_from(c, "P1_Qy"), user)
+
+    alias = db_fk.query(models.QuestionAlias).filter_by(old_id="P1_Qx").one()
+    assert alias.question_id == "P1_Qy"
 
 
 def test_rename_cycle_removes_self_alias(db_fk):

@@ -239,7 +239,7 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                         {total} total versions{activeFilters > 0 && ` · ${activeFilters} active filters`}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={onReset} className="btn btn--small">Reset</button>
+                        <button onClick={onReset} className="btn btn--small">Reset filters</button>
                         <button onClick={onApply} className="btn btn--primary btn--small">Apply filters</button>
                     </div>
                 </div>

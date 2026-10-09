@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api, { getApiErrorMessage } from '../../api';
 import { searchMatches } from '../../utils/search';
@@ -6,7 +6,7 @@ import usePersistentState from '../../utils/usePersistentState';
 import { needsWorkLabels } from './needsWork';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import NoticeToast from '../../components/NoticeToast';
-import { RowActionsMenu, DropdownItem, MenuSection } from '../../components/ActionsMenu';
+import { RowActionsMenu, DropdownItem, MenuButton } from '../../components/ActionsMenu';
 
 async function downloadBlob(request, fallbackName) {
     const res = await request;
@@ -46,22 +46,11 @@ export default function ParameterList() {
 
     const [excludedIds, setExcludedIds] = useState(new Set());
 
-    const [toolsOpen, setToolsOpen] = useState(false);
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const toolsRef = useRef(null);
     const [dialog, setDialog] = useState(null);
     const [notice, setNotice] = useState(null);
     const dismissNotice = useCallback(() => setNotice(null), []);
     const notify = (type, text) => setNotice({ type, text });
-
-    useEffect(() => {
-        if (!toolsOpen) return;
-        const onDocClick = (e) => {
-            if (toolsRef.current && !toolsRef.current.contains(e.target)) setToolsOpen(false);
-        };
-        document.addEventListener('mousedown', onDocClick);
-        return () => document.removeEventListener('mousedown', onDocClick);
-    }, [toolsOpen]);
 
     useEffect(() => {
         const load = async () => {
@@ -385,50 +374,17 @@ export default function ParameterList() {
                         {savingOrder && <span> · saving order…</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={resetAll} className="btn btn--small">Reset</button>
-                        <div ref={toolsRef} style={{ position: 'relative' }}>
-                            <button
-                                type="button"
-                                onClick={() => setToolsOpen(open => !open)}
-                                className="btn btn--small"
-                                aria-haspopup="menu"
-                                aria-expanded={toolsOpen}
-                            >
-                                Tools ▾
-                            </button>
-                            {toolsOpen && (
-                                <div
-                                    role="menu"
-                                    style={{
-                                        position: 'absolute',
-                                        top: 'calc(100% + 4px)',
-                                        right: 0,
-                                        minWidth: 280,
-                                        background: 'var(--surface)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 'var(--radius-sm, 6px)',
-                                        boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
-                                        zIndex: 50,
-                                        overflow: 'hidden',
-                                    }}
-                                >
-                                    <MenuSection label="Export (selected)" />
-                                    <DropdownItem
-                                        onClick={() => { setToolsOpen(false); onExportInfoPdf(); }}
-                                        disabled={exportingInfo || targetIds.length === 0}
-                                    >
-                                        {exportingInfo ? 'Exporting…' : `Parameters Data (${targetIds.length})`}
-                                    </DropdownItem>
-                                    <MenuSection label="Maintenance" divider />
-                                    <DropdownItem
-                                        onClick={() => { setToolsOpen(false); onGlobalBackup(); }}
-                                        disabled={globalBackup}
-                                    >
-                                        {globalBackup ? 'Backing up…' : 'Full parameters backup'}
-                                    </DropdownItem>
-                                </div>
-                            )}
-                        </div>
+                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
+                        <MenuButton label="Download">
+                            <DropdownItem onClick={onExportInfoPdf} disabled={exportingInfo || targetIds.length === 0}>
+                                {exportingInfo ? 'Exporting…' : `Parameters Data (${targetIds.length})`}
+                            </DropdownItem>
+                        </MenuButton>
+                        <MenuButton label="Maintenance">
+                            <DropdownItem onClick={onGlobalBackup} disabled={globalBackup}>
+                                {globalBackup ? 'Backing up…' : 'Full parameters backup'}
+                            </DropdownItem>
+                        </MenuButton>
                         <Link to="/admin/parameters/add" className="btn btn--primary btn--small">Add Parameter</Link>
                     </div>
                 </div>

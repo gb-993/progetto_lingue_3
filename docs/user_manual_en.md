@@ -135,7 +135,7 @@ All the main pages. The visible items depend on your role:
 | Manual | ✓ | ✓ |
 | Glossary | ✓ | ✓ |
 
-> **Super-admin**: two destructive tools — **Migration Import** and **Backup Restore** — are reserved for administrators flagged as *super-admin*. A normal admin doesn't see these two items at all.
+> **Super-admin**: two destructive tools — **Migration Import** and **Backup Restore** — are reserved for administrators flagged as *super-admin*. A normal admin doesn't see these two items at all. **Import from Excel** is super-admin only too: it isn't in the sidebar, it opens from the link at the bottom of the Backup Restore page.
 
 The **button at the top of the sidebar** collapses/expands it (useful to gain horizontal space, especially in TableA). The preference is remembered.
 
@@ -267,16 +267,16 @@ The list of all the languages in the project. **Above** the table there is an **
 
 To the right of the filters: counter "X of Y languages", and the buttons:
 
-- **Reset**: clears filters.
+- **Reset filters**: clears the search box and all filters.
 - **Clear exclusions** (appears if you've manually excluded languages).
-- **Download Data ▾** (admin): opens a menu to export data for the **currently filtered, non-excluded** languages:
+- **Download ▾** (admin): opens a menu to export data for the **currently filtered, non-excluded** languages:
     - **Export language metadata (.xlsx)** — ID, name, family, coordinates, etc.
     - **Export backup (.zip)** — full bundle with all answers and examples for the selected languages (this runs in the background: a small notification box at the bottom-right shows progress).
     - **Map (.png)** — the current map as an image.
     - **Geographic distances (.txt)** — GCD km matrix between the selected languages.
-- **+ Full Languages Backup** (admin): creates a DB-side snapshot of **all** languages (asks for an optional note). You'll find it later under History & Backups → Full backups.
-- **Recompute final values** (admin): re-runs the implicational DAG for **all** languages. It runs in the background, with a progress bar. Use after important changes to implicational conditions, or after an import.
-- **Import from Excel** (admin): structured import page.
+- **Maintenance ▾** (admin): opens a menu with two operations on **all** languages:
+    - **Recompute final values** — re-runs the implicational DAG. It runs in the background, with a progress bar. Use after important changes to implicational conditions, or after an import.
+    - **Full Languages Backup** — creates a DB-side snapshot (asks for an optional note). You'll find it later under History & Backups → Full backups.
 - **Add Language** (admin): create a new language manually.
 
 ---
@@ -291,7 +291,7 @@ To the right of the filters: counter "X of Y languages", and the buttons:
     - **Data**: opens the compilation page (regular users and admins).
     - **Duplicate** (admin): duplicates the language with all answers and examples (useful as a template). The copy is created with a derived ID that you can change afterwards from **Edit**.
     - **Debug** (admin): opens a page showing `init`/`final` values of every parameter for the language, with the option to **Apply implicational condition(s)** (re-runs the DAG on this single language).
-    - **Edit** (admin): edits the language metadata (name, coordinates, family, etc.). The **ID itself can be renamed** here: when you change it, the old ID is kept as a *historical alias*, so future backup restores and Excel imports that reference the old ID still match this language.
+    - **Edit** (admin): edits the language metadata (name, coordinates, family, etc.). The **ID itself can be renamed** here: when you change it, the old ID is kept as a *historical alias*, so future backup restores and Excel imports that reference the old ID still match this language. The old ID stays free, though: if you give it to another language, from then on it matches that one (the same applies to parameters and questions).
     - **Delete** (admin): permanently removes the language. A safety prompt asks you to **type the exact language ID** to confirm. It deletes all of the language's operative data (answers, examples, motivation links, parameter values, its own saved backups and historical ID aliases). It does **not** touch the History audit log (a "delete" event is recorded there), the shared Motivations dictionary, or archived answers from removed questions.
 
 ---
@@ -473,11 +473,11 @@ Page: **Sidebar > Parameters** (`/admin/parameters`).
 
 ### Parameter list
 
-![Parameter Management page: filters (Search, Schema, Type, Level, Active), buttons Reset / Download parameters info (.pdf) / + Full Parameters Backup / Add Parameter, and table with PDF/Backup/Edit buttons per row](img/manuale/parameters-list.png)
+![Parameter Management page: filters (Search, Schema, Type, Level, Active), buttons Reset filters / Download parameters info (.pdf) / + Full Parameters Backup / Add Parameter, and table with PDF/Backup/Edit buttons per row](img/manuale/parameters-list.png)
 
 Table with: ID, name, position, schema, type, level of comparison, counters `questions_count` (regular questions) and `stop_count` (stop questions), active/inactive status.
 
-At the top: search field, **Add parameter** button, **Export PDF (all)** (generates a PDF with all parameters).
+At the top: search field, **Download ▾** menu (*Parameters Data* item: PDF of the selected parameters), **Maintenance ▾** menu (*Full parameters backup* item) and **Add Parameter** button.
 
 Drag & drop to reorder parameters (`position` is saved automatically).
 
@@ -489,7 +489,7 @@ Drag & drop to reorder parameters (`position` is saved automatically).
 
 Click the **Edit** button on a row → edit page with:
 
-- ID (read-only, cannot be changed after creation);
+- **ID**: can be renamed (letters, digits and underscore only). The implicational conditions of other parameters that reference it are updated automatically, and the old ID is kept as a *historical alias*;
 - Name, position, schema, type, level of comparison;
 - **Short description** (shown during compilation);
 - **Long description** (shown in PDFs);
@@ -552,7 +552,7 @@ To create a question, you must first choose its **parent parameter** (ID).
 
 Main fields:
 
-- **ID** (e.g. `FGM_01`, convention `<param_id>_<NN>`);
+- **ID** (e.g. `FGM_01`, convention `<param_id>_<NN>`): can be renamed after creation too, the old ID is kept as a *historical alias*;
 - **Text**: the question text shown to the linguist;
 - **Template type**: classifies the question (useful for statistical filters);
 - **Instruction** (always visible during compilation);
@@ -670,7 +670,7 @@ The **Assign languages** action **replaces** the current pool: if a user had 3 l
 
 Page: **Sidebar > Table A** (`/tablea`).
 
-![Table A page: Parameters View / Questions View toggle, Language Filters and Parameters Filters, Apply Filters / Reset / Download Data buttons, and start of the value matrix](img/manuale/tablea.png)
+![Table A page: Parameters View / Questions View toggle, Language Filters and Parameters Filters, Apply Filters / Reset filters / Download Data buttons, and start of the value matrix](img/manuale/tablea.png)
 
 **TableA** is the project's flagship matrix: **one language per column, one parameter (or question) per row**, with the consolidated value in each cell (`+`, `−`, `0`, `?`).
 
@@ -775,11 +775,11 @@ The site's **audit hub**. The page has **4 tabs** at the top: each one answers a
 
 #### "Change history" tab
 
-![Change history tab: filters for Entity Type, Entity ID, Operation, Source, User, From/To and Text search; Reset / Apply filters buttons; modifications table with When/What/Op./Source/Author/Note and Open button on each row](img/manuale/history-versions.png)
+![Change history tab: filters for Entity Type, Entity ID, Operation, Source, User, From/To and Text search; Reset filters / Apply filters buttons; modifications table with When/What/Op./Source/Author/Note and Open button on each row](img/manuale/history-versions.png)
 
 Table of **all changes** to *non-Answer* entities in the system: `parameter`, `question`, `motivation`, `language`. Designed to answer "who modified parameter FGM and why", "when was motivation MOT042 created?", "who deleted language XYZ last month?".
 
-Available filters: **Entity type** (dropdown), **Entity ID** (e.g. `FGM`, `FGM_01`), **Operation** (create / update / delete), **Source** (manual = panel edit, excel_import = arrived from an Excel import, system = generated by the app), **User** (who did it), **From / To** (date range), **Text search** (searches the ID or note). The **Reset** button clears all filters, **Apply filters** re-runs the query.
+Available filters: **Entity type** (dropdown), **Entity ID** (e.g. `FGM`, `FGM_01`), **Operation** (create / update / delete), **Source** (manual = panel edit, excel_import = arrived from an Excel import, system = generated by the app), **User** (who did it), **From / To** (date range), **Text search** (searches the ID or note). The **Reset filters** button clears all filters, **Apply filters** re-runs the query.
 
 Click **Open** on a row (or the row itself) → a **side panel** slides in with a **before/after comparison**: for each modified field, the old value in red on the left and the new in green on the right, plus a collapsible full snapshot at the bottom.
 
@@ -797,8 +797,8 @@ Same experience as the other tab: filters, table, click a row → side panel wit
 
 List of **complete snapshots** of the system, grouped by date and time. Sub-tabs **Languages** or **Parameters** (switch at the top), selecting two different snapshot types:
 
-- **Language backups** are created from [Languages → + Full Languages Backup](#6-the-languages-page) and contain all languages with answers and examples at the moment of capture.
-- **Parameter backups** are created from [Parameters → + Full Parameters Backup](#8-admin-only--parameters) and contain the state of all parameters (definitions, implicational conditions, descriptions) at capture time.
+- **Language backups** are created from [Languages → Maintenance → Full Languages Backup](#6-the-languages-page) and contain all languages with answers and examples at the moment of capture.
+- **Parameter backups** are created from [Parameters → Maintenance → Full parameters backup](#8-admin-only--parameters) and contain the state of all parameters (definitions, implicational conditions, descriptions) at capture time.
 
 You can also **create one on the fly** from here: the top card has an optional **Note** field and a **+ Create languages backup now** (or **+ Create parameters backup now** on the other sub-tab) button. Clicking a row in the table opens the backup detail, with the option to download an Excel of all data for audit or external restore.
 
@@ -839,13 +839,15 @@ Validation: the ZIP is capped at 200 MB and goes through safety checks on its si
 
 ![Backup Restore page: description of accepted bundle, "Backup ZIP file" file picker, "Wipe data tables before restore" checkbox, Start restore and "← Need Migration Import instead?" buttons](img/manuale/backup-restore.png)
 
-Restore of a **ZIP bundle exported** from [Languages → Download Data → Export backup (.zip)](#6-the-languages-page). Lets you restore a specific set of languages from a previous snapshot, without wiping the DB.
+Restore of a **ZIP bundle exported** from [Languages → Download → Export backup (.zip)](#6-the-languages-page). Lets you restore a specific set of languages from a previous snapshot, without wiping the DB.
 
 ---
 
-### Import from Excel (`/admin/import-excel`)
+### Import from Excel (`/admin/import-excel`) — super-admin only
 
 ![Import from Excel page: Strategy block (Schema strict update / Database_model full replace / Cascading errors), File picker for Excel file, Start Import and Cancel buttons](img/manuale/import-excel.png)
+
+⚠ **Emergency use only**: data entry from Excel is closed, languages, parameters and questions are edited directly on the site. The page opens from the *Emergency: import from Excel* link at the bottom of Backup Restore.
 
 Structured Excel import. 50 MB cap on the file. The sheet must follow the same format produced by the site's Excel export (`Database_model` sheet).
 
@@ -853,7 +855,7 @@ Structured Excel import. 50 MB cap on the file. The sheet must follow the same f
 
 ### Recompute final values
 
-⚠ Reached **from Languages → Recompute final values**, no dedicated page.
+⚠ Reached **from Languages → Maintenance → Recompute final values**, no dedicated page.
 
 Re-runs the **implicational DAG** for **all** languages in the system. Use:
 
@@ -942,7 +944,7 @@ The `top_family`/`family`/`group` strings on languages are a stored copy taken f
 | **Approved / Rejected / Pending / Waiting** | the 4 states of a language |
 | **Admin override** | the purple banner reminding the admin they're editing a locked language |
 | **Force status** | the admin dropdown to override a language's status bypassing the workflow |
-| **Super-admin** | an administrator with extra privileges — the only role that can access Migration Import and Backup Restore |
+| **Super-admin** | an administrator with extra privileges — the only role that can access Migration Import, Backup Restore and Import from Excel |
 | **Implicational DAG** | the parameter dependency graph (`+SPK & -DEM`) deciding whether a value should be neutralized |
 | **value_orig vs value_eval** | `orig` = aggregated from the linguist's answers; `eval` = `orig` post-DAG (can be `0` if neutralized) |
 | **Comparable** | a parameter is "comparable" between two languages if both have a non-null `value_eval` |

@@ -13,7 +13,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 
 import models
-from dependencies import get_db, require_admin
+from dependencies import get_db, require_super_admin
 from services.excel_import import import_excel
 from services.recompute import recompute_after_excel_import
 from services.citation import apply_excel_citation
@@ -30,7 +30,7 @@ def post_import_excel(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_super_admin),
 ):
     fname = (file.filename or "").lower()
     if not fname.endswith((".xlsx", ".xlsm", ".xltx", ".xltm")):
@@ -69,7 +69,7 @@ class ImportErrorPayload(BaseModel):
 @router.post("/error-report/xlsx")
 def post_error_report_xlsx(
     payload: ImportErrorPayload,
-    current_user: models.User = Depends(require_admin),
+    current_user: models.User = Depends(require_super_admin),
 ):
     wb = Workbook()
     ws = wb.active

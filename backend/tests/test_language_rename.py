@@ -6,7 +6,9 @@ from openpyxl import Workbook
 from sqlalchemy import text
 
 import models
-from routers.languages import update_admin_language, LanguageBase
+from routers.languages import (
+    update_admin_language, duplicate_admin_language, LanguageBase, DuplicateLanguageRequest,
+)
 
 
 @pytest.fixture
@@ -122,18 +124,48 @@ def test_rename_to_existing_id_rejected(db_fk):
     assert exc.value.status_code == 409
 
 
-def test_rename_to_alias_of_other_language_rejected(db_fk):
+def test_rename_to_alias_of_other_language_takes_the_name(db_fk):
     user = _admin(db_fk)
-    a = _seed_lang(db_fk, "A_NEW")
+    _seed_lang(db_fk, "A_NEW")
     db_fk.add(models.LanguageAlias(language_id="A_NEW", old_id="OldA"))
     b = models.Language(id="B", name_full="B", position=2)
     db_fk.add(b)
     db_fk.commit()
-    # "OldA" è già alias di A_NEW
-    payload = _put_item_from(b, "OldA")
-    with pytest.raises(HTTPException) as exc:
-        update_admin_language("B", payload, db=db_fk, current_user=user)
-    assert exc.value.status_code == 409
+    # "OldA" era un vecchio nome di A_NEW: ora passa a B
+    update_admin_language("B", _put_item_from(b, "OldA"), db=db_fk, current_user=user)
+
+    assert db_fk.query(models.Language).filter_by(id="OldA").one().name_full == "B"
+    aliases = {a.old_id: a.language_id for a in db_fk.query(models.LanguageAlias).all()}
+    assert aliases == {"B": "OldA"}
+
+
+def test_rename_moves_stale_alias_to_last_owner(db_fk):
+    user = _admin(db_fk)
+    _seed_lang(db_fk, "A_NEW")
+    # A_NEW si chiamava X; poi è nata una nuova lingua con quel nome
+    db_fk.add(models.LanguageAlias(language_id="A_NEW", old_id="X"))
+    c = models.Language(id="X", name_full="C", position=2)
+    db_fk.add(c)
+    db_fk.commit()
+
+    update_admin_language("X", _put_item_from(c, "Y"), db=db_fk, current_user=user)
+
+    alias = db_fk.query(models.LanguageAlias).filter_by(old_id="X").one()
+    assert alias.language_id == "Y"
+
+
+def test_duplicate_with_alias_of_other_language_takes_the_name(db_fk):
+    user = _admin(db_fk)
+    _seed_lang(db_fk, "A_NEW")
+    db_fk.add(models.LanguageAlias(language_id="A_NEW", old_id="OldA"))
+    db_fk.commit()
+
+    duplicate_admin_language(
+        "A_NEW", DuplicateLanguageRequest(new_id="OldA"), db=db_fk, current_user=user,
+    )
+
+    assert db_fk.query(models.Language).filter_by(id="OldA").one() is not None
+    assert db_fk.query(models.LanguageAlias).filter_by(old_id="OldA").first() is None
 
 
 def test_rename_cycle_removes_self_alias(db_fk):

@@ -294,7 +294,7 @@ export default function ParameterByLanguage() {
                         {filteredLanguages.length} of {languages.length} languages
                         {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
                     </div>
-                    <button onClick={resetAll} className="btn btn--small">Reset</button>
+                    <button onClick={resetAll} className="btn btn--small">Reset filters</button>
                 </div>
             </div>
 

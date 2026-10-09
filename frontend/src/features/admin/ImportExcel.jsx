@@ -81,6 +81,12 @@ export default function ImportExcel() {
                 </p>
             </header>
 
+            <div className="alert alert-warning" role="note" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
+                <strong>Emergency use only.</strong> Data entry from Excel is closed: languages, parameters and
+                questions are edited directly on the site. IDs in the file are matched against the current IDs
+                first, so a file exported before an ID was reused may write data to the wrong entity.
+            </div>
+
             <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)' }}>
                 <h3 style={{ marginTop: 0 }}>Strategy</h3>
                 <ul className="small" style={{ lineHeight: 1.8, marginBottom: 0 }}>
@@ -112,7 +118,7 @@ export default function ImportExcel() {
                         >
                             {busy ? 'Importing...' : 'Start Import'}
                         </button>
-                        <Link to="/languages" className="btn">Cancel</Link>
+                        <Link to="/admin/backup-restore" className="btn">Cancel</Link>
                     </div>
                 </form>
             </div>
