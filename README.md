@@ -14,9 +14,6 @@ Tutti i comandi vanno lanciati da PowerShell nella root del progetto (tranne il 
 
 **2. Creare il file `.env`**
 
-    copy .env.example .env
-
-Poi aprire `.env` e impostare:
 
 | Variabile | Valore |
 |---|---|
