@@ -4,16 +4,14 @@
 
 1. Installare [Docker Desktop](https://www.docker.com/products/docker-desktop/) e lasciarlo acceso.
 
-## Primo avvio
 
-Tutti i comandi vanno lanciati da PowerShell nella root del progetto (tranne il primo).
+## Primo avvio
 
 **1. Scaricare il codice** (PowerShell nella cartella dove volete il progetto)
 
     git clone https://github.com/gb-993/progetto_lingue_3.git pcm-hub
 
 **2. Creare il file `.env`**
-
 
 | Variabile | Valore |
 |---|---|
