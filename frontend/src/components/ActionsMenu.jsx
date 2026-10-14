@@ -14,7 +14,7 @@ export function DropdownItem({ onClick, disabled, danger, children }) {
                 padding: '0.6rem 0.9rem',
                 background: 'transparent',
                 border: 'none',
-                color: danger ? '#dc2626' : 'var(--text)',
+                color: danger ? 'var(--brand)' : 'var(--text)',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 fontSize: '0.85rem',
                 opacity: disabled ? 0.55 : 1,

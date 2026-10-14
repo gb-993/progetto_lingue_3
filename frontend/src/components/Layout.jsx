@@ -446,7 +446,7 @@ export default function Layout({ children }) {
                                             {isSuperAdmin && (
                                                 <>
                                                     <li>
-                                                        <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: '#b91c1c' }}>
+                                                        <Link className={`btn ${isCurrent('/admin/migration-import')}`} to="/admin/migration-import" title="Migration Import" style={{ color: 'var(--brand)' }}>
                                                             <DatabaseZap size={18} className="nav-icon" />
                                                             <span className="nav-label">Migration Import</span>
                                                         </Link>

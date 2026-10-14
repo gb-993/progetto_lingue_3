@@ -80,7 +80,7 @@ export default function AccountList() {
                                 {showAssignBtn && (
                                     <Link to={`/admin/accounts/${u.id}/assign`} className="btn">Assign Langs</Link>
                                 )}
-                                <button onClick={() => handleDelete(u.id)} className="btn btn--danger" style={{color: 'red'}}>Delete</button>
+                                <button onClick={() => handleDelete(u.id)} className="btn btn--danger" style={{color: 'var(--brand)'}}>Delete</button>
                             </td>
                         </tr>
                     ))}

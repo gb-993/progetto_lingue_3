@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import ParameterBlock from './ParameterBlock';
 import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
+import LegendPopover, { LegendGroup, LegendItem } from '../../components/LegendPopover';
+import ParamBadges from '../../components/ParamBadges';
 
 // Asse B (review): senza colori
 const STATUS_META = {
@@ -31,11 +33,41 @@ const COMPLETION_META = {
 
 const COLOR_CLASS = { green: 'is-complete', red: 'is-incomplete', yellow: 'is-warning', grey: 'is-empty' };
 const COLOR_TITLE = {
-    green: 'Complete',
-    red: 'Incomplete / missing answers',
-    yellow: 'Needs attention (missing examples, test example, or edited question)',
-    grey: 'Empty',
+    grey: 'Empty: no answers yet',
+    red: 'Red: at least one question (stop questions included) is unanswered or UNSURE',
+    yellow: 'Yellow: all questions answered, but with a MISSING answer, a YES with fewer than 2 examples, an example marked as "fake", or a modified question',
+    green: 'Green: every question is answered YES or NO',
 };
+
+function SampleSquare({ stateClass, hasAnswerConflict = false, needsReview = false }) {
+    return (
+        <span className={`param-btn ${stateClass}`} style={{ cursor: 'default', margin: '0.35rem 0.4rem 0.1rem 0' }}>
+            ABC
+            <ParamBadges hasAnswerConflict={hasAnswerConflict} needsReview={needsReview} />
+        </span>
+    );
+}
+
+function WizardLegend() {
+    return (
+        <LegendPopover width="min(27rem, 88vw)">
+            <div className="param-nav" style={{ display: 'contents' }}>
+                <LegendGroup title="Colors" />
+                {Object.entries(COLOR_TITLE).map(([color, title]) => (
+                    <LegendItem key={color} symbol={<SampleSquare stateClass={COLOR_CLASS[color]} />}>{title}</LegendItem>
+                ))}
+
+                <LegendGroup title="Badges" />
+                <LegendItem symbol={<SampleSquare stateClass="is-complete" hasAnswerConflict />}>
+                    Answer conflict: a question and a stop question are both YES
+                </LegendItem>
+                <LegendItem symbol={<SampleSquare stateClass="is-warning" needsReview />}>
+                    A question was modified: re-check and save the block
+                </LegendItem>
+            </div>
+        </LegendPopover>
+    );
+}
 
 export default function LanguageData() {
     const { id } = useParams();
@@ -269,7 +301,7 @@ export default function LanguageData() {
                                     <>
                                         <button
                                             className="btn"
-                                            style={{ background: '#16a34a', color: '#fff', borderColor: '#15803d' }}
+                                            style={{ background: 'var(--ok-solid)', color: '#fff', borderColor: 'color-mix(in oklab, var(--ok-solid) 75%, black)' }}
                                             disabled={actionInProgress}
                                             onClick={handleValidate}
                                         >
@@ -277,7 +309,7 @@ export default function LanguageData() {
                                         </button>
                                         <button
                                             className="btn"
-                                            style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c' }}
+                                            style={{ background: 'var(--brand)', color: '#fff', borderColor: 'color-mix(in oklab, var(--brand) 75%, black)' }}
                                             disabled={actionInProgress}
                                             onClick={handleSendBack}
                                         >
@@ -349,7 +381,7 @@ export default function LanguageData() {
                             <button className="btn" onClick={() => setShowSendBackModal(false)}>Cancel</button>
                             <button
                                 className="btn"
-                                style={{ background: '#dc2626', color: '#fff', borderColor: '#b91c1c' }}
+                                style={{ background: 'var(--brand)', color: '#fff', borderColor: 'color-mix(in oklab, var(--brand) 75%, black)' }}
                                 disabled={actionInProgress}
                                 onClick={submitSendBack}
                             >
@@ -374,6 +406,9 @@ export default function LanguageData() {
                 />
                 <button type="submit" className="btn btn--small">Search</button>
                 {searchMsg && <span className="small muted">{searchMsg}</span>}
+                <div style={{ marginLeft: 'auto' }}>
+                    <WizardLegend />
+                </div>
             </form>
 
             <div ref={wizardTopRef} className="param-nav" style={{ scrollMarginTop: '1rem' }}>
@@ -381,6 +416,7 @@ export default function LanguageData() {
                     const { answered = 0, total = 0 } = param.stats || {};
                     const stateClass = COLOR_CLASS[param.color] || 'is-empty';
                     const needsReview = !!param.needs_review;
+                    const hasAnswerConflict = !!param.answer_conflict;
 
                     const isActive = idx === activeIndex;
 
@@ -395,17 +431,10 @@ export default function LanguageData() {
                                 setActiveIndex(idx);
                             }}
                             className={`param-btn ${stateClass}${isActive ? ' is-active' : ''}${param.id === foundId ? ' is-found' : ''}`}
-                            title={`${COLOR_TITLE[param.color] || ''} — ${answered}/${total} answered${needsReview ? ' — ✎ a modified question needs re-check & re-save' : ''}`}
+                            title={`${COLOR_TITLE[param.color] || ''} — ${answered}/${total} answered${hasAnswerConflict ? ' — ! a question and a stop question are both YES' : ''}${needsReview ? ' — ✎ a modified question needs re-check & re-save' : ''}`}
                         >
                             {param.id}
-                            {needsReview && (
-                                <span
-                                    className="badge-review"
-                                    title="A question was modified — re-check and re-save this parameter"
-                                >
-                                    ✎
-                                </span>
-                            )}
+                            <ParamBadges hasAnswerConflict={hasAnswerConflict} needsReview={needsReview} />
                         </button>
                     );
                 })}

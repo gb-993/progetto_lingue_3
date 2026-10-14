@@ -12,7 +12,7 @@ class ContentUpdate(BaseModel):
     content: str
 
 @router.get("/{key}")
-def get_site_content(key: str, db: Session = Depends(get_db)):
+def get_site_content(key: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     item = db.query(models.SiteContent).filter(models.SiteContent.key == key).first()
     if not item:
         return {"key": key, "content": ""}

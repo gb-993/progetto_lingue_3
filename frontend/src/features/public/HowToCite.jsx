@@ -61,7 +61,7 @@ export default function HowToCite() {
                             style={{
                                 position: 'absolute', top: '8px', right: '8px',
                                 padding: '4px 8px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copyStatus.params === 'Copy' ? 'var(--surface)' : '#28a745',
+                                background: copyStatus.params === 'Copy' ? 'var(--surface)' : 'var(--ok-solid)',
                                 color: copyStatus.params === 'Copy' ? 'var(--text)' : '#fff',
                                 border: '1px solid var(--border)', borderRadius: '4px'
                             }}
@@ -97,7 +97,7 @@ export default function HowToCite() {
                             style={{
                                 position: 'absolute', top: '8px', right: '8px',
                                 padding: '4px 8px', fontSize: '0.7rem', cursor: 'pointer',
-                                background: copyStatus.data === 'Copy' ? 'var(--surface)' : '#28a745',
+                                background: copyStatus.data === 'Copy' ? 'var(--surface)' : 'var(--ok-solid)',
                                 color: copyStatus.data === 'Copy' ? 'var(--text)' : '#fff',
                                 border: '1px solid var(--border)', borderRadius: '4px'
                             }}

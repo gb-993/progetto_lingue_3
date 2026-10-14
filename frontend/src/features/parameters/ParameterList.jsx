@@ -367,14 +367,16 @@ export default function ParameterList() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div className="small muted">
-                        {filteredParams.length} of {parameters.length} parameters
-                        {visibleExcludedCount > 0 && <span> · {targetIds.length} selected for export</span>}
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters · reordering disabled while filtering</span>}
-                        {savingOrder && <span> · saving order…</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
+                        <div className="small muted">
+                            {filteredParams.length} of {parameters.length} parameters
+                            {visibleExcludedCount > 0 && <span> · {targetIds.length} selected for export</span>}
+                            {activeFilterCount > 0 && <span> · {activeFilterCount} active filters · reordering disabled while filtering</span>}
+                            {savingOrder && <span> · saving order…</span>}
+                        </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
                         <MenuButton label="Download">
                             <DropdownItem onClick={onExportInfoPdf} disabled={exportingInfo || targetIds.length === 0}>
                                 {exportingInfo ? 'Exporting…' : `Parameters Data (${targetIds.length})`}

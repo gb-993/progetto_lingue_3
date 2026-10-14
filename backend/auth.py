@@ -1,4 +1,5 @@
 import bcrypt
+import hashlib
 from datetime import timedelta
 from typing import Optional
 from jose import jwt
@@ -13,6 +14,8 @@ __all__ = [
     "verify_password",
     "get_password_hash",
     "create_access_token",
+    "password_fingerprint",
+    "token_for_user",
 ]
 
 
@@ -31,3 +34,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     )
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def password_fingerprint(hashed_password: str) -> str:
+    return hashlib.sha256((hashed_password or "").encode("utf-8")).hexdigest()[:16]
+
+
+def token_for_user(user) -> str:
+    return create_access_token({
+        "sub": str(user.id),
+        "role": user.role,
+        "pv": password_fingerprint(user.hashed_password),
+    })

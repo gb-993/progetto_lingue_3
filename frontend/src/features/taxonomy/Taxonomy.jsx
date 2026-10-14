@@ -432,7 +432,7 @@ function Row({ label, badge, onClick, onEdit, onDelete, active, extra, muted, dr
                 >
                     {extra}
                     {onEdit && <button className="btn btn--small" onClick={onEdit} style={{ fontSize: '0.72rem' }}>Edit</button>}
-                    {onDelete && <button className="btn btn--small btn--danger" onClick={onDelete} style={{ fontSize: '0.72rem', color: 'red' }}>Delete</button>}
+                    {onDelete && <button className="btn btn--small btn--danger" onClick={onDelete} style={{ fontSize: '0.72rem', color: 'var(--brand)' }}>Delete</button>}
                 </div>
             )}
             {expandedContent}

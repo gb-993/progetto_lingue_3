@@ -11,7 +11,7 @@ const multiSelectStyles = {
     ...reactSelectStyles,
     multiValue: (base) => ({ ...base, background: 'var(--surface-2)', border: '1px solid var(--border)' }),
     multiValueLabel: (base) => ({ ...base, color: 'var(--text)' }),
-    multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' } }),
+    multiValueRemove: (base) => ({ ...base, color: 'var(--text-muted)', ':hover': { background: 'var(--bad)', color: '#fff' } }),
 };
 const labelStyle = { display: 'block', fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.3rem', color: 'var(--text-muted)', textTransform: 'uppercase' };
 
@@ -655,8 +655,7 @@ export default function TableA() {
 
             {view === 'questions' && matrixData.orphan_answers?.count > 0 && (
                 <div className="alert alert-warning" style={{ marginBottom: 'var(--form-field-mb, 1rem)' }}>
-                    {/* un solo figlio: .alert è flex */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div>
                         <strong>
                             {matrixData.orphan_answers.count.toLocaleString('en-US')} answer
                             {matrixData.orphan_answers.count === 1 ? '' : 's'} in this selection belong to
@@ -765,7 +764,7 @@ export default function TableA() {
                                             style={{
                                                 textAlign: 'center',
                                                 fontWeight: cell.val ? 'bold' : 'normal',
-                                                background: cell.is_incomplete ? 'rgba(220, 53, 69, 0.15)' : undefined,
+                                                background: cell.is_incomplete ? 'color-mix(in oklab, var(--brand) 15%, transparent)' : undefined,
                                             }}
                                             title={
                                                 cell.is_incomplete ? 'Parameter partially compiled for this language'
@@ -774,7 +773,7 @@ export default function TableA() {
                                             }
                                         >
                                             {cell.val ? (
-                                                <Link to={`/languages/${cell.lang_id}/data#${view === 'questions' ? 'q_' : ''}${row.item.id}`} style={{ textDecoration: 'none', color: cell.val === '-' ? '#dc3545' : cell.val === '+' ? '#28a745' : 'inherit' }}>
+                                                <Link to={`/languages/${cell.lang_id}/data#${view === 'questions' ? 'q_' : ''}${row.item.id}`} style={{ textDecoration: 'none', color: cell.val === '-' ? 'var(--brand)' : cell.val === '+' ? 'var(--ok)' : 'inherit' }}>
                                                     {(cell.val === '0' && cell.init === '+') ? '0+' : cell.val}
                                                 </Link>
                                             ) : (

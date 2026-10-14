@@ -75,7 +75,7 @@ export default function AccountAssign() {
                                 <span><strong>{lang.id}</strong> — {lang.name_full}</span>
 
                                 {lang.assigned_user_id && lang.assigned_user_id !== user.id && (
-                                    <span className="badge" style={{ marginLeft: 'auto', backgroundColor: 'var(--pill-warn-bg)', color: 'var(--warn)' }}>
+                                    <span className="badge" style={{ marginLeft: 'auto', backgroundColor: 'var(--pill-warn-bg)', color: 'var(--warn-text)' }}>
                                         Assigned to others (will be transferred)
                                     </span>
                                 )}

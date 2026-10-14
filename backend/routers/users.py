@@ -1,14 +1,16 @@
 import logging
 import re
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import models
 import auth
 from config import SITE_URL
-from dependencies import get_db, require_admin, get_current_user, is_super_admin
+from dependencies import get_db, require_admin, get_current_user, is_super_admin, super_admin_email
 from services.email_service import send_email
+from services.password_reset import WELCOME_TOKEN_TTL, build_link, issue_token
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ class ProfileUpdate(BaseModel):
     name: str
     surname: str
     email: str
+    current_password: Optional[str] = None
 
 class PasswordUpdate(BaseModel):
     old_password: str
@@ -86,7 +89,7 @@ def get_single_account(user_id: int, db: Session = Depends(get_db), current_user
     }
 
 @router.post("/api/admin/accounts", status_code=status.HTTP_201_CREATED)
-def create_account(data: AccountCreate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+def create_account(data: AccountCreate, request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     if data.role not in ("admin", "user"):
         raise HTTPException(status_code=400, detail="Invalid role: must be 'admin' or 'user'.")
     _validate_email(data.email)
@@ -105,26 +108,32 @@ def create_account(data: AccountCreate, db: Session = Depends(get_db), current_u
     db.add(new_user)
     db.commit()
 
+    token_clear = issue_token(
+        db, new_user, ttl=WELCOME_TOKEN_TTL,
+        request_ip=request.client.host if request.client else None,
+    )
     _send_welcome_email(
-        to=data.email.lower(),
+        to=new_user.email,
         name=data.name or "",
-        password=data.password,
+        link=build_link(token_clear, mode="welcome"),
     )
 
     return {"detail": "Account successfully created."}
 
 
-def _send_welcome_email(to: str, name: str, password: str) -> None:
+def _send_welcome_email(to: str, name: str, link: str) -> None:
 
     salutation = f"Hi {name.strip()}," if name and name.strip() else "Hi,"
+    valid_hours = int(WELCOME_TOKEN_TTL.total_seconds() // 3600)
     body_text = (
         f"{salutation}\n\n"
         f"your PCM-Hub account has been created.\n\n"
         f"Site: {SITE_URL}\n"
-        f"Email: {to}\n"
-        f"Temporary password: {password}\n\n"
-        f"We recommend logging in and changing your password from the "
-        f"'My Account' menu on first login.\n\n"
+        f"Email: {to}\n\n"
+        f"Set your password using the link below (valid for {valid_hours} hours):\n\n"
+        f"{link}\n\n"
+        f"If the link has expired, use 'Forgot password' on the login page "
+        f"to request a new one.\n\n"
         f"-- PCM-Hub"
     )
     send_email(
@@ -156,6 +165,9 @@ def delete_account(user_id: int, db: Session = Depends(get_db), current_user: mo
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
 
+    if is_super_admin(target_user):
+        raise HTTPException(status_code=400, detail="The super-administrator account cannot be deleted.")
+
     if target_user.id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot delete your own account. Ask another admin to do it.")
 
@@ -181,14 +193,25 @@ def get_my_account(current_user: models.User = Depends(get_current_user)):
 @router.put("/api/me")
 def update_my_profile(data: ProfileUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     _validate_email(data.email)
-    if data.email.lower() != current_user.email.lower():
-        existing_user = db.query(models.User).filter(models.User.email == data.email.lower()).first()
+    new_email = data.email.lower()
+    if new_email != current_user.email.lower():
+        reserved_email = super_admin_email()
+        if current_user.email.lower() == reserved_email:
+            raise HTTPException(
+                status_code=400,
+                detail="The super-administrator email is set in the server configuration and cannot be changed here.",
+            )
+        if new_email == reserved_email:
+            raise HTTPException(status_code=400, detail="This email address is reserved.")
+        if not data.current_password or not auth.verify_password(data.current_password, current_user.hashed_password):
+            raise HTTPException(status_code=400, detail="Enter your current password to change the email address.")
+        existing_user = db.query(models.User).filter(models.User.email == new_email).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="This email is already in use by another user.")
 
     current_user.name = data.name
     current_user.surname = data.surname
-    current_user.email = data.email.lower()
+    current_user.email = new_email
     db.commit()
     return {"detail": "Profile updated successfully."}
 
@@ -203,4 +226,7 @@ def update_my_password(data: PasswordUpdate, db: Session = Depends(get_db), curr
 
     current_user.hashed_password = auth.get_password_hash(data.new_password1)
     db.commit()
-    return {"detail": "Password updated successfully."}
+    return {
+        "detail": "Password updated successfully.",
+        "access_token": auth.token_for_user(current_user),
+    }

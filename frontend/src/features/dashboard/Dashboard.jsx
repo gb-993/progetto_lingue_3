@@ -20,7 +20,7 @@ function StatusBadge({ status }) {
 
 // Asse A (completamento): colori dei quadratini
 const COMPLETION_BAR = {
-    empty: { label: 'Empty', color: 'var(--text-muted)' },
+    empty: { label: 'Empty', color: 'var(--warn)' },
     incomplete: { label: 'Incomplete', color: 'var(--warn)' },
     complete: { label: 'Complete', color: 'var(--ok)' },
 };

@@ -38,7 +38,7 @@ export default function DraftIndicator({ lastSavedAt }) {
                 width: '0.5rem',
                 height: '0.5rem',
                 borderRadius: '50%',
-                background: '#16a34a',
+                background: 'var(--ok)',
                 display: 'inline-block',
             }} />
             Draft saved {ago} ({time})

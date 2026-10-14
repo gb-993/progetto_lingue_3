@@ -15,9 +15,9 @@ const ENTITY_LABELS = {
 };
 
 const OPERATION_LABELS = {
-    create: { label: 'Created', color: '#16a34a' },
+    create: { label: 'Created', color: 'var(--ok-solid)' },
     update: { label: 'Updated', color: '#3b82f6' },
-    delete: { label: 'Deleted', color: '#dc2626' },
+    delete: { label: 'Deleted', color: 'var(--brand)' },
 };
 
 const SOURCE_LABELS = {
@@ -235,13 +235,13 @@ function VersionsTab({ lockEntityType, excludeEntityType }) {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                    <div className="small muted">
-                        {total} total versions{activeFilters > 0 && ` · ${activeFilters} active filters`}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                         <button onClick={onReset} className="btn btn--small">Reset filters</button>
-                        <button onClick={onApply} className="btn btn--primary btn--small">Apply filters</button>
+                        <div className="small muted">
+                            {total} total versions{activeFilters > 0 && ` · ${activeFilters} active filters`}
+                        </div>
                     </div>
+                    <button onClick={onApply} className="btn btn--primary btn--small">Apply filters</button>
                 </div>
             </div>
 

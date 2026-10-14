@@ -685,15 +685,18 @@ export default function LanguageList() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div className="small muted">
-                        {effectiveLanguages.length} of {languages.length} languages
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
-                        {visibleExcludedCount > 0 && (
-                            <span> · <strong>{visibleExcludedCount} excluded</strong></span>
-                        )}
-                        {excludedIds.size > visibleExcludedCount && (
-                            <span> · {excludedIds.size - visibleExcludedCount} hidden excluded</span>
-                        )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
+                        <div className="small muted">
+                            {effectiveLanguages.length} of {languages.length} languages
+                            {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
+                            {visibleExcludedCount > 0 && (
+                                <span> · <strong>{visibleExcludedCount} excluded</strong></span>
+                            )}
+                            {excludedIds.size > visibleExcludedCount && (
+                                <span> · {excludedIds.size - visibleExcludedCount} hidden excluded</span>
+                            )}
+                        </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         {excludedIds.size > 0 && (
@@ -705,7 +708,6 @@ export default function LanguageList() {
                                 Clear exclusions
                             </button>
                         )}
-                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
                         {isAdmin && (
                             <>
                                 <MenuButton label="Download">
@@ -782,7 +784,7 @@ export default function LanguageList() {
             </div>
 
             <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-                {error && <div style={{ color: 'red', padding: '1rem' }}>{error}</div>}
+                {error && <div style={{ color: 'var(--brand)', padding: '1rem' }}>{error}</div>}
                 <table className="table">
                     <thead>
                         <tr>
@@ -1123,7 +1125,7 @@ function ProgressToast({
             )}
 
             {errored && (
-                <div className="small" style={{ color: '#b91c1c' }}>
+                <div className="small" style={{ color: 'var(--brand)' }}>
                     {job?.error || state?.error}
                 </div>
             )}

@@ -344,13 +344,21 @@ Shows the current status of the language, a short description and the available 
 
 Below the status banner there is a **row of small squares**, one per active parameter. Clicking a square jumps to **that parameter's question block**.
 
-Squares are colored by progress:
+Squares are colored by the state of the answers:
 
 - **Grey (empty)** — no answers yet.
-- **Yellow (in progress)** — some questions answered but not all, or parameter marked as "Unsure".
-- **Green (complete)** — every question has a valid answer (`yes` or `no`; `unsure` does not count as completed).
+- **Red (incomplete)** — at least one question of the parameter (stop questions included) has no answer, or is answered `unsure`.
+- **Yellow (to re-check)** — every question has an answer, but something needs fixing: a `missing` answer, a `yes` with fewer than 2 examples, an example marked as test, or a question modified by an admin (see ✎ below).
+- **Green (complete)** — every question is answered `yes` or `no` and there is nothing to re-check.
 
-Tip: use the colors as a visual to-do list. All green = ready to submit.
+Two small **badges** can appear in the top-right corner of a square, independently of its color:
+
+- **Yellow ✎** — an admin modified a question of this parameter after the language had already answered it. Re-check the block and save it: the badge disappears.
+- **Red !** — **answer conflict**: a question and a stop question of the same parameter are both answered `yes`. The two answers contradict each other, so the final value of the parameter usually becomes uncertain (`?`). Fix one of the two answers and save the block: the badge disappears.
+
+When both are present, the red **!** sits just left of the ✎.
+
+Tip: use the colors as a visual to-do list. All green = ready to submit; before submitting, also check that there are no red **!** badges.
 
 ---
 
@@ -462,7 +470,7 @@ Remember: an admin can force the language status at any time and in any directio
 
 Beyond the purple "Admin override" banner and the **Change Status ▾** dropdown, an admin opening a language has:
 
-- **Apply implicational condition(s)** (link at the top): opens the **Debug** page showing all init/final parameter values for the language, with the option to re-run the DAG just for this language.
+- **Apply implicational condition(s)** (link at the top): opens the language's **Debug** page. For each parameter it shows questions and answers, the **initial value** (from the answers only), the implicational condition with its outcome (TRUE/FALSE) and the **final value**. An orange **!** marks a conflict between a question and a stop question; a **?** with a red **!** marks an uncertain final value, which is also passed on to the parameters that depend on it. The **Legend** button, below "Show inactive questions", opens a compact legend of all the symbols. From the Debug page the admin can also re-run the implicational DAG just for this language.
 - **Admin notes** inside each parameter block: free-text note for (language, parameter). It is not exported and not visible to Users.
 
 ---
@@ -950,7 +958,8 @@ The `top_family`/`family`/`group` strings on languages are a stored copy taken f
 | **Comparable** | a parameter is "comparable" between two languages if both have a non-null `value_eval` |
 | **Implicational condition** | the string like `+SPK & -DEM` that triggers neutralization |
 | **Neutralized** | a parameter forced to `0` because its implicational condition is not satisfied |
-| **Flagged / Unsure parameter** | parameter marked "uncertain" by the linguist (yellow square) |
+| **Unsure answer** | an `unsure` answer: the parameter's square turns red |
+| **Answer conflict** | a question and a stop question of the same parameter are both answered `yes` (red **!** badge on the square, orange **!** on the Debug page) |
 | **Red parameter** | in the Admin Dashboard, "red" parameters = unsure or incomplete |
 | **Hamming / Jaccard distance** | distance metrics between languages based on parameter values |
 | **GCD** | Geographic Distance, kilometric distance computed from lat/lng |

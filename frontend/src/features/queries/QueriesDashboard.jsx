@@ -364,7 +364,7 @@ export default function QueriesDashboard() {
                             {/* Q1: Implicational conditions */}
                             {activeTab === 'q1' && (
                                 <div>
-                                    <div className="alert alert-info" style={{ marginBottom: '1.5rem', justifyContent: 'flex-start', gap: '0.5rem' }}>
+                                    <div className="alert alert-info" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <strong>Implicational condition:</strong>
                                         <code>{results.raw_condition || 'None (always active)'}</code>
                                     </div>
@@ -406,8 +406,8 @@ export default function QueriesDashboard() {
                                 <div>
                                     <h3 style={{ marginBottom: '1.5rem' }}>Parameter: {results.parameter.id} — {results.parameter.name}</h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-                                        <div className="card" style={{ padding: 0, border: '1px solid #28a745' }}>
-                                            <div style={{ background: '#d4edda', padding: '0.75rem 1rem', fontWeight: 'bold', color: '#155724' }}>
+                                        <div className="card" style={{ padding: 0, border: '1px solid var(--ok)' }}>
+                                            <div style={{ background: 'var(--pill-ok-bg)', padding: '0.75rem 1rem', fontWeight: 'bold', color: 'var(--ok)' }}>
                                                 Value: + ({results.plus.length} languages)
                                             </div>
                                             <table className="table" style={{ margin: 0 }}>
@@ -424,8 +424,8 @@ export default function QueriesDashboard() {
                                             </table>
                                         </div>
 
-                                        <div className="card" style={{ padding: 0, border: '1px solid #dc3545' }}>
-                                            <div style={{ background: '#f8d7da', padding: '0.75rem 1rem', fontWeight: 'bold', color: '#721c24' }}>
+                                        <div className="card" style={{ padding: 0, border: '1px solid var(--brand)' }}>
+                                            <div style={{ background: 'var(--pill-bad-bg)', padding: '0.75rem 1rem', fontWeight: 'bold', color: 'var(--brand)' }}>
                                                 Value: - ({results.minus.length} languages)
                                             </div>
                                             <table className="table" style={{ margin: 0 }}>
@@ -534,8 +534,8 @@ export default function QueriesDashboard() {
                                                 <tr key={answer.q_id}>
                                                     <td style={{
                                                         textAlign: 'center', fontWeight: 'bold',
-                                                        color: activeTab === 'q8' ? '#28a745'
-                                                            : activeTab === 'q9' ? '#dc3545'
+                                                        color: activeTab === 'q8' ? 'var(--ok)'
+                                                            : activeTab === 'q9' ? 'var(--brand)'
                                                             : 'var(--text-muted, #888)',
                                                     }}>
                                                         {activeTab === 'q8' ? 'YES' : activeTab === 'q9' ? 'NO' : '—'}
@@ -615,7 +615,7 @@ function ParamValueRowsTable({ params, language, activeTab, onJumpToQ3 }) {
         }
     };
 
-    const valueColor = activeTab === 'q4' ? '#28a745' : activeTab === 'q5' ? '#dc3545' : '#6c757d';
+    const valueColor = activeTab === 'q4' ? 'var(--ok)' : activeTab === 'q5' ? 'var(--brand)' : '#6c757d';
     const valueLabel = activeTab === 'q4' ? '+' : activeTab === 'q5' ? '-' : '0';
     const colCount = activeTab === 'q6' ? 5 : 3;
 
@@ -785,7 +785,7 @@ function ByQuestionTable({ result }) {
     const rows = result.rows || [];
     const visibleRows = onlyAnswered ? rows.filter(row => row.response) : rows;
     const answeredCount = rows.filter(row => row.response).length;
-    const responseColor = (response) => response === 'yes' ? '#15803d' : response === 'no' ? '#b91c1c' : (response === 'unsure' || response === 'missing') ? '#a16207' : 'var(--text-muted, #888)';
+    const responseColor = (response) => response === 'yes' ? 'var(--ok)' : response === 'no' ? 'var(--brand)' : (response === 'unsure' || response === 'missing') ? '#a16207' : 'var(--text-muted, #888)';
 
     return (
         <div>
@@ -796,7 +796,7 @@ function ByQuestionTable({ result }) {
                 <div className="small muted" style={{ marginBottom: '0.5rem' }}>
                     Parameter: <strong>{result.question.parameter_id}</strong>
                     {result.question.parameter_name ? ` — ${result.question.parameter_name}` : ''}
-                    {!result.question.is_active && <span style={{ marginLeft: '0.75rem', color: '#b91c1c' }}>(inactive)</span>}
+                    {!result.question.is_active && <span style={{ marginLeft: '0.75rem', color: 'var(--brand)' }}>(inactive)</span>}
                 </div>
                 <div style={{ padding: '0.75rem 1rem', background: 'var(--surface-2)', borderRadius: 6, marginBottom: '0.75rem' }}>
                     {result.question.text}

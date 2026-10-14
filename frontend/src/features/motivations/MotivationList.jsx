@@ -160,7 +160,7 @@ export default function MotivationList() {
                             <td style={{ whiteSpace: 'nowrap', verticalAlign: 'middle', textAlign: 'right' }}>
                                 <div className="row-actions" style={{ flexWrap: 'nowrap' }}>
                                     <button className="btn" onClick={() => handleOpenModal(m)}>Edit</button>
-                                    <button className="btn btn--danger" style={{color: 'red'}} onClick={() => handleDelete(m.id)}>Delete</button>
+                                    <button className="btn btn--danger" style={{color: 'var(--brand)'}} onClick={() => handleDelete(m.id)}>Delete</button>
                                 </div>
                             </td>
                         </tr>

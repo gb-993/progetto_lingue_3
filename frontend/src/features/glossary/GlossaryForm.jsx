@@ -59,7 +59,7 @@ export default function GlossaryForm() {
                     <h2>{isEditMode ? 'Edit Term' : 'Add Term to Glossary'}</h2>
                 </header>
 
-                {error && <div style={{color: 'red', marginBottom: 'var(--form-field-mb, 1rem)', padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid red', borderRadius: '4px'}}>{error}</div>}
+                {error && <div style={{color: 'var(--brand)', marginBottom: 'var(--form-field-mb, 1rem)', padding: 'var(--form-input-pad, 0.5rem)', border: '1px solid var(--brand)', borderRadius: '4px'}}>{error}</div>}
 
                 <form onSubmit={handleSubmit} style={{display: 'flex', flexDirection: 'column', gap: 'var(--form-grid-gap, 1rem)'}}>
                     <div>

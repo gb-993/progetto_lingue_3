@@ -109,7 +109,7 @@ export default function GlossaryList() {
                             {isAdmin && (
                                 <td className="row-actions" style={{ padding: 'var(--form-box-pad, 1rem)', textAlign: 'right', verticalAlign: 'top' }}>
                                     <Link to={`/admin/glossary/${item.id}/edit`} className="btn">Edit</Link>
-                                    <button onClick={() => handleDelete(item.id)} className="btn btn--danger" style={{color: 'red', marginLeft: '0.5rem'}}>Delete</button>
+                                    <button onClick={() => handleDelete(item.id)} className="btn btn--danger" style={{color: 'var(--brand)', marginLeft: '0.5rem'}}>Delete</button>
                                 </td>
                             )}
                         </tr>

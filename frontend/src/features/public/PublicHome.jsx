@@ -257,7 +257,7 @@ export default function PublicHome() {
                         </p>
                         <p style={{ marginTop: '1rem', fontWeight: 'bold' }}>
                             Contact us at: <br />
-                            <a href="mailto:pcm_lab@unimore.it" style={{ color: '#ff4500' }}>pcm_lab@unimore.it</a>
+                            <a href="mailto:pcm_lab@unimore.it" style={{ color: 'var(--brand)' }}>pcm_lab@unimore.it</a>
                         </p>
                     </div>
                 </section>

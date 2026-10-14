@@ -152,7 +152,7 @@ function LanguagesBackupsPanel() {
                                 <td className="small">{f.user_email}</td>
                                 <td style={{ textAlign: 'right' }}>
                                     <Link to={`/admin/backups/${encodeURIComponent(f.timestamp)}`} className="btn btn--small btn--primary">Open</Link>
-                                    <button onClick={() => handleDelete(f.timestamp)} className="btn btn--small btn--danger" style={{ marginLeft: '0.4rem', color: 'red' }}>Delete</button>
+                                    <button onClick={() => handleDelete(f.timestamp)} className="btn btn--small btn--danger" style={{ marginLeft: '0.4rem', color: 'var(--brand)' }}>Delete</button>
                                 </td>
                             </tr>
                         ))}
@@ -264,7 +264,7 @@ function ParametersBackupsPanel() {
                                 <td className="small">{f.user_email}</td>
                                 <td style={{ textAlign: 'right' }}>
                                     <Link to={`/admin/backups/parameters/${encodeURIComponent(f.timestamp)}`} className="btn btn--small btn--primary">Open</Link>
-                                    <button onClick={() => handleDelete(f.timestamp)} className="btn btn--small btn--danger" style={{ marginLeft: '0.4rem', color: 'red' }}>Delete</button>
+                                    <button onClick={() => handleDelete(f.timestamp)} className="btn btn--small btn--danger" style={{ marginLeft: '0.4rem', color: 'var(--brand)' }}>Delete</button>
                                 </td>
                             </tr>
                         ))}
@@ -284,11 +284,11 @@ function ParametersBackupsPanel() {
 function BackupProgress({ label }) {
     return (
         <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <h4 style={{ color: '#ff4500', marginBottom: '0.5rem' }}>{label}</h4>
+            <h4 style={{ color: 'var(--brand)', marginBottom: '0.5rem' }}>{label}</h4>
             <div style={{ width: '100%', background: '#e9ecef', height: '10px', borderRadius: '5px', overflow: 'hidden', margin: '1rem 0', position: 'relative' }}>
-                <div className="progress-bar-moving" style={{ height: '100%', background: '#ff4500', borderRadius: '5px', position: 'absolute', width: '30%', animation: 'progress-loop 2s infinite linear' }}></div>
+                <div className="progress-bar-moving" style={{ height: '100%', background: 'var(--brand)', borderRadius: '5px', position: 'absolute', width: '30%', animation: 'progress-loop 2s infinite linear' }}></div>
             </div>
-            <div className="alert" style={{ backgroundColor: '#fee2e2', color: '#7f1d1d', padding: '0.6rem', display: 'inline-block', borderRadius: '4px', fontWeight: '600', fontSize: '0.85rem' }}>
+            <div className="alert" style={{ backgroundColor: 'var(--pill-bad-bg)', color: 'var(--brand)', padding: '0.6rem', display: 'inline-block', borderRadius: '4px', fontWeight: '600', fontSize: '0.85rem' }}>
                 Do not close or refresh the page!
             </div>
         </div>

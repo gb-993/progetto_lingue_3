@@ -180,8 +180,8 @@ export default function MigrationImport() {
                 </p>
             </header>
 
-            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c' }}>
-                <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Destructive operation</h3>
+            <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid var(--brand)' }}>
+                <h3 style={{ marginTop: 0, color: 'var(--brand)' }}>⚠ Destructive operation</h3>
                 <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
                     <li>With <code>wipe</code> enabled, <strong>all data tables are deleted</strong> (languages, parameters, questions, answers, examples, motivations, glossary, snapshots, change logs, taxonomy).</li>
                     <li>Existing users are NOT touched. The default admin is (re)created anyway with the credentials from the env vars <code>ADMIN_EMAIL</code>/<code>ADMIN_PASSWORD</code> (default: <code>admin@pcm.local</code>/<code>admin</code>).</li>
@@ -393,12 +393,12 @@ function MigrationReport({ report }) {
                                 <tr key={name}>
                                     <td><strong>{name}</strong></td>
                                     <td style={{ textAlign: 'right' }}>{sectionStats.rows_total || 0}</td>
-                                    <td style={{ textAlign: 'right', color: sectionStats.inserted > 0 ? '#15803d' : 'inherit' }}>{sectionStats.inserted || 0}</td>
-                                    <td style={{ textAlign: 'right', color: sectionStats.updated > 0 ? '#15803d' : 'inherit' }}>{sectionStats.updated || 0}</td>
+                                    <td style={{ textAlign: 'right', color: sectionStats.inserted > 0 ? 'var(--ok)' : 'inherit' }}>{sectionStats.inserted || 0}</td>
+                                    <td style={{ textAlign: 'right', color: sectionStats.updated > 0 ? 'var(--ok)' : 'inherit' }}>{sectionStats.updated || 0}</td>
                                     <td style={{ textAlign: 'right' }}>{sectionStats.skipped || 0}</td>
                                     <td style={{
                                         textAlign: 'right',
-                                        color: sectionStats.errors > 0 ? '#b91c1c' : 'inherit',
+                                        color: sectionStats.errors > 0 ? 'var(--brand)' : 'inherit',
                                         fontWeight: sectionStats.errors > 0 ? 'bold' : 'normal',
                                     }}>
                                         {sectionStats.errors || 0}
@@ -413,7 +413,7 @@ function MigrationReport({ report }) {
             {hasDagFails && (
                 <>
                     <h4 style={{ marginBottom: '0.5rem' }}>Languages with failed DAG ({report.languages_dag_failed.length})</h4>
-                    <ul className="small" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)', color: '#b91c1c' }}>
+                    <ul className="small" style={{ marginBottom: 'var(--form-col-gap, 1.5rem)', color: 'var(--brand)' }}>
                         {report.languages_dag_failed.map((failure, index) => (
                             <li key={index}><strong>{failure.language_id}</strong>: {failure.error}</li>
                         ))}
@@ -447,7 +447,7 @@ function MigrationReport({ report }) {
                                         <td className="small" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>
                                             {errorEntry.value || '—'}
                                         </td>
-                                        <td className="small" style={{ color: '#b91c1c' }}>{errorEntry.reason}</td>
+                                        <td className="small" style={{ color: 'var(--brand)' }}>{errorEntry.reason}</td>
                                     </tr>
                                 ))}
                             </tbody>

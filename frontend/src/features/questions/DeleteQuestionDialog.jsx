@@ -53,7 +53,7 @@ export default function DeleteQuestionDialog({ questionId, onClose, onDeleted })
                     <button
                         type="button"
                         className="btn"
-                        style={{ background: '#b91c1c', borderColor: '#b91c1c', color: '#fff' }}
+                        style={{ background: 'var(--brand)', borderColor: 'var(--brand)', color: '#fff' }}
                         onClick={doDelete}
                         disabled={busy || statsLoading}
                     >

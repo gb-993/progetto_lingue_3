@@ -134,8 +134,8 @@ export default function ArchivedQuestionDetail() {
                                         <div className="muted" style={{ fontSize: '0.78rem' }}>{a.language_id}</div>
                                     </td>
                                     <td>
-                                        {a.response_text === 'yes' && <span style={{ color: 'green', fontWeight: 'bold' }}>YES</span>}
-                                        {a.response_text === 'no' && <span style={{ color: 'red', fontWeight: 'bold' }}>NO</span>}
+                                        {a.response_text === 'yes' && <span style={{ color: 'var(--ok)', fontWeight: 'bold' }}>YES</span>}
+                                        {a.response_text === 'no' && <span style={{ color: 'var(--brand)', fontWeight: 'bold' }}>NO</span>}
                                         {!a.response_text && <span className="muted">—</span>}
                                     </td>
                                     <td style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{a.comments || ''}</td>
@@ -175,8 +175,8 @@ export default function ArchivedQuestionDetail() {
 }
 
 function SnapField({ label, value, accent }) {
-    const borderLeft = accent === 'green' ? '4px solid green'
-        : accent === 'red' ? '4px solid red'
+    const borderLeft = accent === 'green' ? '4px solid var(--ok)'
+        : accent === 'red' ? '4px solid var(--brand)'
         : '4px solid var(--border)';
     return (
         <div style={{ borderLeft, paddingLeft: '0.75rem' }}>

@@ -8,6 +8,8 @@ from dependencies import get_db, require_admin
 
 router = APIRouter(tags=["Site Content"])
 
+PUBLIC_CONTENT_KEYS = ("params_cite", "data_cite")
+
 class MapDataResponse(BaseModel):
     id: str
     name: str
@@ -41,12 +43,14 @@ def get_map_data(db: Session = Depends(get_db)):
 @router.get("/api/public/site-content", response_model=Dict[str, str])
 def get_site_content(db: Session = Depends(get_db)):
 
-    contents = db.query(models.SiteContent).all()
+    contents = db.query(models.SiteContent).filter(models.SiteContent.key.in_(PUBLIC_CONTENT_KEYS)).all()
     return {item.key: item.content for item in contents}
 
 
 @router.put("/api/admin/site-content/{key}")
 def update_site_content(key: str, data: SiteContentUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
+    if key not in PUBLIC_CONTENT_KEYS:
+        raise HTTPException(status_code=404, detail="Unknown content key.")
 
     content_obj = db.query(models.SiteContent).filter(models.SiteContent.key == key).first()
 

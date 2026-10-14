@@ -109,7 +109,7 @@ export default function LegalDocuments() {
                                         <td className="small">{formatDate(doc.published_at)}</td>
                                         <td>
                                             {doc.is_current ? (
-                                                <span style={{ color: '#15803d', fontWeight: 600 }}>● current</span>
+                                                <span style={{ color: 'var(--ok)', fontWeight: 600 }}>● current</span>
                                             ) : (
                                                 <span className="muted small">superseded</span>
                                             )}

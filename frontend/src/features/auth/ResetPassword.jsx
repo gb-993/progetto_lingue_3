@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 
 export default function ResetPassword() {
     const [searchParams] = useSearchParams();
+    const { hash } = useLocation();
     const navigate = useNavigate();
-    const token = searchParams.get('token') || '';
+    const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+    const token = hashParams.get('token') || searchParams.get('token') || '';
+    const isWelcome = hashParams.get('mode') === 'welcome';
 
     const [password1, setPassword1] = useState('');
     const [password2, setPassword2] = useState('');
@@ -51,7 +54,7 @@ export default function ResetPassword() {
     return (
         <div className="auth-shell">
             <section className="card auth-card">
-                <h1 className="auth-title">Set a new password</h1>
+                <h1 className="auth-title">{isWelcome ? 'Set your password' : 'Set a new password'}</h1>
                 {done ? (
                     <>
                         <div className="alert alert-success">

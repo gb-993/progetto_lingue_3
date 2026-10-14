@@ -40,12 +40,12 @@ function ExpandedCell({ children }) {
 }
 
 const STATUS_META = {
-    neutralized:        { label: 'NEUTRALIZED (0)',           bg: '#f8d7da', fg: '#721c24', border: '#dc3545' },
-    active:             { label: 'ACTIVE',                    bg: '#d4edda', fg: '#155724', border: '#28a745' },
+    neutralized:        { label: 'NEUTRALIZED (0)',           bg: 'var(--pill-bad-bg)', fg: 'var(--brand)', border: 'var(--brand)' },
+    active:             { label: 'ACTIVE',                    bg: 'var(--pill-ok-bg)', fg: 'var(--ok)', border: 'var(--ok)' },
     set_directly:       { label: 'SET DIRECTLY (from answer)',bg: '#fff3cd', fg: '#856404', border: '#ffc107' },
     warning_propagated: { label: 'WARNING (?)',               bg: '#fff3cd', fg: '#856404', border: '#ffc107' },
     no_condition:       { label: 'NO CONDITION',              bg: '#e2e3e5', fg: '#383d41', border: '#6c757d' },
-    parse_error:        { label: 'PARSE ERROR',               bg: '#f8d7da', fg: '#721c24', border: '#dc3545' },
+    parse_error:        { label: 'PARSE ERROR',               bg: 'var(--pill-bad-bg)', fg: 'var(--brand)', border: 'var(--brand)' },
     no_answers:         { label: 'NO ANSWERS',                bg: '#e2e3e5', fg: '#383d41', border: '#6c757d' },
 };
 
@@ -293,7 +293,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
                                     {other.map((leaf, idx) => {
                                         const effectivePass = leaf.leaf_eval !== leaf.negated;
                                         return (
-                                            <tr key={`o-${idx}-${leaf.param_id}`} style={{ background: !effectivePass ? 'rgba(220,53,69,0.05)' : 'transparent' }}>
+                                            <tr key={`o-${idx}-${leaf.param_id}`} style={{ background: !effectivePass ? 'color-mix(in oklab, var(--brand) 5%, transparent)' : 'transparent' }}>
                                                 <td><code>{leaf.negated ? 'not ' : ''}{leaf.sign}{leaf.param_id}</code></td>
                                                 <td>{leaf.param_name || ''}</td>
                                                 <td style={{ textAlign: 'center', fontWeight: 700 }}>
@@ -316,7 +316,7 @@ function BlameLeavesView({ explanation, canExpand, nested, loading, error, onExp
 function LeafRow({ leaf, canExpand, isOpen, isLoading, onClick, error, nestedResp, langId, depth, cache }) {
     // passa se il valore rispetta il "not"
     const effectivePass = leaf.leaf_eval !== leaf.negated;
-    const rowBg = !effectivePass ? 'rgba(220,53,69,0.05)' : 'transparent';
+    const rowBg = !effectivePass ? 'color-mix(in oklab, var(--brand) 5%, transparent)' : 'transparent';
     return (
         <Fragment>
             <tr style={{ background: rowBg }}>
@@ -387,7 +387,7 @@ export function AnswersList({ answers, languageId, title, emptyMessage, embedded
                             <tr key={answer.q_id}>
                                 <td style={{
                                     textAlign: 'center', fontWeight: 700,
-                                    color: answer.response === 'yes' ? '#28a745' : answer.response === 'no' ? '#dc3545' : '#6c757d'
+                                    color: answer.response === 'yes' ? 'var(--ok)' : answer.response === 'no' ? 'var(--brand)' : '#6c757d'
                                 }}>
                                     {(answer.response || '—').toUpperCase()}
                                 </td>

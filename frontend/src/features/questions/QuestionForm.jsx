@@ -108,7 +108,7 @@ const reactSelectStyles = {
     multiValueRemove: (base) => ({
         ...base,
         color: 'var(--text-muted)',
-        ':hover': { background: 'var(--bad, #dc2626)', color: '#fff' },
+        ':hover': { background: 'var(--bad)', color: '#fff' },
     }),
     input: (base) => ({ ...base, color: 'var(--text)' }),
     placeholder: (base) => ({ ...base, color: 'var(--text-muted)' }),
@@ -776,12 +776,12 @@ export default function QuestionForm({ mode = 'page' }) {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--form-grid-gap, 1rem)' }}>
                             <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'green' }}>Instruction for YES</label>
-                                <textarea name="instruction_yes" value={formData.instruction_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid green' }} placeholder="Specific instruction if the user answers YES..." />
+                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'var(--ok)' }}>Instruction for YES</label>
+                                <textarea name="instruction_yes" value={formData.instruction_yes} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid var(--ok)' }} placeholder="Specific instruction if the user answers YES..." />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'red' }}>Instruction for NO</label>
-                                <textarea name="instruction_no" value={formData.instruction_no} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid red' }} placeholder="Specific instruction if the user answers NO..." />
+                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.3rem', color: 'var(--brand)' }}>Instruction for NO</label>
+                                <textarea name="instruction_no" value={formData.instruction_no} onChange={handleChange} rows="3" style={{ width: '100%', padding: 'var(--form-input-pad, 0.6rem)', borderLeft: '4px solid var(--brand)' }} placeholder="Specific instruction if the user answers NO..." />
                             </div>
                         </div>
 
@@ -871,7 +871,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                     style={{
                                         width: '100%',
                                         padding: 'var(--form-input-pad, 0.5rem)',
-                                        borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
+                                        borderColor: (isDirty && !changeNote.trim()) ? 'var(--brand)' : 'var(--border)',
                                         borderRadius: '4px',
                                         // testo scuro anche in dark mode
                                         backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
@@ -988,7 +988,7 @@ export default function QuestionForm({ mode = 'page' }) {
             {wipeConfirmOpen && (
                 <div style={modalOverlayStyle}>
                     <div className="card" style={{ width: '500px', maxWidth: '92vw' }}>
-                        <h3 style={{ marginTop: 0, color: '#d9534f' }}>Archive linked data?</h3>
+                        <h3 style={{ marginTop: 0, color: 'var(--brand)' }}>Archive linked data?</h3>
                         <p style={{ fontSize: '0.92rem', lineHeight: 1.45 }}>
                             You are about to delete all data linked to this question. However all the
                             data will be saved in <strong> Old Questions Archive</strong> (in Hystory & Backups sidebar section) where they can still be consulted or downloaded.
@@ -1056,7 +1056,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                 className="btn"
                                 onClick={handleConfirmWipe}
                                 disabled={isLoading || wipeStatsLoading}
-                                style={{ background: '#d9534f', borderColor: '#d9534f', color: 'white' }}
+                                style={{ background: 'var(--brand)', borderColor: 'var(--brand)', color: 'white' }}
                             >
                                 {isLoading ? 'Archiving…' : 'Archive and save'}
                             </button>
@@ -1125,7 +1125,7 @@ export default function QuestionForm({ mode = 'page' }) {
                                 <button
                                     type="button"
                                     className="btn btn--danger"
-                                    style={{ color: 'red', borderColor: 'red' }}
+                                    style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}
                                     onClick={deleteCurrentMotivation}
                                     disabled={motSaving || motDeleting}
                                     title={linkedCount > 1

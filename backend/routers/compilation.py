@@ -138,6 +138,8 @@ def search_examples(
 def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     language = db.query(models.Language).filter(models.Language.id == lang_id).first()
     if not language: raise HTTPException(status_code=404, detail="Language not found")
+    if current_user.role != "admin" and language.assigned_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not authorized to view this language.")
 
     parameters = (
         db.query(models.ParameterDef)
@@ -165,6 +167,12 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
     needs_review_dict = {s.parameter_id: bool(s.needs_review) for s in statuses}
     is_admin = current_user.role == "admin"
     admin_note_dict = {s.parameter_id: (s.admin_note or "") for s in statuses} if is_admin else {}
+    answer_conflict_by_pid = {
+        parameter_id: bool(warning_orig)
+        for parameter_id, warning_orig in db.query(
+            models.LanguageParameter.parameter_id, models.LanguageParameter.warning_orig,
+        ).filter(models.LanguageParameter.language_id == language.id)
+    }
 
     result = {
         "language": {
@@ -247,6 +255,7 @@ def get_language_compilation_data(lang_id: str, db: Session = Depends(get_db), c
             "stats": {"answered": answered_q, "total": total_q},
             "color": color,
             "needs_review": needs_review_dict.get(p.id, False),
+            "answer_conflict": answer_conflict_by_pid.get(p.id, False),
             "last_modified": block_last_modified.isoformat() if block_last_modified else None,
             "questions": []
         }

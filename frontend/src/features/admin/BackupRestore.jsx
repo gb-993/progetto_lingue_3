@@ -346,8 +346,8 @@ export default function BackupRestore() {
             </div>
 
             {wipe && (
-                <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c' }}>
-                    <h3 style={{ marginTop: 0, color: '#b91c1c' }}>⚠ Destructive operation</h3>
+                <div className="card" style={{ padding: 'var(--form-box-pad-lg, 1.5rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid var(--brand)' }}>
+                    <h3 style={{ marginTop: 0, color: 'var(--brand)' }}>⚠ Destructive operation</h3>
                     <ul className="small" style={{ lineHeight: 1.7, marginBottom: 0 }}>
                         <li>With <code>wipe</code> enabled, <strong>all data tables are deleted</strong> before the restore (schema, languages, answers, examples, motivations, glossary, snapshots, change logs, taxonomy, site content, archived questions, parameter submissions).</li>
                         <li>Users are NOT affected.</li>
@@ -422,7 +422,7 @@ export default function BackupRestore() {
             )}
 
             {error && (
-                <div className="card" style={{ padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid #b91c1c', color: '#b91c1c' }}>
+                <div className="card" style={{ padding: 'var(--form-box-pad, 1rem)', marginBottom: 'var(--form-col-gap, 1.5rem)', borderLeft: '4px solid var(--brand)', color: 'var(--brand)' }}>
                     <strong>Error:</strong> {error}
                 </div>
             )}
@@ -521,7 +521,7 @@ function ExportProgressPanel({ jobState, elapsed, error }) {
                     width: `${displayPercent}%`,
                     height: '100%',
                     background: error
-                        ? '#b91c1c'
+                        ? 'var(--brand)'
                         : 'linear-gradient(90deg, var(--brand, #3b82f6), #6366f1)',
                     transition: 'width 0.4s ease',
                 }} />
@@ -535,7 +535,7 @@ function ExportProgressPanel({ jobState, elapsed, error }) {
                 </div>
             </div>
             {error && (
-                <div className="small" style={{ marginTop: '0.5rem', color: '#b91c1c' }}>
+                <div className="small" style={{ marginTop: '0.5rem', color: 'var(--brand)' }}>
                     <strong>Error:</strong> {error}
                 </div>
             )}
@@ -565,7 +565,7 @@ function RestoreReport({ report }) {
                 {' · '}
                 <strong>Languages:</strong> {langsRestored.length} restored
                 {langsFailed.length > 0 && (
-                    <span style={{ color: '#b91c1c' }}>, {langsFailed.length} failed</span>
+                    <span style={{ color: 'var(--brand)' }}>, {langsFailed.length} failed</span>
                 )}
                 {' · '}
                 <strong>Errors:</strong> {errors.length}
@@ -573,7 +573,7 @@ function RestoreReport({ report }) {
 
             {langsFailed.length > 0 && (
                 <div className="small" style={{ marginBottom: '0.5rem' }}>
-                    <strong style={{ color: '#b91c1c' }}>Failed languages:</strong>{' '}
+                    <strong style={{ color: 'var(--brand)' }}>Failed languages:</strong>{' '}
                     {langsFailed.join(', ')}
                 </div>
             )}

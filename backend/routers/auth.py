@@ -1,7 +1,4 @@
-import hashlib
 import logging
-import secrets
-from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -9,10 +6,10 @@ from sqlalchemy.orm import Session
 
 import auth
 import models
-from config import SITE_URL
 from dependencies import get_db
 from rate_limit import limiter
 from services.email_service import send_email
+from services.password_reset import RESET_TOKEN_TTL, build_link, hash_token, issue_token
 from time_utils import utc_now
 
 
@@ -20,9 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-
-RESET_TOKEN_TTL = timedelta(minutes=30)
 
 
 class LoginRequest(BaseModel):
@@ -39,11 +33,6 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
-def _hash_token(token: str) -> str:
-    """Nel DB va l'hash del token, mai il token in chiaro."""
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
@@ -51,8 +40,10 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user or not auth.verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Wrong email or password")
+    if user.is_active is False:
+        raise HTTPException(status_code=403, detail="This account is disabled. Contact an administrator.")
 
-    access_token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
+    access_token = auth.token_for_user(user)
     return {"access_token": access_token, "token_type": "bearer", "role": user.role, "name": user.name}
 
 
@@ -67,34 +58,16 @@ def forgot_password(
     email = (req.email or "").strip().lower()
     user = db.query(models.User).filter(models.User.email == email).first()
 
-    if not user:
-        logger.info("forgot-password: email non registrata (%s) — risposta 200 silente.", email)
+    if not user or user.is_active is False:
+        logger.info("forgot-password: email non registrata o disattivata (%s) — risposta 200 silente.", email)
         return {"detail": "If the email is registered, you will receive a link to reset your password."}
 
-    token_clear = secrets.token_urlsafe(32)
-    token_hash = _hash_token(token_clear)
-    now = utc_now()
-
-    db.query(models.PasswordResetToken).filter(
-        models.PasswordResetToken.user_id == user.id,
-        models.PasswordResetToken.used_at.is_(None),
-    ).update({"used_at": now})
-
-    db.query(models.PasswordResetToken).filter(
-        models.PasswordResetToken.expires_at < now - timedelta(days=30),
-    ).delete()
-
-    db_token = models.PasswordResetToken(
-        user_id=user.id,
-        token_hash=token_hash,
-        created_at=now,
-        expires_at=now + RESET_TOKEN_TTL,
+    token_clear = issue_token(
+        db, user, ttl=RESET_TOKEN_TTL,
         request_ip=request.client.host if request.client else None,
     )
-    db.add(db_token)
-    db.commit()
 
-    reset_link = f"{SITE_URL}/reset-password?token={token_clear}"
+    reset_link = build_link(token_clear)
     body_text = (
         f"Hi,\n\n"
         f"we received a request to reset the password "
@@ -129,7 +102,7 @@ def reset_password(
             detail=f"Password too short (minimum {MIN_PASSWORD_LENGTH} characters).",
         )
 
-    token_hash = _hash_token(req.token or "")
+    token_hash = hash_token(req.token or "")
     db_token = (
         db.query(models.PasswordResetToken)
         .filter(models.PasswordResetToken.token_hash == token_hash)

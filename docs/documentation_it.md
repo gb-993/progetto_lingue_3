@@ -792,11 +792,11 @@ Sequenza:
 5. **Per ogni Answer in payload**:
    - normalizza `response_text` (`""` → `None`);
    - se `response_text in ('yes', 'unsure')` valida ≥2 esempi non vuoti, altrimenti `400 missing_examples` con `question_id` dell'incriminata (frontend usa il campo per scrollare e flashare la card);
-   - upsert dell'`Answer`, ricrea `AnswerMotivation` (se `no`) e `Example` (se `yes`/`unsure`);
+   - upsert dell'`Answer`, ricrea `AnswerMotivation` (se `no`) e `Example` (per ogni risposta data: `yes`/`no`/`unsure`/`missing`);
    - aggiungi alla lista `touched`.
 6. **Versioning**: per ogni Answer touched, se è cambiata davvero (snapshot diff), registra una `EntityVersion`.
 7. `db.commit()`.
-8. **Recompute consolidate** del parametro per la lingua (`recompute_and_persist_language_parameter`): ricalcola `LanguageParameter.value_orig` e `warning_orig` aggregando le Answer.
+8. **Recompute consolidate** del parametro per la lingua (`recompute_and_persist_language_parameter`): ricalcola `LanguageParameter.value_orig` e `warning_orig` aggregando le Answer. `warning_orig=True` = conflitto: una domanda normale e una stop question hanno entrambe `yes` (badge **!** rosso sul quadratino del parametro).
 9. `db.commit()`.
 10. **DAG** (`run_dag_for_language`) schedulato come `BackgroundTask`: parte dopo l'invio della response al client. Aggiorna `LanguageParameterEval.value_eval/warning_eval` per tutti i parametri della lingua, propagando le condizioni implicazionali.
 
@@ -809,8 +809,15 @@ Vedi [services/dag_eval.py](backend/services/dag_eval.py).
 - Per ogni `ParameterDef.implicational_condition` (es. `+SPK & -DEM`), si estraggono i parametri "ref" citati.
 - Si costruisce il grafo `ref → target` (un parametro target dipende dai suoi ref).
 - Topological sort.
-- In ordine, per ogni parametro target: si valuta la condizione usando i `value_eval` (o, se assenti, `value_orig`) dei ref. Se la condizione **non è soddisfatta**, il `value_eval` del target è forzato a `0` (neutralizzato) con `warning_eval=True`.
-- Le warning si propagano: se un ref ha `warning_eval=True`, anche tutti i suoi discendenti ereditano la warning.
+- Prima del giro, i parametri con `warning_orig=True` (conflitto sulle risposte) entrano nell'insieme dei parametri **incerti**.
+- In ordine, per ogni parametro target (i ref vengono prima nell'ordine, quindi la condizione usa i loro `value_eval` già calcolati):
+    - **condizione inutilizzabile** (sintassi errata, ref inesistente o disattivato, dipendenza circolare) → `?` con `warning_eval=True`; finisce in `formula_errors`, mostrati in testa alla pagina Debug;
+    - **nessuna condizione** → `value_eval = value_orig`; `?` se `value_orig` è vuoto o se il parametro è incerto;
+    - **un ref è incerto** → `?` con `warning_eval=True`, senza valutare la condizione;
+    - **condizione non soddisfatta** → `0` (neutralizzato) con `warning_eval=False`: il parametro esce dagli incerti, anche se aveva un conflitto sulle risposte;
+    - **condizione soddisfatta** → `value_eval = value_orig`; `?` se `value_orig` è vuoto o se il parametro è incerto.
+- Ogni `?` rende incerto il parametro, quindi le warning si propagano a tutti i discendenti finché non incontrano una condizione non soddisfatta (lo `0` ferma la propagazione).
+- `value_eval = '?'` se e solo se `warning_eval = True`.
 
 L'idea: un parametro è "comparabile" solo se le sue precondizioni linguistiche sono soddisfatte; altrimenti il valore originale è mascherato da uno `0`.
 

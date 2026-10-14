@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 
 const COLORS = {
-    success: '#16a34a',
+    success: 'var(--ok)',
     warning: '#d97706',
-    error: '#dc2626',
+    error: 'var(--brand)',
 };
 
 export default function NoticeToast({ notice, onClose }) {

@@ -157,10 +157,10 @@ export default function BackupDetail() {
                                             {p.warning_orig && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
                                         </td>
                                         <td style={{ fontWeight: 'bold' }}>
-                                            {p.value_eval === '?' ? <span style={{ color: '#d63384' }}>?</span> : (p.value_eval || "")}
+                                            {p.value_eval === '?' ? <span style={{ color: 'var(--brand)' }}>?</span> : (p.value_eval || "")}
                                         </td>
                                         <td title={p.warning_eval ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
-                                            {p.warning_eval && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
+                                            {p.warning_eval && <span style={{ color: 'var(--brand)', fontWeight: 'bold' }}>!</span>}
                                         </td>
                                     </tr>
                                 ))
@@ -190,9 +190,9 @@ export default function BackupDetail() {
                                         <td>{a.question_code}</td>
                                         <td>
                                             {a.response_text === 'yes' ? (
-                                                <span style={{ color: '#28a745', fontWeight: 'bold' }}>Yes</span>
+                                                <span style={{ color: 'var(--ok)', fontWeight: 'bold' }}>Yes</span>
                                             ) : a.response_text === 'no' ? (
-                                                <span style={{ color: '#dc3545', fontWeight: 'bold' }}>No</span>
+                                                <span style={{ color: 'var(--brand)', fontWeight: 'bold' }}>No</span>
                                             ) : (
                                                 a.response_text
                                             )}

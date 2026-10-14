@@ -668,6 +668,12 @@ def get_parameter_by_language(
 
     languages = db.query(models.Language).order_by(func.lower(models.Language.id)).all()
     colors = compute_colors(db, [l.id for l in languages], {param_id: active_qids})
+    conflict_lang_ids = {
+        language_id for (language_id,) in db.query(models.LanguageParameter.language_id).filter(
+            models.LanguageParameter.parameter_id == param_id,
+            models.LanguageParameter.warning_orig.is_(True),
+        )
+    }
     langs_out = [{
         "id": l.id,
         "name_full": l.name_full,
@@ -678,6 +684,7 @@ def get_parameter_by_language(
         "answered": answered_map.get(l.id, 0),
         "with_response": with_response_map.get(l.id, 0),
         "color": colors.get((l.id, param_id), "grey"),
+        "answer_conflict": l.id in conflict_lang_ids,
     } for l in languages]
 
     return {
@@ -696,7 +703,7 @@ class LookupBase(BaseModel):
     label: str
 
 @router.get("/lookups/schemas")
-def get_schemas(db: Session = Depends(get_db)):
+def get_schemas(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamSchema).all()]
 
 @router.post("/lookups/schemas")
@@ -726,7 +733,7 @@ def delete_schema(lookup_id: int, db: Session = Depends(get_db), current_user: m
     return {"detail": "Schema deleted"}
 
 @router.get("/lookups/types")
-def get_types(db: Session = Depends(get_db)):
+def get_types(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamType).all()]
 
 @router.post("/lookups/types")
@@ -756,7 +763,7 @@ def delete_type(lookup_id: int, db: Session = Depends(get_db), current_user: mod
     return {"detail": "Type deleted"}
 
 @router.get("/lookups/levels")
-def get_levels(db: Session = Depends(get_db)):
+def get_levels(db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     return [{"id": item.id, "label": item.label} for item in db.query(models.ParamLevelOfComparison).all()]
 
 @router.post("/lookups/levels")

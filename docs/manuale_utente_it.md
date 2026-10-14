@@ -344,13 +344,21 @@ Mostra lo stato corrente della lingua, una breve descrizione e i pulsanti di wor
 
 Sotto il banner di stato c'è una **fila di quadratini**, uno per ogni parametro attivo. Cliccando un quadratino salti al **blocco di domande di quel parametro**.
 
-I quadratini sono colorati in base al progresso:
+I quadratini sono colorati in base allo stato delle risposte:
 
 - **Grigio (vuoto)** — nessuna risposta ancora.
-- **Giallo (in corso)** — alcune domande risposte ma non tutte, oppure parametro segnato come "Unsure".
-- **Verde (completo)** — tutte le domande hanno una risposta valida (`yes` o `no`; `unsure` non conta come completata).
+- **Rosso (incompleto)** — almeno una domanda del parametro (stop question comprese) è senza risposta, oppure ha la risposta `unsure`.
+- **Giallo (da ricontrollare)** — tutte le domande hanno una risposta, ma c'è qualcosa da sistemare: una risposta `missing`, un `yes` con meno di 2 esempi, un esempio segnato come test, oppure una domanda modificata da un admin (vedi ✎ qui sotto).
+- **Verde (completo)** — tutte le domande hanno una risposta `yes` o `no` e non c'è niente da ricontrollare.
 
-Suggerimento: usa il colore dei quadratini come "to-do list" visiva. Tutti verdi = pronto per il submit.
+Nell'angolo in alto a destra di un quadratino possono comparire due piccoli **badge**, indipendenti dal colore:
+
+- **✎ giallo** — un admin ha modificato una domanda di questo parametro dopo che la lingua aveva già risposto. Ricontrolla il blocco e salvalo: il badge sparisce.
+- **! rosso** — **conflitto tra le risposte**: una domanda e una stop question dello stesso parametro hanno entrambe `yes`. Le due risposte si contraddicono, quindi di solito il valore finale del parametro diventa incerto (`?`). Correggi una delle due risposte e salva il blocco: il badge sparisce.
+
+Se ci sono tutti e due, il **!** rosso si affianca a sinistra del ✎.
+
+Suggerimento: usa il colore dei quadratini come "to-do list" visiva. Tutti verdi = pronto per il submit; prima di inviare controlla anche che non ci siano **!** rossi.
 
 ---
 
@@ -462,7 +470,7 @@ Ricorda: l'admin può forzare lo stato della lingua in qualsiasi momento e in qu
 
 Oltre al banner viola "Admin override" e al dropdown **Change Status ▾**, un admin che apre una lingua ha:
 
-- **Apply implicational condition(s)** (link in alto): apre la pagina **Debug** che mostra tutti i valori init/final dei parametri della lingua, e da lì può rilanciare il DAG implicazionale solo per questa lingua.
+- **Apply implicational condition(s)** (link in alto): apre la pagina **Debug** della lingua. Per ogni parametro mostra domande e risposte, il **valore iniziale** (ricavato dalle sole risposte), la condizione implicazionale con il suo esito (TRUE/FALSE) e il **valore finale**. Un **!** arancione segnala un conflitto tra domanda e stop question; un **?** con **!** rosso segnala un valore finale incerto, che passa anche ai parametri che dipendono da lui. Il pulsante **Legend**, sotto "Show inactive questions", apre una legenda compatta di tutti i simboli. Dalla pagina Debug l'admin può anche rilanciare il DAG implicazionale solo per questa lingua.
 - **Admin notes** dentro a ogni blocco parametro: nota libera per (lingua, parametro). Non viene esportata e non è visibile agli User.
 
 ---
@@ -950,7 +958,8 @@ Le stringhe `top_family`/`family`/`group` sulle lingue sono una copia salvata pr
 | **Comparable** | un parametro è "comparable" tra due lingue se entrambe hanno un `value_eval` non nullo |
 | **Implicational condition** | la stringa tipo `+SPK & -DEM` che scatena la neutralizzazione |
 | **Neutralized** | un parametro forzato a `0` perché la sua condizione implicazionale non è soddisfatta |
-| **Flagged / Unsure parameter** | parametro segnato come "incerto" dal linguista (quadratino giallo) |
+| **Unsure answer** | risposta `unsure`: il quadratino del parametro diventa rosso |
+| **Answer conflict** | una domanda e una stop question dello stesso parametro hanno entrambe `yes` (badge **!** rosso sul quadratino, **!** arancione nella pagina Debug) |
 | **Red parameter** | nella Dashboard admin, parametri "rossi" = unsure o incompleti |
 | **Hamming / Jaccard distance** | metriche di distanza tra lingue basate sui valori dei parametri |
 | **GCD** | Geographic Distance, distanza in km calcolata da lat/lng |

@@ -53,6 +53,7 @@ export default function LegalConsentsModal() {
                 ids: requiredConsents.map(d => d.id),
                 vexatiousApproved: vexatiousAccepted,
             });
+            window.location.reload();
         } catch (err) {
             setError(err.response?.data?.detail || 'Acceptance failed. Please try again.');
         } finally {

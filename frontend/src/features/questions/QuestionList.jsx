@@ -126,7 +126,7 @@ export default function QuestionList() {
                                     <td>{truncate(question.text, 70)}</td>
                                     <td className="hide-mobile">
                                         {question.is_stop_question
-                                            ? <span style={{ color: 'var(--bad, #d9534f)', fontWeight: 700 }}>Stop</span>
+                                            ? <span style={{ color: 'var(--bad)', fontWeight: 700 }}>Stop</span>
                                             : <span className="muted">Standard</span>}
                                     </td>
                                     <td className="hide-mobile">
@@ -140,7 +140,7 @@ export default function QuestionList() {
                                             <button
                                                 type="button"
                                                 className={`btn ${isActive ? 'btn--danger' : ''}`}
-                                                style={{ color: isActive ? 'red' : 'green' }}
+                                                style={{ color: isActive ? 'var(--brand)' : 'var(--ok)' }}
                                                 onClick={() => handleToggleActive(question)}
                                                 title={isActive ? 'Deactivate (soft-delete: keeps the data, hides the question)' : 'Restore (reactivate)'}
                                             >
@@ -150,7 +150,7 @@ export default function QuestionList() {
                                                 <button
                                                     type="button"
                                                     className="btn btn--danger"
-                                                    style={{ color: 'red' }}
+                                                    style={{ color: 'var(--brand)' }}
                                                     onClick={() => setDeleteCandidate(question.id)}
                                                     title="Delete permanently (linked data is archived first)"
                                                     aria-label={`Delete question ${question.id} permanently`}

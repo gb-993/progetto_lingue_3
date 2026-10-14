@@ -40,7 +40,7 @@ function NeedsWorkToggle({ checked, onChange, title }) {
                 display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
                 fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer',
                 fontWeight: checked ? 600 : 400,
-                color: checked ? 'var(--warn)' : 'var(--text-muted)',
+                color: checked ? 'var(--warn-text)' : 'var(--text-muted)',
             }}
         >
             <input type="checkbox" checked={checked} onChange={onChange} />
@@ -426,7 +426,7 @@ export default function ParameterForm() {
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                                 <button type="button" className="btn" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn--danger" style={{ background: 'red', color: 'white' }}>Confirm Deactivation</button>
+                                <button type="submit" className="btn btn--danger" style={{ background: 'var(--brand)', color: 'white' }}>Confirm Deactivation</button>
                             </div>
                         </form>
                     </div>
@@ -487,8 +487,8 @@ export default function ParameterForm() {
                         <div className="grid grid-2" style={{gap: 'var(--form-grid-gap, 1rem)', marginBottom: 'var(--form-field-mb, 1rem)'}}>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Parameter ID</label>
-                                <input type="text" name="id" value={formData.id} onChange={handleIdChange} required maxLength={10} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: idWarning ? 'red' : 'inherit'}} />
-                                {idWarning && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{idWarning}</p>}
+                                <input type="text" name="id" value={formData.id} onChange={handleIdChange} required maxLength={10} style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: idWarning ? 'var(--brand)' : 'inherit'}} />
+                                {idWarning && <p style={{color: 'var(--brand)', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{idWarning}</p>}
                             </div>
                             <div>
                                 <label style={{fontWeight: 'bold'}}>Position</label>
@@ -581,9 +581,9 @@ export default function ParameterForm() {
                                 value={formData.implicational_condition || ''}
                                 onChange={handleChange}
                                 placeholder="e.g. (+FGM | -ABC)"
-                                style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: syntaxError ? 'red' : 'inherit', ...flaggedStyle('implicational_condition')}}
+                                style={{width: '100%', padding: 'var(--form-input-pad, 0.5rem)', borderColor: syntaxError ? 'var(--brand)' : 'inherit', ...flaggedStyle('implicational_condition')}}
                             />
-                            {syntaxError && <p style={{color: 'red', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{syntaxError}</p>}
+                            {syntaxError && <p style={{color: 'var(--brand)', fontSize: '0.85rem', marginTop: '0.4rem', fontWeight: 'bold'}}>{syntaxError}</p>}
                         </div>
 
                         <div style={{marginBottom: 'var(--form-field-mb, 1rem)'}}>
@@ -661,7 +661,7 @@ export default function ParameterForm() {
                                             style={{
                                                 width: '100%',
                                                 padding: '0.5rem',
-                                                borderColor: (isDirty && !changeNote.trim()) ? 'red' : 'var(--border)',
+                                                borderColor: (isDirty && !changeNote.trim()) ? 'var(--brand)' : 'var(--border)',
                                                 borderRadius: '4px',
                                                 // testo scuro anche in dark mode
                                                 backgroundColor: !isDirty ? 'var(--surface-2, #e2e8f0)' : '#fff',
@@ -760,7 +760,7 @@ export default function ParameterForm() {
                                                         type="button"
                                                         onClick={() => handleToggleQuestionActive(question.id, question.is_active)}
                                                         className={`btn btn--small ${question.is_active ? 'btn--danger' : ''}`}
-                                                        style={{ color: question.is_active ? 'red' : 'green', borderColor: question.is_active ? 'red' : 'green' }}
+                                                        style={{ color: question.is_active ? 'var(--brand)' : 'var(--ok)', borderColor: question.is_active ? 'var(--brand)' : 'var(--ok)' }}
                                                     >
                                                         {question.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
@@ -769,7 +769,7 @@ export default function ParameterForm() {
                                                             type="button"
                                                             onClick={() => setDeleteCandidate(question.id)}
                                                             className="btn btn--small btn--danger"
-                                                            style={{ color: 'red', borderColor: 'red' }}
+                                                            style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}
                                                             title="Delete permanently (linked data is archived first)"
                                                             aria-label={`Delete question ${question.id} permanently`}
                                                         >
@@ -801,7 +801,7 @@ export default function ParameterForm() {
                                                         type="button"
                                                         onClick={() => handleToggleQuestionActive(question.id, question.is_active)}
                                                         className={`btn btn--small ${question.is_active ? 'btn--danger' : ''}`}
-                                                        style={{ color: question.is_active ? 'red' : 'green', borderColor: question.is_active ? 'red' : 'green' }}
+                                                        style={{ color: question.is_active ? 'var(--brand)' : 'var(--ok)', borderColor: question.is_active ? 'var(--brand)' : 'var(--ok)' }}
                                                     >
                                                         {question.is_active ? 'Deactivate' : 'Reactivate'}
                                                     </button>
@@ -810,7 +810,7 @@ export default function ParameterForm() {
                                                             type="button"
                                                             onClick={() => setDeleteCandidate(question.id)}
                                                             className="btn btn--small btn--danger"
-                                                            style={{ color: 'red', borderColor: 'red' }}
+                                                            style={{ color: 'var(--brand)', borderColor: 'var(--brand)' }}
                                                             title="Delete permanently (linked data is archived first)"
                                                             aria-label={`Delete question ${question.id} permanently`}
                                                         >
@@ -985,7 +985,7 @@ function LookupField({
                                     fontSize: '0.85rem',
                                     padding: '0 0.25rem',
                                 }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--brand)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                             >
                                 🗑

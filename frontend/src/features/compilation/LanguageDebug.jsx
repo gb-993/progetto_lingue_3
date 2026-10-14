@@ -1,11 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../api';
+import LegendPopover, { LegendGroup, LegendItem } from '../../components/LegendPopover';
 
 const SHOW_INACTIVE_KEY = 'language-debug.show-inactive-questions';
 
 // '0+' solo a schermo: nei calcoli resta 0
 const displayFinalValue = (initial, final) => (initial === '+' && final === '0' ? '0+' : final);
+
+const conflictCellStyle = {
+    background: 'color-mix(in oklab, var(--warn) 18%, transparent)',
+    borderLeft: '3px solid var(--warn)',
+};
+const badgeStyle = { padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' };
+
+const ConflictMark = () => <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>;
+const UncertainMark = () => <span style={{ color: 'var(--brand)', fontWeight: 'bold' }}>!</span>;
+const UncertainValue = () => <span style={{ color: 'var(--brand)', fontWeight: 'bold' }}>?</span>;
+const TrueBadge = () => <span style={{ ...badgeStyle, background: '#d1e7dd', color: '#0f5132' }}>TRUE</span>;
+const FalseBadge = () => <span style={{ ...badgeStyle, background: 'var(--pill-bad-bg)', color: 'var(--brand)' }}>FALSE</span>;
+const ConflictCellSample = () => <span style={{ display: 'inline-block', width: '0.9rem', height: '0.9rem', ...conflictCellStyle }} />;
+
+function SymbolLegend() {
+    return (
+        <LegendPopover>
+            <LegendGroup title="Initial value" />
+            <LegendItem symbol="+">A regular question is YES</LegendItem>
+            <LegendItem symbol="-">A stop question is YES, or all questions are NO</LegendItem>
+            <LegendItem symbol={<span className="muted" style={{ fontWeight: 'normal' }}>empty</span>}>Not decidable yet</LegendItem>
+            <LegendItem symbol={<><ConflictCellSample /><ConflictMark /></>}>Conflict: a question and a stop question are both YES</LegendItem>
+
+            <LegendGroup title="Final value" />
+            <LegendItem symbol="0+">0, but the answers alone give + </LegendItem>
+            <LegendItem symbol={<><UncertainValue /><UncertainMark /></>}>
+                Uncertain: answers missing or in conflict, or condition uncertain or broken. Passed on to dependent parameters
+            </LegendItem>
+        </LegendPopover>
+    );
+}
 
 export default function LanguageDebug() {
     const { id } = useParams();
@@ -60,7 +92,7 @@ export default function LanguageDebug() {
         <div className="container page-debug" style={{ marginTop: '2rem', paddingBottom: '10rem' }}>
 
             <div className="sticky-debug-header" style={{
-                position: 'sticky', top: '1rem', zIndex: 1000, padding: '1.25rem 1.5rem', marginBottom: '2rem',
+                position: 'sticky', top: 'calc(var(--topbar-height) + 1rem)', zIndex: 10, padding: '1.25rem 1.5rem', marginBottom: '2rem',
                 borderRadius: '12px', border: '1px solid var(--border)',
                 background: 'color-mix(in oklab, var(--surface) 75%, transparent)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
@@ -78,30 +110,17 @@ export default function LanguageDebug() {
                     >
                         {isRunningDag ? 'Processing...' : 'Apply implicational condition(s)'}
                     </button>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 'auto' }}>
-                        <input
-                            type="checkbox"
-                            checked={showInactive}
-                            onChange={(e) => toggleShowInactive(e.target.checked)}
-                        />
-                        Show inactive questions
-                    </label>
-                </div>
-
-                <div style={{ marginTop: '0.85rem', display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{
-                            display: 'inline-block', width: '0.9rem', height: '0.9rem',
-                            background: 'color-mix(in oklab, var(--warn) 18%, transparent)',
-                            borderLeft: '3px solid var(--warn)'
-                        }} />
-                        <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>
-                        <span>Input warning — conflict on answers (informational, does not block the result)</span>
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>
-                        <span>Eval warning — uncertain final value (propagates downstream)</span>
-                    </span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={showInactive}
+                                onChange={(e) => toggleShowInactive(e.target.checked)}
+                            />
+                            Show inactive questions
+                        </label>
+                        <SymbolLegend />
+                    </div>
                 </div>
             </div>
 
@@ -168,29 +187,28 @@ export default function LanguageDebug() {
                                 style={{
                                     textAlign: 'center',
                                     fontWeight: 'bold',
-                                    background: row.warn_init ? 'color-mix(in oklab, var(--warn) 18%, transparent)' : undefined,
-                                    borderLeft: row.warn_init ? '3px solid var(--warn)' : undefined,
+                                    ...(row.warn_init ? conflictCellStyle : {}),
                                 }}
-                                title={row.warn_init ? 'Conflict between question/stop-question answers' : undefined}
+                                title={row.warn_init ? 'Answer conflict: a question and a stop question are both YES' : undefined}
                             >
                                 {row.initial || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }} title={row.warn_init ? 'Conflict on the input answers (informational)' : undefined}>
-                                {row.warn_init && <span style={{ color: 'var(--warn)', fontWeight: 'bold' }}>!</span>}
+                            <td style={{ textAlign: 'center' }} title={row.warn_init ? 'Answer conflict: a question and a stop question are both YES' : undefined}>
+                                {row.warn_init && <ConflictMark />}
                             </td>
                             <td>{row.cond ? <code>{row.cond}</code> : <span className="muted">—</span>}</td>
                             <td style={{ textAlign: 'center' }}>
-                                {row.cond_true === true && <span style={{ background: '#d1e7dd', color: '#0f5132', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>TRUE</span>}
-                                {row.cond_true === false && <span style={{ background: '#f8d7da', color: '#842029', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>FALSE</span>}
+                                {row.cond_true === true && <TrueBadge />}
+                                {row.cond_true === false && <FalseBadge />}
                                 {row.cond_true === null && <span className="muted">—</span>}
                             </td>
                             <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
                                 {row.final === '?'
-                                    ? <span style={{ color: '#d63384' }}>?</span>
+                                    ? <UncertainValue />
                                     : displayFinalValue(row.initial, row.final) || <span className="muted"> </span>}
                             </td>
-                            <td style={{ textAlign: 'center' }} title={row.warn_final ? 'Eval is uncertain (warning propagated or unresolved condition)' : undefined}>
-                                {row.warn_final && <span style={{ color: 'red', fontWeight: 'bold' }}>!</span>}
+                            <td style={{ textAlign: 'center' }} title={row.warn_final ? 'Uncertain final value' : undefined}>
+                                {row.warn_final && <UncertainMark />}
                             </td>
                         </tr>
                         );

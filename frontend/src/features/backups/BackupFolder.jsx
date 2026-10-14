@@ -80,7 +80,7 @@ export default function BackupFolder() {
                         <tr key={sub.id}>
                             <td><strong>{sub.language_name}</strong></td>
                             <td><code>{sub.language_id}</code></td>
-                            <td><span className="badge bg-success" style={{ backgroundColor: '#28a745', color: 'white', padding: '0.25em 0.6em', borderRadius: '50px', fontSize: '0.85em' }}>Saved</span></td>
+                            <td><span className="badge bg-success" style={{ backgroundColor: 'var(--ok-solid)', color: 'white', padding: '0.25em 0.6em', borderRadius: '50px', fontSize: '0.85em' }}>Saved</span></td>
                             <td style={{ textAlign: 'right' }}>
                                 <Link className="btn btn-sm btn-outline-primary" to={`/admin/backups/submissions/${sub.id}`}>
                                     View Data

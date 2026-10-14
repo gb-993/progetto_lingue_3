@@ -224,13 +224,21 @@ def restore_backup_bundle(
                 filename = os.path.basename(pdf_entry)
                 if not filename:
                     continue
+                if not filename.lower().endswith(".pdf"):
+                    report.files_skipped.append(pdf_entry)
+                    continue
                 target_path = os.path.join(LEGAL_DOCUMENTS_DIR, filename)
                 if os.path.exists(target_path):
                     already_present_count += 1
                     continue
                 try:
-                    with zip_file.open(pdf_entry) as source_file, open(target_path, "wb") as dest_file:
-                        dest_file.write(source_file.read())
+                    with zip_file.open(pdf_entry) as source_file:
+                        pdf_bytes = source_file.read()
+                    if not pdf_bytes.startswith(b"%PDF-"):
+                        report.files_skipped.append(pdf_entry)
+                        continue
+                    with open(target_path, "wb") as dest_file:
+                        dest_file.write(pdf_bytes)
                     restored_count += 1
                 except Exception as exception:
                     report.errors.append({"_file": pdf_entry, "reason": f"Cannot restore PDF: {exception}"})
@@ -283,8 +291,10 @@ def _user_id_by_email(db: Session) -> Dict[str, int]:
     return {user.email: user.id for user in db.query(models.User).all() if user.email}
 
 
-def _yn_to_bool(value) -> bool:
+def _yn_to_bool(value, default: bool = False) -> bool:
     text = (str(value) if value is not None else "").strip().lower()
+    if text == "":
+        return default
     return text in ("yes", "true", "1", "y")
 
 
@@ -819,7 +829,7 @@ def _restore_users(
         role = (str(row.get("Role")) if row.get("Role") is not None else "").strip() or "public"
         if role not in valid_roles:
             role = "public"
-        is_active = _yn_to_bool(row.get("Is Active"))
+        is_active = _yn_to_bool(row.get("Is Active"), default=True)
         existing = db.query(models.User).filter(models.User.email == email).first()
         if existing:
             existing.name = row.get("Name") or None

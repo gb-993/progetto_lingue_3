@@ -7,7 +7,7 @@ import usePersistentState from '../../utils/usePersistentState';
 
 const VALUE_COLORS = {
     '+': { bg: '#1B5E20', border: '#0B3D13', text: '#ffffff' },
-    '-': { bg: '#B71C1C', border: '#7F0000', text: '#ffffff' },
+    '-': { bg: '#d14124', border: '#a8341a', text: '#ffffff' },
     '0': { bg: '#0D47A1', border: '#002171', text: '#ffffff' },
     '?': { bg: '#616161', border: '#373737', text: '#ffffff' },
     'unset': { bg: '#FAFAFA', border: '#BDBDBD', text: '#000000' },
@@ -70,7 +70,7 @@ const CY_STYLE = [
             'text-background-color': '#ffffff',
             'text-background-opacity': 0.95,
             'text-background-padding': 3,
-            'text-rotation': 'autorotate',
+            'text-rotation': 'none',
         },
     },
 
@@ -444,7 +444,7 @@ export default function ParameterGraph() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '0.75rem', flex: 1, minHeight: 500 }}>
-                <div className="card" style={{ position: 'relative', minHeight: 500, padding: 0, overflow: 'hidden' }}>
+                <div className="card" style={{ position: 'relative', minHeight: 500, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     {loading && (
                         <div className="muted" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
                             Loading graph...
@@ -455,7 +455,7 @@ export default function ParameterGraph() {
                             {error}
                         </div>
                     )}
-                    <div ref={containerRef} style={{ width: '100%', height: '100%', minHeight: 500 }} />
+                    <div ref={containerRef} style={{ width: '100%', flex: 1, minHeight: 500 }} />
 
                     <Legend hasLang={!!selectedLang} />
                 </div>
@@ -490,10 +490,8 @@ const lineBox = (color, dashed) => (
 function Legend({ hasLang }) {
     return (
         <div style={{
-            position: 'absolute', bottom: 10, right: 10, padding: '0.5rem 0.7rem',
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 6, display: 'flex', flexDirection: 'column', gap: '0.2rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)', zIndex: 1,
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.4rem 1rem',
+            padding: '0.5rem 0.75rem', background: 'var(--surface)', borderTop: '1px solid var(--border)',
         }}>
             {hasLang && (
                 <>
@@ -504,11 +502,11 @@ function Legend({ hasLang }) {
                     <Item swatch={colorBox(VALUE_COLORS.unset.bg, VALUE_COLORS.unset.border)} label="unset" />
                 </>
             )}
-            <strong style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: hasLang ? 4 : 0 }}>CHAIN (on click)</strong>
+            <strong style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: hasLang ? '0.75rem' : 0 }}>CHAIN (on click)</strong>
             <Item swatch={colorBox('transparent', CHAIN_COLORS.focus)} label="selected" />
             <Item swatch={lineBox(CHAIN_COLORS.up)} label="antecedent" />
             <Item swatch={lineBox(CHAIN_COLORS.down)} label="consequent" />
-            {hasLang && <Item swatch={lineBox('#90A4AE', true)} label="not satisfied" />}
+            {hasLang && <Item swatch={lineBox('var(--text-muted)', true)} label="dashed = not satisfied" />}
         </div>
     );
 }
@@ -530,7 +528,7 @@ function SidePanel({ chain, finalValueOf, onJump, conditionTree, selectedLang, l
                         <span className="muted">Final value: </span>
                         <strong>{finalForSelected.final === 'unset' ? '—' : finalForSelected.final}</strong>
                         {finalForSelected.condition_satisfied != null && (
-                            <span style={{ marginLeft: '0.6rem', color: finalForSelected.condition_satisfied ? 'var(--ok)' : 'var(--bad)' }}>
+                            <span className="muted" style={{ marginLeft: '0.6rem' }}>
                                 condition {finalForSelected.condition_satisfied ? 'satisfied' : 'not satisfied'}
                             </span>
                         )}
@@ -538,8 +536,8 @@ function SidePanel({ chain, finalValueOf, onJump, conditionTree, selectedLang, l
                 )}
                 {chain && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                        <ChainList title="Antecedents" subtitle="(this depends on)" items={chain.up} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
-                        <ChainList title="Consequents" subtitle="(depend on this)" items={chain.down} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
+                        <ChainList title="Antecedents" subtitle="" items={chain.up} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
+                        <ChainList title="Consequents" subtitle="" items={chain.down} finalValueOf={finalValueOf} onJump={onJump} hasLang={!!selectedLang} />
                     </div>
                 )}
             </div>

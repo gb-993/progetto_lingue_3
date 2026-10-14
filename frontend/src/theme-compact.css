@@ -185,17 +185,6 @@
   margin-bottom: 0;
 }
 
-/* Tiles dashboard */
-:root[data-density="compact"] .dash-tile {
-  min-height: 2.5rem;
-  border-radius: 6px;
-  padding: .4rem .7rem;
-  font-size: .9rem;
-}
-:root[data-density="compact"] .nav-tiles .tile {
-  border-radius: 6px;
-  padding: .5rem .85rem;
-}
 
 /* Titoli */
 :root[data-density="compact"] .page-title {
@@ -221,8 +210,12 @@
 
 /* Quadratini dei parametri */
 :root[data-density="compact"] .param-nav .param-btn {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2.4rem;
+  height: 2.4rem;
+}
+:root[data-density="compact"] .param-nav--wide .param-btn {
+  width: auto;
+  min-width: 2.4rem;
 }
 
 /* Tabelle */
@@ -351,8 +344,12 @@
 /* Touch: controlli più grandi */
 @media (pointer: coarse){
   :root[data-density="compact"] .param-nav .param-btn{
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+  :root[data-density="compact"] .param-nav--wide .param-btn{
+    width: auto;
+    min-width: 2.6rem;
   }
   :root[data-density="compact"] .pagination a,
   :root[data-density="compact"] .pagination .current{

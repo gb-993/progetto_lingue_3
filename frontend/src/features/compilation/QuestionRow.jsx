@@ -374,12 +374,12 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                             onClick={() => handleCopyExample(example)}
                                             disabled={isReadOnly}
                                             className="btn btn--small"
-                                            style={{ borderColor: 'transparent', color: recentlyCopiedTempId === example.tempId ? '#16a34a' : 'inherit' }}
+                                            style={{ borderColor: 'transparent', color: recentlyCopiedTempId === example.tempId ? 'var(--ok)' : 'inherit' }}
                                             title="Copy this example to the clipboard (paste it into any question of this language)"
                                         >
                                             {recentlyCopiedTempId === example.tempId ? '✓ Copied!' : 'Copy'}
                                         </button>
-                                        <button type="button" onClick={() => handleRemoveExample(example.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'red', borderColor: 'transparent' }}>Remove</button>
+                                        <button type="button" onClick={() => handleRemoveExample(example.tempId)} disabled={isReadOnly} className="btn btn--small" style={{ color: 'var(--brand)', borderColor: 'transparent' }}>Remove</button>
                                     </div>
                                     <h4 style={{ marginTop: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>Example #{index + 1}</h4>
 
@@ -432,9 +432,9 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                 style={{
                                     marginBottom: 'var(--form-field-mb, 1rem)',
                                     padding: 'var(--form-box-pad, 1rem)',
-                                    background: 'color-mix(in oklab, #dc2626 7%, var(--surface-2))',
-                                    border: '1px dashed #dc2626',
-                                    boxShadow: '0 0 0 3px color-mix(in oklab, #dc2626 10%, transparent)',
+                                    background: 'color-mix(in oklab, var(--brand) 7%, var(--surface-2))',
+                                    border: '1px dashed var(--brand)',
+                                    boxShadow: '0 0 0 3px color-mix(in oklab, var(--brand) 10%, transparent)',
                                     position: 'relative',
                                 }}
                             >
@@ -444,7 +444,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         onClick={handlePasteFromClipboard}
                                         disabled={isReadOnly}
                                         className="btn btn--small"
-                                        style={{ borderColor: 'transparent', color: '#16a34a', fontWeight: 600 }}
+                                        style={{ borderColor: 'transparent', color: 'var(--ok)', fontWeight: 600 }}
                                         title="Paste the copied example(s) as new examples here (clipboard remains, you can paste into more questions)"
                                     >
                                         {copied.examples.length > 1 ? 'Paste all here' : 'Paste here'}
@@ -453,13 +453,13 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                         type="button"
                                         onClick={clearClipboard}
                                         className="btn btn--small"
-                                        style={{ color: '#dc2626', borderColor: 'transparent' }}
+                                        style={{ color: 'var(--brand)', borderColor: 'transparent' }}
                                         title="Clear the clipboard"
                                     >
                                         Clear
                                     </button>
                                 </div>
-                                <h4 style={{ marginTop: 0, marginBottom: '0.85rem', fontSize: '0.9rem', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <h4 style={{ marginTop: 0, marginBottom: '0.85rem', fontSize: '0.9rem', color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                     {copied.examples.length > 1
                                         ? `${copied.examples.length} examples in clipboard`
                                         : 'Example in clipboard'}
@@ -493,7 +493,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                         {copied.examples.map((example, index) => (
                                             <div key={index} style={{ ...clipboardFieldStyle, minHeight: 'auto', display: 'flex', gap: '0.6rem', alignItems: 'baseline' }}>
-                                                <span style={{ fontWeight: 700, color: '#dc2626', flex: '0 0 auto' }}>#{index + 1}</span>
+                                                <span style={{ fontWeight: 700, color: 'var(--brand)', flex: '0 0 auto' }}>#{index + 1}</span>
                                                 <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                                     {example.textarea || <span className="muted" style={{ fontStyle: 'italic' }}>(empty)</span>}
                                                 </span>
@@ -514,7 +514,7 @@ export default function QuestionRow({ question, value, onChange, isReadOnly, cur
                                     onClick={handleCopyAllExamples}
                                     disabled={isReadOnly}
                                     className="btn"
-                                    style={{ color: copiedAllCount ? '#16a34a' : 'inherit', borderColor: copiedAllCount ? '#16a34a' : undefined }}
+                                    style={{ color: copiedAllCount ? 'var(--ok)' : 'inherit', borderColor: copiedAllCount ? 'var(--ok)' : undefined }}
                                     title="Copy all examples of this question to the clipboard (paste them into another question of this language)"
                                 >
                                     {copiedAllCount ? `✓ Copied ${copiedAllCount}` : 'Copy all'}

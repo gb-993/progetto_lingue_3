@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import SegmentedToggle from '../../components/SegmentedToggle';
 
 const DENSITY_STORAGE_KEY = 'pcm-density';
@@ -22,6 +23,10 @@ export default function MyAccount() {
     const [message, setMessage] = useState({ text: '', type: '' });
     const [density, setDensity] = useState(getInitialDensity);
     const [theme, setTheme] = useState(getInitialTheme);
+    const [savedEmail, setSavedEmail] = useState('');
+    const [currentPassword, setCurrentPassword] = useState('');
+    const { login } = useAuth();
+    const emailChanged = profile.email.trim().toLowerCase() !== savedEmail.trim().toLowerCase();
 
     const applyDensity = (value) => {
         setDensity(value);
@@ -51,6 +56,7 @@ export default function MyAccount() {
             try {
                 const res = await api.get('/api/me');
                 setProfile({ name: res.data.name || '', surname: res.data.surname || '', email: res.data.email || '' });
+                setSavedEmail(res.data.email || '');
             } catch (err) {
                 console.error(err);
             }
@@ -64,8 +70,13 @@ export default function MyAccount() {
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.put('/api/me', profile);
+            const res = await api.put('/api/me', {
+                ...profile,
+                current_password: emailChanged ? currentPassword : undefined,
+            });
             setMessage({ text: res.data.detail, type: 'success' });
+            setSavedEmail(profile.email);
+            setCurrentPassword('');
             localStorage.setItem('name', profile.name);
         } catch (err) {
             setMessage({ text: err.response?.data?.detail || 'Profile update error', type: 'error' });
@@ -76,6 +87,7 @@ export default function MyAccount() {
         e.preventDefault();
         try {
             const res = await api.put('/api/me/password', passwords);
+            if (res.data.access_token) await login(res.data.access_token);
             setMessage({ text: res.data.detail, type: 'success' });
             setPasswords({ old_password: '', new_password1: '', new_password2: '' });
         } catch (err) {
@@ -110,6 +122,12 @@ export default function MyAccount() {
                         <label>Email</label>
                         <input type="email" name="email" value={profile.email} onChange={handleProfileChange} required />
                     </div>
+                    {emailChanged && (
+                        <div className="form-group">
+                            <label>Current password (required to change the email)</label>
+                            <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required autoComplete="current-password" />
+                        </div>
+                    )}
                     <div className="toolbar" style={{gridColumn: '1 / -1', justifyContent: 'flex-end', marginTop: 'var(--acc-action-top, 1rem)'}}>
                         <button type="submit" className="btn btn--primary">Save Profile</button>
                     </div>

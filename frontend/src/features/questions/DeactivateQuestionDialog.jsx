@@ -73,7 +73,7 @@ export default function DeactivateQuestionDialog({ questionId, onClose, onDeacti
                     <button
                         type="button"
                         className="btn"
-                        style={{ background: '#d9534f', borderColor: '#d9534f', color: '#fff' }}
+                        style={{ background: 'var(--brand)', borderColor: 'var(--brand)', color: '#fff' }}
                         onClick={doDeactivate}
                         disabled={busy || statsLoading}
                     >

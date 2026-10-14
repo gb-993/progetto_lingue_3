@@ -174,7 +174,7 @@ export default function OldQuestionsTab() {
                                                     </button>
                                                     <button
                                                         className="btn btn-sm btn-danger"
-                                                        style={{ backgroundColor: '#dc3545', borderColor: '#dc3545', color: 'white' }}
+                                                        style={{ backgroundColor: 'var(--brand)', borderColor: 'var(--brand)', color: 'white' }}
                                                         onClick={() => handleDelete(version.id)}
                                                     >
                                                         Delete

@@ -46,7 +46,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
 
     user = resolve_user_from_sub(db, sub)
-    if user is None:
+    if user is None or user.is_active is False:
+        raise credentials_exception
+    if payload.get("pv") != auth.password_fingerprint(user.hashed_password):
         raise credentials_exception
     return user
 
@@ -60,10 +62,14 @@ def require_admin(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 
+def super_admin_email() -> str:
+    return (os.getenv("ADMIN_EMAIL", "") or "").strip().lower()
+
+
 def is_super_admin(user: models.User) -> bool:
     if user is None or user.role != "admin":
         return False
-    expected = (os.getenv("ADMIN_EMAIL", "") or "").strip().lower()
+    expected = super_admin_email()
     if not expected:
         return False
     return (user.email or "").strip().lower() == expected

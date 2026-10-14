@@ -219,12 +219,12 @@ function ImportReport({ report, onDownloadErrors }) {
                             <tr key={name}>
                                 <td><strong>{name}</strong></td>
                                 <td style={{ textAlign: 'right' }}>{s.rows_total}</td>
-                                <td style={{ textAlign: 'right', color: s.updated > 0 ? '#15803d' : 'inherit' }}>{s.updated}</td>
-                                <td style={{ textAlign: 'right', color: s.inserted > 0 ? '#15803d' : 'inherit' }}>{s.inserted}</td>
+                                <td style={{ textAlign: 'right', color: s.updated > 0 ? 'var(--ok)' : 'inherit' }}>{s.updated}</td>
+                                <td style={{ textAlign: 'right', color: s.inserted > 0 ? 'var(--ok)' : 'inherit' }}>{s.inserted}</td>
                                 <td style={{ textAlign: 'right' }}>{s.skipped}</td>
                                 <td style={{
                                     textAlign: 'right',
-                                    color: s.errors > 0 ? '#b91c1c' : 'inherit',
+                                    color: s.errors > 0 ? 'var(--brand)' : 'inherit',
                                     fontWeight: s.errors > 0 ? 'bold' : 'normal',
                                 }}>
                                     {s.errors}
@@ -261,7 +261,7 @@ function ImportReport({ report, onDownloadErrors }) {
                                         <td className="small" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>
                                             {errorEntry.value || '—'}
                                         </td>
-                                        <td className="small" style={{ color: '#b91c1c' }}>{errorEntry.reason}</td>
+                                        <td className="small" style={{ color: 'var(--brand)' }}>{errorEntry.reason}</td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -6,6 +6,7 @@ import useUnsavedChangesGuard from '../../utils/useUnsavedChangesGuard';
 import usePersistentState from '../../utils/usePersistentState';
 import { searchMatches } from '../../utils/search';
 import { readExampleClipboard, clearExampleClipboard } from '../../utils/exampleClipboard';
+import ParamBadges from '../../components/ParamBadges';
 
 // un parametro, un quadratino per lingua
 
@@ -290,11 +291,13 @@ export default function ParameterByLanguage() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--filter-card-actions-top, 0.85rem)', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div className="small muted">
-                        {filteredLanguages.length} of {languages.length} languages
-                        {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <button onClick={resetAll} className="btn btn--small">Reset filters</button>
+                        <div className="small muted">
+                            {filteredLanguages.length} of {languages.length} languages
+                            {activeFilterCount > 0 && <span> · {activeFilterCount} active filters</span>}
+                        </div>
                     </div>
-                    <button onClick={resetAll} className="btn btn--small">Reset filters</button>
                 </div>
             </div>
 
@@ -310,9 +313,10 @@ export default function ParameterByLanguage() {
                             type="button"
                             onClick={() => selectLanguage(lang.id)}
                             className={`param-btn ${squareState(lang)}${lang.id === selectedId ? ' is-active' : ''}`}
-                            title={`${lang.name_full} · ${STATUS_LABELS[lang.status] || lang.status} · ${lang.answered}/${total} answered`}
+                            title={`${lang.name_full} · ${STATUS_LABELS[lang.status] || lang.status} · ${lang.answered}/${total} answered${lang.answer_conflict ? ' · ! a question and a stop question are both YES' : ''}`}
                         >
                             {lang.id}
+                            <ParamBadges hasAnswerConflict={!!lang.answer_conflict} />
                         </button>
                     ))}
                 </div>

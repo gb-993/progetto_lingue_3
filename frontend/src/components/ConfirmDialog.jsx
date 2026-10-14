@@ -86,7 +86,7 @@ export default function ConfirmDialog({ config, onClose }) {
                     boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
                 }}
             >
-                <h3 style={{ marginTop: 0, marginBottom: '0.6rem', color: danger ? '#dc2626' : undefined }}>
+                <h3 style={{ marginTop: 0, marginBottom: '0.6rem', color: danger ? 'var(--brand)' : undefined }}>
                     {title}
                 </h3>
 
@@ -132,7 +132,7 @@ export default function ConfirmDialog({ config, onClose }) {
                         className={`btn ${danger ? 'btn--danger' : 'btn--primary'}`}
                         onClick={submit}
                         disabled={!canConfirm}
-                        style={danger ? { color: '#dc2626' } : undefined}
+                        style={danger ? { color: 'var(--brand)' } : undefined}
                     >
                         {busy ? 'Working…' : confirmLabel}
                     </button>

@@ -251,8 +251,9 @@ export default function ParameterBlock({
                 style={{
                     marginTop: 'var(--form-col-gap, 2rem)',
                     marginLeft: 'auto',
+                    marginRight: '3.5rem',
                     width: 'fit-content',
-                    maxWidth: '100%',
+                    maxWidth: 'calc(100% - 3.5rem)',
                     padding: '0.85rem 1rem',
                     border: '1px solid var(--border)',
                     position: 'sticky',
@@ -283,7 +284,7 @@ export default function ParameterBlock({
                         className="btn btn--ok"
                         onClick={handleFinalSave}
                         disabled={isSaving || isReadOnly}
-                        style={{ minWidth: '180px', background: '#16a34a', borderColor: '#15803d', color: '#fff' }}
+                        style={{ minWidth: '180px', background: 'var(--ok-solid)', borderColor: 'color-mix(in oklab, var(--ok-solid) 75%, black)', color: '#fff' }}
                     >
                         {isSaving ? 'Saving...' : 'Save → Next'}
                     </button>
